@@ -1,7 +1,7 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'bosh_azure_cpi/version'
+require 'bosh_azure_cpi/cloud/azure/version'
 
 version = Bosh::AzureCloud::VERSION
 
@@ -12,13 +12,15 @@ Gem::Specification.new do |spec|
   spec.email         = ['nick.i.terry@gmail.com']
   spec.summary       = %q{TODO: Write a short summary. Required.}
   spec.description   = %q{TODO: Write a longer description. Optional.}
-  spec.homepage      = ''
-  spec.license       = 'MIT'
+  spec.homepage      = 'https://github.com/nterry/bosh_azure_cpi'
+  spec.license       = 'Apache 2.0'
 
   spec.files         = `git ls-files -z`.split("\x0")
   spec.executables   = spec.files.grep(%r{^bin/}) { |f| File.basename(f) }
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ['lib']
+
+  spec.add_dependency 'azure', '~> 0.6.4'
 
   spec.add_dependency 'bosh_common',   "~>#{version}"
   spec.add_dependency 'bosh_cpi',      "~>#{version}"

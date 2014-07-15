@@ -1,5 +1,5 @@
 module Bosh
   module AzureCloud
-    VERSION = '0.0.1'
+    VERSION = '1.2641.0'
   end
 end
