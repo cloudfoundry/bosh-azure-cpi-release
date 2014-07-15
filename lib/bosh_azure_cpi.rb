@@ -1,0 +1,2 @@
+
+require 'bosh/azure'
