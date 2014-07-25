@@ -1,5 +1,6 @@
 require 'common/common'
 require 'time'
+require 'socket'
 require_relative 'helpers'
 
 module Bosh::AzureCloud
@@ -39,6 +40,25 @@ module Bosh::AzureCloud
       end
 
       @client.create_virtual_machine(params, opts)
+    end
+
+    def find(name, uuid)
+      @client.get_virtual_machine(name, "cloud_service_#{uuid}")
+    end
+
+    def instance_id
+      addr = nil
+      Socket.ip_address_list.each do |ip|
+        addr = ip.ip_address if (ip.ipv4_private?)
+      end
+
+      insts = @client.list_virtual_machines.select { |vm| vm.ipaddress == addr }
+
+      # raise an error if something funny happened and we have more than one
+      # instance with the same ip or no ip at all
+      raise if insts.length != 1
+
+      insts.first.vm_name
     end
   end
 end

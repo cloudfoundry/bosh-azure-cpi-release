@@ -1,2 +1,2 @@
 
-require 'bosh/azure'
+require 'azure'

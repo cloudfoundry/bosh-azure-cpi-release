@@ -2,7 +2,6 @@ module Bosh
   module AzureCloud; end
 end
 
-require "aws-sdk"
 require "httpclient"
 require "pp"
 require "set"
@@ -17,26 +16,25 @@ require "common/thread_formatter"
 require "bosh/registry/client"
 
 require "cloud"
-require "cloud/aws/helpers"
-require "cloud/aws/cloud"
-require "cloud/aws/version"
+require "bosh_azure_cpi/cloud/azure/helpers"
+require "bosh_azure_cpi/cloud/azure/cloud"
+require "bosh_azure_cpi/cloud/azure/version"
 
-require "cloud/aws/aki_picker"
-require "cloud/aws/network_configurator"
-require "cloud/aws/network"
-require "cloud/aws/stemcell"
-require "cloud/aws/stemcell_creator"
-require "cloud/aws/dynamic_network"
-require "cloud/aws/manual_network"
-require "cloud/aws/vip_network"
-require "cloud/aws/instance_manager"
-require "cloud/aws/spot_manager"
-require "cloud/aws/tag_manager"
-require "cloud/aws/availability_zone_selector"
-require "cloud/aws/resource_wait"
+require "bosh_azure_cpi/cloud/azure/network_configurator"
+require "bosh_azure_cpi/cloud/azure/network"
+#require "bosh_azure_cpi/cloud/azure/stemcell"
+require "bosh_azure_cpi/cloud/azure/stemcell_creator"
+require "bosh_azure_cpi/cloud/azure/dynamic_network"
+require "bosh_azure_cpi/cloud/azure/manual_network"
+require "bosh_azure_cpi/cloud/azure/vip_network"
+require "bosh_azure_cpi/cloud/azure/instance_manager"
+require "bosh_azure_cpi/cloud/azure/spot_manager"
+require "bosh_azure_cpi/cloud/azure/tag_manager"
+require "bosh_azure_cpi/cloud/azure/availability_zone_selector"
+require "bosh_azure_cpi/cloud/azure/resource_wait"
 
 module Bosh
   module Clouds
-    Aws = Bosh::AzureCloud::Cloud
+    azure = Bosh::AzureCloud::Cloud
   end
 end

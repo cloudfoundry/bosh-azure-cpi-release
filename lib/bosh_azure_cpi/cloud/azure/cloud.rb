@@ -17,8 +17,8 @@ module Bosh::AzureCloud
       @options = options.dup.freeze
       validate_options
 
-      @azure_img_client = init_azure_img_client('', '')
-      @logger = Bosh::Clouds::Config.logger
+      # Logger is available as a public method, but Bosh::Clouds::Config is apparently nil. Need to investigate
+      #@logger = Bosh::Clouds::Config.logger
       @metadata_lock = Mutex.new
     end
 
@@ -27,6 +27,9 @@ module Bosh::AzureCloud
     #
     # @return [String] opaque id later used by other methods of the CPI
     def current_vm_id
+      @metadata_lock.synchronize do
+        instance_manager.instance_id
+      end
     end
 
     ##
@@ -87,6 +90,8 @@ module Bosh::AzureCloud
       stemcell = stemcell_finder.find_stemcell_by_name stemcell_id
 
       instance = instance_manager.create(agent_id, stemcell, name, networks, {})
+
+
     end
 
     ##
@@ -192,24 +197,14 @@ module Bosh::AzureCloud
 
     private
 
-    def init_azure_img_client(cert, sub_id)
-      Azure.configure do |config|
-        # Configure these 3 properties to use Storage
-        config.management_certificate = cert
-        config.subscription_id        = sub_id
-        config.management_endpoint    = @vmm_endpoint_url
-      end
-
-      @azure_img_client.nil? ? Azure::VirtualMachineManagementService.new : @azure_img_client
-    end
-
     ##
     # Checks if options passed to CPI are valid and can actually
     # be used to create all required data structures etc.
     #
     def validate_options
       required_keys = {
-          'azure' => %w(cert_path subsctiption_id region default_key_name logical_name),
+          # 'azure' => %w(cert_path subscription_id region default_key_name logical_name),
+          'azure' => %w(),
           'registry' => []
       }
 
@@ -226,13 +221,28 @@ module Bosh::AzureCloud
       raise ArgumentError, "missing configuration parameters > #{missing_keys.join(', ')}" unless missing_keys.empty?
     end
 
+    def azure_properties
+      @azure_properties ||= options.fetch('azure')
+    end
+
+    def azure_vm_client
+      Azure.configure do |config|
+        # Configure these 3 properties to use Storage
+        config.management_certificate = File.absolute_path(azure_properties['cert_path'])
+        config.subscription_id        = azure_properties['subscription_id']
+        config.management_endpoint    = @vmm_endpoint_url
+      end
+
+      @azure_vm_client ||= Azure::VirtualMachineManagementService.new
+    end
+
     def stemcell_finder
-      @stemcell_finder = @stemcell_finder.nil? ? StemcellFinder.new(@azure_img_client) : @stemcell_finder
-      @stemcell_finder
+      @stemcell_finder ||= StemcellFinder.new(azure_vm_client)
     end
 
     def instance_manager
-      @instance_manager = @instance_manager.nil? ? InstanceManager.new(@azure_inst_client) : @ins
+      @instance_manager ||= InstanceManager.new(azure_vm_client)
     end
+
   end
 end

@@ -10,8 +10,8 @@ Gem::Specification.new do |spec|
   spec.version       = version
   spec.authors       = ['Nicholas Terry']
   spec.email         = ['nick.i.terry@gmail.com']
-  spec.summary       = %q{TODO: Write a short summary. Required.}
-  spec.description   = %q{TODO: Write a longer description. Optional.}
+  spec.summary       = %q{Foo}
+  spec.description   = %q{Foo}
   spec.homepage      = 'https://github.com/nterry/bosh_azure_cpi'
   spec.license       = 'Apache 2.0'
 
@@ -25,6 +25,11 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'bosh_common',   "~>#{version}"
   spec.add_dependency 'bosh_cpi',      "~>#{version}"
   spec.add_dependency 'bosh-registry', "~>#{version}"
+  spec.add_dependency 'psych'
+  spec.add_dependency 'logger'
+  spec.add_dependency 'httpclient'
+  spec.add_dependency 'membrane'
+
 
   spec.add_development_dependency 'bundler', '~> 1.6'
   spec.add_development_dependency 'rake'

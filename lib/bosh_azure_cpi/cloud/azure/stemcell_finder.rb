@@ -1,4 +1,4 @@
-require_relative 'stemcell'
+
 
 module Bosh::AzureCloud
   class StemcellFinder
