@@ -87,11 +87,11 @@ module Bosh::AzureCloud
     # @return [String] opaque id later used by {#configure_networks}, {#attach_disk},
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
-      stemcell = stemcell_finder.find_stemcell_by_name stemcell_id
+      raise if not(stemcell_finder.exist?(stemcell_id))
 
-      instance = instance_manager.create(agent_id, stemcell, name, networks, {})
+      instance = instance_manager.create(agent_id, stemcell_id, agent_id, networks, azure_properties.merge({'user' => 'bosh'}))
 
-
+      instance
     end
 
     ##
@@ -228,7 +228,7 @@ module Bosh::AzureCloud
     def azure_vm_client
       Azure.configure do |config|
         # Configure these 3 properties to use Storage
-        config.management_certificate = File.absolute_path(azure_properties['cert_path'])
+        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
         config.subscription_id        = azure_properties['subscription_id']
         config.management_endpoint    = @vmm_endpoint_url
       end
@@ -237,11 +237,22 @@ module Bosh::AzureCloud
     end
 
     def stemcell_finder
-      @stemcell_finder ||= StemcellFinder.new(azure_vm_client)
+      @stemcell_finder ||= StemcellFinder.new(image_service)
     end
 
     def instance_manager
-      @instance_manager ||= InstanceManager.new(azure_vm_client)
+      @instance_manager ||= InstanceManager.new(azure_vm_client, image_service)
+    end
+
+    def image_service
+      Azure.configure do |config|
+        # Configure these 3 properties to use Storage
+        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
+        config.subscription_id        = azure_properties['subscription_id']
+        config.management_endpoint    = @vmm_endpoint_url
+      end
+
+      @image_service ||= Azure::VirtualMachineImageManagementService.new
     end
 
   end

@@ -13,7 +13,16 @@ module Bosh::AzureCloud
       end
 
       raise Bosh::Clouds::CloudError, "Given image name '#{name}' does not exist!" if stemcell.nil?
-      stemcell
+      stemcell.name
+    end
+
+    def exist?(name)
+      begin
+        find_stemcell_by_name name
+      rescue
+        return false
+      end
+      return true
     end
   end
 end

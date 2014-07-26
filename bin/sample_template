@@ -3,8 +3,9 @@ name: wordpress
 director_uuid: 718f5344-c8e4-4266-ab10-3a75e1638e25 # CHANGE: Director UUID
 
 azure:
-  subscription_id: 00000000-0000-0000-0000-000000000000
-  cert_file: mycert.pem
+  subscription_id: 
+  cert_file:
+  ssh_key_file:
 
 release:
   name: wordpress
