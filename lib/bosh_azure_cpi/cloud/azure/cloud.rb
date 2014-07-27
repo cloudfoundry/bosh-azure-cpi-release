@@ -2,6 +2,8 @@ require 'azure'
 
 require_relative 'stemcell_finder'
 require_relative 'instance_manager'
+require_relative 'affinity_group_manager'
+require_relative 'virtual_network_manager'
 
 module Bosh::AzureCloud
   class Cloud < Bosh::Cloud
@@ -89,8 +91,10 @@ module Bosh::AzureCloud
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       raise if not(stemcell_finder.exist?(stemcell_id))
 
-      instance = instance_manager.create(agent_id, stemcell_id, agent_id, networks, azure_properties.merge({'user' => 'bosh'}))
+      # TODO Need to check if networks contains an existing and valid subnet and create it if not
+      vnet_manager.create("vnet_#{agent_id}", "ag_#{agent_id}", [{:name => 'Subnet-1', :ip_address => '10.0.0.0', :cidr => 8}]) if !vnet_manager.exist?(networks['name'])
 
+      instance = instance_manager.create(agent_id, stemcell_id, agent_id, networks, azure_properties.merge({'user' => 'bosh'}))
       instance
     end
 
@@ -225,6 +229,22 @@ module Bosh::AzureCloud
       @azure_properties ||= options.fetch('azure')
     end
 
+    def stemcell_finder
+      @stemcell_finder ||= StemcellFinder.new(image_service)
+    end
+
+    def instance_manager
+      @instance_manager ||= InstanceManager.new(azure_vm_client, image_service)
+    end
+
+    def affinity_group_manager
+      @ag_manager ||= AffinityGroupManager.new(base_service)
+    end
+
+    def vnet_manager
+      @vnet_manager ||= VirtualNetworkManager.new(vnet_service, affinity_group_manager)
+    end
+
     def azure_vm_client
       Azure.configure do |config|
         # Configure these 3 properties to use Storage
@@ -236,23 +256,34 @@ module Bosh::AzureCloud
       @azure_vm_client ||= Azure::VirtualMachineManagementService.new
     end
 
-    def stemcell_finder
-      @stemcell_finder ||= StemcellFinder.new(image_service)
-    end
+    def base_service
+      Azure.configure do |config|
+        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
+        config.subscription_id        = azure_properties['subscription_id']
+        config.management_endpoint    = @vmm_endpoint_url
+      end
 
-    def instance_manager
-      @instance_manager ||= InstanceManager.new(azure_vm_client, image_service)
+      @base_service ||= Azure::BaseManagementService.new
     end
 
     def image_service
       Azure.configure do |config|
-        # Configure these 3 properties to use Storage
         config.management_certificate = File.absolute_path(azure_properties['cert_file'])
         config.subscription_id        = azure_properties['subscription_id']
         config.management_endpoint    = @vmm_endpoint_url
       end
 
       @image_service ||= Azure::VirtualMachineImageManagementService.new
+    end
+
+    def vnet_service
+      Azure.configure do |config|
+        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
+        config.subscription_id        = azure_properties['subscription_id']
+        config.management_endpoint    = @vmm_endpoint_url
+      end
+
+      @vnet_service ||= Azure::VirtualNetworkManagementService.new
     end
 
   end
