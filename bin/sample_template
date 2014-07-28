@@ -3,7 +3,7 @@ name: wordpress
 director_uuid: 718f5344-c8e4-4266-ab10-3a75e1638e25 # CHANGE: Director UUID
 
 azure:
-  subscription_id: 
+  subscription_id:
   cert_file:
   ssh_key_file:
 
@@ -25,14 +25,21 @@ update:
   max_in_flight: 4
 
 networks:
-  - name: elastic
-    type: vip
-    cloud_properties: {}
   - name: default
     type: dynamic
-    cloud_properties:
-      security_groups:
-        - default # CHANGE: Security Group
+    dns:
+    - name: google-primary
+      ip_address: 8.8.8.8
+    - name: google-secondary
+      ip_address: 8.8.4.4
+    address_spaces:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    subnets:
+    - range: 10.0.0.0/8
+      name: Subnet-1
+      cloud_properties:
 
 resource_pools:
   - name: common

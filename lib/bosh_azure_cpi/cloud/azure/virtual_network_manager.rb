@@ -1,3 +1,4 @@
+require 'bosh/registry/config'
 
 module Bosh::AzureCloud
   class VirtualNetworkManager
@@ -18,11 +19,39 @@ module Bosh::AzureCloud
       # TODO: Need to check if subnet exists
     end
 
-    def create(name, affinity_group, subnets, dns_servers=[{:name => 'google_primary', :ip_address => '8.8.8.8'}, {:name => 'google_secondary', :ip_address => '8.8.4.4'}])
+    def create(affinity_group, network_spec)
       raise if not exist?(name)
       if !@ag_manager.exist? affinity_group
         puts "Affinity group '#{affinity_group}' does not exist... Creating"
         @ag_manager.create name
+      end
+
+      @logger = Bosh::Clouds::Config.logger
+      @network = nil
+      @vip_network = nil
+
+      network_spec.each do |spec|
+        network_type = spec['type'] || 'dynamic'
+        name = spec['name']
+
+        dns_servers = network_spec['dns'] || [{:name => 'google_primary', :ip_address => '8.8.8.8'},
+                                              {:name => 'google_secondary', :ip_address => '8.8.4.4'}]
+        # Azure expects these keys to be symbols, not strings
+        dns_servers.symbolize_keys!
+
+        case network_type
+          when 'dynamic'
+            puts "More than one dynamic network for '#{name}'" if @network
+            @network = DynamicNetwork.new(@vnet_client, spec)
+
+          when 'vip'
+            puts "More than one vip network for '#{name}'" if @vip_network
+            @vip_network = VipNetwork.new(@vnet_client, spec)
+
+          else
+            puts "Invalid network type '#{network_type}' for Azure, " \
+                 "can only handle 'dynamic' or 'vip' network types"
+        end
       end
 
       address_space = ['10.0.0.0/8']
