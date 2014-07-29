@@ -6,9 +6,5 @@ module Bosh::AzureCloud
     def initialize(vnet_client, spec)
       super(vnet_client, spec)
     end
-
-    def configure
-
-    end
   end
 end

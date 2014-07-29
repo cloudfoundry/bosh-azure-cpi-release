@@ -19,12 +19,8 @@ module Bosh::AzureCloud
       # TODO: Need to check if subnet exists
     end
 
-    def create(affinity_group, network_spec)
+    def create(network_spec)
       raise if not exist?(name)
-      if !@ag_manager.exist? affinity_group
-        puts "Affinity group '#{affinity_group}' does not exist... Creating"
-        @ag_manager.create name
-      end
 
       @logger = Bosh::Clouds::Config.logger
       @network = nil
@@ -32,33 +28,30 @@ module Bosh::AzureCloud
 
       network_spec.each do |spec|
         network_type = spec['type'] || 'dynamic'
-        name = spec['name']
-
-        dns_servers = network_spec['dns'] || [{:name => 'google_primary', :ip_address => '8.8.8.8'},
-                                              {:name => 'google_secondary', :ip_address => '8.8.4.4'}]
-        # Azure expects these keys to be symbols, not strings
-        dns_servers.symbolize_keys!
-
         case network_type
           when 'dynamic'
-            puts "More than one dynamic network for '#{name}'" if @network
-            @network = DynamicNetwork.new(@vnet_client, spec)
+            puts "More than one dynamic network for '#{name}'" && next if @network
+            @network = DynamicNetwork.new(@vnet_client, spec) # For now, will short-circuit with auto-assiged public ip
+
 
           when 'vip'
-            puts "More than one vip network for '#{name}'" if @vip_network
+            puts "More than one vip network for '#{name}'" && next if @vip_network
             @vip_network = VipNetwork.new(@vnet_client, spec)
 
           else
             puts "Invalid network type '#{network_type}' for Azure, " \
                  "can only handle 'dynamic' or 'vip' network types"
         end
-      end
 
-      address_space = ['10.0.0.0/8']
+        # TODO: Need to put managers in array for cleaner code and to finish
+        check_affinity_group(@network.affinity_group) if @network
+        check_affinity_group(@vip_network.affinity_group) if @vip_network
+
+      #address_space = ['10.0.0.0/8']
       # subnets = [{:name => 'subnet-1',  :ip_address=>'172.16.0.0',  :cidr=>12},  {:name => 'subnet-2',  :ip_address=>'10.0.0.0',  :cidr=>8}]
-      validate_subnets subnets
-      options = {:subnet => subnets, :dns => dns_servers}
-      @vnet_client.set_network_configuration(name, affinity_group, address_space, options)
+      #validate_subnets subnets
+      #options = {:subnet => subnets, :dns => dns_servers}
+      #@vnet_client.set_network_configuration(name, affinity_group, address_space, options)
     end
 
 
@@ -75,6 +68,13 @@ module Bosh::AzureCloud
 
     def find_similar_network(affinity_group, subnets)
       # TODO: Look for a subnet that matches the nesessary subnets, but doesnt necessarily have the same name
+    end
+
+    def check_affinity_group(name)
+      if !@ag_manager.exist? name
+        puts "Affinity group '#{name}' does not exist... Creating..."
+        @ag_manager.create name
+      end
     end
   end
 end

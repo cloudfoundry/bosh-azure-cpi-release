@@ -18,12 +18,15 @@ module Bosh::AzureCloud
       @vnet_client = vnet_client
       @logger = Bosh::Clouds::Config.logger
 
+      name = spec['name'] || raise("Missing required network property 'name'")
+      address_space = spec['address_space'] || ['10.0.0.0/8']
+      dns_servers = spec['dns'] || default_dns
+      affinity_group = spec['affinity_group'] || raise("Missing required network property 'affinity_group'")
       @spec = spec
       @cloud_properties = spec['cloud_properties']
-    end
 
-    def configure
-      puts "`configure' not implemented by #{self.class}"
+      # Azure expects these keys to be symbols, not strings
+      dns_servers.symbolize_keys
     end
 
     def eql?(other)
@@ -32,6 +35,13 @@ module Bosh::AzureCloud
               (dns_servers.sort == other.dns_servers.sort) &&
               (state.eql? other.state) &&
               (subnets.sort == other.subnets.sort))
+    end
+
+    private
+
+    def default_dns
+      [{:name => 'google_primary', :ip_address => '8.8.8.8'},
+       {:name => 'google_secondary', :ip_address => '8.8.4.4'}]
     end
   end
 end
