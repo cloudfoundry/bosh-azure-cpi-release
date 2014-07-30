@@ -1,4 +1,6 @@
-require 'bosh/registry/config'
+require 'bosh/clouds/config'
+require 'bosh/registry/errors'
+
 
 require_relative 'dynamic_network'
 require_relative 'vip_network'
@@ -11,57 +13,31 @@ module Bosh::AzureCloud
       @ag_manager = affinity_group_manager
     end
 
-    def exist?(name)
-      @vnet_client.list_virtual_networks.each do |vnet|
-        return true if vnet.name.eql? name
-      end
-      return false
-    end
-
-    def subnet_exist?(vnet_name, subnet_name)
-      # TODO: Need to check if subnet exists
-    end
-
+    # TODO: Dynamic needs to be re-defined to represent the 'acl' stuff for external-facing vms
     def create(network_spec)
 
-      #@logger = Bosh::Clouds::Config.logger
-      @network = nil
-      @vip_network = nil
+      @logger = Bosh::Clouds::Config.logger
 
-      # TODO: Need to fix affinity_group accessor.
-      network_spec.each do |spec|
-        network_type = spec['type'] || 'dynamic'
-        case network_type
-          when 'dynamic'
-            puts "More than one dynamic network for '#{name}'" && next if @network
-            @network = DynamicNetwork.new(@vnet_client, spec) # For now, will short-circuit with auto-assiged public ip
-            check_affinity_group(@network.spec['affinity_group'])
-            @network.provision
+      network_type = network_spec['type'] || 'dynamic'
+      case network_type
+        when 'dynamic'
+          # For now, will short-circuit with auto-assiged public ip
+          network = DynamicNetwork.new(@vnet_client, spec)
 
-          when 'vip'
-            puts "More than one vip network for '#{name}'" && next if @vip_network
-            @vip_network = VipNetwork.new(@vnet_client, spec)
-            check_affinity_group(@vip_network.spec['affinity_group'])
-            @vip_network.provision
+        when 'vip'
+          network = VipNetwork.new(@vnet_client, spec)
 
-          else
-            puts "Invalid network type '#{network_type}' for Azure, " \
-                 "can only handle 'dynamic' or 'vip' network types"
-        end
+        else
+          raise Bosh::Registry::ConfigError "Invalid network type '#{network_type}' for Azure, " \
+                                            "can only handle 'dynamic' or 'vip' network types"
       end
+
+      check_affinity_group(network.affinity_group)
+      network.provision
     end
 
 
     private
-
-    def validate_subnets(subnets)
-      subnets.each do |subnet|
-        raise 'Malformed subnet given to virtual network. Format is' +
-              "{:name => 'some_name', :ip_address => '10.x.x.x', :cidr => X}" if !subnet.include?(:name) ||
-                                                                                 !subnet.include?(:ip_address) ||
-                                                                                 !subnet.include?(:cidr)
-      end
-    end
 
     def find_similar_network(affinity_group, subnets)
       # TODO: Look for a subnet that matches the nesessary subnets, but doesnt necessarily have the same name
