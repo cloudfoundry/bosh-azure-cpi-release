@@ -25,8 +25,8 @@ update:
   max_in_flight: 4
 
 networks:
-  - name: default
-    type: dynamic
+  - name: default4
+    type: vip
     affinity_group: foo
     dns:
     - name: google-primary
@@ -35,8 +35,8 @@ networks:
       ip_address: 8.8.4.4
     address_space:
     - 10.0.0.0/8
-    - 172.16.0.0/12
-    - 192.168.0.0/16
+    #- 172.16.0.0/12
+    #- 192.168.0.0/16
     subnets:
     - range: 10.0.0.0/8
       name: Subnet-1

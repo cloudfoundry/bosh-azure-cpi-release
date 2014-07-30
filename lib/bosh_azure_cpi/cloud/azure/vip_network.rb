@@ -10,6 +10,11 @@ module Bosh::AzureCloud
       @subnets = parse_subnets
     end
 
+    def provision
+      @options = {:subnet => @subnets, :dns => @dns_servers}
+      @vnet_client.set_network_configuration(@name, @affinity_group, @address_space, @options)
+    end
+
     private
 
     def parse_subnets
@@ -24,6 +29,7 @@ module Bosh::AzureCloud
                      :ip_address => subnet['range'].split('/')[0],
                      :cidr => subnet['range'].split('/')[1]}
       end
+      subnets
     end
 
     def default_subnet

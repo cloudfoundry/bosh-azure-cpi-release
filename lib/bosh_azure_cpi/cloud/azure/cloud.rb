@@ -91,8 +91,8 @@ module Bosh::AzureCloud
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       raise if not(stemcell_finder.exist?(stemcell_id))
 
-      # TODO Need to check if networks contains an existing and valid subnet and create it if not
-      vnet_manager.create("vnet_#{agent_id}", "ag_#{agent_id}", [{:name => 'Subnet-1', :ip_address => '10.0.0.0', :cidr => 8}]) if !vnet_manager.exist?(networks['name'])
+      # Can only accept one network
+      vnet_manager.create(networks)
 
       instance = instance_manager.create(agent_id, stemcell_id, agent_id, networks, azure_properties.merge({'user' => 'bosh'}))
       instance
