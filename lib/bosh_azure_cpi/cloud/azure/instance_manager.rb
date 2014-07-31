@@ -35,11 +35,10 @@ module Bosh::AzureCloud
 
       if (!virtual_network.nil?)
 
-        # TODO: Need to fix stack to handle single network hash, not array of hashes... (oops) [0] accessor is stop-gap
         # As far as I am aware, Azure only supports one virtual network for a vm and it's
         # indicated by name in the API, so I am accepting only the first key (the name of the network)
-        opts[:virtual_network_name] = virtual_network[0]['name']
-        opts[:subnet_name] = virtual_network[0]['subnets'][0]['name']
+        opts[:virtual_network_name] = virtual_network['name']
+        opts[:subnet_name] = virtual_network['subnets'][0]['name']
       end
 
       @vm_client.create_virtual_machine(params, opts)

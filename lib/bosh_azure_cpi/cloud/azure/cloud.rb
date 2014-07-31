@@ -91,7 +91,6 @@ module Bosh::AzureCloud
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       raise if not(stemcell_finder.exist?(stemcell_id))
 
-      # Can only accept one network
       vnet_manager.create(networks)
 
       instance = instance_manager.create(agent_id, stemcell_id, agent_id, networks, azure_properties.merge({'user' => 'bosh'}))

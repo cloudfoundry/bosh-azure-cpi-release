@@ -18,12 +18,11 @@ module Bosh::AzureCloud
       @vnet_client = vnet_client
       #@logger = Bosh::Clouds::Config.logger
 
-      @name = spec['name'] || raise("Missing required network property 'name'")
+      @spec = spec
+      @name = spec['vlan_name'] || raise("Missing required network property 'vlan_name'")
       @address_space = spec['address_space'] || ['10.0.0.0/8']
       @dns_servers = spec['dns'] || default_dns
       @affinity_group = spec['affinity_group'] || raise("Missing required network property 'affinity_group'")
-      @spec = spec
-      @cloud_properties = spec['cloud_properties']
 
       # TODO: Find a better/cleaner way?
       dns_servers_sym = []

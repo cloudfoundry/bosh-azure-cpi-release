@@ -1,9 +1,6 @@
-require 'bosh/clouds/config'
 require 'bosh/registry/errors'
 
-
 require_relative 'dynamic_network'
-require_relative 'vip_network'
 
 module Bosh::AzureCloud
   class VirtualNetworkManager
@@ -13,19 +10,21 @@ module Bosh::AzureCloud
       @ag_manager = affinity_group_manager
     end
 
-    # TODO: Dynamic needs to be re-defined to represent the 'acl' stuff for external-facing vms
+    # TODO: VIP needs to be re-defined to represent the 'acl' stuff for external-facing vms
+    # TODO: Need to support both a single network and multiple networks provided
+    # TODO: Need to validate 'cloud_properties' section of 'network_spec'
     def create(network_spec)
 
-      @logger = Bosh::Clouds::Config.logger
+      #@logger = Bosh::Clouds::Config.logger
 
       network_type = network_spec['type'] || 'dynamic'
       case network_type
         when 'dynamic'
-          # For now, will short-circuit with auto-assiged public ip
-          network = DynamicNetwork.new(@vnet_client, spec)
+          network = DynamicNetwork.new(@vnet_client, network_spec['cloud_properties'])
 
         when 'vip'
-          network = VipNetwork.new(@vnet_client, spec)
+          # For now, will short-circuit with auto-assiged public ip
+          network = VipNetwork.new(@vnet_client, network_spec['cloud_properties'])
 
         else
           raise Bosh::Registry::ConfigError "Invalid network type '#{network_type}' for Azure, " \
