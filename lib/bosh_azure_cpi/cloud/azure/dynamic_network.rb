@@ -15,6 +15,10 @@ module Bosh::AzureCloud
       @vnet_client.set_network_configuration(@name, @affinity_group, @address_space, @options)
     end
 
+    def first_subnet
+      @subnets.first
+    end
+
     private
 
     def parse_subnets

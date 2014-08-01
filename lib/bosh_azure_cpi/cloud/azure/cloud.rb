@@ -93,7 +93,7 @@ module Bosh::AzureCloud
 
       vnet_manager.create(networks)
 
-      instance = instance_manager.create(agent_id, stemcell_id, agent_id, networks, azure_properties.merge({'user' => 'bosh'}))
+      instance = instance_manager.create(agent_id, stemcell_id, agent_id, azure_properties.merge({'user' => 'bosh'}))
       instance
     end
 
@@ -233,7 +233,7 @@ module Bosh::AzureCloud
     end
 
     def instance_manager
-      @instance_manager ||= InstanceManager.new(azure_vm_client, image_service)
+      @instance_manager ||= InstanceManager.new(azure_vm_client, image_service, vnet_manager)
     end
 
     def affinity_group_manager

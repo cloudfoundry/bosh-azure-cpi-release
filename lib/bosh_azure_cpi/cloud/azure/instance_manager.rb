@@ -7,12 +7,13 @@ module Bosh::AzureCloud
   class InstanceManager
     include Helpers
 
-    def initialize(vm_client, img_client)
+    def initialize(vm_client, img_client, vnet_client)
       @vm_client = vm_client
       @img_client = img_client
+      @vnet_client = vnet_client
     end
 
-    def create(name, stemcell, uuid, virtual_network, cloud_opts)
+    def create(name, stemcell, uuid, cloud_opts)
       params = {
           :vm_name => "vm-#{name}",
           :vm_user => cloud_opts['user'],
@@ -33,12 +34,11 @@ module Bosh::AzureCloud
           :availability_set_name => "avail-set-#{uuid}"
       }
 
-      if (!virtual_network.nil?)
-
+      if (!dynamic_network.nil?)
         # As far as I am aware, Azure only supports one virtual network for a vm and it's
         # indicated by name in the API, so I am accepting only the first key (the name of the network)
-        opts[:virtual_network_name] = virtual_network['name']
-        opts[:subnet_name] = virtual_network['subnets'][0]['name']
+        opts[:virtual_network_name] = dynamic_network['name']
+        opts[:subnet_name] = dynamic_network.first_subnet['name']
       end
 
       @vm_client.create_virtual_machine(params, opts)
@@ -61,6 +61,16 @@ module Bosh::AzureCloud
       raise if insts.length != 1
 
       insts.first.vm_name
+    end
+
+    private
+
+    def dynamic_network
+      @vnet_client.network
+    end
+
+    def vip_network
+      @vnet_client.vip_network
     end
   end
 end

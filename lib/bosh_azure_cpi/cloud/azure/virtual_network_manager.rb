@@ -4,6 +4,7 @@ require_relative 'dynamic_network'
 
 module Bosh::AzureCloud
   class VirtualNetworkManager
+    attr_accessor :network, :vip_network
 
     def initialize(vnet_client, affinity_group_manager)
       @vnet_client = vnet_client
@@ -17,26 +18,46 @@ module Bosh::AzureCloud
 
       #@logger = Bosh::Clouds::Config.logger
 
-      network_type = network_spec['type'] || 'dynamic'
-      case network_type
-        when 'dynamic'
-          network = DynamicNetwork.new(@vnet_client, network_spec['cloud_properties'])
+      # Need to reset between each call so that this class is stateless between jobs
+      @network = nil
+      @vip_network = nil
 
-        when 'vip'
-          # For now, will short-circuit with auto-assiged public ip
-          network = VipNetwork.new(@vnet_client, network_spec['cloud_properties'])
+      networks = []
+      network_spec.each do |spec|
+        raise Bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
+        network_type = spec['type'] || 'dynamic'
+        case network_type
+          when 'dynamic'
+            next if (@network)
+            @network = DynamicNetwork.new(@vnet_client, spec['cloud_properties'])
+            networks << @network
 
-        else
-          raise Bosh::Registry::ConfigError "Invalid network type '#{network_type}' for Azure, " \
-                                            "can only handle 'dynamic' or 'vip' network types"
+          when 'vip'
+            next if (@vip_network)
+            @vip_network = VipNetwork.new(@vnet_client, spec['cloud_properties'])
+            networks << @vip_network
+
+          else
+            raise Bosh::Registry::ConfigError "Invalid network type '#{network_type}' for Azure, " \
+                                              "can only handle 'dynamic' or 'vip' network types"
+        end
+
+        # Create the network(s) if they dont exist
+        networks.each do |network|
+          check_affinity_group(network.affinity_group)
+          network.provision
+        end
       end
-
-      check_affinity_group(network.affinity_group)
-      network.provision
     end
 
-
     private
+
+    def validate_spec(spec)
+      spec.each do |key, value|
+        return false if (value.nil? || value == '')
+      end
+      return true
+    end
 
     def find_similar_network(affinity_group, subnets)
       # TODO: Look for a subnet that matches the nesessary subnets, but doesnt necessarily have the same name
