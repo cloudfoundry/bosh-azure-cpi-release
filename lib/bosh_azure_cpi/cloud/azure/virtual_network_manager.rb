@@ -1,6 +1,7 @@
 require 'bosh/registry/errors'
 
 require_relative 'dynamic_network'
+require_relative 'vip_network'
 
 module Bosh::AzureCloud
   class VirtualNetworkManager
@@ -24,7 +25,7 @@ module Bosh::AzureCloud
 
       networks = []
       network_spec.each do |spec|
-        raise Bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
+        #raise Bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
         network_type = spec['type'] || 'dynamic'
         case network_type
           when 'dynamic'

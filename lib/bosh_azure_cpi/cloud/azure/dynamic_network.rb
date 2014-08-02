@@ -1,7 +1,7 @@
 require_relative 'network'
 
 module Bosh::AzureCloud
-  class VipNetwork < Network
+  class DynamicNetwork < Network
     attr_accessor :subnets
 
     def initialize(vnet_client, spec)

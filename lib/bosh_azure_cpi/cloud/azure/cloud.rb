@@ -93,7 +93,7 @@ module Bosh::AzureCloud
 
       vnet_manager.create(networks)
 
-      instance = instance_manager.create(agent_id, stemcell_id, agent_id, azure_properties.merge({'user' => 'bosh'}))
+      instance = instance_manager.create(agent_id, stemcell_id, azure_properties.merge({'user' => 'bosh'}))
       instance
     end
 

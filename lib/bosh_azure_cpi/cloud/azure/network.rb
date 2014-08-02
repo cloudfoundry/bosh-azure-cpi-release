@@ -2,7 +2,7 @@ require 'azure'
 
 module Bosh::AzureCloud
   class Network
-    attr_accessor :vnet_client, :affinity_group
+    attr_accessor :vnet_client, :name, :affinity_group
 
     ##
     # Creates a new network

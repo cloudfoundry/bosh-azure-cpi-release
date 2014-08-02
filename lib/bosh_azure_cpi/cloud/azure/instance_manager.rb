@@ -1,7 +1,6 @@
 require 'common/common'
 require 'time'
 require 'socket'
-require_relative 'helpers'
 
 module Bosh::AzureCloud
   class InstanceManager
@@ -13,9 +12,11 @@ module Bosh::AzureCloud
       @vnet_client = vnet_client
     end
 
-    def create(name, stemcell, uuid, cloud_opts)
+    def create(uuid, stemcell, cloud_opts)
+      endpoints = '25555:25555'
+
       params = {
-          :vm_name => "vm-#{name}",
+          :vm_name => "vm-#{uuid}",
           :vm_user => cloud_opts['user'],
           :password => 'P4$$w0rd!',
           :image => stemcell,
@@ -27,7 +28,7 @@ module Bosh::AzureCloud
           # Error: ConflictError : The storage account named '' is already taken.
           :storage_account_name => "storage#{uuid}",
           :cloud_service_name => "cloud-service-#{uuid}",
-          :tcp_endpoints => '80:80,443:443,25555:25555',
+
           #:private_key_file => cloud_opts['ssh_key_file'] || raise('ssh_key_path must be given to cloud_opts'),
           :certificate_file => cloud_opts['cert_file'] || raise('ssh_cert_path must be given to cloud_opts'),
           :vm_size => cloud_opts[:instance_size] || 'Small',
@@ -37,9 +38,20 @@ module Bosh::AzureCloud
       if (!dynamic_network.nil?)
         # As far as I am aware, Azure only supports one virtual network for a vm and it's
         # indicated by name in the API, so I am accepting only the first key (the name of the network)
-        opts[:virtual_network_name] = dynamic_network['name']
+        opts[:virtual_network_name] = dynamic_network.name
         opts[:subnet_name] = dynamic_network.first_subnet['name']
       end
+
+      if (!vip_network.nil?)
+        # VIP network just represents the dynamically assigned public ip address azure gives.
+        # I am unaware of how to statically assign one
+        vip_network.tcp_endpoints.each do |endpoint|
+          # Prepend the endpoint followed by a comma
+          endpoints = "#{endpoint}, #{endpoints}"
+        end
+      end
+
+      opts[:tcp_endpoints] = endpoints
 
       @vm_client.create_virtual_machine(params, opts)
     end

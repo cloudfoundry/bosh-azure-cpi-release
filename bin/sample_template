@@ -27,16 +27,21 @@ update:
 networks:
   - name: floating
     type: vip
-    cloud_properties: {}
+    cloud_properties:
+      vlan_name: wooberries
+      affinity_group: foo
+      tcp_endpoints:
+        - 85:85
+        - 4433:4433
   - name: default
     type: dynamic
     cloud_properties:
-      vlan_name: foo
+      vlan_name: adreaminyodreaminyodream
       affinity_group: foo
       address_space:
         - 10.0.0.0/8
-        - 172.16.0.0/12
-        - 192.168.0.0/16
+        #- 172.16.0.0/12
+        #- 192.168.0.0/16
       subnets:
         - range: 10.0.0.0/8
           name: Subnet-1
