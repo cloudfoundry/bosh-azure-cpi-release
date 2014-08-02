@@ -4,7 +4,6 @@ require 'socket'
 
 module Bosh::AzureCloud
   class InstanceManager
-    include Helpers
 
     def initialize(vm_client, img_client, vnet_client)
       @vm_client = vm_client
@@ -39,7 +38,7 @@ module Bosh::AzureCloud
         # As far as I am aware, Azure only supports one virtual network for a vm and it's
         # indicated by name in the API, so I am accepting only the first key (the name of the network)
         opts[:virtual_network_name] = dynamic_network.name
-        opts[:subnet_name] = dynamic_network.first_subnet['name']
+        opts[:subnet_name] = dynamic_network.first_subnet[:name]
       end
 
       if (!vip_network.nil?)

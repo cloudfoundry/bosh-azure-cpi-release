@@ -2,12 +2,13 @@ require_relative 'network'
 
 module Bosh::AzureCloud
   class DynamicNetwork < Network
-    attr_accessor :subnets
+    attr_accessor :subnets, :affinity_group
 
     def initialize(vnet_client, spec)
       super(vnet_client, spec)
 
       @subnets = parse_subnets
+      @affinity_group = spec['affinity_group'] || raise("Missing required network property 'affinity_group'")
     end
 
     def provision
@@ -18,6 +19,7 @@ module Bosh::AzureCloud
     def first_subnet
       @subnets.first
     end
+
 
     private
 

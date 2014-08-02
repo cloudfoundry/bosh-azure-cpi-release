@@ -2,7 +2,7 @@ require 'azure'
 
 module Bosh::AzureCloud
   class Network
-    attr_accessor :vnet_client, :name, :affinity_group
+    attr_accessor :vnet_client, :name
 
     ##
     # Creates a new network
@@ -22,7 +22,6 @@ module Bosh::AzureCloud
       @name = spec['vlan_name'] || raise("Missing required network property 'vlan_name'")
       @address_space = spec['address_space'] || ['10.0.0.0/8']
       @dns_servers = spec['dns'] || default_dns
-      @affinity_group = spec['affinity_group'] || raise("Missing required network property 'affinity_group'")
 
       # TODO: Find a better/cleaner way?
       dns_servers_sym = []

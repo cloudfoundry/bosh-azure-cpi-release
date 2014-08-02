@@ -31,6 +31,7 @@ module Bosh::AzureCloud
           when 'dynamic'
             next if (@network)
             @network = DynamicNetwork.new(@vnet_client, spec['cloud_properties'])
+            check_affinity_group(@network.affinity_group)
             networks << @network
 
           when 'vip'
@@ -45,7 +46,6 @@ module Bosh::AzureCloud
 
         # Create the network(s) if they dont exist
         networks.each do |network|
-          check_affinity_group(network.affinity_group)
           network.provision
         end
       end
