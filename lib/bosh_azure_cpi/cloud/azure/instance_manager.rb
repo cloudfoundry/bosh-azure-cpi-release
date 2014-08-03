@@ -11,6 +11,7 @@ module Bosh::AzureCloud
       @vnet_client = vnet_client
     end
 
+    # TODO: Need a better place to specify instance size than manifest azure properties section
     def create(uuid, stemcell, cloud_opts)
       endpoints = '25555:25555'
 
@@ -55,8 +56,21 @@ module Bosh::AzureCloud
       @vm_client.create_virtual_machine(params, opts)
     end
 
-    def find(name, uuid)
-      @vm_client.get_virtual_machine(name, "cloud-service-#{uuid}")
+    # TODO: Need to find vms with missing cloud service or with missing name
+
+    def find(vm_id)
+      vm_ext = vm_from_yaml(vm_id)
+      @vm_client.get_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
+    end
+
+    def delete(vm_id)
+      vm_ext = vm_from_yaml(vm_id)
+      @vm_client.delete_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
+    end
+
+    def reboot(vm_id)
+      vm_ext = vm_from_yaml(vm_id)
+      @vm_client.restart_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
     end
 
     def instance_id

@@ -18,7 +18,6 @@ module Bosh::AzureCloud
     def create(network_spec)
 
       #@logger = Bosh::Clouds::Config.logger
-
       # Need to reset between each call so that this class is stateless between jobs
       @network = nil
       @vip_network = nil
@@ -50,6 +49,46 @@ module Bosh::AzureCloud
         end
       end
     end
+
+    def parse(network_spec)
+      # Need to reset between each call so that this class is stateless between jobs
+      temp_network = nil
+      temp_vip_network = nil
+
+      networks = []
+      network_spec.each do |spec|
+        #raise Bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
+        network_type = spec['type'] || 'dynamic'
+        case network_type
+          when 'dynamic'
+            next if (temp_network)
+            temp_network = DynamicNetwork.new(@vnet_client, spec['cloud_properties'])
+            #check_affinity_group(temp_network.affinity_group)
+            networks << temp_network
+
+          when 'vip'
+            next if (temp_vip_network)
+            temp_vip_network = VipNetwork.new(@vnet_client, spec['cloud_properties'])
+            networks << temp_vip_network
+
+          else
+            raise Bosh::Registry::ConfigError "Invalid network type '#{network_type}' for Azure, " \
+                                              "can only handle 'dynamic' or 'vip' network types"
+        end
+
+        networks.sort
+      end
+    end
+
+    # def eql?(other_network_spec)
+    #   return false if (other_network_spec.size != 2) # There are only 2 supported network types
+    #   networks = parse(other_network_spec)
+    #   networks.each do |network|
+    #     other_network_spec.each do |other_network|
+    #
+    #     end
+    #   end
+    # end
 
     private
 

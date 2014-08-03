@@ -4,6 +4,8 @@ module Bosh::AzureCloud
   class VipNetwork < Network
     attr_accessor :tcp_endpoints
 
+    include Comparable
+
     def initialize(vnet_client, spec)
       super(vnet_client, spec)
 
@@ -14,6 +16,16 @@ module Bosh::AzureCloud
     def provision
       # Nothing to provision... Public ip is already auto-assigned by azure
       nil
+    end
+
+    def <=>(other)
+      case other.class.name.split('::').last
+        when 'DynamicNetwork'
+          return -1
+
+        when 'VipNetwork'
+          return 0
+      end
     end
 
     private

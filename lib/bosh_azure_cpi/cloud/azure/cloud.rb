@@ -4,10 +4,13 @@ require_relative 'stemcell_finder'
 require_relative 'instance_manager'
 require_relative 'affinity_group_manager'
 require_relative 'virtual_network_manager'
+require_relative 'helpers'
 
 module Bosh::AzureCloud
   class Cloud < Bosh::Cloud
     attr_accessor :options
+
+    include Helpers
 
     @vmm_endpoint_url = 'https://management.core.windows.net'
 
@@ -47,7 +50,7 @@ module Bosh::AzureCloud
     ##
     # Deletes a stemcell
     #
-    # @param [String] stemcell stemcell id that was once returned by {#create_stemcell}
+    # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
     # @return [void]
     def delete_stemcell(stemcell_id)
     end
@@ -89,12 +92,15 @@ module Bosh::AzureCloud
     # @return [String] opaque id later used by {#configure_networks}, {#attach_disk},
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
+
+      n = vnet_manager.parse networks
+
       raise if not(stemcell_finder.exist?(stemcell_id))
-
       vnet_manager.create(networks)
-
       instance = instance_manager.create(agent_id, stemcell_id, azure_properties.merge({'user' => 'bosh'}))
-      instance
+
+      # convert instance to a yaml string containing a hash of vm_name and cloud_service_name (both are needed for lookup)
+      vm_to_yaml(instance)
     end
 
     ##
@@ -103,23 +109,26 @@ module Bosh::AzureCloud
     # @param [String] vm_id vm id that was once returned by {#create_vm}
     # @return [void]
     def delete_vm(vm_id)
+      instance_manager.delete(vm_id)
     end
 
     ##
     # Checks if a VM exists
     #
-    # @param [String] vm vm id that was once returned by {#create_vm}
+    # @param [String] vm_id vm id that was once returned by {#create_vm}
     # @return [Boolean] True if the vm exists
     def has_vm?(vm_id)
+      !instance_manager.find(vm_id).nil?
     end
 
     ##
     # Reboots a VM
     #
-    # @param [String] vm vm id that was once returned by {#create_vm}
+    # @param [String] vm_id vm id that was once returned by {#create_vm}
     # @param [Optional, Hash] CPI specific options (e.g hard/soft reboot)
     # @return [void]
     def reboot_vm(vm_id)
+      instance_manager.reboot(vm_id)
     end
 
     ##
@@ -136,11 +145,15 @@ module Bosh::AzureCloud
     ##
     # Configures networking an existing VM.
     #
-    # @param [String] vm vm id that was once returned by {#create_vm}
+    # @param [String] vm_id vm id that was once returned by {#create_vm}
     # @param [Hash] networks list of networks and their settings needed for this VM,
     #               same as the networks argument in {#create_vm}
     # @return [void]
     def configure_networks(vm_id, networks)
+      # Azure requires that the vm be recreated for network update,
+      # so we need to notify the InstanceUpdater to recreate it
+      raise Bosh::Clouds::NotSupported unless (networks.eql?(instance_manager.find(vm_id)))
+
     end
 
     ##

@@ -4,6 +4,8 @@ module Bosh::AzureCloud
   class DynamicNetwork < Network
     attr_accessor :subnets, :affinity_group
 
+    include Comparable
+
     def initialize(vnet_client, spec)
       super(vnet_client, spec)
 
@@ -20,6 +22,15 @@ module Bosh::AzureCloud
       @subnets.first
     end
 
+    def <=>(other)
+      case other.class.name.split('::').last
+        when 'DynamicNetwork'
+          return 0
+
+        when 'VipNetwork'
+          return 1
+      end
+    end
 
     private
 
