@@ -12,8 +12,6 @@ module Bosh::AzureCloud
       @ag_manager = affinity_group_manager
     end
 
-    # TODO: VIP needs to be re-defined to represent the 'acl' stuff for external-facing vms
-    # TODO: Need to support both a single network and multiple networks provided
     # TODO: Need to validate 'cloud_properties' section of 'network_spec'
     def create(network_spec)
 
@@ -87,10 +85,6 @@ module Bosh::AzureCloud
         return false if (value.nil? || value == '')
       end
       return true
-    end
-
-    def find_similar_network(affinity_group, subnets)
-      # TODO: Look for a subnet that matches the nesessary subnets, but doesnt necessarily have the same name
     end
 
     def check_affinity_group(name)

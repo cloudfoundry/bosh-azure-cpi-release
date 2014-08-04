@@ -73,6 +73,8 @@ module Bosh::AzureCloud
     end
 
     # TODO: Need to fix for new yaml-based ID
+    # TODO: Since we cannot know the cloud service name beforehand,
+    #       check if we can get the external IP and filter further with that
     def instance_id
       addr = nil
       Socket.ip_address_list.each do |ip|
@@ -88,7 +90,8 @@ module Bosh::AzureCloud
       insts.first.vm_name
     end
 
-    def network_spec
+    def network_spec(vm_id)
+      vm = find(vm_id) || raise('Given vm id does not exist')
 
     end
 
@@ -100,6 +103,22 @@ module Bosh::AzureCloud
 
     def vip_network
       @vnet_client.vip_network
+    end
+
+    # TODO: Need to figure out how to recreate the 'vlan_name' part of the vip network
+    # TODO: Need to return a VipNetwork object
+    def extract_vip_network(vm)
+      tcp = []
+      vm.tcp_endpoints.each do |endpoint|
+        next if (endpoint[:name].eql?('SSH')) # SSH is the auto-assigned ssh one from azure and we can ignore it
+        tcp << "#{endpoint[:local_port]}:#{endpoint[:public_port]}"
+      end
+    end
+
+    # TODO: Need to return a DynamicNetwork object
+    def extract_dynamic_network(vm)
+      return nil if (vm.virtual_network_name.nil?)
+      # TODO: Need to look up and format/return the DynamicNetwork details with the vnet client
     end
   end
 end

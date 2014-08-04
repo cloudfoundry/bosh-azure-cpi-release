@@ -22,6 +22,7 @@ module Bosh::AzureCloud
       @subnets.first
     end
 
+    # TODO: Cannot get private IP from azure API.... need to determine if private IP/CIDR is necessary to determine eql?
     def eql?(other)
       return (affinity_group.eql?(other.affinity_group) &&
               address_space.sort.eql?(other.address_space.sort) &&
