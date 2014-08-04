@@ -4,6 +4,7 @@ module Bosh::AzureCloud
   class Network
     attr_accessor :vnet_client, :name
 
+    include Comparable
     ##
     # Creates a new network
     #
@@ -20,8 +21,6 @@ module Bosh::AzureCloud
 
       @spec = spec
       @name = spec['vlan_name'] || raise("Missing required network property 'vlan_name'")
-      @address_space = spec['address_space'] || ['10.0.0.0/8']
-      @dns_servers = spec['dns'] || default_dns
 
       # TODO: Find a better/cleaner way?
       dns_servers_sym = []
@@ -46,12 +45,8 @@ module Bosh::AzureCloud
               (subnets.sort == other.subnets.sort))
     end
 
-    private
 
-    def default_dns
-      [{:name => 'google_primary', :ip_address => '8.8.8.8'},
-       {:name => 'google_secondary', :ip_address => '8.8.4.4'}]
-    end
+    private
 
     # TODO: Need to extract this to helpers
     # Converts all keys of a [Hash] to symbols. Performs deep conversion.

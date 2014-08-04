@@ -2,15 +2,15 @@ require_relative 'network'
 
 module Bosh::AzureCloud
   class DynamicNetwork < Network
-    attr_accessor :subnets, :affinity_group
-
-    include Comparable
+    attr_accessor :subnets, :address_space, :dns_servers, :affinity_group
 
     def initialize(vnet_client, spec)
       super(vnet_client, spec)
 
       @subnets = parse_subnets
       @affinity_group = spec['affinity_group'] || raise("Missing required network property 'affinity_group'")
+      @address_space = spec['address_space'] || ['10.0.0.0/8']
+      @dns_servers = spec['dns'] || default_dns
     end
 
     def provision
@@ -22,15 +22,15 @@ module Bosh::AzureCloud
       @subnets.first
     end
 
-    def <=>(other)
-      case other.class.name.split('::').last
-        when 'DynamicNetwork'
-          return 0
-
-        when 'VipNetwork'
-          return 1
-      end
+    def eql?(other)
+      return (affinity_group.eql?(other.affinity_group) &&
+              address_space.sort.eql?(other.address_space.sort) &&
+              dns_servers.sort_by { |s| s[:ip_address] }.eql?(
+                  other.dns_servers.sort_by { |s| s[:ip_address] }) &&
+              subnets.sort_by { |s| [s[:ip_address, s[:cidr]]]}.eql?(
+                  other.subnets.sort_by { |s| [s[:ip_address, s[:cidr]]] }))
     end
+
 
     private
 
@@ -65,5 +65,9 @@ module Bosh::AzureCloud
       range =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d{1,2}$/
     end
 
+    def default_dns
+      [{:name => 'google_primary', :ip_address => '8.8.8.8'},
+       {:name => 'google_secondary', :ip_address => '8.8.4.4'}]
+    end
   end
 end

@@ -32,6 +32,7 @@ networks:
       tcp_endpoints:
         - 85:85
         - 4433:4433
+
   - name: default
     type: dynamic
     cloud_properties:

@@ -57,7 +57,6 @@ module Bosh::AzureCloud
     end
 
     # TODO: Need to find vms with missing cloud service or with missing name
-
     def find(vm_id)
       vm_ext = vm_from_yaml(vm_id)
       @vm_client.get_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
@@ -73,6 +72,7 @@ module Bosh::AzureCloud
       @vm_client.restart_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
     end
 
+    # TODO: Need to fix for new yaml-based ID
     def instance_id
       addr = nil
       Socket.ip_address_list.each do |ip|
@@ -86,6 +86,10 @@ module Bosh::AzureCloud
       raise if insts.length != 1
 
       insts.first.vm_name
+    end
+
+    def network_spec
+
     end
 
     private

@@ -75,20 +75,10 @@ module Bosh::AzureCloud
             raise Bosh::Registry::ConfigError "Invalid network type '#{network_type}' for Azure, " \
                                               "can only handle 'dynamic' or 'vip' network types"
         end
-
-        networks.sort
       end
+      networks.sort_by { |n| [ n.class.name.split('::').last, n.name ] }
     end
 
-    # def eql?(other_network_spec)
-    #   return false if (other_network_spec.size != 2) # There are only 2 supported network types
-    #   networks = parse(other_network_spec)
-    #   networks.each do |network|
-    #     other_network_spec.each do |other_network|
-    #
-    #     end
-    #   end
-    # end
 
     private
 

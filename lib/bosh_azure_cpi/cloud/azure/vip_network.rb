@@ -4,8 +4,6 @@ module Bosh::AzureCloud
   class VipNetwork < Network
     attr_accessor :tcp_endpoints
 
-    include Comparable
-
     def initialize(vnet_client, spec)
       super(vnet_client, spec)
 
@@ -18,15 +16,10 @@ module Bosh::AzureCloud
       nil
     end
 
-    def <=>(other)
-      case other.class.name.split('::').last
-        when 'DynamicNetwork'
-          return -1
-
-        when 'VipNetwork'
-          return 0
-      end
+    def eql?(other)
+      return (tcp_endpoints.sort.eql?(other.tcp_endpoints.sort))
     end
+
 
     private
 
