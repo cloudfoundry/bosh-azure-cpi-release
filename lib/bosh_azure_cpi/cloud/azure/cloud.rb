@@ -109,7 +109,6 @@ module Bosh::AzureCloud
     # @param [String] vm_id vm id that was once returned by {#create_vm}
     # @return [void]
     def delete_vm(vm_id)
-      instance_manager.delete(vm_id)
     end
 
     ##
@@ -140,6 +139,7 @@ module Bosh::AzureCloud
     # @param [Hash] metadata metadata key/value pairs
     # @return [void]
     def set_vm_metadata(vm, metadata)
+      instance_manager.network_spec(vm)
     end
 
     ##

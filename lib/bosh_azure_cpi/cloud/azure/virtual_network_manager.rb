@@ -27,13 +27,13 @@ module Bosh::AzureCloud
         case network_type
           when 'dynamic'
             next if (@network)
-            @network = DynamicNetwork.new(@vnet_client, spec['cloud_properties'])
+            @network = DynamicNetwork.new(@vnet_manager, spec['cloud_properties'])
             check_affinity_group(@network.affinity_group)
             networks << @network
 
           when 'vip'
             next if (@vip_network)
-            @vip_network = VipNetwork.new(@vnet_client, spec['cloud_properties'])
+            @vip_network = VipNetwork.new(@vnet_manager, spec['cloud_properties'])
             networks << @vip_network
 
           else
@@ -60,13 +60,13 @@ module Bosh::AzureCloud
         case network_type
           when 'dynamic'
             next if (temp_network)
-            temp_network = DynamicNetwork.new(@vnet_client, spec['cloud_properties'])
+            temp_network = DynamicNetwork.new(@vnet_manager, spec['cloud_properties'])
             #check_affinity_group(temp_network.affinity_group)
             networks << temp_network
 
           when 'vip'
             next if (temp_vip_network)
-            temp_vip_network = VipNetwork.new(@vnet_client, spec['cloud_properties'])
+            temp_vip_network = VipNetwork.new(@vnet_manager, spec['cloud_properties'])
             networks << temp_vip_network
 
           else
@@ -75,6 +75,10 @@ module Bosh::AzureCloud
         end
       end
       networks.sort_by { |n| [ n.class.name.split('::').last, n.name ] }
+    end
+
+    def list_virtual_networks
+      @vnet_client.list_virtual_networks
     end
 
 

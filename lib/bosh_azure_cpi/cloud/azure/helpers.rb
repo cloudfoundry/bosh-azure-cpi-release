@@ -9,7 +9,7 @@ module Bosh::AzureCloud
     end
 
     def vm_from_yaml(yaml)
-      symbolize_keys(YAML.parse(yaml))
+      symbolize_keys(YAML.load(yaml))
     end
 
     def symbolize_keys(hash)

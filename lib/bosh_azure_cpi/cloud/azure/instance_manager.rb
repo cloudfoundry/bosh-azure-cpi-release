@@ -2,13 +2,19 @@ require 'common/common'
 require 'time'
 require 'socket'
 
+require_relative 'dynamic_network'
+require_relative 'vip_network'
+require_relative 'helpers'
+
 module Bosh::AzureCloud
   class InstanceManager
 
-    def initialize(vm_client, img_client, vnet_client)
+    include Helpers
+
+    def initialize(vm_client, img_client, vnet_manager)
       @vm_client = vm_client
       @img_client = img_client
-      @vnet_client = vnet_client
+      @vnet_manager = vnet_manager
     end
 
     # TODO: Need a better place to specify instance size than manifest azure properties section
@@ -59,7 +65,7 @@ module Bosh::AzureCloud
     # TODO: Need to find vms with missing cloud service or with missing name
     def find(vm_id)
       vm_ext = vm_from_yaml(vm_id)
-      @vm_client.get_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
+      @vm_client.get_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
     end
 
     def delete(vm_id)
@@ -92,17 +98,17 @@ module Bosh::AzureCloud
 
     def network_spec(vm_id)
       vm = find(vm_id) || raise('Given vm id does not exist')
-
+      d_net = extract_dynamic_network vm
     end
 
     private
 
     def dynamic_network
-      @vnet_client.network
+      @vnet_manager.network
     end
 
     def vip_network
-      @vnet_client.vip_network
+      @vnet_manager.vip_network
     end
 
     # TODO: Need to figure out how to recreate the 'vlan_name' part of the vip network
@@ -115,10 +121,24 @@ module Bosh::AzureCloud
       end
     end
 
-    # TODO: Need to return a DynamicNetwork object
     def extract_dynamic_network(vm)
       return nil if (vm.virtual_network_name.nil?)
-      # TODO: Need to look up and format/return the DynamicNetwork details with the vnet client
+      vnet = @vnet_manager.list_virtual_networks.select do |network|
+        network.name.eql?(vm.virtual_network_name)
+      end.first
+      return nil if (vnet.nil?)
+      DynamicNetwork.new(@vnet_manager, {
+                                          'vlan_name' => vnet.name,
+                                          'affinity_group' => vnet.affinity_group,
+                                          'address_space' => vnet.address_space,
+                                          'dns' => vnet.dns_servers,
+                                          'subnets' => vnet.subnets.collect { |subnet|
+                                            {
+                                                'range' => subnet[:address_prefix],
+                                                'name' => subnet[:name]
+                                            }
+                                        }
+      })
     end
   end
 end
