@@ -78,9 +78,6 @@ module Bosh::AzureCloud
       @vm_client.restart_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
     end
 
-    # TODO: Need to fix for new yaml-based ID
-    # TODO: Since we cannot know the cloud service name beforehand,
-    #       check if we can get the external IP and filter further with that
     def instance_id
       addr = nil
       Socket.ip_address_list.each do |ip|
@@ -93,7 +90,7 @@ module Bosh::AzureCloud
       # instance with the same ip or no ip at all
       raise if insts.length != 1
 
-      insts.first.vm_name
+      vm_to_yaml(insts.first)
     end
 
     def network_spec(vm_id)

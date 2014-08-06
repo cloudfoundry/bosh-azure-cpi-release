@@ -8,7 +8,7 @@ module Bosh::AzureCloud
     attr_accessor :network, :vip_network
 
     def initialize(vnet_client, affinity_group_manager)
-      @vnet_client = vnet_client
+      @vnet_manager = vnet_client
       @ag_manager = affinity_group_manager
     end
 

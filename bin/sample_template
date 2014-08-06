@@ -37,7 +37,7 @@ networks:
     type: dynamic
     cloud_properties:
       vlan_name: priv
-      affinity_group: some_ag
+      affinity_group: some-ag
       address_space:
         - 10.0.0.0/8
       subnets:

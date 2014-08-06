@@ -45,6 +45,7 @@ module Bosh::AzureCloud
     #               specific to a CPI
     # @return [String] opaque id later used by {#create_vm} and {#delete_stemcell}
     def create_stemcell(image_path, cloud_properties)
+      # TODO: Get vhd from 'vhd' container in vm storage account and use blob client to snapshot it
     end
 
     ##
@@ -92,11 +93,9 @@ module Bosh::AzureCloud
     # @return [String] opaque id later used by {#configure_networks}, {#attach_disk},
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
-
-      n = vnet_manager.parse networks
-
       raise if not(stemcell_finder.exist?(stemcell_id))
-      vnet_manager.create(networks)
+      a = vnet_manager
+      a.create(networks)
       instance = instance_manager.create(agent_id, stemcell_id, azure_properties.merge({'user' => 'bosh'}))
 
       # convert instance to a yaml string containing a hash of vm_name and cloud_service_name (both are needed for lookup)
@@ -109,6 +108,7 @@ module Bosh::AzureCloud
     # @param [String] vm_id vm id that was once returned by {#create_vm}
     # @return [void]
     def delete_vm(vm_id)
+      instance_manager.delete(vm_id)
     end
 
     ##
@@ -162,10 +162,12 @@ module Bosh::AzureCloud
     # when it's attached later.
     #
     # @param [Integer] size disk size in MB
-    # @param [optional, String] vm_locality vm id if known of the VM that this disk will
+    # @param [optional, String] vm_id vm id if known of the VM that this disk will
     #                           be attached to
     # @return [String] opaque id later used by {#attach_disk}, {#detach_disk}, and {#delete_disk}
-    def create_disk(size, vm_locality = nil)
+    def create_disk(size, vm_id = nil)
+      # Azure doesn't support creating disks outside of creation of vms so just return existing disk name
+      instance_manager.find(vm_id).disk_name
     end
 
     ##
@@ -175,6 +177,7 @@ module Bosh::AzureCloud
     # @param [String] disk disk id that was once returned by {#create_disk}
     # @return [void]
     def delete_disk(disk_id)
+      vdisk_service.delete_virtual_machine_disk(disk_id)
     end
 
     # Attaches a disk
@@ -189,6 +192,7 @@ module Bosh::AzureCloud
     # @param [Hash] metadata metadata key/value pairs
     # @return [String] snapshot id
     def snapshot_disk(disk_id, metadata={})
+      # TODO: Get vhd from 'vhd' container in vm storage account and use blob client to snapshot it
     end
 
     # Delete a disk snapshot
@@ -298,5 +302,14 @@ module Bosh::AzureCloud
       @vnet_service ||= Azure::VirtualNetworkManagementService.new
     end
 
+    def vdisk_service
+      Azure.configure do |config|
+        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
+        config.subscription_id        = azure_properties['subscription_id']
+        config.management_endpoint    = @vmm_endpoint_url
+      end
+
+      @vdisk_service ||= Azure::VirtualMachineImageManagement::VirtualMachineDiskManagementService
+    end
   end
 end

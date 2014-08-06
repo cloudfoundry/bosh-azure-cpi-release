@@ -22,7 +22,7 @@ module Bosh::AzureCloud
     private
 
     def validate(vm)
-      return (!vm.nil? && !vm.vm_name.nil_or_empty? && !vm.cloud_service_name.nil_or_empty?)
+      return (!vm.nil? && !nil_or_empty?(vm.vm_name) && !nil_or_empty?(vm.cloud_service_name))
     end
 
     def nil_or_empty?(obj)
