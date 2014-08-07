@@ -47,19 +47,37 @@ module Bosh::AzureCloud
     end
 
     def post(path, body=nil)
-      http = Net::HTTP.new('management.core.windows.net', 443)
-      http.use_ssl = true
-      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      http.add_field('x-ms-version', '2014-02-01')
-
-
-      # TODO: Need to set body
       store = OpenSSL::X509::Store.new
       store.set_default_paths # Optional method that will auto-include the system CAs.
       store.add_cert(Azure.management_certificate)
-      http.cert_store = store
 
-      response = http.request(Net::HTTP::Post.new(path))
+      request = Net::HTTP::Post.new(path)
+
+      request.use_ssl = true
+      request.cert_store = store
+      request.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      request.add_field('x-ms-version', '2014-02-01')
+
+      request.content_type = 'text/xml'
+      request.body='put_xml_here'
+
+      Net::HTTP.start('management.core.windows.net', 443) {|http| http.request(request)}
+
+      # http = Net::HTTP.new('management.core.windows.net', 443)
+      # http.use_ssl = true
+      # http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      # http.add_field('x-ms-version', '2014-02-01')
+      #
+      # http.content_type = 'text/xml'
+      # http.body='put_xml_here'
+      #
+      #
+      # store = OpenSSL::X509::Store.new
+      # store.set_default_paths # Optional method that will auto-include the system CAs.
+      # store.add_cert(Azure.management_certificate)
+      # http.cert_store = store
+      #
+      # response = http.request(Net::HTTP::Post.new(path))
     end
   end
 end
