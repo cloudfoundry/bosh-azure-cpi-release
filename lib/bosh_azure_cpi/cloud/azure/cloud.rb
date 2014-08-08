@@ -4,6 +4,7 @@ require_relative 'stemcell_finder'
 require_relative 'instance_manager'
 require_relative 'affinity_group_manager'
 require_relative 'virtual_network_manager'
+require_relative 'stemcell_creator'
 require_relative 'helpers'
 
 module Bosh::AzureCloud
@@ -45,11 +46,27 @@ module Bosh::AzureCloud
     #               specific to a CPI
     # @return [String] opaque id later used by {#create_vm} and {#delete_stemcell}
     def create_stemcell(image_path, cloud_properties)
+      #vm = current_vm_id
+      vm = 'vm_name: nickisawesomeer
+cloud_service_name: nickisawesomeer'
+      # NOTE: May need to use the deployment name from the virtual machine object
+      deployment_name = cloud_service_service.get_cloud_service_properties(vm_from_yaml(vm)[:cloud_service_name]).deployment_name
+
+      #`yes y | sudo -n waagent -deprovision`
+      #raise if !$?.success?
+
+      instance_manager.shutdown(vm)
+
       # TODO: Get vhd from 'vhd' container in vm storage account and use blob client to snapshot it
+      stemcell_id = stemcell_creator.imageize_vhd(vm, deployment_name)
+
+      instance_manager.start(vm)
+
+      stemcell_id
     end
 
     ##
-    # Deletes a stemcell
+    # Delets a stemcell
     #
     # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
     # @return [void]
@@ -261,6 +278,17 @@ module Bosh::AzureCloud
       @vnet_manager ||= VirtualNetworkManager.new(vnet_service, affinity_group_manager)
     end
 
+    def cloud_service_service
+      Azure.configure do |config|
+        # Configure these 3 properties to use Storage
+        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
+        config.subscription_id        = azure_properties['subscription_id']
+        config.management_endpoint    = @vmm_endpoint_url
+      end
+
+      @cloud_service_service ||= Azure::CloudServiceManagement::CloudServiceManagementService.new
+    end
+
     def azure_vm_client
       Azure.configure do |config|
         # Configure these 3 properties to use Storage
@@ -310,6 +338,10 @@ module Bosh::AzureCloud
       end
 
       @vdisk_service ||= Azure::VirtualMachineImageManagement::VirtualMachineDiskManagementService
+    end
+
+    def stemcell_creator
+      @stemcell_creator ||= StemcellCreator.new
     end
   end
 end

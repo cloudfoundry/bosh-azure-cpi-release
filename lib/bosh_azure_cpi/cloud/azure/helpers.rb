@@ -32,16 +32,6 @@ module Bosh::AzureCloud
       return (obj.nil? || obj.empty?)
     end
 
-    # TODO: Move to stemcell creator
-    def imageize_vhd(service_name, deployment_name, vm_name)
-      # TODO: Need to set body
-      # See: http://msdn.microsoft.com/en-us/library/azure/dn499768.aspx
-      handle_response post("/#{Azure.subscription_id}/services/hostedservices/#{service_name}/" \
-                           "deployments/#{deployment_name}/roleinstances/#{vm_name}/Operations")
-    end
-
-    private
-
     def handle_response(response)
       nil
     end
@@ -49,35 +39,39 @@ module Bosh::AzureCloud
     def post(path, body=nil)
       store = OpenSSL::X509::Store.new
       store.set_default_paths # Optional method that will auto-include the system CAs.
-      store.add_cert(Azure.management_certificate)
+      store.add_cert(OpenSSL::X509::Certificate.new(File.open(Azure.config.management_certificate)))
 
       request = Net::HTTP::Post.new(path)
-
-      request.use_ssl = true
-      request.cert_store = store
-      request.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      #
+      # request.use_ssl = true
+      # request.cert_store = store
+      # request.verify_mode = OpenSSL::SSL::VERIFY_PEER
       request.add_field('x-ms-version', '2014-02-01')
-
+      #
       request.content_type = 'text/xml'
-      request.body='put_xml_here'
+      # request.body = body if not(body.nil?)
+      #
+      # response = nil
+      # Net::HTTP.start('management.core.windows.net', 443) { |http|
+      #   response = http.request(request)
+      # }
+      #
+      # response
 
-      Net::HTTP.start('management.core.windows.net', 443) {|http| http.request(request)}
+      http = Net::HTTP.new('management.core.windows.net', 443)
+      http.use_ssl = true
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      #http.add_field('x-ms-version', '2014-02-01')
 
-      # http = Net::HTTP.new('management.core.windows.net', 443)
-      # http.use_ssl = true
-      # http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      # http.add_field('x-ms-version', '2014-02-01')
-      #
-      # http.content_type = 'text/xml'
-      # http.body='put_xml_here'
-      #
-      #
-      # store = OpenSSL::X509::Store.new
-      # store.set_default_paths # Optional method that will auto-include the system CAs.
-      # store.add_cert(Azure.management_certificate)
-      # http.cert_store = store
-      #
-      # response = http.request(Net::HTTP::Post.new(path))
+      #http.content_type = 'text/xml'
+      #http.body = body if not(body.nil?)
+
+      http.cert_store = store
+
+      # response = http.request_post(path, { 'x-ms-version' => '2014-02-01', 'content-type' => 'text/xml' })
+      response = http.request(request, body)
+
+      response
     end
   end
 end

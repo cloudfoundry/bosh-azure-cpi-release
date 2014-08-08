@@ -70,12 +70,22 @@ module Bosh::AzureCloud
 
     def delete(vm_id)
       vm_ext = vm_from_yaml(vm_id)
-      @vm_client.delete_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
+      @vm_client.delete_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
     end
 
     def reboot(vm_id)
       vm_ext = vm_from_yaml(vm_id)
-      @vm_client.restart_virtual_machine(vm_ext[:name], vm_ext[:cloud_service_name])
+      @vm_client.restart_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
+    end
+
+    def start(vm_id)
+      vm_ext = vm_from_yaml(vm_id)
+      @vm_client.start_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
+    end
+
+    def shutdown(vm_id)
+      vm_ext = vm_from_yaml(vm_id)
+      @vm_client.shutdown_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
     end
 
     def instance_id
