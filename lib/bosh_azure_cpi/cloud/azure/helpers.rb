@@ -1,7 +1,7 @@
 require 'yaml'
 require 'azure'
 require 'net/https'
-require 'openssl'
+require 'uri'
 
 module Bosh::AzureCloud
   module Helpers
@@ -36,42 +36,22 @@ module Bosh::AzureCloud
       nil
     end
 
-    def post(path, body=nil)
-      store = OpenSSL::X509::Store.new
-      store.set_default_paths # Optional method that will auto-include the system CAs.
-      store.add_cert(OpenSSL::X509::Certificate.new(File.open(Azure.config.management_certificate)))
-
-      request = Net::HTTP::Post.new(path)
-      #
-      # request.use_ssl = true
-      # request.cert_store = store
-      # request.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      request.add_field('x-ms-version', '2014-02-01')
-      #
-      request.content_type = 'text/xml'
-      # request.body = body if not(body.nil?)
-      #
-      # response = nil
-      # Net::HTTP.start('management.core.windows.net', 443) { |http|
-      #   response = http.request(request)
-      # }
-      #
-      # response
-
-      http = Net::HTTP.new('management.core.windows.net', 443)
+    # TODO: Need to figure a way to upload cert to BOSH as it is needed locally on the BOSH instance
+    def post(uri, body=nil)
+      uri = URI.parse(uri)
+      pem = File.read(Azure.config.management_certificate)
+      http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
+      http.cert = OpenSSL::X509::Certificate.new(pem)
+      http.key = OpenSSL::PKey::RSA.new(pem)
       http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      #http.add_field('x-ms-version', '2014-02-01')
 
-      #http.content_type = 'text/xml'
-      #http.body = body if not(body.nil?)
+      request = Net::HTTP::Post.new(uri.request_uri)
+      request.body = body unless body.nil?
+      request['x-ms-version'] = '2014-06-01'
+      request['Content-Type'] = 'application/xml' unless body.nil?
 
-      http.cert_store = store
-
-      # response = http.request_post(path, { 'x-ms-version' => '2014-02-01', 'content-type' => 'text/xml' })
-      response = http.request(request, body)
-
-      response
+      http.request(request)
     end
   end
 end

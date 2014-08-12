@@ -6,6 +6,7 @@ azure:
   subscription_id:
   cert_file:
   ssh_key_file:
+  storage_account_name:
 
 release:
   name: wordpress

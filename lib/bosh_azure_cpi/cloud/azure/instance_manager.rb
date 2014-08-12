@@ -11,10 +11,11 @@ module Bosh::AzureCloud
 
     include Helpers
 
-    def initialize(vm_client, img_client, vnet_manager)
+    def initialize(vm_client, img_client, vnet_manager, storage_manager)
       @vm_client = vm_client
       @img_client = img_client
       @vnet_manager = vnet_manager
+      @storage_manager = storage_manager
     end
 
     # TODO: Need a better place to specify instance size than manifest azure properties section
@@ -32,9 +33,10 @@ module Bosh::AzureCloud
       opts = {
           # Storage account names must be between 3 and 24 characters in length and use numbers and lower-case letters only.
           # Error: ConflictError : The storage account named '' is already taken.
-          :storage_account_name => "storage#{uuid}",
+          :storage_account_name => @storage_manager.create,
           :cloud_service_name => "cloud-service-#{uuid}",
 
+          # TODO: Must figure a way to upload key to bosh
           #:private_key_file => cloud_opts['ssh_key_file'] || raise('ssh_key_path must be given to cloud_opts'),
           :certificate_file => cloud_opts['cert_file'] || raise('ssh_cert_path must be given to cloud_opts'),
           :vm_size => cloud_opts[:instance_size] || 'Small',
@@ -89,18 +91,11 @@ module Bosh::AzureCloud
     end
 
     def instance_id
-      addr = nil
-      Socket.ip_address_list.each do |ip|
-        addr = ip.ip_address if (ip.ipv4_private?)
-      end
+      hostname = `hostname -f`
+      vm_id = { :vm_name => hostname.split('.')[0], :cloud_service_name => hostname.split('.')[1] }
+      inst = find vm_id
 
-      insts = @img_client.list_virtual_machines.select { |vm| vm.ipaddress == addr }
-
-      # raise an error if something funny happened and we have more than one
-      # instance with the same ip or no ip at all
-      raise if insts.length != 1
-
-      vm_to_yaml(insts.first)
+      vm_to_yaml(inst)
     end
 
     def network_spec(vm_id)

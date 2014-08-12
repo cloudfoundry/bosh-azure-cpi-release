@@ -5,6 +5,7 @@ require_relative 'instance_manager'
 require_relative 'affinity_group_manager'
 require_relative 'virtual_network_manager'
 require_relative 'stemcell_creator'
+require_relative 'storage_account_manager'
 require_relative 'helpers'
 
 module Bosh::AzureCloud
@@ -26,6 +27,8 @@ module Bosh::AzureCloud
       # Logger is available as a public method, but Bosh::Clouds::Config is apparently nil. Need to investigate
       #@logger = Bosh::Clouds::Config.logger
       @metadata_lock = Mutex.new
+
+      init_azure
     end
 
     ##
@@ -46,14 +49,12 @@ module Bosh::AzureCloud
     #               specific to a CPI
     # @return [String] opaque id later used by {#create_vm} and {#delete_stemcell}
     def create_stemcell(image_path, cloud_properties)
-      #vm = current_vm_id
-      vm = 'vm_name: nickisawesomeer
-cloud_service_name: nickisawesomeer'
+      vm = current_vm_id
       # NOTE: May need to use the deployment name from the virtual machine object
       deployment_name = cloud_service_service.get_cloud_service_properties(vm_from_yaml(vm)[:cloud_service_name]).deployment_name
 
-      #`yes y | sudo -n waagent -deprovision`
-      #raise if !$?.success?
+      `yes y | sudo -n waagent -deprovision`
+      raise if !$?.success?
 
       instance_manager.shutdown(vm)
 
@@ -183,8 +184,7 @@ cloud_service_name: nickisawesomeer'
     #                           be attached to
     # @return [String] opaque id later used by {#attach_disk}, {#detach_disk}, and {#delete_disk}
     def create_disk(size, vm_id = nil)
-      # Azure doesn't support creating disks outside of creation of vms so just return existing disk name
-      instance_manager.find(vm_id).disk_name
+
     end
 
     ##
@@ -258,6 +258,15 @@ cloud_service_name: nickisawesomeer'
       raise ArgumentError, "missing configuration parameters > #{missing_keys.join(', ')}" unless missing_keys.empty?
     end
 
+    # TODO: Need to figure a way to upload cert to BOSH as it is needed locally on the BOSH instance
+    def init_azure
+      Azure.configure do |config|
+        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
+        config.subscription_id        = azure_properties['subscription_id']
+        config.management_endpoint    = @vmm_endpoint_url
+      end
+    end
+
     def azure_properties
       @azure_properties ||= options.fetch('azure')
     end
@@ -267,7 +276,7 @@ cloud_service_name: nickisawesomeer'
     end
 
     def instance_manager
-      @instance_manager ||= InstanceManager.new(azure_vm_client, image_service, vnet_manager)
+      @instance_manager ||= InstanceManager.new(azure_vm_client, image_service, vnet_manager, storage_manager)
     end
 
     def affinity_group_manager
@@ -278,70 +287,40 @@ cloud_service_name: nickisawesomeer'
       @vnet_manager ||= VirtualNetworkManager.new(vnet_service, affinity_group_manager)
     end
 
-    def cloud_service_service
-      Azure.configure do |config|
-        # Configure these 3 properties to use Storage
-        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
-        config.subscription_id        = azure_properties['subscription_id']
-        config.management_endpoint    = @vmm_endpoint_url
-      end
+    def stemcell_creator
+      @stemcell_creator ||= StemcellCreator.new
+    end
 
+    def storage_manager
+      @storage_manager ||= StorageAccountManager.new(storage_service, options['azure']['storage_account_name'] || 'boshdefaultstorage')
+    end
+
+    def cloud_service_service
       @cloud_service_service ||= Azure::CloudServiceManagement::CloudServiceManagementService.new
     end
 
     def azure_vm_client
-      Azure.configure do |config|
-        # Configure these 3 properties to use Storage
-        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
-        config.subscription_id        = azure_properties['subscription_id']
-        config.management_endpoint    = @vmm_endpoint_url
-      end
-
       @azure_vm_client ||= Azure::VirtualMachineManagementService.new
     end
 
     def base_service
-      Azure.configure do |config|
-        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
-        config.subscription_id        = azure_properties['subscription_id']
-        config.management_endpoint    = @vmm_endpoint_url
-      end
-
       @base_service ||= Azure::BaseManagementService.new
     end
 
     def image_service
-      Azure.configure do |config|
-        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
-        config.subscription_id        = azure_properties['subscription_id']
-        config.management_endpoint    = @vmm_endpoint_url
-      end
-
       @image_service ||= Azure::VirtualMachineImageManagementService.new
     end
 
     def vnet_service
-      Azure.configure do |config|
-        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
-        config.subscription_id        = azure_properties['subscription_id']
-        config.management_endpoint    = @vmm_endpoint_url
-      end
-
       @vnet_service ||= Azure::VirtualNetworkManagementService.new
     end
 
     def vdisk_service
-      Azure.configure do |config|
-        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
-        config.subscription_id        = azure_properties['subscription_id']
-        config.management_endpoint    = @vmm_endpoint_url
-      end
-
-      @vdisk_service ||= Azure::VirtualMachineImageManagement::VirtualMachineDiskManagementService
+      @vdisk_service ||= Azure::VirtualMachineImageManagement::VirtualMachineDiskManagementService.new
     end
 
-    def stemcell_creator
-      @stemcell_creator ||= StemcellCreator.new
+    def storage_service
+      @storage_service ||= Azure::StorageManagement::StorageManagementService.new
     end
   end
 end
