@@ -6,6 +6,7 @@ require_relative 'affinity_group_manager'
 require_relative 'virtual_network_manager'
 require_relative 'stemcell_creator'
 require_relative 'storage_account_manager'
+require_relative 'blob_manager'
 require_relative 'helpers'
 
 module Bosh::AzureCloud
@@ -15,6 +16,7 @@ module Bosh::AzureCloud
     include Helpers
 
     @vmm_endpoint_url = 'https://management.core.windows.net'
+    @seed_api_cert_path = File.absolute_path("#{ENV['HOME']}/api-cert.pem")
 
     ##
     # Cloud initialization
@@ -29,6 +31,8 @@ module Bosh::AzureCloud
       @metadata_lock = Mutex.new
 
       init_azure
+
+      prepare_azure_cert
     end
 
     ##
@@ -58,9 +62,9 @@ module Bosh::AzureCloud
 
       instance_manager.shutdown(vm)
 
-      # TODO: Get vhd from 'vhd' container in vm storage account and use blob client to snapshot it
       stemcell_id = stemcell_creator.imageize_vhd(vm, deployment_name)
 
+      # TODO: Figure a way to 'reprovision' with waagent so we can restart the instance
       instance_manager.start(vm)
 
       stemcell_id
@@ -234,6 +238,22 @@ module Bosh::AzureCloud
 
     private
 
+    #TODO: Need to refresh cert contents each time in case cert ever changes...
+    # Makes sure the Azure cert specified in the template is available as a well-known blob
+    def prepare_azure_cert
+      container_name = 'well-known'
+      blob_name = 'api-cert'
+
+      blob_service.create_container(container_name) \
+        unless blob_manager.container_exist?(container_name)
+
+      blob_manager.put_file(container_name, blob_name,
+                            Azure.config.management_certificate) \
+        unless blob_manager.blob_exist?(container_name, blob_name)
+
+      blob_manager.get_file(container_name, blob_name, @seed_api_cert_path)
+    end
+
     ##
     # Checks if options passed to CPI are valid and can actually
     # be used to create all required data structures etc.
@@ -258,12 +278,15 @@ module Bosh::AzureCloud
       raise ArgumentError, "missing configuration parameters > #{missing_keys.join(', ')}" unless missing_keys.empty?
     end
 
-    # TODO: Need to figure a way to upload cert to BOSH as it is needed locally on the BOSH instance
     def init_azure
       Azure.configure do |config|
-        config.management_certificate = File.absolute_path(azure_properties['cert_file'])
+        config.management_certificate = File.absolute_path(azure_properties['cert_file']) || @seed_api_cert_path
+
         config.subscription_id        = azure_properties['subscription_id']
         config.management_endpoint    = @vmm_endpoint_url
+
+        config.storage_account_name = azure_properties['storage_account_name']
+        config.storage_access_key = azure_properties['storage_account_access_key']
       end
     end
 
@@ -291,8 +314,16 @@ module Bosh::AzureCloud
       @stemcell_creator ||= StemcellCreator.new
     end
 
+    # TODO: Need to make default more 'random' with the abaility to determine it after the fact
+    # TODO: as the storage accounts are globally unique accross ALL azure accounts in the world
     def storage_manager
-      @storage_manager ||= StorageAccountManager.new(storage_service, options['azure']['storage_account_name'] || 'boshdefaultstorage')
+      @storage_manager ||= StorageAccountManager.new(storage_service,
+                                                     options['azure']['storage_account_name'] ||
+                                                        'boshdefaultstorage')
+    end
+
+    def blob_manager
+      @blob_manager ||= BlobManager.new(blob_service)
     end
 
     def cloud_service_service
@@ -321,6 +352,10 @@ module Bosh::AzureCloud
 
     def storage_service
       @storage_service ||= Azure::StorageManagement::StorageManagementService.new
+    end
+
+    def blob_service
+      @blob_service ||= Azure::BlobService.new
     end
   end
 end

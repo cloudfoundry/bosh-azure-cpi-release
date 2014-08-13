@@ -6,10 +6,8 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    # def initialize(cloud_service_client)
-    #   @cloud_service_client = cloud_service_client
-    # end
 
+    # TODO: Need to set more predictable name in request as Azure returns an empty body... not sure why...
     def imageize_vhd(vm_id, deployment_name)
       vm = vm_from_yaml(vm_id)
       # TODO: Need to set body
