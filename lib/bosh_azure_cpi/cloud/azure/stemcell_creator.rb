@@ -1,10 +1,15 @@
 require 'azure'
+require 'date'
 require_relative 'helpers'
 
 module Bosh::AzureCloud
   class StemcellCreator
     include Bosh::Exec
     include Helpers
+
+    def initialize(blob_manager)
+      @blob_manager = blob_manager
+    end
 
 
     # TODO: Need to set more predictable name in request as Azure returns an empty body... not sure why...
@@ -19,9 +24,9 @@ module Bosh::AzureCloud
                            "xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">" \
                            '<OperationType>CaptureRoleAsVMImageOperation</OperationType>' \
                            '<OSState>Specialized</OSState>' \
-                           "<VMImageName>BOSH-Stemcell-#{(0..16).to_a.map{rand(16).to_s(16)}.join}</VMImageName>" \
+                           "<VMImageName>BOSH-Stemcell-#{vm[:cloud_service_name]}-#{(0..16).to_a.map{|a| rand(16).to_s(16)}.join}</VMImageName>" \
                            '<VMImageLabel>BOSH-Stemcell</VMImageLabel>' \
-                           "<Description>Auto created by BOSH on #{Time.now}</Description>" \
+                           "<Description>Auto created by BOSH on #{DateTime.now}</Description>" \
                            '</CaptureRoleAsVMImageOperation>')
     end
   end

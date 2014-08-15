@@ -23,3 +23,5 @@ mkmf.log
 
 .idea/
 *.iml
+
+foo.rb

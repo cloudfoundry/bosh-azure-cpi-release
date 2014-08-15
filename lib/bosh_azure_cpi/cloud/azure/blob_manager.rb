@@ -12,11 +12,15 @@ module Bosh::AzureCloud
     end
 
     def blob_exist?(container_name, blob_name)
-      @blob_service_client.list_blobs(container_name).each do |blob|
+      list_blobs(container_name).each do |blob|
         return true if (blob.name.eql?(blob_name))
       end
 
       return false
+    end
+
+    def list_blobs(container_name)
+      @blob_service_client.list_blobs(container_name)
     end
 
     def get_file(container_name, blob_name, file_path)

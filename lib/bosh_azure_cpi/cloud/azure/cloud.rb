@@ -15,9 +15,6 @@ module Bosh::AzureCloud
 
     include Helpers
 
-    @vmm_endpoint_url = 'https://management.core.windows.net'
-    @seed_api_cert_path = File.absolute_path("#{ENV['HOME']}/api-cert.pem")
-
     ##
     # Cloud initialization
     #
@@ -25,6 +22,9 @@ module Bosh::AzureCloud
     def initialize(options)
       @options = options.dup.freeze
       validate_options
+
+      @vmm_endpoint_url = 'https://management.core.windows.net'
+      @seed_api_cert_path = File.absolute_path("#{ENV['HOME']}/api-cert.pem")
 
       # Logger is available as a public method, but Bosh::Clouds::Config is apparently nil. Need to investigate
       #@logger = Bosh::Clouds::Config.logger
@@ -71,7 +71,7 @@ module Bosh::AzureCloud
     end
 
     ##
-    # Delets a stemcell
+    # Deletes a stemcell
     #
     # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
     # @return [void]
@@ -116,8 +116,7 @@ module Bosh::AzureCloud
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       raise if not(stemcell_finder.exist?(stemcell_id))
-      a = vnet_manager
-      a.create(networks)
+      vnet_manager.create(networks)
       instance = instance_manager.create(agent_id, stemcell_id, azure_properties.merge({'user' => 'bosh'}))
 
       # convert instance to a yaml string containing a hash of vm_name and cloud_service_name (both are needed for lookup)
@@ -188,22 +187,21 @@ module Bosh::AzureCloud
     #                           be attached to
     # @return [String] opaque id later used by {#attach_disk}, {#detach_disk}, and {#delete_disk}
     def create_disk(size, vm_id = nil)
-
     end
 
     ##
     # Deletes a disk
     # Will raise an exception if the disk is attached to a VM
     #
-    # @param [String] disk disk id that was once returned by {#create_disk}
+    # @param [String] disk_id disk id that was once returned by {#create_disk}
     # @return [void]
     def delete_disk(disk_id)
       vdisk_service.delete_virtual_machine_disk(disk_id)
     end
 
     # Attaches a disk
-    # @param [String] vm vm id that was once returned by {#create_vm}
-    # @param [String] disk disk id that was once returned by {#create_disk}
+    # @param [String] vm_id vm id that was once returned by {#create_vm}
+    # @param [String] disk_id disk id that was once returned by {#create_disk}
     # @return [void]
     def attach_disk(vm_id, disk_id)
     end
@@ -223,8 +221,8 @@ module Bosh::AzureCloud
     end
 
     # Detaches a disk
-    # @param [String] vm vm id that was once returned by {#create_vm}
-    # @param [String] disk disk id that was once returned by {#create_disk}
+    # @param [String] vm_id vm id that was once returned by {#create_vm}
+    # @param [String] disk_id disk id that was once returned by {#create_disk}
     # @return [void]
     def detach_disk(vm_id, disk_id)
     end
@@ -235,6 +233,7 @@ module Bosh::AzureCloud
     # other disk-related methods on the CPI
     def get_disks(vm_id)
     end
+
 
     private
 
@@ -311,7 +310,7 @@ module Bosh::AzureCloud
     end
 
     def stemcell_creator
-      @stemcell_creator ||= StemcellCreator.new
+      @stemcell_creator ||= StemcellCreator.new(blob_manager)
     end
 
     # TODO: Need to make default more 'random' with the abaility to determine it after the fact

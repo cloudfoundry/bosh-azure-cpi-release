@@ -3,11 +3,12 @@ name: wordpress
 director_uuid: 718f5344-c8e4-4266-ab10-3a75e1638e25 # CHANGE: Director UUID
 
 azure:
-  subscription_id:
-  cert_file:
-  ssh_key_file:
-  storage_account_name:
-  storage_account_access_key:
+  subscription_id: e6621b72-cdf5-4557-a471-1102ddd62c06
+  #subscription_id: b1e71576-15dc-4e97-a9bd-78139113c3a2
+  cert_file: /Users/nicholasterry/mycert.pem
+  ssh_key_file: /Users/nicholasterry/.ssh/azure_rsa
+  storage_account_name: boshtest
+  storage_account_access_key: GhTn6vqC5SDm8f3wi+kaV0v9Zl1NXM+RcMEAVZTpfU8p4UJ4al9RikqC4mZdBoxRRnNUEEJxlPaN6TPgoU3q1w==
 
 release:
   name: wordpress
