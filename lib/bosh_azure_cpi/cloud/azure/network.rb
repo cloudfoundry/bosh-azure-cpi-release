@@ -17,14 +17,14 @@ module Bosh::AzureCloud
       end
 
       @vnet_manager = vnet_client
-      #@logger = Bosh::Clouds::Config.logger
+      #@logger = bosh::Clouds::Config.logger
 
       @spec = spec
       @name = spec['vlan_name'] || raise("Missing required network property 'vlan_name'")
     end
 
     def provision
-      raise "'provision' is not implemented for 'Bosh::AzureCloud::Network'"
+      raise "'provision' is not implemented for 'bosh::AzureCloud::Network'"
     end
 
     # TODO: This was defined when Network was a subclass of Azure Network object. Need to re-define (or probably define in children)

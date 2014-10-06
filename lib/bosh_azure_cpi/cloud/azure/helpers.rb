@@ -36,22 +36,37 @@ module Bosh::AzureCloud
       nil
     end
 
+    def get(uri)
+      url = URI.parse(uri)
+      request = Net::HTTP::Get.new(url.request_uri)
+      request['x-ms-version'] = '2014-06-01'
+      request['Content-Length'] = 0
+
+      http(uri).request(request)
+    end
+
     # TODO: Need to figure a way to upload cert to BOSH as it is needed locally on the BOSH instance
     def post(uri, body=nil)
-      uri = URI.parse(uri)
-      pem = File.read(Azure.config.management_certificate)
-      http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
-      http.cert = OpenSSL::X509::Certificate.new(pem)
-      http.key = OpenSSL::PKey::RSA.new(pem)
-      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-
-      request = Net::HTTP::Post.new(uri.request_uri)
+      url = URI.parse(uri)
+      request = Net::HTTP::Post.new(url.request_uri)
       request.body = body unless body.nil?
       request['x-ms-version'] = '2014-06-01'
       request['Content-Type'] = 'application/xml' unless body.nil?
 
-      http.request(request)
+      http(uri).request(request)
+    end
+
+    private
+
+    def http(uri)
+      url = URI.parse(uri)
+      pem = File.read(Azure.config.management_certificate)
+      http = Net::HTTP.new(url.host, url.port)
+      http.use_ssl = true
+      http.cert = OpenSSL::X509::Certificate.new(pem)
+      http.key = OpenSSL::PKey::RSA.new(pem)
+      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+      http
     end
   end
 end

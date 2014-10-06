@@ -24,7 +24,7 @@ require 'bosh_azure_cpi/cloud/azure/network'
 require 'bosh_azure_cpi/cloud/azure/dynamic_network'
 require 'bosh_azure_cpi/cloud/azure/stemcell_creator'
 require 'bosh_azure_cpi/cloud/azure/virtual_network_manager'
-require 'bosh_azure_cpi/cloud/azure/instance_manager'
+require 'bosh_azure_cpi/cloud/azure/vm_manager'
 
 module Bosh
   module Clouds

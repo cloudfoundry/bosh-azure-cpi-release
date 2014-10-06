@@ -7,12 +7,12 @@ require_relative 'vip_network'
 require_relative 'helpers'
 
 module Bosh::AzureCloud
-  class InstanceManager
+  class VMManager
 
     include Helpers
 
     def initialize(vm_client, img_client, vnet_manager, storage_manager)
-      @vm_client = vm_client
+      @vm_manager = vm_client
       @img_client = img_client
       @vnet_manager = vnet_manager
       @storage_manager = storage_manager
@@ -20,11 +20,13 @@ module Bosh::AzureCloud
 
     # TODO: Need a better place to specify instance size than manifest azure properties section
     def create(uuid, stemcell, cloud_opts)
+      # Include 25555 by default as it is the BOSH port
       endpoints = '25555:25555'
 
       params = {
           :vm_name => "vm-#{uuid}",
           :vm_user => cloud_opts['user'],
+          # TODO: Password is temporary until I can upload private key file
           :password => 'P4$$w0rd!',
           :image => stemcell,
           :location => 'East US'
@@ -33,6 +35,7 @@ module Bosh::AzureCloud
       opts = {
           # Storage account names must be between 3 and 24 characters in length and use numbers and lower-case letters only.
           # Error: ConflictError : The storage account named '' is already taken.
+          # We probably should create one storage account per Azure account for all BOSH stuff...
           :storage_account_name => @storage_manager.create,
           :cloud_service_name => "cloud-service-#{uuid}",
 
@@ -61,33 +64,34 @@ module Bosh::AzureCloud
 
       opts[:tcp_endpoints] = endpoints
 
-      @vm_client.create_virtual_machine(params, opts)
+      # TODO: For some reason, this method sometimes returns the following string 'ConflictError : The specified DNS name is already taken.' if the given cloud service already exists...
+      @vm_manager.create_virtual_machine(params, opts)
     end
 
     # TODO: Need to find vms with missing cloud service or with missing name
     def find(vm_id)
       vm_ext = vm_from_yaml(vm_id)
-      @vm_client.get_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
+      @vm_manager.get_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
     end
 
     def delete(vm_id)
       vm_ext = vm_from_yaml(vm_id)
-      @vm_client.delete_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
+      @vm_manager.delete_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
     end
 
     def reboot(vm_id)
       vm_ext = vm_from_yaml(vm_id)
-      @vm_client.restart_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
+      @vm_manager.restart_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
     end
 
     def start(vm_id)
       vm_ext = vm_from_yaml(vm_id)
-      @vm_client.start_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
+      @vm_manager.start_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
     end
 
     def shutdown(vm_id)
       vm_ext = vm_from_yaml(vm_id)
-      @vm_client.shutdown_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
+      @vm_manager.shutdown_virtual_machine(vm_ext[:vm_name], vm_ext[:cloud_service_name])
     end
 
     def instance_id
@@ -141,6 +145,20 @@ module Bosh::AzureCloud
                                             }
                                         }
       })
+    end
+
+    def verify_stemcell(stemcell_id)
+      is_in_canonical = @img_client.list_virtual_machine_images.any? do |image|
+        image.name == stemcell_id
+      end
+
+    end
+
+    def request_private_images
+      uri = 'https://management.core.windows.net/e6621b72-cdf5-4557-a471-1102ddd62c06/services/vmimages'
+      response = get(uri)
+      xml = XmlSimple.xml_in(response.body)
+      xml
     end
   end
 end

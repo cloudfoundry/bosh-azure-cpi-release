@@ -15,14 +15,14 @@ module Bosh::AzureCloud
     # TODO: Need to validate 'cloud_properties' section of 'network_spec'
     def create(network_spec)
 
-      #@logger = Bosh::Clouds::Config.logger
+      #@logger = bosh::Clouds::Config.logger
       # Need to reset between each call so that this class is stateless between jobs
       @network = nil
       @vip_network = nil
 
       networks = []
       network_spec.each do |spec|
-        #raise Bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
+        #raise bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
         network_type = spec['type'] || 'dynamic'
         case network_type
           when 'dynamic'
@@ -55,7 +55,7 @@ module Bosh::AzureCloud
 
       networks = []
       network_spec.each do |spec|
-        #raise Bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
+        #raise bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
         network_type = spec['type'] || 'dynamic'
         case network_type
           when 'dynamic'

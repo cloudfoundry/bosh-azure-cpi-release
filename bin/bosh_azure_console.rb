@@ -48,7 +48,7 @@ end
 
 cloud_config = OpenStruct.new(:logger => Logger.new(STDOUT))
 
-#Bosh::Clouds::Config.configure(cloud_config)
+#bosh::Clouds::Config.configure(cloud_config)
 
 include ConsoleHelpers
 

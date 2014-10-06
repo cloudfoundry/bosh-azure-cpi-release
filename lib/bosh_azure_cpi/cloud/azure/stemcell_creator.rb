@@ -23,7 +23,7 @@ module Bosh::AzureCloud
                            "<CaptureRoleAsVMImageOperation xmlns=\"http://schemas.microsoft.com/windowsazure\" " \
                            "xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">" \
                            '<OperationType>CaptureRoleAsVMImageOperation</OperationType>' \
-                           '<OSState>Specialized</OSState>' \
+                           '<OSState>Generalized</OSState>' \
                            "<VMImageName>BOSH-Stemcell-#{vm[:cloud_service_name]}-#{(0..16).to_a.map{|a| rand(16).to_s(16)}.join}</VMImageName>" \
                            '<VMImageLabel>BOSH-Stemcell</VMImageLabel>' \
                            "<Description>Auto created by BOSH on #{DateTime.now}</Description>" \

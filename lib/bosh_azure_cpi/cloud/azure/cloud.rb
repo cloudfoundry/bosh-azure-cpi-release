@@ -1,7 +1,8 @@
 require 'azure'
+require 'xmlsimple'
 
 require_relative 'stemcell_finder'
-require_relative 'instance_manager'
+require_relative 'vm_manager'
 require_relative 'affinity_group_manager'
 require_relative 'virtual_network_manager'
 require_relative 'stemcell_creator'
@@ -26,13 +27,15 @@ module Bosh::AzureCloud
       @vmm_endpoint_url = 'https://management.core.windows.net'
       @seed_api_cert_path = File.absolute_path("#{ENV['HOME']}/api-cert.pem")
 
-      # Logger is available as a public method, but Bosh::Clouds::Config is apparently nil. Need to investigate
-      #@logger = Bosh::Clouds::Config.logger
+      # Logger is available as a public method, but bosh::Clouds::Config is apparently nil. Need to investigate
+      #@logger = bosh::Clouds::Config.logger
       @metadata_lock = Mutex.new
 
       init_azure
 
-      prepare_azure_cert
+      # TODO: This is executed before storage manager can check for existence of the named storage account in manifest
+      # TODO: Currently getting an Azure::Core::Http::HTTPError with a 403 for some reason... Need to figure out why
+      #prepare_azure_cert
     end
 
     ##
@@ -76,6 +79,8 @@ module Bosh::AzureCloud
     # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
     # @return [void]
     def delete_stemcell(stemcell_id)
+      vm = instance_manager.find("---\n:vm_name: vm-test2\n:cloud_service_name: cloud-service-test2\n")
+      puts ""
     end
 
     ##
@@ -298,7 +303,7 @@ module Bosh::AzureCloud
     end
 
     def instance_manager
-      @instance_manager ||= InstanceManager.new(azure_vm_client, image_service, vnet_manager, storage_manager)
+      @instance_manager ||= VMManager.new(azure_vm_client, image_service, vnet_manager, storage_manager)
     end
 
     def affinity_group_manager
