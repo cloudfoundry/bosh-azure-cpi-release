@@ -18,10 +18,9 @@ module Bosh::AzureCloud
             break if (status == desired_status)
           end
         }
-      rescue Timeout::Error => ex
-
+      rescue Timeout::Error
+        raise StandardError("Timed out while waiting for vm #{vm_from_yaml(vm_id)[:vm_name]} to reach state '#{desired_status}'")
       end
-
     end
   end
 end

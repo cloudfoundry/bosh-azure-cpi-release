@@ -25,11 +25,11 @@ module Bosh::AzureCloud
     private
 
     def validate(vm)
-      return (!vm.nil? && !nil_or_empty?(vm.vm_name) && !nil_or_empty?(vm.cloud_service_name))
+      (!vm.nil? && !nil_or_empty?(vm.vm_name) && !nil_or_empty?(vm.cloud_service_name))
     end
 
     def nil_or_empty?(obj)
-      return (obj.nil? || obj.empty?)
+      (obj.nil? || obj.empty?)
     end
 
     def handle_response(response)
@@ -53,13 +53,23 @@ module Bosh::AzureCloud
       request['x-ms-version'] = '2014-06-01'
       request['Content-Type'] = 'application/xml' unless body.nil?
 
-      http(uri).request(request)
+      http(url).request(request)
     end
+
+    def delete(uri, body=nil)
+      url = URI.parse(uri)
+      request = Net::HTTP::Delete.new(url.request_uri)
+      request.body = body unless body.nil?
+      request['x-ms-version'] = '2014-06-01'
+      request['Content-Type'] = 'application/xml' unless body.nil?
+
+      http(url).request(request)
+    end
+
 
     private
 
-    def http(uri)
-      url = URI.parse(uri)
+    def http(url)
       pem = File.read(Azure.config.management_certificate)
       http = Net::HTTP.new(url.host, url.port)
       http.use_ssl = true

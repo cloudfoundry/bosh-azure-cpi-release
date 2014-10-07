@@ -8,7 +8,13 @@ module Bosh::AzureCloud
 
     def put_file(container_name, blob_name, file_path)
       content = File.open(file_path, 'rb') { |file| file.read }
-      blob_service.create_block_blob(container_name, blob_name, content)
+      @blob_service_client.create_block_blob(container_name, blob_name, content)
+    end
+
+    def delete_file(container_name, blob_name)
+      @blob_service_client.delete_blob(container_name, blob_name, {
+        :delete_snapshots => :include
+      })
     end
 
     def blob_exist?(container_name, blob_name)

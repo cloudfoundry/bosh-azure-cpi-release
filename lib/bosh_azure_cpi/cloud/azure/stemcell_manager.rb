@@ -3,7 +3,7 @@ require 'date'
 require_relative 'helpers'
 
 module Bosh::AzureCloud
-  class StemcellCreator
+  class StemcellManager
     include Bosh::Exec
     include Helpers
 
@@ -28,6 +28,12 @@ module Bosh::AzureCloud
                            '<VMImageLabel>BOSH-Stemcell</VMImageLabel>' \
                            "<Description>Auto created by BOSH on #{DateTime.now}</Description>" \
                            '</CaptureRoleAsVMImageOperation>')
+    end
+
+
+    def delete_image(image_name)
+      handle_response delete("https://management.core.windows.net/#{Azure.config.subscription_id}/" \
+                             "services/vmimages/#{image_name}")
     end
   end
 end

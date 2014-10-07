@@ -5,7 +5,7 @@ require_relative 'stemcell_finder'
 require_relative 'vm_manager'
 require_relative 'affinity_group_manager'
 require_relative 'virtual_network_manager'
-require_relative 'stemcell_creator'
+require_relative 'stemcell_manager'
 require_relative 'storage_account_manager'
 require_relative 'blob_manager'
 require_relative 'helpers'
@@ -35,7 +35,7 @@ module Bosh::AzureCloud
 
       # TODO: This is executed before storage manager can check for existence of the named storage account in manifest
       # TODO: Currently getting an Azure::Core::Http::HTTPError with a 403 for some reason... Need to figure out why
-      #prepare_azure_cert
+      prepare_azure_cert
     end
 
     ##
@@ -65,7 +65,7 @@ module Bosh::AzureCloud
 
       instance_manager.shutdown(vm)
 
-      stemcell_id = stemcell_creator.imageize_vhd(vm, deployment_name)
+      stemcell_id = stemcell_manager.imageize_vhd(vm, deployment_name)
 
       # TODO: Figure a way to 'reprovision' with waagent so we can restart the instance
       instance_manager.start(vm)
@@ -79,8 +79,7 @@ module Bosh::AzureCloud
     # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
     # @return [void]
     def delete_stemcell(stemcell_id)
-      vm = instance_manager.find("---\n:vm_name: vm-test2\n:cloud_service_name: cloud-service-test2\n")
-      puts ""
+      stemcell_manager.delete_image(stemcell_id)
     end
 
     ##
@@ -165,7 +164,6 @@ module Bosh::AzureCloud
     # @param [Hash] metadata metadata key/value pairs
     # @return [void]
     def set_vm_metadata(vm, metadata)
-      instance_manager.network_spec(vm)
     end
 
     ##
@@ -179,7 +177,6 @@ module Bosh::AzureCloud
       # Azure requires that the vm be recreated for network update,
       # so we need to notify the InstanceUpdater to recreate it
       raise Bosh::Clouds::NotSupported unless (networks.eql?(instance_manager.find(vm_id)))
-
     end
 
     ##
@@ -242,19 +239,15 @@ module Bosh::AzureCloud
 
     private
 
-    #TODO: Need to refresh cert contents each time in case cert ever changes...
+    # TODO: Need to improve cycling of cert to happen only if necessary
     # Makes sure the Azure cert specified in the template is available as a well-known blob
     def prepare_azure_cert
       container_name = 'well-known'
       blob_name = 'api-cert'
 
-      blob_service.create_container(container_name) \
-        unless blob_manager.container_exist?(container_name)
-
-      blob_manager.put_file(container_name, blob_name,
-                            Azure.config.management_certificate) \
-        unless blob_manager.blob_exist?(container_name, blob_name)
-
+      blob_service.create_container(container_name) unless blob_manager.container_exist?(container_name)
+      blob_manager.delete_file(container_name, blob_name) if blob_manager.blob_exist?(container_name, blob_name)
+      blob_manager.put_file(container_name, blob_name, Azure.config.management_certificate)
       blob_manager.get_file(container_name, blob_name, @seed_api_cert_path)
     end
 
@@ -314,8 +307,8 @@ module Bosh::AzureCloud
       @vnet_manager ||= VirtualNetworkManager.new(vnet_service, affinity_group_manager)
     end
 
-    def stemcell_creator
-      @stemcell_creator ||= StemcellCreator.new(blob_manager)
+    def stemcell_manager
+      @stemcell_creator ||= StemcellManager.new(blob_manager)
     end
 
     # TODO: Need to make default more 'random' with the abaility to determine it after the fact
