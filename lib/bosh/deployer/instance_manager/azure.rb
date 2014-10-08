@@ -88,16 +88,16 @@ module Bosh::Deployer
       attr_reader :registry, :instance_manager, :logger, :config
 
       def ssh_properties(properties)
-        ssh_user = properties['azure']['ssh_user']
+        ssh_user = properties['azure']['ssh_user'] || 'vcap'
         ssh_port = properties['azure']['ssh_port'] || 22
         ssh_wait = properties['azure']['ssh_wait'] || 60
 
-        key = properties['azure']['private_key']
-        err 'Missing properties.azure.private_key' unless key
+        key = properties['azure']['ssh_key_file']
+        err 'Missing properties.azure.ssh_key_file' unless key
 
         ssh_key = File.expand_path(key)
         unless File.exists?(ssh_key)
-          err "properties.azure.private_key '#{key}' does not exist"
+          err "properties.azure.ssh_key_file '#{key}' does not exist"
         end
 
         [ssh_key, ssh_port, ssh_user, ssh_wait]

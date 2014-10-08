@@ -2,6 +2,7 @@ require 'yaml'
 require 'azure'
 require 'net/https'
 require 'uri'
+require 'xmlsimple'
 
 module Bosh::AzureCloud
   module Helpers
@@ -33,7 +34,7 @@ module Bosh::AzureCloud
     end
 
     def handle_response(response)
-      nil
+      XmlSimple.xml_in(response.body) unless response.body.nil?
     end
 
     def get(uri)
@@ -63,13 +64,14 @@ module Bosh::AzureCloud
       request['x-ms-version'] = '2014-06-01'
       request['Content-Type'] = 'application/xml' unless body.nil?
 
-      http(url).request(request)
+      http(uri).request(request)
     end
 
 
     private
 
-    def http(url)
+    def http(uri)
+      url = URI.parse(uri)
       pem = File.read(Azure.config.management_certificate)
       http = Net::HTTP.new(url.host, url.port)
       http.use_ssl = true

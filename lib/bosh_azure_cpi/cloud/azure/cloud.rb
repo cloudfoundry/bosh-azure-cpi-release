@@ -1,13 +1,7 @@
 require 'azure'
 require 'xmlsimple'
 
-require_relative 'stemcell_finder'
-require_relative 'vm_manager'
-require_relative 'affinity_group_manager'
-require_relative 'virtual_network_manager'
-require_relative 'stemcell_manager'
-require_relative 'storage_account_manager'
-require_relative 'blob_manager'
+require_relative 'util/services'
 require_relative 'helpers'
 
 module Bosh::AzureCloud
@@ -15,6 +9,7 @@ module Bosh::AzureCloud
     attr_accessor :options
 
     include Helpers
+    include Util::Services
 
     ##
     # Cloud initialization
@@ -26,16 +21,15 @@ module Bosh::AzureCloud
 
       @vmm_endpoint_url = 'https://management.core.windows.net'
       @seed_api_cert_path = File.absolute_path("#{ENV['HOME']}/api-cert.pem")
+      @seed_ssh_file_path = File.absolute_path("#{ENV['HOME']}/.ssh/authorized_keys")
 
       # Logger is available as a public method, but bosh::Clouds::Config is apparently nil. Need to investigate
       #@logger = bosh::Clouds::Config.logger
       @metadata_lock = Mutex.new
 
       init_azure
-
-      # TODO: This is executed before storage manager can check for existence of the named storage account in manifest
-      # TODO: Currently getting an Azure::Core::Http::HTTPError with a 403 for some reason... Need to figure out why
       prepare_azure_cert
+      prepare_ssh_key
     end
 
     ##
@@ -61,7 +55,7 @@ module Bosh::AzureCloud
       deployment_name = cloud_service_service.get_cloud_service_properties(vm_from_yaml(vm)[:cloud_service_name]).deployment_name
 
       `yes y | sudo -n waagent -deprovision`
-      raise if !$?.success?
+      raise('Failed to deprovision vm agent') unless $?.success?
 
       instance_manager.shutdown(vm)
 
@@ -119,7 +113,7 @@ module Bosh::AzureCloud
     # @return [String] opaque id later used by {#configure_networks}, {#attach_disk},
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
-      raise if not(stemcell_finder.exist?(stemcell_id))
+      raise("Given stemcell '#{stemcell_id}' does not exist") unless stemcell_manager.stemcell_exist?(stemcell_id)
       vnet_manager.create(networks)
       instance = instance_manager.create(agent_id, stemcell_id, azure_properties.merge({'user' => 'bosh'}))
 
@@ -149,9 +143,9 @@ module Bosh::AzureCloud
     # Reboots a VM
     #
     # @param [String] vm_id vm id that was once returned by {#create_vm}
-    # @param [Optional, Hash] CPI specific options (e.g hard/soft reboot)
+    # @param [Optional, Hash] options CPI specific options (e.g hard/soft reboot)
     # @return [void]
-    def reboot_vm(vm_id)
+    def reboot_vm(vm_id, options=nil)
       instance_manager.reboot(vm_id)
     end
 
@@ -242,13 +236,18 @@ module Bosh::AzureCloud
     # TODO: Need to improve cycling of cert to happen only if necessary
     # Makes sure the Azure cert specified in the template is available as a well-known blob
     def prepare_azure_cert
-      container_name = 'well-known'
-      blob_name = 'api-cert'
+      cycle_credential_artifact('well-known', 'api-cert', azure_properties['cert_file'], @seed_api_cert_path)
+    end
 
+    def prepare_ssh_key
+      cycle_credential_artifact('well-known', 'ssh-key', azure_properties['ssh_key_file'], @seed_ssh_file_path)
+    end
+
+    def cycle_credential_artifact(container_name, blob_name, local_file, remote_path)
       blob_service.create_container(container_name) unless blob_manager.container_exist?(container_name)
       blob_manager.delete_file(container_name, blob_name) if blob_manager.blob_exist?(container_name, blob_name)
-      blob_manager.put_file(container_name, blob_name, Azure.config.management_certificate)
-      blob_manager.get_file(container_name, blob_name, @seed_api_cert_path)
+      blob_manager.put_file(container_name, blob_name, local_file)
+      blob_manager.get_file(container_name, blob_name, remote_path)
     end
 
     ##
@@ -266,7 +265,7 @@ module Bosh::AzureCloud
 
       required_keys.each_pair do |key, values|
         values.each do |value|
-          if (!options.has_key?(key) || !options[key].has_key?(value))
+          if !options.has_key?(key) || !options[key].has_key?(value)
             missing_keys << "#{key}:#{value}"
           end
         end
@@ -289,70 +288,6 @@ module Bosh::AzureCloud
 
     def azure_properties
       @azure_properties ||= options.fetch('azure')
-    end
-
-    def stemcell_finder
-      @stemcell_finder ||= StemcellFinder.new(image_service)
-    end
-
-    def instance_manager
-      @instance_manager ||= VMManager.new(azure_vm_client, image_service, vnet_manager, storage_manager)
-    end
-
-    def affinity_group_manager
-      @ag_manager ||= AffinityGroupManager.new(base_service)
-    end
-
-    def vnet_manager
-      @vnet_manager ||= VirtualNetworkManager.new(vnet_service, affinity_group_manager)
-    end
-
-    def stemcell_manager
-      @stemcell_creator ||= StemcellManager.new(blob_manager)
-    end
-
-    # TODO: Need to make default more 'random' with the abaility to determine it after the fact
-    # TODO: as the storage accounts are globally unique accross ALL azure accounts in the world
-    def storage_manager
-      @storage_manager ||= StorageAccountManager.new(storage_service,
-                                                     options['azure']['storage_account_name'] ||
-                                                        'boshdefaultstorage')
-    end
-
-    def blob_manager
-      @blob_manager ||= BlobManager.new(blob_service)
-    end
-
-    def cloud_service_service
-      @cloud_service_service ||= Azure::CloudServiceManagement::CloudServiceManagementService.new
-    end
-
-    def azure_vm_client
-      @azure_vm_client ||= Azure::VirtualMachineManagementService.new
-    end
-
-    def base_service
-      @base_service ||= Azure::BaseManagementService.new
-    end
-
-    def image_service
-      @image_service ||= Azure::VirtualMachineImageManagementService.new
-    end
-
-    def vnet_service
-      @vnet_service ||= Azure::VirtualNetworkManagementService.new
-    end
-
-    def vdisk_service
-      @vdisk_service ||= Azure::VirtualMachineImageManagement::VirtualMachineDiskManagementService.new
-    end
-
-    def storage_service
-      @storage_service ||= Azure::StorageManagement::StorageManagementService.new
-    end
-
-    def blob_service
-      @blob_service ||= Azure::BlobService.new
     end
   end
 end
