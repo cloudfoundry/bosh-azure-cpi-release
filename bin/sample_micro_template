@@ -1,20 +1,21 @@
 name: microbosh-azure
 
 logging:
-  # If needed increase the default logging level to trace REST traffic with IaaS providers. Default is info
   level: debug
-  # Default location is deployment_dir>/bosh_micro_deploy.log
-  # file :
 
 network:
-  type: dynamic
+  type: vip
   vip: <reserved_ip_for_microbosh_vm>
+  cloud_properties:
+    vlan_name: awesome
+    tcp_endpoints:
+    - 80:80
+    - 443:443
 
 resources:
   persistent_disk: 20000
   cloud_properties:
-    instance_type: m1.small
-    availability_zone: us-east-1a
+    instance_type: Small
 
 cloud:
   plugin: azure

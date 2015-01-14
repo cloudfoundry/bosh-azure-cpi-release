@@ -30,6 +30,9 @@ module Bosh::AzureCloud
           :password => 'P4$$w0rd!',
           :image => stemcell,
           :location => 'East US'
+
+          # TODO: This doesnt work and is ignored... Need to research azure sdk and add functionality if necessary... REST API call is COMPLICATED!!!!
+          #:reserved_ip_name => 'boshtest01'
       }
 
       opts = {

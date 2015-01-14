@@ -28,7 +28,6 @@ require 'cloud/azure/vm_manager'
 
 module Bosh
   module Clouds
-    #TODO: This is a problem as the parent class is also called Azure and we cant change it unless the plugin itself is named something other than just 'Azure'
     Azure = Bosh::AzureCloud::Cloud
   end
 end

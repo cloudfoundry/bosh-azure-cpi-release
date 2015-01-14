@@ -50,21 +50,24 @@ module Bosh::AzureCloud
     #               specific to a CPI
     # @return [String] opaque id later used by {#create_vm} and {#delete_stemcell}
     def create_stemcell(image_path, cloud_properties)
-      vm = current_vm_id
-      # NOTE: May need to use the deployment name from the virtual machine object
-      deployment_name = cloud_service_service.get_cloud_service_properties(vm_from_yaml(vm)[:cloud_service_name]).deployment_name
+      # vm = current_vm_id
+      # # NOTE: May need to use the deployment name from the virtual machine object
+      # deployment_name = cloud_service_service.get_cloud_service_properties(vm_from_yaml(vm)[:cloud_service_name]).deployment_name
+      #
+      # `yes y | sudo -n waagent -deprovision`
+      # raise('Failed to deprovision vm agent') unless $?.success?
+      #
+      # instance_manager.shutdown(vm)
+      #
+      # stemcell_id = stemcell_manager.imageize_vhd(vm, deployment_name)
+      #
+      # # TODO: Figure a way to 'reprovision' with waagent so we can restart the instance
+      # instance_manager.start(vm)
+      #
+      # stemcell_id
 
-      `yes y | sudo -n waagent -deprovision`
-      raise('Failed to deprovision vm agent') unless $?.success?
-
-      instance_manager.shutdown(vm)
-
-      stemcell_id = stemcell_manager.imageize_vhd(vm, deployment_name)
-
-      # TODO: Figure a way to 'reprovision' with waagent so we can restart the instance
-      instance_manager.start(vm)
-
-      stemcell_id
+      # Stub for now as we need to figure out the stemcell stuff...
+      'b39f27a8b8c64d52b05eac6a62ebad85__Ubuntu-14_04-LTS-amd64-server-20140528-en-us-30GB'
     end
 
     ##
