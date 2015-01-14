@@ -34,7 +34,7 @@ module Bosh::AzureCloud
     end
 
     def handle_response(response)
-      XmlSimple.xml_in(response.body) unless response.body.nil?
+      XmlSimple.xml_in(response.body) unless nil_or_empty?(response.body)
     end
 
     def get(uri)
@@ -43,7 +43,7 @@ module Bosh::AzureCloud
       request['x-ms-version'] = '2014-06-01'
       request['Content-Length'] = 0
 
-      http(uri).request(request)
+      http(url).request(request)
     end
 
     # TODO: Need to figure a way to upload cert to BOSH as it is needed locally on the BOSH instance
@@ -64,14 +64,13 @@ module Bosh::AzureCloud
       request['x-ms-version'] = '2014-06-01'
       request['Content-Type'] = 'application/xml' unless body.nil?
 
-      http(uri).request(request)
+      http(url).request(request)
     end
 
 
     private
 
-    def http(uri)
-      url = URI.parse(uri)
+    def http(url)
       pem = File.read(Azure.config.management_certificate)
       http = Net::HTTP.new(url.host, url.port)
       http.use_ssl = true
