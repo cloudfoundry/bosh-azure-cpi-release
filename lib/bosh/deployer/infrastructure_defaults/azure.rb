@@ -17,8 +17,7 @@ module Bosh::Deployer::InfrastructureDefaults
       'resources' => {
           'persistent_disk' => 4096,
           'cloud_properties' => {
-              'instance_type' => 'Small',
-              'availability_zone' => nil
+              'instance_type' => 'Small'
           }
       },
       'cloud' => {
