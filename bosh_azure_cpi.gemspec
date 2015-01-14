@@ -1,7 +1,7 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'bosh_azure_cpi/cloud/azure/version'
+require 'cloud/azure/version'
 
 version = Bosh::AzureCloud::VERSION
 
