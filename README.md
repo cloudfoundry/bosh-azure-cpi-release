@@ -1,24 +1,52 @@
-# BoshAzureCpi
+# Bosh Azure CPI
 
-TODO: Write a gem description
+Cloud Provider Interface (CPI) implementation for Microsft's Azure offering
+
+
+## Environment Setup
+
+For the time being, BOSH has some limitations regarding CPIs. I have made the necessary fixes and committed them to
+a repo located at: 
+
+    git@github.com:nterry/bosh.git
+    
+Here are the steps to take to get your environment ready (Ideally, if you use RVM or RBENV, create a new gemset):
+    
+1. Clone the BOSH repo mentioned above
+2. CD to the bosh_cli folder in the cloned repo and run:
+
+    >gem build bosh_cli.gemspec
+
+    >gem install (outputted_gem_file)
+    
+3. Repeat the above steps for the bosh_cli_plugin_micro folder in the root of the repo
+   
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Run the following from this repo:
 
-    gem 'bosh_azure_cpi'
+>gem build bosh_azure_cpi.gemspec   
+>gem install (outputted_gem_file)
+    
 
-And then execute:
+## Deployment
 
-    $ bundle
+1. CD to the bin folder in this repo
+2. For the time being, you will need to reserve an IP and place it in the sample_micro_template in the marked place
+3. Fill out the fields in the sample_micro_template file
+4. Run the following (we will fix the stemcell stuff later):
 
-Or install it yourself as:
+    >bosh micro deployment sample_micro_template
+    
+    >bosh download public stemcell (pick one from the list, it doesn't matter, and put its name here)
+    
+    >bosh micro deploy (downloaded tgz from previous command here)
+    
+Ultimately, at the time of this writing, you will get to a waiting for agent prompt.... This will never finish as the
+'stemcell' that we used is hard-coded to a stock Azure vm image. We will build a stemcell in the future that has the
+agent installed to get past this. 
 
-    $ gem install bosh_azure_cpi
-
-## Usage
-
-TODO: Write usage instructions here
 
 ## Contributing
 

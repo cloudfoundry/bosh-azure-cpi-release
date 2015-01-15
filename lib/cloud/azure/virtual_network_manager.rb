@@ -22,7 +22,6 @@ module Bosh::AzureCloud
 
       networks = []
       network_spec.each_pair do |name, spec|
-        puts spec.class
         #raise bosh::Registry::ConfigError "'#{spec['type']}' network spec provided is invalid"
         network_type = spec['type'] || 'dynamic'
         case network_type
