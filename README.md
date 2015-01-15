@@ -43,7 +43,7 @@ Run the following from this repo:
     
     >bosh micro deploy (downloaded tgz from previous command here)
     
-Ultimately, at the time of this writing, you will get to a waiting for agent prompt.... This will never finish as the
+Ultimately, at the time of this writing, you will get to a 'waiting for agent' prompt.... This will never finish as the
 'stemcell' that we used is hard-coded to a stock Azure vm image. We will build a stemcell in the future that has the
 agent installed to get past this. 
 
