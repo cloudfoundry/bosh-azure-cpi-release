@@ -1,31 +1,39 @@
-
-
 module Bosh::AzureCloud
   class StorageAccountManager
+    
+    attr_accessor :logger
 
-    def initialize(storage_client, storage_account_name)
-      @storage_client = storage_client
+    def initialize(storage_account_name)
+      @storage_service = Azure::StorageManagement::StorageManagementService.new
       @storage_account_name = storage_account_name
+
+      @logger = Bosh::Clouds::Config.logger
     end
-
-    def create
-      begin
-        @storage_client.create_storage_account(@storage_account_name, {
-            :label => 'bosh-managed-storage',
-            # TODO: Support more than East US
-            :location => 'East US' # Specify East US to avoid affinity group requirement.
-        }) unless exist?
-      rescue ConflictError => e
-        # TODO: Need to return a bosh error so deployment doesn't continue.
-        puts "Storage account name '#{@storage_account_name}' is already taken in another account. Remember,
-              the namespace for storage accounts is shared between all azure users"
-      end
-
+    
+    def get_storage_account_name
       @storage_account_name
     end
-
-    def exist?
-      @storage_client.get_storage_account(@storage_account_name)
+    
+    def get_storage_affinity_group
+      get_storage_properties.affinity_group
+    end
+    
+    def get_storage_blob_endpoint
+      blob_endpoint = ""
+      get_storage_properties.endpoints.each do |endpoint|
+        if endpoint.include? "blob"
+          blob_endpoint = endpoint
+          break
+        end
+      end
+      
+      blob_endpoint
+    end
+    
+    private
+    
+    def get_storage_properties
+      @storage_service.get_storage_account_properties(@storage_account_name)
     end
   end
 end

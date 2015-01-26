@@ -1,39 +1,11 @@
-require_relative 'network'
-require_relative 'helpers'
-
 module Bosh::AzureCloud
   class DynamicNetwork < Network
     attr_accessor :subnets, :address_space, :dns_servers, :affinity_group
 
     include Helpers
-    def initialize(vnet_client, spec)
-      super(vnet_client, spec)
-
-      @subnets = parse_subnets
-      @affinity_group = spec['affinity_group'] || raise("Missing required network property 'affinity_group'")
-      @address_space = spec['address_space'] || ['10.0.0.0/8']
-      @dns_servers = spec['dns'].collect{|dns| symbolize_keys(dns) } || default_dns
+    def initialize(name, spec)
+      super
     end
-
-    def provision
-      @options = {:subnet => @subnets, :dns => @dns_servers}
-      @vnet_manager.set_network_configuration(@name, @affinity_group, @address_space, @options)
-    end
-
-    def first_subnet
-      @subnets.first
-    end
-
-    # TODO: Cannot get private IP from azure API.... need to determine if private IP/CIDR is necessary to determine eql?
-    def eql?(other)
-      return (affinity_group.eql?(other.affinity_group) &&
-              address_space.sort.eql?(other.address_space.sort) &&
-              dns_servers.sort_by { |s| s[:ip_address] }.eql?(
-                  other.dns_servers.sort_by { |s| s[:ip_address] }) &&
-              subnets.sort_by { |s| [s[:ip_address, s[:cidr]]]}.eql?(
-                  other.subnets.sort_by { |s| [s[:ip_address, s[:cidr]]] }))
-    end
-
 
     private
 

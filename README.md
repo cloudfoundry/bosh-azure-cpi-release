@@ -12,14 +12,18 @@ a repo located at:
     
 Here are the steps to take to get your environment ready (Ideally, if you use RVM or RBENV, create a new gemset):
     
-1. Clone the BOSH repo mentioned above
-2. CD to the bosh_cli folder in the cloned repo and run:
+1. Install related tools: 
+
+    >sudo apt-get install -y libsqlite3-dev libxml2-dev libxslt-dev libmysqlclient-dev libpq-dev
+
+2. Clone the BOSH repo mentioned above
+3. CD to the bosh_cli folder in the cloned repo and run:
 
     >gem build bosh_cli.gemspec
 
-    >gem install (outputted_gem_file)
+    >gem install (outputted_gem_file) --no-ri --no-rdoc
     
-3. Repeat the above steps for the bosh_cli_plugin_micro folder in the root of the repo
+4. Repeat the above steps for the bosh_cli_plugin_micro folder in the root of the repo
    
 
 ## Installation
@@ -27,7 +31,7 @@ Here are the steps to take to get your environment ready (Ideally, if you use RV
 Run the following from this repo:
 
 >gem build bosh_azure_cpi.gemspec   
->gem install (outputted_gem_file)
+>gem install (outputted_gem_file) --no-ri --no-rdoc
     
 
 ## Deployment

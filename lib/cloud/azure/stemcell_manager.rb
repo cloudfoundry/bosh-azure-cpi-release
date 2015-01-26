@@ -1,18 +1,24 @@
-require 'azure'
-require 'date'
-require_relative 'helpers'
 
 module Bosh::AzureCloud
   class StemcellManager
+    IMAGE_FAMILY = 'bosh'
+
+    attr_reader   :container_name
+    attr_accessor :logger
+    
     include Bosh::Exec
     include Helpers
 
-    def initialize(blob_manager, image_client)
+    def initialize(container_name, storage_manager, blob_manager)
+      @container_name = container_name
+      @storage_manager = storage_manager
       @blob_manager = blob_manager
-      @image_client = image_client
+
+      @logger = Bosh::Clouds::Config.logger
+
+      @blob_manager.create_container(container_name)
     end
 
-    # TODO: Need to list all private stemcells as well and make this metod search them
     def find_stemcell_by_name(name)
       stemcell = list_stemcells.find do |image_name|
         image_name == name
@@ -22,7 +28,7 @@ module Bosh::AzureCloud
       stemcell
     end
 
-    def stemcell_exist?(name)
+    def has_stemcell?(name)
       begin
         find_stemcell_by_name name
       rescue
@@ -30,53 +36,54 @@ module Bosh::AzureCloud
       end
       true
     end
-
-    # TODO: Need to set more predictable name in request as Azure returns an empty body... not sure why...
-    def imageize_vhd(vm_id, deployment_name)
-      vm = vm_from_yaml(vm_id)
-      # TODO: Need to set body
-      # See: http://msdn.microsoft.com/en-us/library/azure/dn499768.aspx
-      handle_response post("https://management.core.windows.net/#{Azure.config.subscription_id}/" \
-                           "services/hostedservices/#{vm[:cloud_service_name]}/deployments/" \
-                           "#{deployment_name}/roleinstances/#{vm[:vm_name]}/Operations",
-                           "<CaptureRoleAsVMImageOperation xmlns=\"http://schemas.microsoft.com/windowsazure\" " \
-                           "xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">" \
-                           '<OperationType>CaptureRoleAsVMImageOperation</OperationType>' \
-                           '<OSState>Generalized</OSState>' \
-                           "<VMImageName>BOSH-Stemcell-#{vm[:cloud_service_name]}-#{(0..16).to_a.map{|a| rand(16).to_s(16)}.join}</VMImageName>" \
-                           '<VMImageLabel>BOSH-Stemcell</VMImageLabel>' \
-                           "<Description>Auto created by BOSH on #{DateTime.now}</Description>" \
-                           '</CaptureRoleAsVMImageOperation>')
-    end
-
-
+    
     def delete_image(image_name)
-      handle_response delete("https://management.core.windows.net/#{Azure.config.subscription_id}/" \
-                             "services/vmimages/#{image_name}")
+      http_delete("services/images/#{image_name}?comp=media")
     end
 
     def list_stemcells
-      list_private_images.concat(list_public_images)
+      os_images = []
+      storage_affinity_group = @storage_manager.get_storage_affinity_group
+      
+      response = handle_response http_get("/services/images")
+      response.css('Images OSImage').each do |image|
+        image_family = xml_content(image, 'ImageFamily')
+        category = xml_content(image, 'Category')
+        affinity_group = xml_content(image, 'AffinityGroup')
+        
+        if image_family == IMAGE_FAMILY && category == 'User' && affinity_group == storage_affinity_group
+          os_images << xml_content(image, 'Name')
+        end
+      end
+      os_images
     end
 
+    def create_stemcell(image_path, cloud_properties)
+      stemcell_name = "bosh-image-#{SecureRandom.uuid}"
+      
+      logger.info("Start to upload VHD")
+      @blob_manager.create_page_blob(container_name, image_path, "#{stemcell_name}.vhd")
+      
+      begin
+        logger.info("Start to create an image with the uploaded VHD")
+        handle_response http_post("/services/images",
+                             "<OSImage xmlns=\"http://schemas.microsoft.com/windowsazure\" " \
+                             "xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">" \
+                             "<Label>#{IMAGE_FAMILY}</Label>" \
+                             "<MediaLink>#{@storage_manager.get_storage_blob_endpoint}#{container_name}/#{stemcell_name}.vhd</MediaLink>" \
+                             "<Name>#{stemcell_name}</Name>" \
+                             '<OS>Linux</OS>' \
+                             '<Description>BOSH Stemcell</Description>' \
+                             "<ImageFamily>#{IMAGE_FAMILY}</ImageFamily>" \
+                             '</OSImage>')
+      rescue => e
+        @blob_manager.delete_blob(container_name, "#{stemcell_name}.vhd")
+        cloud_error("Failed to create stemcell: #{e.message}\n#{e.backtrace.join("\n")}")
+      end
+      
+      stemcell_name
+    end
 
     private
-
-    def list_public_images
-      public_images = []
-      @image_client.list_virtual_machine_images.each { |image|
-        public_images << image.name
-      }
-      public_images
-    end
-
-    def list_private_images
-      private_images = []
-      response = handle_response get("https://management.core.windows.net/#{Azure.config.subscription_id}/services/vmimages")
-      response['VMImage'].each { |image|
-        private_images << image['Name'].first
-      }
-      private_images
-    end
   end
 end

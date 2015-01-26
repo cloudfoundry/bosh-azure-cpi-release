@@ -1,19 +1,12 @@
-require 'yaml'
-require 'azure'
-require 'net/https'
-require 'uri'
-require 'xmlsimple'
-
 module Bosh::AzureCloud
   module Helpers
 
-    def vm_to_yaml(vm)
-      raise 'Invalid vm object returned...' if not(validate(vm))
-      { :vm_name => vm.vm_name, :cloud_service_name => vm.cloud_service_name }.to_yaml
+    def generate_instance_id(cloud_service_name, vm_name)
+      instance_id = cloud_service_name + "&" + vm_name
     end
 
-    def vm_from_yaml(yaml)
-      symbolize_keys(YAML.load(yaml))
+    def parse_instance_id(instance_id)
+      cloud_service_name, vm_name = instance_id.split("&")
     end
 
     def symbolize_keys(hash)
@@ -21,6 +14,24 @@ module Bosh::AzureCloud
         h[key.to_sym] = value.is_a?(Hash) ? symbolize_keys(value) : value
         h
       end
+    end
+    
+    ##
+    # Raises CloudError exception
+    #
+    # @param [String] message Message about what went wrong
+    # @param [Exception] exception Exception to be logged (optional)
+    def cloud_error(message, exception = nil)
+      @logger.error(message) if @logger
+      @logger.error(exception) if @logger && exception
+      raise Bosh::Clouds::CloudError, message
+    end
+    
+    def xml_content(xml, key, default = '')
+      content = default
+      node = xml.at_css(key)
+      content = node.text if node
+      content
     end
 
     private
@@ -34,11 +45,16 @@ module Bosh::AzureCloud
     end
 
     def handle_response(response)
-      XmlSimple.xml_in(response.body) unless nil_or_empty?(response.body)
+      ret = wait_for_completion(response)
+      Nokogiri::XML(ret.body) unless ret.nil?
+    end
+    
+    def init_url(uri)
+      "#{Azure.config.management_endpoint}/#{Azure.config.subscription_id}/#{uri}"
     end
 
-    def get(uri)
-      url = URI.parse(uri)
+    def http_get(uri)
+      url = URI.parse(init_url(uri))
       request = Net::HTTP::Get.new(url.request_uri)
       request['x-ms-version'] = '2014-06-01'
       request['Content-Length'] = 0
@@ -46,9 +62,8 @@ module Bosh::AzureCloud
       http(url).request(request)
     end
 
-    # TODO: Need to figure a way to upload cert to BOSH as it is needed locally on the BOSH instance
-    def post(uri, body=nil)
-      url = URI.parse(uri)
+    def http_post(uri, body=nil)
+      url = URI.parse(init_url(uri))
       request = Net::HTTP::Post.new(url.request_uri)
       request.body = body unless body.nil?
       request['x-ms-version'] = '2014-06-01'
@@ -57,8 +72,8 @@ module Bosh::AzureCloud
       http(url).request(request)
     end
 
-    def delete(uri, body=nil)
-      url = URI.parse(uri)
+    def http_delete(uri, body=nil)
+      url = URI.parse(init_url(uri))
       request = Net::HTTP::Delete.new(url.request_uri)
       request.body = body unless body.nil?
       request['x-ms-version'] = '2014-06-01'
@@ -66,9 +81,6 @@ module Bosh::AzureCloud
 
       http(url).request(request)
     end
-
-
-    private
 
     def http(url)
       pem = File.read(Azure.config.management_certificate)
@@ -78,6 +90,60 @@ module Bosh::AzureCloud
       http.key = OpenSSL::PKey::RSA.new(pem)
       http.verify_mode = OpenSSL::SSL::VERIFY_PEER
       http
+    end
+    
+    def wait_for_completion(response)
+      ret_val = Nokogiri::XML response.body
+      if ret_val.at_css('Error Code') && ret_val.at_css('Error Code').content == 'AuthenticationFailed'
+        cloud_error(ret_val.at_css('Error Code').content + ' : ' + ret_val.at_css('Error Message').content)
+      end
+      if response.code.to_i == 200 || response.code.to_i == 201
+        return response
+      elsif response.code.to_i == 307
+        #rebuild_request response
+        cloud_error("Currently bosh_azure_cpi does not support proxy.")
+      elsif response.code.to_i > 201 && response.code.to_i <= 299
+        check_completion(response['x-ms-request-id'])
+      elsif warn && !response.success?
+      elsif response.body
+        if ret_val.at_css('Error Code') && ret_val.at_css('Error Message')
+          cloud_error(ret_val.at_css('Error Code').content + ' : ' + ret_val.at_css('Error Message').content)
+        else
+          cloud_error(nil, "http error: #{response.code}")
+        end
+      else
+        cloud_error(nil, "http error: #{response.code}")
+      end
+    end
+    
+    def check_completion(request_id)
+      request_path = "/operations/#{request_id}"
+      done = false
+      while not done
+        puts '# '
+        response = http_get(request_path)
+        ret_val = Nokogiri::XML response.body
+        status = xml_content(ret_val, 'Operation Status')
+        status_code = response.code.to_i
+        if status != 'InProgress'
+          done = true
+        end
+        if response.code.to_i == 307
+          done = true
+        end
+        if done
+          if status.downcase != 'succeeded'
+            error_code = xml_content(ret_val, 'Operation Error Code')
+            error_msg = xml_content(ret_val, 'Operation Error Message')
+            cloud_error(nil, "#{error_code}: #{error_msg}")
+          else
+            puts "#{status.downcase} (#{status_code})"
+          end
+          return
+        else
+          sleep(5)
+        end
+      end
     end
   end
 end

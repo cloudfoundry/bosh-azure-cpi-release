@@ -14,7 +14,6 @@ require "ostruct"
 require "optparse"
 require "psych"
 require "logger"
-require "bosh_azure_cpi/cloud/azure"
 require "membrane"
 
 config_file = nil
@@ -37,8 +36,8 @@ module ConsoleHelpers
     @cpi ||= Bosh::AzureCloud::Cloud.new(@config)
   end
 
-  def ec2
-    cpi.ec2
+  def azure
+    cpi.azure
   end
 
   def registry
@@ -48,7 +47,7 @@ end
 
 cloud_config = OpenStruct.new(:logger => Logger.new(STDOUT))
 
-#bosh::Clouds::Config.configure(cloud_config)
+Bosh::Clouds::Config.configure(cloud_config)
 
 include ConsoleHelpers
 

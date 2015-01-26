@@ -1,39 +1,37 @@
-require 'azure'
-
 module Bosh::AzureCloud
   class Network
-    attr_accessor :vnet_client, :name
+    # {
+    # "bosh"=>{"netmask"=>nil, "gateway"=>nil, "ip"=>"10.0.0.4", "dns"=>["10.0.0.2"], "type"=>"manual", "default"=>["dns", "gateway"], 
+    #          "cloud_properties"=>{"virtual_network_name"=>"abel-boshvnet", "subnet_name"=>"BOSH", "tcp_endpoints"=>["80:80", "443:443", "6868:6868", "25555:25555"]}}, 
+    # "vip"=>{"ip"=>"23.101.15.75", "type"=>"vip", 
+    #         "cloud_properties"=>{"virtual_network_name"=>"abel-boshvnet", "subnet_name"=>"BOSH", "tcp_endpoints"=>["80:80", "443:443", "6868:6868", "25555:25555"]}}
+    #}
 
-    include Comparable
     ##
     # Creates a new network
     #
-    # @param [Azure::VirtualMachineManagement::VirtualMachineManagementService] vnet_client
+    # @param [String] name Network name
     # @param [Hash] spec Raw network spec
-    def initialize(vnet_client, spec)
+    def initialize(name, spec)
       unless spec.is_a?(Hash)
-        raise ArgumentError, 'Invalid spec, Hash expected, ' \
+        raise ArgumentError, "Invalid spec, Hash expected, " \
                              "#{spec.class} provided"
       end
 
-      @vnet_manager = vnet_client
-      #@logger = bosh::Clouds::Config.logger
+      @logger = Bosh::Clouds::Config.logger
 
+      @name = name
+      @ip = spec["ip"]
+      @cloud_properties = spec["cloud_properties"]
       @spec = spec
-      @name = spec['vlan_name'] || raise("Missing required network property 'vlan_name'")
     end
-
-    def provision
-      raise "'provision' is not implemented for 'bosh::AzureCloud::Network'"
+    
+    def cloud_properties
+      @cloud_properties
     end
-
-    # TODO: This was defined when Network was a subclass of Azure Network object. Need to re-define (or probably define in children)
-    # def eql?(other)
-    #   return ((address_space.sort == other.address_space.sort) &&
-    #           (affinity_group.eql? other.affinity_group) &&
-    #           (dns_servers.sort == other.dns_servers.sort) &&
-    #           (state.eql? other.state) &&
-    #           (subnets.sort == other.subnets.sort))
-    # end
+    
+    def spec
+      @spec
+    end
   end
 end

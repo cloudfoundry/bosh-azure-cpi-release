@@ -1,2 +1,2 @@
 
-require 'azure'
+require 'cloud/azure'
