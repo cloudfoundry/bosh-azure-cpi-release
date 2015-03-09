@@ -4,17 +4,14 @@
 
 # Usage example:
 # irb(main):001:0> cpi.create_vm("test", "b39f27a8b8c64d52b05eac6a62ebad85__Ubuntu-14_04-LTS-amd64-server-20140528-en-us-30GB",
-#                  {}, {}, [], {"foo" =>"bar"})
+#                  {"instance_type" => "Small"}, {"default" => {"type" => "dynamic", "cloud_properties" => {}}, [], {"foo" =>"bar"})
 
-#require "bosh_cpi"
+
 require "bosh_azure_cpi"
 require "irb"
 require "irb/completion"
 require "ostruct"
 require "optparse"
-require "psych"
-require "logger"
-require "membrane"
 
 config_file = nil
 

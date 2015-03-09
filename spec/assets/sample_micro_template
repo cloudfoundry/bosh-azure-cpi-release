@@ -6,8 +6,8 @@ logging:
 network:
   type: manual
   vip: <reserved_ip_for_microbosh_vm>
-  ip: 10.0.0.4
-  dns: [10.0.0.2]
+  ip: 10.0.0.5
+  dns: [10.0.0.4]
   cloud_properties:
     virtual_network_name: <virtual_network_name>
     subnet_name: <subnet_name>

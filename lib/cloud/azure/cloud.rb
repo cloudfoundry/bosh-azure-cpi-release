@@ -70,18 +70,12 @@ module Bosh::AzureCloud
     #      "ip"               => "172.30.41.40",
     #      "gateway"          => "172.30.40.1",
     #      "dns"              => ["172.30.22.153", "172.30.22.154"],
-    #      "cloud_properties" => {"name" => "VLAN444"}
+    #      "cloud_properties" => {"virtual_network_name"=>"boshvnet", "subnet_name"=>"BOSH"}
     #    }
     #  }
     #
     # Sample resource pool config (CPI specific):
-    #  {
-    #    "ram"  => 512,
-    #    "disk" => 512,
-    #    "cpu"  => 1
-    #  }
-    # or similar for EC2:
-    #  {"name" => "m1.small"}
+    #  {"instance_type" => "Small"}
     #
     # @param [String] agent_id UUID for the agent that will be used later on by the director
     #                 to locate and talk to the agent
@@ -384,7 +378,7 @@ module Bosh::AzureCloud
       registry_password   = registry_properties.fetch('password')
 
       # Registry updates are not really atomic in relation to
-      # EC2 API calls, so they might get out of sync. Cloudcheck
+      # Azure API calls, so they might get out of sync. Cloudcheck
       # is supposed to fix that.
       @registry = Bosh::Registry::Client.new(registry_endpoint,
                                              registry_user,

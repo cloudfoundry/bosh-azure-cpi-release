@@ -1,61 +1,114 @@
-# Bosh Azure CPI
+# BOSH Azure Cloud Provider Interface
 
-Cloud Provider Interface (CPI) implementation for Microsft's Azure offering
+## Options
 
+These options are passed to the Azure CPI when it is instantiated.
 
-## Environment Setup
+### Azure options
 
-For the time being, BOSH has some limitations regarding CPIs. I have made the necessary fixes and committed them to
-a repo located at: 
+* `management_endpoint` (required)
+  The base URI for Azure Management Service
+* `subscription_id` (required)
+  Azure Subscription Id
+* `management_certificate` (required)
+  Base64 encoding content of Azure API certificates used to authenticate service management operations
+* `storage_account_name` (required)
+  Azure storage account name
+* `storage_access_key` (required)
+  Azure storage access key
+* `affinity_group_name` (required)
+  Affinity group name to use when spinning up new vms
+* `ssh_certificate` (required)
+  Base64 encoding content of the default certificate to use when spinning up new vms
+* `ssh_private_key` (required)
+  Base64 encoding content of the default private key to use when spinning up new vms
+* `container_name` (optional)
+  Contianer name in Azure storage account, defaults to 'bosh'
 
-    git@github.com:nterry/bosh.git
-    
-Here are the steps to take to get your environment ready (Ideally, if you use RVM or RBENV, create a new gemset):
-    
-1. Install related tools: 
+### Registry options
 
-    >sudo apt-get install -y libsqlite3-dev libxml2-dev libxslt-dev libmysqlclient-dev libpq-dev
+The registry options are passed to the Azure CPI by the BOSH director based on the settings in `director.yml`, but can be
+overridden if needed.
 
-2. Clone the BOSH repo mentioned above
-3. CD to the bosh_cli folder in the cloned repo and run:
+* `endpoint` (required)
+  registry URL
+* `user` (required)
+  registry user
+* `password` (required)
+  registry password
 
-    >gem build bosh_cli.gemspec
+### Agent options
 
-    >gem install (outputted_gem_file) --no-ri --no-rdoc
-    
-4. Repeat the above steps for the bosh_cli_plugin_micro folder in the root of the repo
-   
+Agent options are passed to the Azure CPI by the BOSH director based on the settings in `director.yml`, but can be
+overridden if needed.
 
-## Installation
+### Resource pool options
 
-Run the following from this repo:
+These options are specified under `cloud_options` in the `resource_pools` section of a BOSH deployment manifest.
 
->gem build bosh_azure_cpi.gemspec   
->gem install (outputted_gem_file) --no-ri --no-rdoc
-    
+* `instance_type` (required)
+  which [type of instance](https://msdn.microsoft.com/en-us/library/azure/dn197896.aspx) the VMs should belong to
 
-## Deployment
+### Network options
 
-1. CD to the bin folder in this repo
-2. For the time being, you will need to reserve an IP and place it in the sample_micro_template in the marked place
-3. Fill out the fields in the sample_micro_template file
-4. Run the following (we will fix the stemcell stuff later):
+These options are specified under `cloud_options` in the `networks` section of a BOSH deployment manifest.
 
-    >bosh micro deployment sample_micro_template
-    
-    >bosh download public stemcell (pick one from the list, it doesn't matter, and put its name here)
-    
-    >bosh micro deploy (downloaded tgz from previous command here)
-    
-Ultimately, at the time of this writing, you will get to a 'waiting for agent' prompt.... This will never finish as the
-'stemcell' that we used is hard-coded to a stock Azure vm image. We will build a stemcell in the future that has the
-agent installed to get past this. 
+* `type` (required)
+  can be either `dynamic` for a DHCP assigned IP by Azure, or 'manual' to use an assigned IP by BOSH director,
+  or `vip` to use an Reserved IP (which needs to be already allocated)
 
+## Example
 
-## Contributing
+This is a sample of how Azure specific properties are used in a BOSH deployment manifest:
 
-1. Fork it ( https://github.com/[my-github-username]/bosh_azure_cpi/fork )
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
+    ---
+    name: sample
+    director_uuid: 081e60b9-160e-4236-b12f-ea11293d95e3
+
+    ...
+
+    networks:
+      - name: reserved
+        type: vip
+        cloud_properties: {}
+      - name: default
+        type: manual
+        subnets:
+        - range:   10.0.0.0/20
+          gateway: 10.0.0.1
+          dns:     [10.0.0.4]
+          reserved: [10.0.0.2 - 10.0.0.6]
+          cloud_properties:
+            virtual_network_name: boshvnet
+            subnet_name: BOSH
+            tcp_endpoints:
+            - 4222:4222
+            - 25777:25777
+            - 25250:25250
+            - 6868:6868
+            - 25555:25555
+
+    ...
+
+    resource_pools:
+      - name: default
+        network: default
+        size: 3
+        stemcell:
+          name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+          version: latest
+        cloud_properties:
+          instance_type: Small
+
+    ...
+
+    properties:
+      azure:
+        management_endpoint: https://management.core.windows.net
+        subscription_id: <your_subscription_id>
+        management_certificate: "<base64_encoding_content_of_your_management_certificate>"
+        storage_account_name: <your_storage_account_name>
+        storage_access_key: <your_storage_access_key>
+        ssh_certificate: "<base64_encoding_content_of_your_ssh_certificate>"
+        ssh_private_key: "<base64_encoding_content_of_your_ssh_private_key>"
+        affinity_group_name: <youre_affinity_group_name>
