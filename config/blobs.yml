@@ -1,0 +1,17 @@
+---
+ruby_azure_cpi/bundler-1.8.2.gem:
+  object_id: 002f0bf1-f744-43d7-87b9-e980eb103a6c
+  sha: e9b810268eea94ac5e825b5ae8a2d5fd19fb5905
+  size: 235008
+ruby_azure_cpi/ruby-1.9.3-p545.tar.gz:
+  object_id: f907cd97-da4b-4b65-b1f1-01060aeb3222
+  sha: 03455364740914e8d2dfd6421f681b3fb68a4313
+  size: 12582277
+ruby_azure_cpi/rubygems-2.1.11.tgz:
+  object_id: 8d0c1377-6871-4263-acde-99dd8ecaaf4d
+  sha: ca3033432cae28deb7ced79cda271cb292b70e59
+  size: 367166
+ruby_azure_cpi/yaml-0.1.5.tar.gz:
+  object_id: 0ce51818-5aeb-4840-a45c-5343d6b014e7
+  sha: 8b78cb9f759c7d80db8a7328c0ebecfe34fde737
+  size: 504897

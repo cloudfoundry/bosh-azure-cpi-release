@@ -1,0 +1,56 @@
+cloud:
+  plugin: azure
+
+  properties:
+    azure:
+      management_endpoint: <%= p('azure.management_endpoint') %>
+      subscription_id: <%= p('azure.subscription_id') %>
+      management_certificate: <%= p('azure.management_certificate') %>
+      storage_account_name: <%= p('azure.storage_account_name') %>
+      storage_access_key: <%= p('azure.storage_access_key') %>
+      ssh_certificate: <%= p('azure.ssh_certificate') %>
+      ssh_private_key: <%= p('azure.ssh_private_key') %>
+      affinity_group_name: <%= p('azure.affinity_group_name') %>
+
+    registry:
+      endpoint: http://<%= p(['registry.username', 'registry.http.user']) %>:<%= p(['registry.password', 'registry.http.password']) %>@<%= p(['registry.host', 'registry.address']) %>:<%= p(['registry.port', 'registry.http.port']) %>
+      user: <%= p(['registry.username', 'registry.http.user']) %>
+      password: <%= p(['registry.password', 'registry.http.password']) %>
+
+    agent:
+      ntp: [<%= p('ntp').join(", ") %>]
+
+    <% if_p('blobstore') do %>
+      blobstore:
+        provider: <%= p('blobstore.provider') %>
+        options:
+      <% if p('blobstore.provider') == "s3" %>
+          bucket_name: <%= p('blobstore.bucket_name') %>
+          access_key_id: <%= p(['agent.blobstore.access_key_id', 'blobstore.access_key_id']) %>
+          secret_access_key: <%= p(['agent.blobstore.secret_access_key', 'blobstore.secret_access_key']) %>
+        <% if_p('blobstore.use_ssl') do |use_ssl| %>
+          use_ssl: <%= use_ssl %>
+        <% end %>
+        <% if_p('blobstore.s3_port') do |port| %>
+          port: <%= port %>
+        <% end %>
+        <% if_p('blobstore.host') do |host| %>
+          host: <%= host %>
+        <% end %>
+        <% if_p('blobstore.s3_force_path_style') do |s3_force_path_style| %>
+          s3_force_path_style: <%= s3_force_path_style %>
+        <% end %>
+      <% elsif p('blobstore.provider') == 'local' %>
+          blobstore_path: <%= p('blobstore.path') %>
+      <% else %>
+          endpoint: 'http://<%= p(['agent.blobstore.address', 'blobstore.address']) %>:<%= p('blobstore.port') %>'
+          user: <%= p('blobstore.agent.user') %>
+          password: <%= p('blobstore.agent.password') %>
+      <% end %>
+    <% end %>
+
+    <% if_p('agent.mbus') do |mbus| %>
+      mbus: <%= mbus %>
+    <% end.else_if_p('nats') do %>
+      mbus: nats://<%= p('nats.user') %>:<%= p('nats.password') %>@<%= p(['agent.nats.address', 'nats.address']) %>:<%= p('nats.port') %>
+    <% end %>

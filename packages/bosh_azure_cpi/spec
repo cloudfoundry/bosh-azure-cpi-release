@@ -1,0 +1,8 @@
+---
+name: bosh_azure_cpi
+
+dependencies:
+- ruby_azure_cpi
+
+files:
+- bosh_azure_cpi/vendor/cache/*.gem

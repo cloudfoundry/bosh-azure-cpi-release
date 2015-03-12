@@ -1,0 +1,12 @@
+---
+name: cpi
+
+templates:
+  cpi.erb: bin/cpi
+  cpi.yml.erb: config/cpi.yml
+
+packages:
+- ruby_azure_cpi
+- bosh_azure_cpi
+
+properties: {}

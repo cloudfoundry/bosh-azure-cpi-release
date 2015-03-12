@@ -1,0 +1,32 @@
+#!/bin/bash
+
+set -ex
+
+cpi_dir=$(cd $(dirname $0)/../ && pwd)
+cpi_gems_dir=$cpi_dir/src/bosh_azure_cpi
+
+cleanup() {
+  cd $cpi_gems_dir
+  rm -f *.gem Gemfile*
+}
+
+trap cleanup EXIT
+
+(
+  cd $cpi_gems_dir
+
+  rm -f *.gem
+
+  wget https://github.com/AbelHu/bosh/raw/azure_cpi/vendor/cache/azure-0.6.5.gem
+  gem install azure-0.6.5.gem
+
+  wget https://github.com/AbelHu/bosh/raw/azure_cpi/vendor/cache/vhd-0.0.4.gem
+  gem install vhd-0.0.4.gem
+
+  cat > Gemfile <<EOF
+source "https://rubygems.org"
+gem "bosh_azure_cpi", github: "AbelHu/bosh_azure_cpi"
+EOF
+
+  bundle package
+)

@@ -1,0 +1,14 @@
+#!/bin/bash
+
+read INPUT
+
+pkgs_dir=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
+jobs_dir=${BOSH_JOBS_DIR:-/var/vcap/jobs}
+
+export PATH=$pkgs_dir/ruby_azure_cpi/bin:$PATH
+export BUNDLE_GEMFILE=$pkgs_dir/bosh_azure_cpi/Gemfile
+export GEM_HOME=$pkgs_dir/bosh_azure_cpi/gem_home/ruby/1.9.1
+
+echo $INPUT | $pkgs_dir/bosh_azure_cpi/bin/azure_cpi $jobs_dir/cpi/config/cpi.yml
+
+exit 0
