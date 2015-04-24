@@ -27,6 +27,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'bosh-registry',    "~>#{version}"
   spec.add_dependency 'nokogiri',         "~> 1.5"
   spec.add_dependency 'vhd',              "~> 0.0.4"
-  spec.add_dependency 'psych'
-  spec.add_dependency 'httpclient'
+  spec.add_dependency 'httpclient',       "=2.4.0"
 end

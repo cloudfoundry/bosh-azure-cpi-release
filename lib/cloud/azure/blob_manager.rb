@@ -68,7 +68,7 @@ module Bosh::AzureCloud
         
         logger.info("create_page_blob: Calculate hash for every block")
 
-        upload_page_blob(container_name, blob_name, blob_size, file_path, 10)
+        upload_page_blob(container_name, blob_name, blob_size, file_path, 36)
       rescue => e
         cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")
       end
@@ -185,8 +185,9 @@ module Bosh::AzureCloud
           logger.debug("read_content_func: id: #{id}, start_range: #{file_start_range}, size: #{chunk.size}")
 
           id += 1
+          block = VHDBlock.new(id, file_start_range, chunk.size, file_start_range, chunk)
           file_mutex.synchronize do
-            file_blocks.push(VHDBlock.new(id, file_start_range, chunk.size, file_start_range, chunk))
+            file_blocks.push(block)
           end
         end
       end

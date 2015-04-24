@@ -1,12 +1,12 @@
 azure:
       management_endpoint: https://management.core.windows.net
       subscription_id: <your_subscription_id>
-      management_certificate: "<content_of_your_management_certificate>"
+      management_certificate: <content_of_your_management_certificate>
       storage_account_name: <your_storage_account_name>
       storage_access_key: <your_storage_access_key>
-      ssh_certificate: "<content_of_your_ssh_certificate>"
-      ssh_private_key: "<content_of_your_ssh_private_key>"
-      affinity_group_name: <youre_affinity_group_name>
+      ssh_certificate: <content_of_your_ssh_certificate>
+      ssh_private_key: <content_of_your_ssh_private_key>
+      affinity_group_name: <your_affinity_group_name>
 registry:
       endpoint: http://admin:admin@localhost:25888
       user: admin

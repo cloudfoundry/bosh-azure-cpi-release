@@ -24,5 +24,9 @@ module Bosh::AzureCloud
       @ip
     end
 
+    def vnet?
+      true
+    end
+
   end
 end
