@@ -12,7 +12,7 @@ mkdir my-bosh
 
 1. Create `bosh.yml` inside deployment directory with following contents
 
-```
+```yaml
 ---
 name: bosh
 
@@ -20,8 +20,8 @@ releases:
 - name: bosh
   url: https://bosh.io/d/github.com/cloudfoundry/bosh?v=158
   sha1: a97811864b96bee096477961b5b4dadd449224b4
-- name: bosh-aws-cpi
-  url: file://./bosh-azure-cpi-release.tgz
+- name: bosh-azure-cpi
+  url: file://../dev_releases/bosh-azure-cpi/bosh-azure-cpi-0+dev.21.tgz
 
 networks:
 - name: public
@@ -33,8 +33,8 @@ networks:
     gateway: 10.0.0.1
     dns: [8.8.8.8]
     cloud_properties:
-      virtual_network_name: boshvnet
-      subnet_name: BOSH
+      virtual_network_name: boshnet
+      subnet_name: subnet1
       tcp_endpoints:
       - 4222:4222
       - 25777:25777
@@ -47,7 +47,7 @@ resource_pools:
   network: private
   stemcell:
     # bosh-azure-hyperv-ubuntu-trusty-go_agent
-    url: file://./bosh-azure-hyperv-ubuntu-trusty-go_agent.tgz
+    url: file://~/Downloads/stemcell.tgz
   cloud_properties:
     instance_type: Small
 
@@ -122,14 +122,15 @@ jobs:
       director_account: {user: admin, password: admin}
 
     azure: &azure
+      subscription_id: 9eec...
+      affinity_group_name: bosh
       management_endpoint: https://management.core.windows.net
-      subscription_id: <your_subscription_id>
-      management_certificate: "<base64_encoding_content_of_your_management_certificate>"
-      storage_account_name: <your_storage_account_name>
-      storage_access_key: <your_storage_access_key>
-      ssh_certificate: "<base64_encoding_content_of_your_ssh_certificate>"
-      ssh_private_key: "<base64_encoding_content_of_your_ssh_private_key>"
-      affinity_group_name: <youre_affinity_group_name>
+      management_certificate: "-----BEGIN RSA PRIVATE KEY-----\n..."
+      storage_account_name: bosh...
+      storage_access_key: "n6Qi..."
+      ssh_user: vcap
+      ssh_certificate: "-----BEGIN CERTIFICATE-----\n..."
+      ssh_private_key: "-----BEGIN RSA PRIVATE KEY-----\n..."
 
     # Tells agents how to contact nats
     agent: {mbus: "nats://nats:nats-password@10.0.0.7:4222"}
@@ -139,20 +140,20 @@ jobs:
 cloud_provider:
   template: {name: cpi, release: bosh-azure-cpi}
 
-  # Tells bosh-micro how to SSH into deployed VM
+  # Tells bosh-init how to SSH into deployed VM
   ssh_tunnel:
     host: __PUBLIC_IP__
     port: 22
     user: vcap
-    private_key: ~/Downloads/new-bosh.pem
+    private_key: ~/.ssh/bosh
 
-  # Tells bosh-micro how to contact remote agent
+  # Tells bosh-init how to contact remote agent
   mbus: https://mbus-user:mbus-password@__PUBLIC_IP__:6868
 
   properties:
     azure: *azure
 
-    # Tells CPI how agent should listen for bosh-micro requests
+    # Tells CPI how agent should listen for bosh-init requests
     agent: {mbus: "https://mbus-user:mbus-password@0.0.0.0:6868"}
 
     blobstore: {provider: local, path: /var/vcap/micro_bosh/data/cache}
