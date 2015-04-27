@@ -20,4 +20,4 @@ bosh create release --force --with-tarball
 
 The release is now ready for use. If everything works, commit the changes including the updated gems.
 
-At the end of the CLI output there will be "Release tarball" path. You can use generated tarball with experimental `bosh-micro` CLI.
+At the end of the CLI output there will be "Release tarball" path.
