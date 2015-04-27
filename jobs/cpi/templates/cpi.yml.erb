@@ -1,16 +1,22 @@
+<% require 'json' %>
+
 cloud:
   plugin: azure
 
   properties:
     azure:
-      management_endpoint: <%= p('azure.management_endpoint') %>
       subscription_id: <%= p('azure.subscription_id') %>
-      management_certificate: <%= p('azure.management_certificate') %>
+      affinity_group_name: <%= p('azure.affinity_group_name') %>
+
+      management_endpoint: <%= p('azure.management_endpoint') %>
+      management_certificate: <%= JSON.dump(p('azure.management_certificate')) %>
+
       storage_account_name: <%= p('azure.storage_account_name') %>
       storage_access_key: <%= p('azure.storage_access_key') %>
-      ssh_certificate: <%= p('azure.ssh_certificate') %>
-      ssh_private_key: <%= p('azure.ssh_private_key') %>
-      affinity_group_name: <%= p('azure.affinity_group_name') %>
+
+      ssh_user: <%= p('azure.ssh_user') %>
+      ssh_certificate: <%= JSON.dump(p('azure.ssh_certificate')) %>
+      ssh_private_key: <%= JSON.dump(p('azure.ssh_private_key')) %>
 
     registry:
       endpoint: http://<%= p(['registry.username', 'registry.http.user']) %>:<%= p(['registry.password', 'registry.http.password']) %>@<%= p(['registry.host', 'registry.address']) %>:<%= p(['registry.port', 'registry.http.port']) %>

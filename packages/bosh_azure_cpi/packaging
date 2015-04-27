@@ -13,10 +13,10 @@ cat >> Gemfile <<EOF
 gem 'bosh_azure_cpi'
 EOF
 
-bundle_cmd="$pkgs_dir/ruby_azure_cpi/bin/bundle"
+# force bundler to use a clean config
+export BUNDLE_CONFIG=`pwd`/.cpi_bundle_config
 
-# Use system libxml2 and libxslt, rather than those from Nokogiri
-$bundle_cmd config build.nokogiri --use-system-libraries
+bundle_cmd="$pkgs_dir/ruby_azure_cpi/bin/bundle"
 
 $bundle_cmd install \
   --local           \

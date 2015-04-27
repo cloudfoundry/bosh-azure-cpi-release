@@ -28,5 +28,5 @@ source "https://rubygems.org"
 gem "bosh_azure_cpi", github: "AbelHu/bosh_azure_cpi"
 EOF
 
-  bundle package
+  bundle package --all
 )
