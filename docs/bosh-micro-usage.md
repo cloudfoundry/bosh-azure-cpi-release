@@ -1,50 +1,58 @@
-## Experimental `bosh-micro` usage
+## Experimental `bosh-init` usage
 
-!!! `bosh-micro` CLI is still being worked on !!!
+!!! `bosh-init` CLI is still being worked on !!!
 
-To start experimenting with bosh-azure-cpi release and new bosh-micro cli:
+To start experimenting with bosh-azure-cpi release and new bosh-init cli:
 
 1. Create a deployment directory
 
 ```
-mkdir my-micro
+mkdir my-bosh
 ```
 
-1. Create `manifest.yml` inside deployment directory with following contents
+1. Create `bosh.yml` inside deployment directory with following contents
 
 ```
 ---
 name: bosh
 
+releases:
+- name: bosh
+  url: https://bosh.io/d/github.com/cloudfoundry/bosh?v=158
+  sha1: a97811864b96bee096477961b5b4dadd449224b4
+- name: bosh-aws-cpi
+  url: file://./bosh-azure-cpi-release.tgz
+
 networks:
 - name: public
   type: vip
-  cloud_properties: {}
 - name: private
   type: manual
-  ip:   10.0.0.7
-  dns:  [10.0.0.4]
-  cloud_properties:
-    virtual_network_name: boshvnet
-    subnet_name: BOSH
-    tcp_endpoints:
-    - 4222:4222
-    - 25777:25777
-    - 25250:25250
-    - 6868:6868
-    - 25555:25555
+  subnets:
+  - range: 10.0.0.0/24
+    gateway: 10.0.0.1
+    dns: [8.8.8.8]
+    cloud_properties:
+      virtual_network_name: boshvnet
+      subnet_name: BOSH
+      tcp_endpoints:
+      - 4222:4222
+      - 25777:25777
+      - 25250:25250
+      - 6868:6868
+      - 25555:25555
 
 resource_pools:
-- name: default
+- name: vms
   network: private
   stemcell:
-    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-    version: latest
+    # bosh-azure-hyperv-ubuntu-trusty-go_agent
+    url: file://./bosh-azure-hyperv-ubuntu-trusty-go_agent.tgz
   cloud_properties:
     instance_type: Small
 
 disk_pools:
-- name: my-persistent-disk
+- name: disks
   disk_size: 25_000
 
 jobs:
@@ -60,12 +68,12 @@ jobs:
   - {name: cpi, release: bosh-azure-cpi}
 
   instances: 1
-  persistent_disk_pool: my-persistent-disk
+  resource_pool: vms
+  persistent_disk_pool: disks
 
   networks:
-  - name: private
-  - name: public
-    static_ips: [__PUBLIC_IP__]
+  - {name: private, static_ips: [10.0.0.7]}
+  - {name: public, static_ips: [__PUBLIC_IP__]}
 
   properties:
     nats:
@@ -107,7 +115,7 @@ jobs:
       address: 127.0.0.1
       name: bosh
       db: *db
-      cpi_job: cpi # Use external AWS CPI
+      cpi_job: cpi
 
     hm:
       http: {user: hm, password: hm-password}
@@ -136,14 +144,7 @@ cloud_provider:
     host: __PUBLIC_IP__
     port: 22
     user: vcap
-    private_key: /Users/pivotal/Downloads/new-bosh.pem
-
-  # Tells bosh-micro where to run registry on a user's machine while deploying
-  registry: &registry
-    host: 127.0.0.1
-    port: 6901
-    username: registry-user
-    password: registry-password
+    private_key: ~/Downloads/new-bosh.pem
 
   # Tells bosh-micro how to contact remote agent
   mbus: https://mbus-user:mbus-password@__PUBLIC_IP__:6868
@@ -154,24 +155,13 @@ cloud_provider:
     # Tells CPI how agent should listen for bosh-micro requests
     agent: {mbus: "https://mbus-user:mbus-password@0.0.0.0:6868"}
 
-    # Tells CPI how to contact registry
-    registry: *registry
-
-    blobstore:
-      provider: local
-      path: /var/vcap/micro_bosh/data/cache
+    blobstore: {provider: local, path: /var/vcap/micro_bosh/data/cache}
 
     ntp: *ntp
-```
-
-1. Set deployment
-
-```
-bosh-micro deployment my-micro/manifest.yml
 ```
 
 1. Kick off a deploy with stemcell, BOSH release, and CPI release
 
 ```
-bosh-micro deploy ~/Downloads/???-xen-ubuntu-trusty-go_agent.tgz ~/Downloads/bosh-?.tgz ~/Downloads/bosh-azure-cpi-?.tgz
+cd my-bosh && bosh-init deploy bosh.yml
 ```
