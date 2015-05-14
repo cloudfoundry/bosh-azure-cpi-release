@@ -7,11 +7,11 @@ network:
   type: manual
   vip: <reserved_ip_for_microbosh_vm>
   ip: 10.0.0.5
-  dns: [10.0.0.4]
   cloud_properties:
     virtual_network_name: <virtual_network_name>
     subnet_name: <subnet_name>
     tcp_endpoints:
+    - "22:22"
     - "53:53"
     - "4222:4222"
     - "6868:6868"
@@ -19,30 +19,32 @@ network:
     - "25555:25555"
     - "25777:25777"
     udp_endpoints:
-    - "53:53"
     - "68:68"
 
 resources:
   persistent_disk: 20480
   cloud_properties:
-    instance_type: Small
+    instance_type: Standard_A1
 
 cloud:
   plugin: azure
   properties:
     azure:
-      management_endpoint: https://management.core.windows.net
+      environment: AzureCloud
+      api_version: <api_version>
       subscription_id: <your_subscription_id>
-      management_certificate: <content_of_your_management_certificate>
       storage_account_name: <your_storage_account_name>
       storage_access_key: <your_storage_access_key>
+      resource_group_name: <your_resource_group_name>
+      tenant_id: <your_tenant_id>
+      client_id: <your_client_id>
+      client_secret: <your_client_secret>
       ssh_certificate: <content_of_your_ssh_certificate>
       ssh_private_key: <content_of_your_ssh_private_key>
-      affinity_group_name: <your_affinity_group_name>
 
 apply_spec:
   agent:
-    blobstore: {address: 10.0.0.4}
-    nats:{address: 10.0.0.4}
+    blobstore: {address: 10.0.0.5}
+    nats:{address: 10.0.0.5}
   properties:
-    registry:{address: 10.0.0.4}
+    registry:{address: 10.0.0.5}

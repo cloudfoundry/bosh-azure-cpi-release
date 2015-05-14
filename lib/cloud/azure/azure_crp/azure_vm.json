@@ -1,0 +1,140 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2014-04-01-preview/deploymentTemplate.json",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "storageAccountName": {
+            "type": "string"
+        },
+        "adminUserName": {
+            "type": "string",
+            "defaultValue": "vcap"
+        },
+        "sshKeyData": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "imageUri": {
+            "type": "string"
+        },
+        "osvhdUri": {
+            "type": "string"
+        },
+        "privateIPAddress": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "privateIPAddressType": {
+            "type": "string",
+            "defaultValue": "Dynamic"
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "West US"
+        },
+        "vmSize": {
+            "type": "string",
+            "defaultValue": "Standard_A0"
+        },
+        "customData": {
+            "type": "string",
+            "defaultValue": ""
+        },
+        "vmName": {
+            "type": "string",
+            "defaultValue": "myVM"
+        },
+        "nicName": {
+            "type": "string",
+            "defaultValue": "myNIC"
+        },
+        "virtualNetworkName": {
+            "type": "string"
+        },
+        "subnetName": {
+            "type": "string"
+        },
+     "apiVersion": {
+            "type": "string",
+            "defaultValue": "2015-05-01-preview"
+        }
+    },
+    "variables": {
+        "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName'))]",
+        "subnetRef": "[concat(variables('vnetID'),'/subnets/',parameters('subnetName'))]",
+        "vmStorageAccountContainerName": "stemcell",
+        "sshKeyPath": "[concat('/home/',parameters('adminUsername'),'/.ssh/authorized_keys')]"
+    },
+    "resources": [{
+            "apiVersion": "[parameters('apiVersion')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "name": "[parameters('nicName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "privateIPAddress": "[parameters('privateIPAddress')]",
+                            "privateIPAllocationMethod": "[parameters('privateIPAddressType')]",
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "apiVersion": "[parameters('apiVersion')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "name": "[parameters('vmName')]",
+            "location": "[parameters('location')]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', parameters('nicName'))]"
+            ],
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                    "customData": "[parameters('customData')]",
+                    "computername": "[parameters('vmName')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "linuxConfiguration": {
+                        "disablePasswordAuthentication": "true",
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "[variables('sshKeyPath')]",
+                                    "keyData": "[parameters('sshKeyData')]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "storageProfile": {
+                    "osDisk": {
+                        "name": "osDiskName",
+                        "osType": "linux",
+                        "createOption":"fromImage",
+                        "image": {
+                            "uri": "[parameters('imageUri')]"
+                        },
+                        "vhd": {
+                            "uri": "[parameters('osvhdUri')]"
+                        }
+                    }
+
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces',parameters('nicName'))]"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+

@@ -1,22 +1,48 @@
 module Bosh::AzureCloud
   module Helpers
 
-    MAX_RETRIES = 10 # Max number of retries
-    DEFAULT_RETRY_TIMEOUT = 15 # Default timeout before retrying a call (in seconds)
+    AZURE_ENVIRONMENTS = {
+      'AzureCloud' => {
+        'portalUrl' => 'http://go.microsoft.com/fwlink/?LinkId=254433',
+        'publishingProfileUrl' => 'http://go.microsoft.com/fwlink/?LinkId=254432',
+        'managementEndpointUrl' => 'https://management.core.windows.net',
+        'resourceManagerEndpointUrl' => 'https://management.azure.com/',
+        'sqlManagementEndpointUrl' => 'https://management.core.windows.net:8443/',
+        'sqlServerHostnameSuffix' => '.database.windows.net',
+        'galleryEndpointUrl' => 'https://gallery.azure.com/',
+        'activeDirectoryEndpointUrl' => 'https://login.windows.net',
+        'activeDirectoryResourceId' => 'https://management.core.windows.net/',
+        'commonTenantName' => 'common',
+        'activeDirectoryGraphResourceId' => 'https://graph.windows.net/',
+        'activeDirectoryGraphApiVersion' => '2013-04-05'
+      },
+      'AzureChinaCloud' => {
+        'portalUrl' => 'http://go.microsoft.com/fwlink/?LinkId=301902',
+        'publishingProfileUrl' => 'http://go.microsoft.com/fwlink/?LinkID=301774',
+        'managementEndpointUrl' => 'https://management.core.chinacloudapi.cn',
+        'sqlManagementEndpointUrl' => 'https://management.core.chinacloudapi.cn:8443/',
+        'sqlServerHostnameSuffix' => '.database.chinacloudapi.cn',
+        'activeDirectoryEndpointUrl' => 'https://login.chinacloudapi.cn',
+        'activeDirectoryResourceId' => 'https://management.core.chinacloudapi.cn/',
+        'commonTenantName' => 'common',
+        'activeDirectoryGraphResourceId' => 'https://graph.windows.net/',
+        'activeDirectoryGraphApiVersion' => '2013-04-05'
+      }
+    }
 
-    def generate_instance_id(cloud_service_name, vm_name)
-      instance_id = cloud_service_name + "&" + vm_name
+    def generate_instance_id(resource_group_name, agent_id)
+      instance_id = "bosh-#{resource_group_name}--#{agent_id}"
     end
 
-    def parse_instance_id(instance_id)
-      cloud_service_name, vm_name = instance_id.split("&")
+    def parse_resource_group_from_instance_id(instance_id)
+      index = instance_id.rindex('--') - 1
+      instance_id[5..index]
+    rescue
+      cloud_error("Cannot parse resource group name from instance_id #{instance_id}. The format should be bosh-RESOURCEGROUPNAME--AGENTID")
     end
 
-    def symbolize_keys(hash)
-      hash.inject({}) do |h, (key, value)|
-        h[key.to_sym] = value.is_a?(Hash) ? symbolize_keys(value) : value
-        h
-      end
+    def get_os_disk_name(instance_id)
+      "#{instance_id}_os_disk"
     end
 
     ##
@@ -30,147 +56,97 @@ module Bosh::AzureCloud
       raise Bosh::Clouds::CloudError, message
     end
 
-    def xml_content(xml, key, default = '')
-      content = default
-      node = xml.at_css(key)
-      content = node.text if node
-      content
+    def azure_cmd(cmd)
+      @logger.info("Execute command #{cmd}")
+
+      exit_status = 0
+      Open3.popen3(cmd) do |stdin, stdout, stderr, wait_thr|
+        exit_status = wait_thr.value
+        if exit_status == 0
+          @logger.debug("exit_status is: #{exit_status.to_s}")
+          @logger.debug("stdout is: #{stdout.read}")
+          @logger.debug("stderr is: #{stderr.read}")
+        else
+          @logger.info("Command failed. Please try it manually to see more details")
+          @logger.error("exit_status is: #{exit_status.to_s}")
+          @logger.error("stdout is: #{stdout.read}")
+          @logger.error("stderr is: #{stderr.read}")
+        end
+      end
+
+      exit_status
+    end
+
+    def invoke_azure_js(args, abort_on_error=false)
+      node_js_file = File.join(File.dirname(__FILE__), "azure_crp", "azure_crp_compute.js")
+      cmd = ["node", node_js_file]
+      cmd.concat(args)
+      @logger.info(cmd[2..-1].join(" ")[0..200])
+      result = {}
+
+      node_path = ENV['NODE_PATH']
+      node_path = "/usr/local/lib/node_modules" if node_path.nil? or node_path.empty?
+      node_env = {'NODE_PATH' => node_path}
+    
+      Open3.popen3(node_env, *cmd) { |stdin, stdout, stderr, wait_thr|
+        data = ""
+        stdstr = ""
+        begin
+          while wait_thr.alive? do
+            IO.select([stdout])
+            data = stdout.read_nonblock(1024000)
+            @logger.info(data)
+            stdstr += data
+            task_checkpoint
+          end
+        rescue Errno::EAGAIN
+          retry
+        rescue EOFError
+        end
+
+        errstr = stderr.read
+        stdstr += stdout.read
+        if errstr and errstr.length > 0
+          errstr = "\n\t\tPlease check if env NODE_PATH is correct\n#{errstr}"  if errstr=~/Function.Module._load/
+          cloud_error(errstr)
+        end
+
+        matchdata = stdstr.match(/##RESULTBEGIN##(.*)##RESULTEND##/im)
+        result = JSON(matchdata.captures[0]) if matchdata
+        exitcode = wait_thr.value
+        @logger.debug(result)
+
+        unless result["Failed"].nil?
+          cloud_error("AuthorizationFailed please try azure login\n") if result["Failed"]["code"] =~/AuthorizationFailed/
+          cloud_error("Can't find token in ~/.azure/azureProfile.json or ~/.azure/accessTokens.json\nTry azure login\n") if result["Failed"]["code"] =~/RefreshToken Fail/
+          cloud_error(result["Failed"])  if  abort_on_error
+        end
+
+       result["R"]
+
+      }
+    end
+
+    def invoke_azure_js_with_id(arg)
+      task = arg[0]
+      instance_id = arg[1]
+
+      begin
+        resource_group_name = parse_resource_group_from_instance_id(instance_id)
+        @logger.debug("resource_group_name is #{resource_group_name}")
+        params = ["-t", task, "-r", resource_group_name, instance_id]
+        params.concat(arg[2..-1])
+        invoke_azure_js(params)
+      rescue Exception => e
+        cloud_error("Error: #{e.message}\n#{e.backtrace.join("\n")}")
+      end
     end
 
     private
 
-    def validate(vm)
-      (!vm.nil? && !nil_or_empty?(vm.vm_name) && !nil_or_empty?(vm.cloud_service_name))
-    end
-
-    def nil_or_empty?(obj)
-      (obj.nil? || obj.empty?)
-    end
-
-    def handle_response(response)
-      ret = wait_for_completion(response)
-      Nokogiri::XML(ret.body) unless ret.nil?
-    end
-
-    def init_url(uri)
-      "#{Azure.config.management_endpoint}/#{Azure.config.subscription_id}/#{uri}"
-    end
-
-    def http_get(uri)
-      url = URI.parse(init_url(uri))
-      request = Net::HTTP::Get.new(url.request_uri)
-      request['x-ms-version'] = '2014-06-01'
-      request['Content-Length'] = 0
-
-      http(url).request(request)
-    end
-
-    def http_post(uri, body=nil)
-      url = URI.parse(init_url(uri))
-      request = Net::HTTP::Post.new(url.request_uri)
-      request.body = body unless body.nil?
-      request['x-ms-version'] = '2014-06-01'
-      request['Content-Type'] = 'application/xml' unless body.nil?
-
-      http(url).request(request)
-    end
-
-    def http_delete(uri, body=nil)
-      url = URI.parse(init_url(uri))
-      request = Net::HTTP::Delete.new(url.request_uri)
-      request.body = body unless body.nil?
-      request['x-ms-version'] = '2014-06-01'
-      request['Content-Type'] = 'application/xml' unless body.nil?
-
-      http(url).request(request)
-    end
-
-    def http(url)
-      pem = File.read(Azure.config.management_certificate)
-      http = Net::HTTP.new(url.host, url.port)
-      http.use_ssl = true
-      http.cert = OpenSSL::X509::Certificate.new(pem)
-      http.key = OpenSSL::PKey::RSA.new(pem)
-      http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      http
-    end
-
-    def wait_for_completion(response)
-      ret_val = Nokogiri::XML response.body
-      if ret_val.at_css('Error Code') && ret_val.at_css('Error Code').content == 'AuthenticationFailed'
-        raise Bosh::Clouds::CloudError, (ret_val.at_css('Error Code').content + ' : ' + ret_val.at_css('Error Message').content)
-      end
-      if response.code.to_i == 200 || response.code.to_i == 201
-        return response
-      elsif response.code.to_i == 307
-        #rebuild_request response
-        raise Bosh::Clouds::CloudError, "Currently bosh_azure_cpi does not support proxy."
-      elsif response.code.to_i > 201 && response.code.to_i <= 299
-        check_completion(response['x-ms-request-id'])
-      elsif warn && !response.success?
-      elsif response.body
-        if ret_val.at_css('Error Code') && ret_val.at_css('Error Message')
-          raise Bosh::Clouds::CloudError, (ret_val.at_css('Error Code').content + ' : ' + ret_val.at_css('Error Message').content)
-        else
-          raise Bosh::Clouds::CloudError, "http error: #{response.code}"
-        end
-      else
-        raise Bosh::Clouds::CloudError, "http error: #{response.code}"
-      end
-    end
-
-    def check_completion(request_id)
-      request_path = "/operations/#{request_id}"
-      done = false
-      while not done
-        print '# '
-        response = http_get(request_path)
-        ret_val = Nokogiri::XML response.body
-        status = xml_content(ret_val, 'Operation Status')
-        status_code = response.code.to_i
-        if status != 'InProgress'
-          done = true
-        end
-        if response.code.to_i == 307
-          done = true
-        end
-        if done
-          if status.downcase != 'succeeded'
-            error_code = xml_content(ret_val, 'Operation Error Code')
-            error_msg = xml_content(ret_val, 'Operation Error Message')
-            raise Bosh::Clouds::CloudError, "#{error_code}: #{error_msg}"
-          else
-            puts "#{status.downcase} (#{status_code})"
-          end
-          return
-        else
-          sleep(5)
-        end
-      end
-    end
-
-    def retry_azure_operation
-      retries = 0
-      retry_interval = DEFAULT_RETRY_TIMEOUT
-
-      begin
-        yield
-      rescue => e
-        if e.message.include?("ConflictError") || e.message.include?("TooManyRequests") || e.message.include?("Retry")
-          unless retries >= MAX_RETRIES
-            task_checkpoint
-            sleep(retry_interval)
-            retries += 1
-            @logger.info("retry #{retries} time")
-            retry
-          end
-        end
-        @logger.warn("#{e.message}\n#{e.backtrace.join("\n")}")
-      end
-    end
-
     def task_checkpoint
       Bosh::Clouds::Config.task_checkpoint
     end
+
   end
 end

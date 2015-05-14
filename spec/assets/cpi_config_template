@@ -1,12 +1,15 @@
 azure:
-      management_endpoint: https://management.core.windows.net
+      environment: AzureCloud
+      api_version: <api_version>
       subscription_id: <your_subscription_id>
-      management_certificate: <content_of_your_management_certificate>
       storage_account_name: <your_storage_account_name>
       storage_access_key: <your_storage_access_key>
+      resource_group_name: <your_resource_group_name>
+      tenant_id: <your_tenant_id>
+      client_id: <your_client_id>
+      client_secret: <your_client_secret>
       ssh_certificate: <content_of_your_ssh_certificate>
       ssh_private_key: <content_of_your_ssh_private_key>
-      affinity_group_name: <your_affinity_group_name>
 registry:
       endpoint: http://admin:admin@localhost:25888
       user: admin

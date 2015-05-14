@@ -2,7 +2,6 @@ module Bosh::AzureCloud
   class Cloud < Bosh::Cloud
     attr_reader   :registry
     attr_reader   :options
-    attr_accessor :logger
     attr_reader   :azure
 
     include Helpers
@@ -95,27 +94,19 @@ module Bosh::AzureCloud
       with_thread_name("create_vm(#{agent_id}, ...)") do
         begin
           raise "Given stemcell '#{stemcell_id}' does not exist" unless @azure.stemcell_manager.has_stemcell?(stemcell_id)
-
-          instance = @azure.vm_manager.create(
+          stemcell_uri = @azure.stemcell_manager.get_stemcell_uri(stemcell_id)
+          instance_id = @azure.vm_manager.create(
             agent_id,
-            stemcell_id,
+            stemcell_uri,
             azure_properties,
             NetworkConfigurator.new(networks),
             resource_pool)
 
-          instance_id = generate_instance_id(instance.cloud_service_name, instance.vm_name)
-
-          logger.info("Created new instance '#{instance_id}'")
-
-          unless disk_locality.nil?
-            logger.info("Attach disks to the new instance")
-            disk_locality.each do |disk_id|
-              attach_disk(instance_id, disk_id)
-            end
-          end
+          @logger.info("Created new instance '#{instance_id}'")
 
           registry_settings = initial_agent_settings(
             agent_id,
+            instance_id,
             networks,
             env,
             "/dev/sda"
@@ -124,7 +115,7 @@ module Bosh::AzureCloud
 
           instance_id
         rescue => e
-          @azure.vm_manager.delete(instance_id) if instance
+          @azure.vm_manager.delete(instance_id) if instance_id
           cloud_error("Failed to create instance: #{e.message}\n#{e.backtrace.join("\n")}")
         end
       end
@@ -137,7 +128,7 @@ module Bosh::AzureCloud
     # @return [void]
     def delete_vm(instance_id)
       with_thread_name("delete_vm(#{instance_id})") do
-        logger.info("Deleting instance '#{instance_id}'")
+        @logger.info("Deleting instance '#{instance_id}'")
         @azure.vm_manager.delete(instance_id)
       end
     end
@@ -150,7 +141,7 @@ module Bosh::AzureCloud
     def has_vm?(instance_id)
       with_thread_name("has_vm?(#{instance_id})") do
         vm = @azure.vm_manager.find(instance_id)
-        !vm.nil? && vm.status != "DeletingVM"
+        !vm.nil? && vm['status'] != 'deleting'
       end
     end
 
@@ -186,7 +177,8 @@ module Bosh::AzureCloud
     # @param [Hash] metadata metadata key/value pairs
     # @return [void]
     def set_vm_metadata(instance_id, metadata)
-      logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
+      @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
+      @azure.vm_manager.set_metadata(instance_id, metadata)
     end
 
     ##
@@ -215,7 +207,7 @@ module Bosh::AzureCloud
     # @return [String] opaque id later used by {#attach_disk}, {#detach_disk}, and {#delete_disk}
     def create_disk(size, cloud_properties, instance_id = nil)
       with_thread_name("create_disk(#{size})") do
-        logger.info("Create disk for vm #{instance_id}") unless instance_id.nil?
+        @logger.info("Create disk for vm #{instance_id}") unless instance_id.nil?
         validate_disk_size(size)
 
         @azure.disk_manager.create_disk(size/1024)
@@ -255,7 +247,7 @@ module Bosh::AzureCloud
           settings["disks"]["persistent"][disk_id] = volume_name
         end
 
-        logger.info("Attached `#{disk_id}' to `#{instance_id}'")
+        @logger.info("Attached `#{disk_id}' to `#{instance_id}'")
       end
     end
 
@@ -267,7 +259,8 @@ module Bosh::AzureCloud
       with_thread_name("snapshot_disk(#{disk_id},#{metadata})") do
         snapshot_id = @azure.disk_manager.snapshot_disk(disk_id, metadata)
 
-        logger.info("Take a snapshot disk `#{snapshot_id}' for `#{disk_id}'")
+        @logger.info("Take a snapshot disk '#{snapshot_id}' for '#{disk_id}'")
+        snapshot_id
       end
     end
 
@@ -295,7 +288,7 @@ module Bosh::AzureCloud
 
         @azure.vm_manager.detach_disk(instance_id, disk_id)
 
-        logger.info("Detached `#{disk_id}' from `#{instance_id}'")
+        @logger.info("Detached `#{disk_id}' from `#{instance_id}'")
       end
     end
 
@@ -325,14 +318,17 @@ module Bosh::AzureCloud
     #
     def validate_options
       required_keys = {
-          "azure" => ["management_endpoint",
+          "azure" => ["environment",
+            "api_version",
             "subscription_id",
-            "management_certificate",
             "storage_account_name",
             "storage_access_key",
-            "affinity_group_name",
+            "resource_group_name",
             "ssh_certificate",
-            "ssh_private_key"],
+            "ssh_private_key",
+            "tenant_id",
+            "client_id",
+            "client_secret"],
           "registry" => ["endpoint", "user", "password"],
       }
 
@@ -356,17 +352,13 @@ module Bosh::AzureCloud
       registry_password   = registry_properties.fetch('password')
 
       # Registry updates are not really atomic in relation to
-      # Azure API calls, so they might get out of sync. Cloudcheck
-      # is supposed to fix that.
+      # Azure API calls, so they might get out of sync.
       @registry = Bosh::Registry::Client.new(registry_endpoint,
                                              registry_user,
                                              registry_password)
     end
 
     def init_azure
-      @azure_certificate_file = "/tmp/azure.pem"
-      File.open(@azure_certificate_file, 'w+') { |f| f.write(azure_properties['management_certificate']) }
-
       @ssh_certificate_file = "/tmp/bosh_cert.pem"
       File.open(@ssh_certificate_file, 'w+') { |f| f.write(azure_properties['ssh_certificate']) }
 
@@ -375,7 +367,6 @@ module Bosh::AzureCloud
 
       @azure_properties = azure_properties.merge(
                             {
-                              'azure_certificate_file' => @azure_certificate_file,
                               'ssh_certificate_file'   => @ssh_certificate_file,
                               'ssh_private_key_file'   => @ssh_private_key_file
                             })
@@ -390,14 +381,15 @@ module Bosh::AzureCloud
     #
     # @param [String] agent_id Agent id (will be picked up by agent to
     #   assume its identity
+    # @param [String] vm_name VM name
     # @param [Hash] network_spec Agent network spec
     # @param [Hash] environment
     # @param [String] root_device_name root device, e.g. /dev/sda1
     # @return [Hash]
-    def initial_agent_settings(agent_id, network_spec, environment, root_device_name)
+    def initial_agent_settings(agent_id, vm_name, network_spec, environment, root_device_name)
       settings = {
           "vm" => {
-              "name" => "bosh-vm-#{agent_id}"
+              "name" => vm_name
           },
           "agent_id" => agent_id,
           "networks" => network_spec,

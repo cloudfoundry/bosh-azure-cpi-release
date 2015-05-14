@@ -6,22 +6,28 @@ These options are passed to the Azure CPI when it is instantiated.
 
 ### Azure options
 
-* `management_endpoint` (required)
-  The base URI for Azure Management Service
+* `environment` (required)
+  The environment for Azure Management Service: AzureCloud or AzureChinaCloud
+* `api_version` (required)
+  The API version of Azure Management Service. 2015-05-01-preview
 * `subscription_id` (required)
   Azure Subscription Id
-* `management_certificate` (required)
-  Base64 encoding content of Azure API certificates used to authenticate service management operations
 * `storage_account_name` (required)
   Azure storage account name
 * `storage_access_key` (required)
   Azure storage access key
-* `affinity_group_name` (required)
-  Affinity group name to use when spinning up new vms
+* `resource_group_name` (required)
+  Resource group name to use when spinning up new vms
+* `tenant_id` (required)
+  The tenant id for your service principal
+* `client_id` (required)
+  The client id for your service principal
+* `client_secret` (required)
+  The client secret for your service principal
 * `ssh_certificate` (required)
-  Base64 encoding content of the default certificate to use when spinning up new vms
+  The content of the default certificate to use when spinning up new vms
 * `ssh_private_key` (required)
-  Base64 encoding content of the default private key to use when spinning up new vms
+  The content of the default private key to use when spinning up new vms
 * `container_name` (optional)
   Contianer name in Azure storage account, defaults to 'bosh'
 
@@ -75,18 +81,20 @@ This is a sample of how Azure specific properties are used in a BOSH deployment 
         type: manual
         subnets:
         - range:   10.0.0.0/20
-          gateway: 10.0.0.1
-          dns:     [10.0.0.4]
           reserved: [10.0.0.2 - 10.0.0.6]
           cloud_properties:
             virtual_network_name: boshvnet
             subnet_name: BOSH
             tcp_endpoints:
-            - 4222:4222
-            - 25777:25777
-            - 25250:25250
-            - 6868:6868
-            - 25555:25555
+            - "22:22"
+            - "53:53"
+            - "4222:4222"
+            - "6868:6868"
+            - "25250:25250"
+            - "25555:25555"
+            - "25777:25777"
+            udp_endpoints:
+            - "68:68"
 
     ...
 
@@ -98,17 +106,20 @@ This is a sample of how Azure specific properties are used in a BOSH deployment 
           name: bosh-azure-hyperv-ubuntu-trusty-go_agent
           version: latest
         cloud_properties:
-          instance_type: Small
+          instance_type: Standard_A1
 
     ...
 
     properties:
       azure:
-        management_endpoint: https://management.core.windows.net
+        environment: AzureCloud
+        api_version: 2015-05-01-preview
         subscription_id: <your_subscription_id>
-        management_certificate: "<base64_encoding_content_of_your_management_certificate>"
         storage_account_name: <your_storage_account_name>
         storage_access_key: <your_storage_access_key>
-        ssh_certificate: "<base64_encoding_content_of_your_ssh_certificate>"
-        ssh_private_key: "<base64_encoding_content_of_your_ssh_private_key>"
-        affinity_group_name: <youre_affinity_group_name>
+        resource_group_name: <your_resource_group_name>
+        tenant_id: <your_tenant_id>
+        client_id: <your_client_id>
+        client_secret: <your_client_secret>
+        ssh_certificate: <content_of_your_ssh_certificate>
+        ssh_private_key: <content_of_your_ssh_private_key>
