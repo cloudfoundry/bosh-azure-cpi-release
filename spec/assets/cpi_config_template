@@ -1,6 +1,5 @@
 azure:
       environment: AzureCloud
-      api_version: <api_version>
       subscription_id: <your_subscription_id>
       storage_account_name: <your_storage_account_name>
       storage_access_key: <your_storage_access_key>

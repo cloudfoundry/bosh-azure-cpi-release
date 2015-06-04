@@ -8,8 +8,6 @@ These options are passed to the Azure CPI when it is instantiated.
 
 * `environment` (required)
   The environment for Azure Management Service: AzureCloud or AzureChinaCloud
-* `api_version` (required)
-  The API version of Azure Management Service. 2015-05-01-preview
 * `subscription_id` (required)
   Azure Subscription Id
 * `storage_account_name` (required)
@@ -113,7 +111,6 @@ This is a sample of how Azure specific properties are used in a BOSH deployment 
     properties:
       azure:
         environment: AzureCloud
-        api_version: 2015-05-01-preview
         subscription_id: <your_subscription_id>
         storage_account_name: <your_storage_account_name>
         storage_access_key: <your_storage_access_key>

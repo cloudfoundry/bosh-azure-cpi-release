@@ -319,7 +319,6 @@ module Bosh::AzureCloud
     def validate_options
       required_keys = {
           "azure" => ["environment",
-            "api_version",
             "subscription_id",
             "storage_account_name",
             "storage_access_key",
