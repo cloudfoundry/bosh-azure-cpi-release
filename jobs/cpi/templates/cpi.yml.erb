@@ -5,14 +5,17 @@ cloud:
 
   properties:
     azure:
+      environment: <%= p('azure.environment') %>
       subscription_id: <%= p('azure.subscription_id') %>
-      affinity_group_name: <%= p('azure.affinity_group_name') %>
 
-      management_endpoint: <%= p('azure.management_endpoint') %>
-      management_certificate: <%= JSON.dump(p('azure.management_certificate')) %>
+      resource_group_name: <%= p('azure.resource_group_name') %>
 
       storage_account_name: <%= p('azure.storage_account_name') %>
       storage_access_key: <%= p('azure.storage_access_key') %>
+
+      tenant_id: <%= JSON.dump(p('azure.tenant_id')) %>
+      client_id: <%= JSON.dump(p('azure.client_id')) %>
+      client_secret: <%= JSON.dump(p('azure.client_secret')) %>
 
       ssh_user: <%= p('azure.ssh_user') %>
       ssh_certificate: <%= JSON.dump(p('azure.ssh_certificate')) %>

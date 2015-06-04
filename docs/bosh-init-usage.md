@@ -36,11 +36,15 @@ networks:
       virtual_network_name: boshnet
       subnet_name: subnet1
       tcp_endpoints:
-      - 4222:4222
-      - 25777:25777
-      - 25250:25250
-      - 6868:6868
-      - 25555:25555
+      - "22:22"
+      - "53:53"
+      - "4222:4222"
+      - "6868:6868"
+      - "25250:25250"
+      - "25555:25555"
+      - "25777:25777"
+      udp_endpoints:
+      - "68:68"
 
 resource_pools:
 - name: vms
@@ -49,7 +53,7 @@ resource_pools:
     # bosh-azure-hyperv-ubuntu-trusty-go_agent
     url: file://~/Downloads/stemcell.tgz
   cloud_properties:
-    instance_type: Small
+    instance_type: Standard_A1
 
 disk_pools:
 - name: disks
@@ -122,12 +126,14 @@ jobs:
       director_account: {user: admin, password: admin}
 
     azure: &azure
-      subscription_id: 9eec...
-      affinity_group_name: bosh
-      management_endpoint: https://management.core.windows.net
-      management_certificate: "-----BEGIN RSA PRIVATE KEY-----\n..."
-      storage_account_name: bosh...
-      storage_access_key: "n6Qi..."
+      environment: AzureCloud
+      subscription_id: <your_subscription_id>
+      storage_account_name: <your_storage_account_name>
+      storage_access_key: <your_storage_access_key>
+      resource_group_name: <your_resource_group_name>
+      tenant_id: <your_tenant_id>
+      client_id: <your_client_id>
+      client_secret: <your_client_secret>
       ssh_user: vcap
       ssh_certificate: "-----BEGIN CERTIFICATE-----\n..."
       ssh_private_key: "-----BEGIN RSA PRIVATE KEY-----\n..."
