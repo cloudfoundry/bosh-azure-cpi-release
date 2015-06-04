@@ -14,6 +14,9 @@ Bosh::Clouds::Config.configure(cloud_config)
 cloud_properties = cpi_config['cloud']['properties']
 cloud_properties['cpi_log'] = StringIO.new
 
+# Redefine $stdout because azure libraries use print for info logging
+$stdout = STDERR
+
 cpi = Bosh::Clouds::Azure.new(cloud_properties)
 cli = Bosh::Cpi::Cli.new(cpi, cloud_properties['cpi_log'], STDOUT)
 
