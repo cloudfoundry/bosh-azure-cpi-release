@@ -21,9 +21,7 @@ module Bosh::AzureCloud
       container_name = azure_properties['container_name'] || 'bosh'
 
       unless ENV.has_key?('HOME')
-        user = 'vcap'
-        user = azure_properties['ssh_user'] unless azure_properties['ssh_user'].nil?
-        ENV['HOME'] = "/home/#{user}"
+        ENV['HOME'] = Etc.getpwuid.dir
         @logger.info("Set HOME to #{ENV['HOME']}")
       end
       unless ENV.has_key?('PATH')
