@@ -35,8 +35,6 @@ properties:
     default: vcap
   azure.ssh_certificate:
     description: The content of the default certificate to use when spinning up new vms
-  azure.ssh_private_key:
-    description: The content of the default private key to use when spinning up new vms
   azure.wala_lib_path:
     description: Default WALA installation path
     default: /var/lib/waagent

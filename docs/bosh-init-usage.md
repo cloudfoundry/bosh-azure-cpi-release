@@ -136,7 +136,6 @@ jobs:
       client_secret: <your_client_secret>
       ssh_user: vcap
       ssh_certificate: "-----BEGIN CERTIFICATE-----\n..."
-      ssh_private_key: "-----BEGIN RSA PRIVATE KEY-----\n..."
 
     # Tells agents how to contact nats
     agent: {mbus: "nats://nats:nats-password@10.0.0.7:4222"}

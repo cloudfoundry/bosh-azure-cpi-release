@@ -19,7 +19,6 @@ cloud:
 
       ssh_user: <%= p('azure.ssh_user') %>
       ssh_certificate: <%= JSON.dump(p('azure.ssh_certificate')) %>
-      ssh_private_key: <%= JSON.dump(p('azure.ssh_private_key')) %>
 
     registry:
       endpoint: http://<%= p(['registry.username', 'registry.http.user']) %>:<%= p(['registry.password', 'registry.http.password']) %>@<%= p(['registry.host', 'registry.address']) %>:<%= p(['registry.port', 'registry.http.port']) %>
