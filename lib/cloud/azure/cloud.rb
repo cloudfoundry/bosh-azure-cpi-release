@@ -17,7 +17,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
 
       init_registry
-      init_azure
+      @azure = Bosh::AzureCloud::AzureClient.new(azure_properties, @registry, @logger)
 
       @metadata_lock = Mutex.new
     end
@@ -115,8 +115,9 @@ module Bosh::AzureCloud
 
           instance_id
         rescue => e
+          @logger.error(%Q[Failed to create instance: #{e.message}\n#{e.backtrace.join("\n")}])
           @azure.vm_manager.delete(instance_id) if instance_id
-          cloud_error("Failed to create instance: #{e.message}\n#{e.backtrace.join("\n")}")
+          raise e
         end
       end
     end
@@ -298,7 +299,14 @@ module Bosh::AzureCloud
     # other disk-related methods on the CPI
     def get_disks(instance_id)
       with_thread_name("get_disks(#{instance_id})") do
-        @azure.vm_manager.get_disks(instance_id)
+        disks = []
+        begin
+          find(instance_id)['data_disks'].each do |disk|
+            disks << disk['name']
+          end
+        rescue Bosh::Clouds::VMNotFound
+        end
+        disks
       end
     end
 
@@ -324,7 +332,6 @@ module Bosh::AzureCloud
             "storage_access_key",
             "resource_group_name",
             "ssh_certificate",
-            "ssh_private_key",
             "tenant_id",
             "client_id",
             "client_secret"],
@@ -355,21 +362,6 @@ module Bosh::AzureCloud
       @registry = Bosh::Registry::Client.new(registry_endpoint,
                                              registry_user,
                                              registry_password)
-    end
-
-    def init_azure
-      @ssh_certificate_file = "/tmp/bosh_cert.pem"
-      File.open(@ssh_certificate_file, 'w+') { |f| f.write(azure_properties['ssh_certificate']) }
-
-      @ssh_private_key_file = "/tmp/bosh_private_key"
-      File.open(@ssh_private_key_file, 'w+') { |f| f.write(azure_properties['ssh_private_key']) }
-
-      @azure_properties = azure_properties.merge(
-                            {
-                              'ssh_certificate_file'   => @ssh_certificate_file,
-                              'ssh_private_key_file'   => @ssh_private_key_file
-                            })
-      @azure = Bosh::AzureCloud::AzureClient.new(azure_properties, @registry, @logger)
     end
 
     # Generates initial agent settings. These settings will be read by agent

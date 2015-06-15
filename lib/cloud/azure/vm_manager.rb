@@ -10,6 +10,7 @@ module Bosh::AzureCloud
     end
 
     def create(uuid, stemcell_uri, cloud_opts, network_configurator, resource_pool)
+      vm_created = false
       instance_id = generate_instance_id(cloud_opts["resource_group_name"], uuid)
 
       if @location.nil?
@@ -34,7 +35,7 @@ module Bosh::AzureCloud
         :vmSize              => resource_pool['instance_type'],
         :storageAccountName  => @storage_account_name,
         :customData          => get_user_data(instance_id, network_configurator.dns),
-        :sshKeyData          => File.read(cloud_opts['ssh_certificate_file'])
+        :sshKeyData          => cloud_opts['ssh_certificate']
       }
       params[:virtualNetworkName] = network_configurator.virtual_network_name
       params[:subnetName]         = network_configurator.subnet_name
@@ -49,6 +50,7 @@ module Bosh::AzureCloud
       args.push(Base64.encode64(params.to_json()))
 
       result = invoke_azure_js(args, true)
+      vm_created = true
 
       unless network_configurator.vip_network.nil?
         ip_crp_template = 'azure_vm_endpoints.json'
@@ -99,8 +101,8 @@ module Bosh::AzureCloud
 
       instance_id
     rescue => e
-      delete(instance_id)
-      cloud_error("create vm failed: #{e.message}\n#{e.backtrace.join("\n")}")
+      delete(instance_id) if vm_created
+      raise Bosh::Clouds::VMCreationFailed.new(false), e.message
     end
 
     def find(instance_id)
@@ -132,7 +134,8 @@ module Bosh::AzureCloud
           }
         end
       rescue => e
-        @logger.debug("Cannot find instance by id #{instance_id}: #{e.message}  #{e.backtrace.join("\n")} ")
+        @logger.warn("Cannot find instance by id #{instance_id}: #{e.message}  #{e.backtrace.join("\n")} ")
+        raise Bosh::Clouds::VMNotFound, "VM `#{instance_id}' not found"
       end
 
       instance
@@ -140,14 +143,6 @@ module Bosh::AzureCloud
 
     def delete(instance_id)
       @logger.info("delete(#{instance_id})")
-
-      disks = []
-      begin
-        disks = get_disks(instance_id)
-      rescue => e
-        @logger.warn("Cannot get data disks for #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
-      end
-      disks << get_os_disk_name(instance_id)
 
       begin
         invoke_azure_js_with_id(["delete", instance_id, "Microsoft.Compute/virtualMachines"])
@@ -173,12 +168,11 @@ module Bosh::AzureCloud
         @logger.warn("Cannot delete public IP address for #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
       end
 
-      disks.each do |disk|
-        begin
-          @disk_manager.delete_disk(disk)
-        rescue => e
-          @logger.warn("Cannot delete disk #{disk} for #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
-        end
+      os_disk = get_os_disk_name(instance_id)
+      begin
+        @disk_manager.delete_disk(os_disk)
+      rescue => e
+        @logger.warn("Cannot delete os disk #{os_disk} for #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
       end
     end
 
@@ -233,18 +227,13 @@ module Bosh::AzureCloud
 
     def detach_disk(instance_id, disk_name)
       @logger.info("detach_disk(#{instance_id}, #{disk_name})")
-      disk_uri= @disk_manager.get_disk_uri(disk_name)
-      invoke_azure_js_with_id(["rmdisk", instance_id, disk_uri])
-    end
-
-    def get_disks(instance_id)
-      @logger.info("get_disks(#{instance_id})")
-      vm = find(instance_id) || cloud_error('Given instance id does not exist')
-      data_disks = []
-      vm['data_disks'].each do |disk|
-        data_disks << disk['name']
+      disk_uri = @disk_manager.get_disk_uri(disk_name)
+      begin
+        invoke_azure_js_with_id(["rmdisk", instance_id, disk_uri])
+      rescue => e
+        raise Bosh::Clouds::DiskNotAttached.new(true),
+              "Disk '#{disk_name}' is not attached to instance '#{instance_id}'"
       end
-      data_disks
     end
 
     private
@@ -258,7 +247,7 @@ module Bosh::AzureCloud
 
     def get_volume_name(instance_id, disk_name)
       data_disk = find(instance_id)["data_disks"].find { |disk| disk["name"] == disk_name}
-      data_disk || cloud_error('Given disk name is not attached to given instance id')
+      raise Bosh::Clouds::DiskNotAttached.new(false), "Disk '#{disk_name}' is not attached to instance '#{instance_id}'" if data_disk.nil?
       lun = get_disk_lun(data_disk)
       @logger.info("get_volume_name return lun #{lun}")
       "/dev/sd#{('c'.ord + lun).chr}"

@@ -9,7 +9,7 @@ module Bosh::AzureCloud
 
     def initialize(azure_properties, registry, logger)
       @logger = logger
-      Azure::Core::Utility.initialize_external_logger(logger)
+
       Azure.configure do |config|
         config.subscription_id        = azure_properties['subscription_id']
         config.management_endpoint    = AZURE_ENVIRONMENTS[azure_properties['environment']]['managementEndpointUrl']

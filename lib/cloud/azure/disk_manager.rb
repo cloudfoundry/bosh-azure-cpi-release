@@ -17,7 +17,13 @@ module Bosh::AzureCloud
 
     def delete_disk(disk_name)
       @logger.info("delete_disk(#{disk_name})")
-      @blob_manager.delete_blob(container_name, "#{disk_name}.vhd")
+      begin
+        @blob_manager.delete_blob(container_name, "#{disk_name}.vhd")
+      rescue => e
+        if e.message.include?("BlobNotFound")
+          raise Bosh::Clouds::DiskNotFound.new(false), "Disk '#{disk_name}' not found"
+        end
+      end
     end
 
     def snapshot_disk(disk_name, metadata)

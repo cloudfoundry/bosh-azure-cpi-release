@@ -24,8 +24,6 @@ These options are passed to the Azure CPI when it is instantiated.
   The client secret for your service principal
 * `ssh_certificate` (required)
   The content of the default certificate to use when spinning up new vms
-* `ssh_private_key` (required)
-  The content of the default private key to use when spinning up new vms
 * `container_name` (optional)
   Contianer name in Azure storage account, defaults to 'bosh'
 
@@ -119,4 +117,3 @@ This is a sample of how Azure specific properties are used in a BOSH deployment 
         client_id: <your_client_id>
         client_secret: <your_client_secret>
         ssh_certificate: <content_of_your_ssh_certificate>
-        ssh_private_key: <content_of_your_ssh_private_key>

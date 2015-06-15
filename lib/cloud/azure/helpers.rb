@@ -77,7 +77,7 @@ module Bosh::AzureCloud
       exit_status
     end
 
-    def invoke_azure_js(args, abort_on_error=false)
+    def invoke_azure_js(args, abort_on_error = false)
       node_js_file = File.join(File.dirname(__FILE__), "azure_crp", "azure_crp_compute.js")
       cmd = ["node", node_js_file]
       cmd.concat(args)
@@ -119,11 +119,10 @@ module Bosh::AzureCloud
         unless result["Failed"].nil?
           cloud_error("AuthorizationFailed please try azure login\n") if result["Failed"]["code"] =~/AuthorizationFailed/
           cloud_error("Can't find token in ~/.azure/azureProfile.json or ~/.azure/accessTokens.json\nTry azure login\n") if result["Failed"]["code"] =~/RefreshToken Fail/
-          cloud_error(result["Failed"])  if  abort_on_error
+          cloud_error(result["Failed"]) if abort_on_error
         end
 
-       result["R"]
-
+        result["R"]
       }
     end
 
