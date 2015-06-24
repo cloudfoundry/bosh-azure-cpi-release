@@ -2,10 +2,9 @@ module Bosh::AzureCloud
   class BlobManager
     attr_accessor :logger
     include Helpers
-    
+
     VHDBlock = Struct.new(:id, :file_start_range, :size, :blob_start_range, :content)
-    ThreadFlag = Struct.new(:finish)
-    
+
     def initialize
       @blob_service_client = Azure::BlobService.new
 
@@ -83,7 +82,7 @@ module Bosh::AzureCloud
         
         logger.info("create_page_blob: Calculate hash for every block")
 
-        upload_page_blob(container_name, blob_name, blob_size, file_path, 36)
+        upload_page_blob(container_name, blob_name, blob_size, file_path, 64)
       rescue => e
         cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")
       end
@@ -180,63 +179,42 @@ module Bosh::AzureCloud
 
     private
 
-    def read_content_func(file_mutex, file_path, file_blocks, block_size, finish_flag, max_count)
-      count = 0
+    def read_content_func(file_path, file_blocks, block_size)
       id = 0
       open(file_path, 'rb') do |file|
+        file.sync = true
         while true do
-          file_mutex.synchronize do
-            count = file_blocks.size
-          end
-
-          if count >= max_count
-            sleep(0.01)
-            next
-          end
-
           chunk = nil
           file_start_range = file.pos
           chunk = file.read(block_size)
           break if chunk.nil?
 
-          logger.debug("read_content_func: id: #{id}, start_range: #{file_start_range}, size: #{chunk.size}")
+          block_is_not_empty = false
+          chunk.each_byte do |b|
+            if b != "\0"
+              block_is_not_empty = true
+              break
+            end
+          end
 
-          id += 1
-          block = VHDBlock.new(id, file_start_range, chunk.size, file_start_range, chunk)
-          file_mutex.synchronize do
+          if block_is_not_empty
+            id += 1
+            logger.debug("read_content_func: id: #{id}, start_range: #{file_start_range}, size: #{chunk.size}")
+            block = VHDBlock.new(id, file_start_range, chunk.size, file_start_range, chunk)
             file_blocks.push(block)
           end
         end
       end
 
       logger.debug("read_content_func: Read all content")
-      finish_flag.finish = true
     end
 
-    def upload_page_blob_func(id, container_name, blob_name, options, file_mutex, file_blocks, ignore_hash, finish_flag)
+    def upload_page_blob_func(id, container_name, blob_name, options, file_blocks)
       while true do
-        block = nil
-        file_mutex.synchronize do
-          block = file_blocks.pop()
-        end
-
-        if block.nil?
-          if finish_flag.finish
-            logger.debug("upload_page_blob_func: Thread #{id}: Done")
-            return
-          end
-          sleep(0.01)
-        else
-          hash = Digest::MD5.hexdigest(block.content)
-          # Skip empty content
-          if hash == ignore_hash
-            logger.debug("upload_page_blob_func: Thread #{id}: Skip empty content #{block.id}: #{block.blob_start_range}, length: #{block.size}, hash: #{hash}")
-          else
-            logger.debug("upload_page_blob_func: Thread #{id}: Uploading #{block.id}: #{block.blob_start_range}, length: #{block.size}, hash: #{hash}")
-            @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
-                block.blob_start_range + block.size - 1, block.content, options)
-          end
-        end
+        block = file_blocks.pop()
+        logger.debug("upload_page_blob_func: Thread #{id}: Uploading #{block.id}: #{block.blob_start_range}, length: #{block.size}")
+        @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
+            block.blob_start_range + block.size - 1, block.content, options)
       end
     end
 
@@ -253,24 +231,27 @@ module Bosh::AzureCloud
 
         logger.info("Start to upload every block for page blob")
         threads = []
-        finish_flag = ThreadFlag.new(false)
-        file_blocks = Array.new
-        file_mutex = Mutex.new
+        file_blocks = SizedQueue.new(5 * thread_num)
 
-        block_size = 2**22
-        ignore_hash = get_ignore_hash_for_empty_block(block_size)
+        block_size = 2 * 1024 * 1024
 
         start_time = Time.new
-        threads << Thread.new {
-          read_content_func(file_mutex, file_path, file_blocks, block_size, finish_flag, 2 * thread_num)
+        read_thread = Thread.new {
+          read_content_func(file_path, file_blocks, block_size)
         }
         thread_num.times do |i|
           threads << Thread.new {
-            upload_page_blob_func(i + 1, container_name, blob_name, options, file_mutex, file_blocks, ignore_hash, finish_flag)
+            upload_page_blob_func(i + 1, container_name, blob_name, options, file_blocks)
           }
         end
 
-        threads.each { |t| t.join }
+        read_thread.join
+
+        while file_blocks.num_waiting < thread_num
+          sleep(0.01)
+        end
+
+        threads.each { |t| t.exit }
 
         duration = Time.new - start_time
         logger.info("Duration: #{duration.inspect}")
@@ -279,17 +260,10 @@ module Bosh::AzureCloud
         cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")
       end
     end
-
-    def get_ignore_hash_for_empty_block(size)
-      File.open('/tmp/calaculate_hash_for_empty_content', 'w+') do |f|
-        f.truncate(size)
-        hash = Digest::MD5.hexdigest(f.read)
-      end
-    end
   end
   
   class ::File
-    def each_chunk(chunk_size=2**20)
+    def each_chunk(chunk_size = 1024 * 1024)
       yield read(chunk_size) until eof?
     end
   end
