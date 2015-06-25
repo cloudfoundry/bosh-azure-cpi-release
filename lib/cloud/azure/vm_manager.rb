@@ -159,7 +159,7 @@ module Bosh::AzureCloud
       begin
         invoke_azure_js_with_id(["delete", instance_id, "Microsoft.Network/networkInterfaces"])
       rescue => e
-        @logger.warn("Cannot network interfaces for #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
+        @logger.warn("Cannot delete network interfaces for #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
       end
 
       begin

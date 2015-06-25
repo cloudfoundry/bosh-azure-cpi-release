@@ -34,6 +34,7 @@ module Bosh::AzureCloud
       ENV['client_id'] = azure_properties['client_id']
       ENV['client_secret'] = azure_properties['client_secret']
       ENV['tenant_id'] = azure_properties['tenant_id']
+      ENV['subscription_id'] = azure_properties['subscription_id']
 
       azure_cmd("azure config mode arm")
       azure_cmd("azure login -u #{azure_properties['client_id']} -p '#{azure_properties['client_secret']}' --tenant #{azure_properties['tenant_id']} --service-principal --quiet")
