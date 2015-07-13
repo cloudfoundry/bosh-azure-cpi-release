@@ -17,7 +17,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
 
       init_registry
-      @azure = Bosh::AzureCloud::AzureClient.new(azure_properties, @registry, @logger)
+      @azure = Bosh::AzureCloud::AzureClient.new(azure_properties, @registry.endpoint)
 
       @metadata_lock = Mutex.new
     end
@@ -142,7 +142,7 @@ module Bosh::AzureCloud
     def has_vm?(instance_id)
       with_thread_name("has_vm?(#{instance_id})") do
         vm = @azure.vm_manager.find(instance_id)
-        !vm.nil? && vm['status'] != 'deleting'
+        !vm.nil? && vm[:provisioning_state] != 'Deleting'
       end
     end
 
@@ -301,8 +301,8 @@ module Bosh::AzureCloud
       with_thread_name("get_disks(#{instance_id})") do
         disks = []
         begin
-          find(instance_id)['data_disks'].each do |disk|
-            disks << disk['name']
+          @azure.vm_manager.find(instance_id)[:data_disks].each do |disk|
+            disks << disk[:name]
           end
         rescue Bosh::Clouds::VMNotFound
         end

@@ -75,19 +75,7 @@ module Bosh::AzureCloud
     end
 
     def tcp_endpoints
-      endpoints = ''
-      unless @network.cloud_properties.nil?
-        result = parse_endpoints(@network.cloud_properties['tcp_endpoints']) || []
-        result.each do |endpoint|
-          if endpoints.empty?
-            endpoints = "#{endpoint}"
-          else
-            endpoints = "#{endpoints}, #{endpoint}"
-          end
-        end
-      end
-
-      endpoints
+      parse_endpoints(@network.cloud_properties['tcp_endpoints'])
     end
 
     def dns
@@ -95,25 +83,13 @@ module Bosh::AzureCloud
     end
 
     def udp_endpoints
-      endpoints = ''
-      unless @network.cloud_properties.nil?
-        result = parse_endpoints(@network.cloud_properties['udp_endpoints']) || []
-        result.each do |endpoint|
-          if endpoints.empty?
-            endpoints = "#{endpoint}"
-          else
-            endpoints = "#{endpoints}, #{endpoint}"
-          end
-        end
-      end
-
-      endpoints
+      parse_endpoints(@network.cloud_properties['udp_endpoints'])
     end
 
     private
 
     def parse_endpoints(endpoints)
-      return nil if (endpoints.nil?)
+      return [] if (endpoints.nil?)
       raise ArgumentError, "Invalid 'endpoints', Array expected, " \
                            "#{spec.class} provided" unless endpoints.is_a?(Array)
 

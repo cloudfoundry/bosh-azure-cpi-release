@@ -1,20 +1,18 @@
 module Bosh::AzureCloud
   class StemcellManager
-    STEM_CELL_CONTAINER = 'stemcell'    
+    STEM_CELL_CONTAINER = 'stemcell'
 
-    attr_reader   :container_name
     attr_accessor :logger
 
     include Bosh::Exec
     include Helpers
 
     def initialize(blob_manager)
-      @container_name = STEM_CELL_CONTAINER
       @blob_manager = blob_manager
 
       @logger = Bosh::Clouds::Config.logger
 
-      @blob_manager.create_container(container_name)
+      @blob_manager.create_container(STEM_CELL_CONTAINER)
     end
 
     def find_stemcell_by_name(name)
@@ -29,12 +27,12 @@ module Bosh::AzureCloud
 
     def delete_image(name)
       @logger.info("delete_image(#{name})")
-      @blob_manager.delete_blob(container_name, "#{name}.vhd")
+      @blob_manager.delete_blob(STEM_CELL_CONTAINER, "#{name}.vhd")
     end
 
     def stemcells
       @logger.info("stemcells")
-      @blob_manager.list_blobs(container_name)
+      @blob_manager.list_blobs(STEM_CELL_CONTAINER)
     end
 
     def create_stemcell(image_path, cloud_properties)
@@ -42,7 +40,7 @@ module Bosh::AzureCloud
       vhd_path = extract_image(image_path)
       logger.info("Start to upload VHD")
       stemcell_name = "bosh-image-#{SecureRandom.uuid}"
-      @blob_manager.create_page_blob(container_name, vhd_path, "#{stemcell_name}.vhd")
+      @blob_manager.create_page_blob(STEM_CELL_CONTAINER, vhd_path, "#{stemcell_name}.vhd")
       stemcell_name
     end
 

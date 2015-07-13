@@ -24,8 +24,6 @@ These options are passed to the Azure CPI when it is instantiated.
   The client secret for your service principal
 * `ssh_certificate` (required)
   The content of the default certificate to use when spinning up new vms
-* `container_name` (optional)
-  Contianer name in Azure storage account, defaults to 'bosh'
 
 ### Registry options
 

@@ -1,24 +1,24 @@
 module Bosh::AzureCloud
   class DiskManager
-    attr_reader   :container_name
+    STEM_CELL_CONTAINER = 'bosh'
+
     attr_accessor :logger
     
     include Bosh::Exec
     include Helpers
 
-    def initialize(container_name, blob_manager)
-      @container_name = container_name
+    def initialize(blob_manager)
       @blob_manager = blob_manager
 
       @logger = Bosh::Clouds::Config.logger
 
-      @blob_manager.create_container(container_name)
+      @blob_manager.create_container(STEM_CELL_CONTAINER)
     end
 
     def delete_disk(disk_name)
       @logger.info("delete_disk(#{disk_name})")
       begin
-        @blob_manager.delete_blob(container_name, "#{disk_name}.vhd")
+        @blob_manager.delete_blob(STEM_CELL_CONTAINER, "#{disk_name}.vhd")
       rescue => e
         if e.message.include?("BlobNotFound")
           raise Bosh::Clouds::DiskNotFound.new(false), "Disk '#{disk_name}' not found"
@@ -30,7 +30,7 @@ module Bosh::AzureCloud
       @logger.info("snapshot_disk(#{disk_name}, #{metadata})")
       snapshot_disk_name = "bosh-disk-#{SecureRandom.uuid}"
       disk_blob_name = "#{disk_name}.vhd"
-      @blob_manager.snapshot_blob(container_name, disk_blob_name, metadata, "#{snapshot_disk_name}.vhd")
+      @blob_manager.snapshot_blob(STEM_CELL_CONTAINER, disk_blob_name, metadata, "#{snapshot_disk_name}.vhd")
       snapshot_disk_name
     end
 
@@ -43,29 +43,23 @@ module Bosh::AzureCloud
       @logger.info("create_disk(#{size})")
       disk_name = "bosh-disk-#{SecureRandom.uuid}"
       logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
-      @blob_manager.create_empty_vhd_blob(container_name, "#{disk_name}.vhd", size)
+      @blob_manager.create_empty_vhd_blob(STEM_CELL_CONTAINER, "#{disk_name}.vhd", size)
       disk_name
     end
 
     def has_disk?(disk_name)
       @logger.info("has_disk?(#{disk_name})")
-      @blob_manager.blob_exist?(container_name, "#{disk_name}.vhd")
+      @blob_manager.blob_exist?(STEM_CELL_CONTAINER, "#{disk_name}.vhd")
     end
 
     def get_disk_uri(disk_name)
       @logger.info("get_disk_uri(#{disk_name})")
-      @blob_manager.get_blob_uri(@container_name, "#{disk_name}.vhd")
-    end
-
-    def get_new_os_disk_uri(instance_id)
-      @logger.info("get_new_os_disk_uri(#{instance_id})")
-      os_disk_name = get_os_disk_name(instance_id)
-      @blob_manager.get_blob_uri(@container_name, "#{os_disk_name}.vhd")
+      @blob_manager.get_blob_uri(STEM_CELL_CONTAINER, "#{disk_name}.vhd")
     end
 
     def disks
       @logger.info("disks")
-      disks = @blob_manager.list_blobs(@container_name).select{
+      disks = @blob_manager.list_blobs(STEM_CELL_CONTAINER).select{
         |d| return d.name = ~/vhd$/
       }.map { |d|
         return {
