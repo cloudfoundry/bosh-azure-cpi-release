@@ -83,6 +83,9 @@ module Bosh::AzureCloud
       rescue => e
         @logger.warn("Cannot delete os disk #{vm[:os_disk][:name]} for #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
       end
+
+      # Cleanup invalid VM status file
+      @disk_manager.delete_vm_status_files(instance_id)
     end
 
     def reboot(instance_id)
