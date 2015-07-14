@@ -30,17 +30,6 @@ module Bosh::AzureCloud
       }
     }
 
-    def generate_instance_id(resource_group_name, agent_id)
-      instance_id = "bosh-#{resource_group_name}--#{agent_id}"
-    end
-
-    def parse_resource_group_from_instance_id(instance_id)
-      index = instance_id.rindex('--') - 1
-      instance_id[5..index]
-    rescue
-      cloud_error("Cannot parse resource group name from instance_id #{instance_id}. The format should be bosh-RESOURCEGROUPNAME--AGENTID")
-    end
-
     ##
     # Raises CloudError exception
     #

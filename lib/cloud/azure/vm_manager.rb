@@ -21,24 +21,23 @@ module Bosh::AzureCloud
         cloud_error("Cannot find the reserved IP address #{network_configurator.reserved_ip}") if public_ip.nil?
       end
 
-      instance_id = generate_instance_id(cloud_opts['resource_group_name'], uuid)
-
       load_balancer = nil
       unless network_configurator.vip_network.nil?
-        @client2.create_load_balancer(instance_id, public_ip,
+        @client2.create_load_balancer(uuid, public_ip,
                                       network_configurator.tcp_endpoints,
                                       network_configurator.udp_endpoints)
-        load_balancer = @client2.get_load_balancer_by_name(instance_id)
+        load_balancer = @client2.get_load_balancer_by_name(uuid)
       end
 
       nic_params = {
-        :name                => instance_id,
+        :name                => uuid,
         :location            => @storage_account[:location],
         :private_ip          => network_configurator.private_ip, 
       }
       @client2.create_network_interface(nic_params, subnet, load_balancer)
-      network_interface = @client2.get_network_interface_by_name(instance_id)
+      network_interface = @client2.get_network_interface_by_name(uuid)
 
+      instance_id = uuid
       vm_params = {
         :name                => instance_id,
         :location            => @storage_account[:location],
@@ -60,16 +59,10 @@ module Bosh::AzureCloud
     end
 
     def find(instance_id)
-      instance = nil
-
-      begin
-        instance = @client2.get_virtual_machine_by_name(instance_id)
-      rescue => e
-        @logger.warn("Cannot find instance by id #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
-        raise Bosh::Clouds::VMNotFound, "VM `#{instance_id}' not found"
-      end
-
-      instance
+      @client2.get_virtual_machine_by_name(instance_id)
+    rescue => e
+      @logger.warn("Cannot find instance by id #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
+      raise Bosh::Clouds::VMNotFound, "VM `#{instance_id}' not found"
     end
 
     def delete(instance_id)
@@ -141,6 +134,5 @@ module Bosh::AzureCloud
       user_data[:dns] = {nameserver: dns} if dns
       Base64.strict_encode64(Yajl::Encoder.encode(user_data))
     end
-
   end
 end

@@ -2,8 +2,6 @@ module Bosh::AzureCloud
   class StemcellManager
     STEM_CELL_CONTAINER = 'stemcell'
 
-    attr_accessor :logger
-
     include Bosh::Exec
     include Helpers
 
@@ -38,7 +36,7 @@ module Bosh::AzureCloud
     def create_stemcell(image_path, cloud_properties)
       @logger.info("create_stemcell(#{image_path}, #{cloud_properties})")
       vhd_path = extract_image(image_path)
-      logger.info("Start to upload VHD")
+      @logger.info("Start to upload VHD")
       stemcell_name = "bosh-image-#{SecureRandom.uuid}"
       @blob_manager.create_page_blob(STEM_CELL_CONTAINER, vhd_path, "#{stemcell_name}.vhd")
       stemcell_name
@@ -51,7 +49,7 @@ module Bosh::AzureCloud
 
     private
     def extract_image(image_path)
-      logger.info("Unpacking image: #{image_path}")
+      @logger.info("Unpacking image: #{image_path}")
       tmp_dir = Dir.mktmpdir('sc-')
       run_command("tar -zxf #{image_path} -C #{tmp_dir}")
       "#{tmp_dir}/root.vhd"

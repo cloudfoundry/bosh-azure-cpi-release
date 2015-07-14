@@ -1,6 +1,5 @@
 module Bosh::AzureCloud
   class BlobManager
-    attr_accessor :logger
     include Helpers
 
     VHDBlock = Struct.new(:id, :file_start_range, :size, :blob_start_range, :content)
@@ -65,12 +64,12 @@ module Bosh::AzureCloud
           }
 
           md5 = @blob_service_client.create_blob_block(container_name, blob_name, block_id, chunk, options)
-          logger.debug("Put file: counter: #{counter}, block_id: #{block_id}")
+          @logger.debug("Put file: counter: #{counter}, block_id: #{block_id}")
           counter += 1
         }
       end
 
-      logger.info("Commit file: block_list size: #{block_list.length}")
+      @logger.info("Commit file: block_list size: #{block_list.length}")
       @blob_service_client.commit_blob_blocks(container_name, blob_name, block_list)
     end
 
@@ -78,9 +77,9 @@ module Bosh::AzureCloud
       @logger.info("create_page_blob(#{container_name}, #{file_path}, #{blob_name})")
       begin
         blob_size = File.lstat(file_path).size
-        logger.info("create_page_blob: blob_name: #{blob_name}, blob_size: #{blob_size}")
+        @logger.info("create_page_blob: blob_name: #{blob_name}, blob_size: #{blob_size}")
         
-        logger.info("create_page_blob: Calculate hash for every block")
+        @logger.info("create_page_blob: Calculate hash for every block")
 
         upload_page_blob(container_name, blob_name, blob_size, file_path, 64)
       rescue => e
@@ -99,7 +98,7 @@ module Bosh::AzureCloud
       @logger.info("create_empty_vhd_blob(#{container_name}, #{blob_name}, #{blob_size_in_gb})")
       blob_created = false
       begin
-        logger.info("create_empty_vhd_blob: Start to generate vhd footer")
+        @logger.info("create_empty_vhd_blob: Start to generate vhd footer")
         opts = {
             :type => :fixed,
             :name => "/tmp/tmp.vhd",
@@ -114,11 +113,11 @@ module Bosh::AzureCloud
         options = {
           :timeout => 300 # seconds
         }
-        logger.info("create_empty_vhd_blob: Create empty vhd blob #{blob_name} with size #{blob_size}")
+        @logger.info("create_empty_vhd_blob: Create empty vhd blob #{blob_name} with size #{blob_size}")
         @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
         blob_created = true
 
-        logger.info("create_empty_vhd_blob: Start to upload vhd footer")
+        @logger.info("create_empty_vhd_blob: Start to upload vhd footer")
 
         @blob_service_client.create_blob_pages(container_name, blob_name, vhd_size, blob_size - 1, vhd_footer, options)
       rescue => e
@@ -128,32 +127,32 @@ module Bosh::AzureCloud
     end
 
     def blob_exist?(container_name, blob_name)
-      logger.info("blob_exist?(#{container_name}, #{blob_name})")
+      @logger.info("blob_exist?(#{container_name}, #{blob_name})")
       blob = list_blobs(container_name).find { |blob| blob.name.eql?(blob_name) }
 
       !blob.nil?
     end
 
     def list_blobs(container_name)
-      logger.info("list_blobs(#{container_name})")
+      @logger.info("list_blobs(#{container_name})")
       @blob_service_client.list_blobs(container_name)
     end
 
     def get_blob(container_name, blob_name, file_path)
-      logger.info("get_blob(#{container_name}, #{blob_name}, #{file_path})")
+      @logger.info("get_blob(#{container_name}, #{blob_name}, #{file_path})")
       blob, content = @blob_service_client.get_blob(container_name, blob_name)
       File.open(file_path, 'wb') { |f| f.write(content) }
     end
 
     def snapshot_blob(container_name, blob_name, metadata, snapshot_blob_name)
-      logger.info("snapshot_blob(#{container_name}, #{blob_name}, #{metadata}, #{snapshot_blob_name})")
+      @logger.info("snapshot_blob(#{container_name}, #{blob_name}, #{metadata}, #{snapshot_blob_name})")
       snapshot_time = @blob_service_client.create_blob_snapshot(container_name, blob_name, {:metadata => metadata})
-      logger.debug("Snapshot time: #{snapshot_time}")
+      @logger.debug("Snapshot time: #{snapshot_time}")
 
       begin
-        logger.info("Copying the snapshot of the blob #{container_name}/#{blob_name} to #{container_name}/#{snapshot_blob_name}")
+        @logger.info("Copying the snapshot of the blob #{container_name}/#{blob_name} to #{container_name}/#{snapshot_blob_name}")
         copy_id, copy_status = @blob_service_client.copy_blob(container_name, snapshot_blob_name, container_name, blob_name, {:source_snapshot => snapshot_time})
-        logger.info("Copy id: #{copy_id}, copy status: #{copy_status}")
+        @logger.info("Copy id: #{copy_id}, copy status: #{copy_status}")
 
         copy_status_description = ""
         while copy_status == "pending" do
@@ -164,11 +163,11 @@ module Bosh::AzureCloud
 
           copy_status = blob_props[:copy_status]
           copy_status_description = blob_props[:copy_status_description]
-          logger.debug("Copying progress: #{blob_props[:copy_progress]}")
+          @logger.debug("Copying progress: #{blob_props[:copy_progress]}")
         end
 
         if copy_status == "success"
-          logger.info("Take snapshot of the blob #{container_name}/#{blob_name} successfully.")
+          @logger.info("Take snapshot of the blob #{container_name}/#{blob_name} successfully.")
         else
           cloud_error("Failed to copy the snapshot of the blob #{container_name}/#{blob_name}: \n\tcopy status: #{copy_status}\n\tcopy description: #{copy_status_description}")
         end
@@ -199,20 +198,20 @@ module Bosh::AzureCloud
 
           if block_is_not_empty
             id += 1
-            logger.debug("read_content_func: id: #{id}, start_range: #{file_start_range}, size: #{chunk.size}")
+            @logger.debug("read_content_func: id: #{id}, start_range: #{file_start_range}, size: #{chunk.size}")
             block = VHDBlock.new(id, file_start_range, chunk.size, file_start_range, chunk)
             file_blocks.push(block)
           end
         end
       end
 
-      logger.debug("read_content_func: Read all content")
+      @logger.debug("read_content_func: Read all content")
     end
 
     def upload_page_blob_func(id, container_name, blob_name, options, file_blocks)
       while true do
         block = file_blocks.pop()
-        logger.debug("upload_page_blob_func: Thread #{id}: Uploading #{block.id}: #{block.blob_start_range}, length: #{block.size}")
+        @logger.debug("upload_page_blob_func: Thread #{id}: Uploading #{block.id}: #{block.blob_start_range}, length: #{block.size}")
         @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
             block.blob_start_range + block.size - 1, block.content, options)
       end
@@ -225,11 +224,11 @@ module Bosh::AzureCloud
         options = {
           :timeout => 300 # seconds
         }
-        logger.info("Create page blob #{blob_name} with size #{blob_size}")
+        @logger.info("Create page blob #{blob_name} with size #{blob_size}")
         @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
         blob_created = true
 
-        logger.info("Start to upload every block for page blob")
+        @logger.info("Start to upload every block for page blob")
         threads = []
         file_blocks = SizedQueue.new(5 * thread_num)
 
@@ -254,7 +253,7 @@ module Bosh::AzureCloud
         threads.each { |t| t.exit }
 
         duration = Time.new - start_time
-        logger.info("Duration: #{duration.inspect}")
+        @logger.info("Duration: #{duration.inspect}")
       rescue => e
         @blob_service_client.delete_blob(container_name, blob_name) if blob_created
         cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")

@@ -4,15 +4,10 @@
 ###############################################################################
 module Bosh::AzureCloud
   class AzureError < Bosh::Clouds::CloudError; end
-  class ConnectionError < AzureError; end
   class AzureUnauthorizedError < AzureError; end
-  class AzureForbiddenError < AzureError; end
-  class AzurePartialContentError < AzureError; end
-  class AzureBadRequestError < AzureError; end
   class AzureNoFoundError < AzureError; end
 
   class AzureClient2
-
     include Helpers
 
     API_VERSION    = '2015-05-01-preview'

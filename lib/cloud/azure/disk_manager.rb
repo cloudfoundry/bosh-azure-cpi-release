@@ -2,14 +2,11 @@ module Bosh::AzureCloud
   class DiskManager
     STEM_CELL_CONTAINER = 'bosh'
 
-    attr_accessor :logger
-    
     include Bosh::Exec
     include Helpers
 
     def initialize(blob_manager)
       @blob_manager = blob_manager
-
       @logger = Bosh::Clouds::Config.logger
 
       @blob_manager.create_container(STEM_CELL_CONTAINER)
@@ -42,7 +39,7 @@ module Bosh::AzureCloud
     def create_disk(size)
       @logger.info("create_disk(#{size})")
       disk_name = "bosh-disk-#{SecureRandom.uuid}"
-      logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
+      @logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
       @blob_manager.create_empty_vhd_blob(STEM_CELL_CONTAINER, "#{disk_name}.vhd", size)
       disk_name
     end
