@@ -100,14 +100,6 @@ module Bosh::AzureCloud
       @client2.update_tags_of_virtual_machine(instance_id, metadata)
     end
 
-    def instance_id(wala_lib_path)
-      @logger.debug("instance_id(#{wala_lib_path})")
-      contents = File.open(wala_lib_path + "/CustomData", "r"){ |file| file.read }
-      user_data = Yajl::Parser.parse(Base64.strict_decode64(contents))
-
-      user_data["server"]["name"]
-    end
-
     ##
     # Attach a disk to the Vm
     #

@@ -28,7 +28,8 @@ module Bosh::AzureCloud
     # @return [String] opaque id later used by other methods of the CPI
     def current_vm_id
       @metadata_lock.synchronize do
-        @azure.vm_manager.instance_id(azure_properties['wala_lib_path'])
+        return @current_vm_id if @current_vm_id
+        @current_vm_id = Socket.gethostname
       end
     rescue
       cloud_error("Cannot parse instance id, " \
