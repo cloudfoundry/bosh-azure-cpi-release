@@ -31,9 +31,6 @@ module Bosh::AzureCloud
         return @current_vm_id if @current_vm_id
         @current_vm_id = Socket.gethostname
       end
-    rescue
-      cloud_error("Cannot parse instance id, " \
-                  "please make sure CPI is running on Azure instance")
     end
 
     ##
@@ -45,8 +42,7 @@ module Bosh::AzureCloud
     # @return [String] opaque id later used by {#create_vm} and {#delete_stemcell}
     def create_stemcell(image_path, cloud_properties)
       with_thread_name("create_stemcell(#{image_path}...)") do
-        stemcell_id = @azure.stemcell_manager.create_stemcell(image_path, cloud_properties)
-        stemcell_id
+        @azure.stemcell_manager.create_stemcell(image_path, cloud_properties)
       end
     end
 
@@ -180,7 +176,7 @@ module Bosh::AzureCloud
     # @return [void]
     def set_vm_metadata(instance_id, metadata)
       @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
-      @azure.vm_manager.set_metadata(instance_id, metadata)
+      @azure.vm_manager.set_metadata(instance_id, encode_metadata(metadata))
     end
 
     ##
@@ -259,7 +255,7 @@ module Bosh::AzureCloud
     # @return [String] snapshot id
     def snapshot_disk(disk_id, metadata={})
       with_thread_name("snapshot_disk(#{disk_id},#{metadata})") do
-        snapshot_id = @azure.disk_manager.snapshot_disk(disk_id, metadata)
+        snapshot_id = @azure.disk_manager.snapshot_disk(disk_id, encode_metadata(metadata))
 
         @logger.info("Take a snapshot disk '#{snapshot_id}' for '#{disk_id}'")
         snapshot_id

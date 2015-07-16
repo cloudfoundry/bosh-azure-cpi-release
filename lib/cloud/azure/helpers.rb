@@ -41,6 +41,17 @@ module Bosh::AzureCloud
       raise Bosh::Clouds::CloudError, message
     end
 
+    ## Encode all values in metadata to string.
+    # @param [Hash] metadata
+    # @return [Hash]
+    def encode_metadata(metadata)
+      ret = {}
+      metadata.each do |key, value|
+        ret[key] = value.to_s
+      end
+      ret
+    end
+
     private
 
     def task_checkpoint

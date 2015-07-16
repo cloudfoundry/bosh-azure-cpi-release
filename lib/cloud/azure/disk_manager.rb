@@ -37,9 +37,18 @@ module Bosh::AzureCloud
 
     def snapshot_disk(disk_name, metadata)
       @logger.info("snapshot_disk(#{disk_name}, #{metadata})")
-      snapshot_disk_name = "bosh-disk-#{SecureRandom.uuid}"
-      disk_blob_name = "#{disk_name}.vhd"
-      @blob_manager.snapshot_blob(DISK_CONTAINER, disk_blob_name, metadata, "#{snapshot_disk_name}.vhd")
+      snapshot_disk_name = "#{SecureRandom.uuid}_snapshot"
+      if disk_name.end_with?('_os_disk')
+        snapshot_disk_name += '_os_disk'
+      elsif disk_name.end_with?('_data_disk')
+        snapshot_disk_name += '_data_disk'
+      else
+        error_msg = "snapshot_disk - #{disk_name} is not a bosh disk which was created by Azure CPI.\n"
+        error_msg += 'The disk name should end with _os_disk or _data_disk.'
+        cloud_error(error_msg)
+      end
+
+      @blob_manager.snapshot_blob(DISK_CONTAINER, "#{disk_name}.vhd", metadata, "#{snapshot_disk_name}.vhd")
       snapshot_disk_name
     end
 
@@ -50,7 +59,7 @@ module Bosh::AzureCloud
     # @return [String] disk name
     def create_disk(size)
       @logger.info("create_disk(#{size})")
-      disk_name = "bosh-disk-#{SecureRandom.uuid}"
+      disk_name = "#{SecureRandom.uuid}_data_disk"
       @logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
       @blob_manager.create_empty_vhd_blob(DISK_CONTAINER, "#{disk_name}.vhd", size)
       disk_name

@@ -37,7 +37,7 @@ module Bosh::AzureCloud
       @logger.info("create_stemcell(#{image_path}, #{cloud_properties})")
       vhd_path = extract_image(image_path)
       @logger.info("Start to upload VHD")
-      stemcell_name = "bosh-image-#{SecureRandom.uuid}"
+      stemcell_name = "#{SecureRandom.uuid}_image"
       @blob_manager.create_page_blob(STEM_CELL_CONTAINER, vhd_path, "#{stemcell_name}.vhd")
       stemcell_name
     end
