@@ -20,12 +20,11 @@ Gem::Specification.new do |spec|
   spec.bindir        = 'bin'
   spec.executables   = %w(azure_cpi bosh_azure_console)
 
-  spec.add_dependency 'azure', '~> 0.6.5'
+  spec.add_dependency 'azure', '~> 0.6.4'
 
   spec.add_dependency 'bosh_common',      "~>#{version}"
   spec.add_dependency 'bosh_cpi',         "~>#{version}"
   spec.add_dependency 'bosh-registry',    "~>#{version}"
-  spec.add_dependency 'nokogiri',         "~> 1.5"
   spec.add_dependency 'vhd',              "~> 0.0.4"
   spec.add_dependency 'httpclient',       "=2.4.0"
 end
