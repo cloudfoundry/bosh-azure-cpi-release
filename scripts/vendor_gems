@@ -17,12 +17,6 @@ trap cleanup EXIT
 
   rm -f *.gem
 
-  wget https://github.com/AbelHu/bosh/raw/azure_cpi_external/vendor/cache/azure-0.6.5.gem
-  gem install azure-0.6.5.gem
-
-  wget https://github.com/AbelHu/bosh/raw/azure_cpi_external/vendor/cache/vhd-0.0.4.gem
-  gem install vhd-0.0.4.gem
-
   cat > Gemfile <<EOF
 source "https://rubygems.org"
 gem "bosh_azure_cpi", github: "AbelHu/bosh_azure_cpi"
