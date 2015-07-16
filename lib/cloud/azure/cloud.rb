@@ -328,6 +328,7 @@ module Bosh::AzureCloud
             "storage_account_name",
             "storage_access_key",
             "resource_group_name",
+            "ssh_user",
             "ssh_certificate",
             "tenant_id",
             "client_id",

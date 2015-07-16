@@ -22,6 +22,8 @@ These options are passed to the Azure CPI when it is instantiated.
   The client id for your service principal
 * `client_secret` (required)
   The client secret for your service principal
+* `ssh_user` (required)
+  The user to use when spinning up new vms
 * `ssh_certificate` (required)
   The content of the default certificate to use when spinning up new vms
 
@@ -116,6 +118,7 @@ These are two samples of how Azure specific properties are used in a BOSH deploy
         tenant_id: <your_tenant_id>
         client_id: <your_client_id>
         client_secret: <your_client_secret>
+        ssh_user: <your_ssh_user>
         ssh_certificate: <content_of_your_ssh_certificate>
 
 
@@ -174,4 +177,5 @@ These are two samples of how Azure specific properties are used in a BOSH deploy
         tenant_id: <your_tenant_id>
         client_id: <your_client_id>
         client_secret: <your_client_secret>
+        ssh_user: <your_ssh_user>
         ssh_certificate: <content_of_your_ssh_certificate>
