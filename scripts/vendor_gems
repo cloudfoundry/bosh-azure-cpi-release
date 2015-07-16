@@ -19,7 +19,7 @@ trap cleanup EXIT
 
   cat > Gemfile <<EOF
 source "https://rubygems.org"
-gem "bosh_azure_cpi", github: "AbelHu/bosh_azure_cpi"
+gem "bosh_azure_cpi", github: "Azure/bosh_azure_cpi"
 EOF
 
   bundle package --all
