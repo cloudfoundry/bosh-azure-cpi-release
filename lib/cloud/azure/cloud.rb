@@ -297,11 +297,10 @@ module Bosh::AzureCloud
     def get_disks(instance_id)
       with_thread_name("get_disks(#{instance_id})") do
         disks = []
-        begin
-          @azure.vm_manager.find(instance_id)[:data_disks].each do |disk|
-            disks << disk[:name]
-          end
-        rescue Bosh::Clouds::VMNotFound
+        vm = @azure.vm_manager.find(instance_id)
+        raise Bosh::Clouds::VMNotFound, "VM '#{instance_id}' cannot be found" if vm.nil?
+        vm[:data_disks].each do |disk|
+          disks << disk[:name]
         end
         disks
       end

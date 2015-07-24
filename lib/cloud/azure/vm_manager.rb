@@ -61,14 +61,15 @@ module Bosh::AzureCloud
     def find(instance_id)
       @client2.get_virtual_machine_by_name(instance_id)
     rescue => e
-      @logger.warn("Cannot find instance by id #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
-      raise Bosh::Clouds::VMNotFound, "VM `#{instance_id}' not found"
+      @logger.warn("Unexpect error when find VM by id #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
+      raise Bosh::Clouds::CloudError, e.message
     end
 
     def delete(instance_id)
       @logger.info("delete(#{instance_id})")
 
       vm = find(instance_id)
+      return if vm.nil?
       @client2.delete_virtual_machine(instance_id)
 
       network_interface = vm[:network_interface]

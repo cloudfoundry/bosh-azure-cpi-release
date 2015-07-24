@@ -18,8 +18,10 @@ module Bosh::AzureCloud
 
     def container_exist?(container_name)
       @logger.info("container_exist?(#{container_name})")
-      container = @blob_service_client.list_containers.find { |container| container.name.eql?(container_name) }
-      !container.nil?
+      @blob_service_client.get_container_properties(container_name)
+      true
+    rescue
+      false
     end
 
     def delete_blob(container_name, blob_name)
@@ -32,14 +34,6 @@ module Bosh::AzureCloud
     def get_blob_uri(container_name, blob_name)
       @logger.info("get_blob_uri(#{container_name}, #{blob_name})")
       "#{Azure.config.storage_blob_host}/#{container_name}/#{blob_name}"
-    end
-
-    def get_blob_size(uri)
-      @logger.info("get_blob_size?(#{uri})")
-      container = uri.split("/")[3..3][0]
-      blob_name = uri.split("/")[4..-1][0]
-      prop = @blob_service_client.get_blob_properties(container, blob_name)
-      prop.properties[:content_length]
     end
 
     def delete_blob_snapshot(container_name, blob_name, snapshot_time)
@@ -129,14 +123,24 @@ module Bosh::AzureCloud
 
     def blob_exist?(container_name, blob_name)
       @logger.info("blob_exist?(#{container_name}, #{blob_name})")
-      blob = list_blobs(container_name).find { |blob| blob.name.eql?(blob_name) }
-
-      !blob.nil?
+      @blob_service_client.get_blob_properties(container_name, blob_name)
+      true
+    rescue
+      false
     end
 
-    def list_blobs(container_name)
+    def list_blobs(container_name, prefix = nil)
       @logger.info("list_blobs(#{container_name})")
-      @blob_service_client.list_blobs(container_name)
+      blobs = Array.new
+      options = {}
+      options[:prefix] = prefix unless prefix.nil?
+      while true do
+        temp = @blob_service_client.list_blobs(container_name, options)
+        blobs += temp if temp.size > 0
+        break if temp.continuation_token.nil? || temp.continuation_token.empty?
+        options[:marker] = temp.continuation_token
+      end
+      blobs
     end
 
     def get_blob(container_name, blob_name, file_path)
