@@ -53,7 +53,7 @@ module Bosh::AzureCloud
     # @return [void]
     def delete_stemcell(stemcell_id)
       with_thread_name("delete_stemcell(#{stemcell_id})") do
-        @azure.stemcell_manager.delete_image(stemcell_id)
+        @azure.stemcell_manager.delete_stemcell(stemcell_id)
       end
     end
 
@@ -78,7 +78,7 @@ module Bosh::AzureCloud
     #
     # @param [String] agent_id UUID for the agent that will be used later on by the director
     #                 to locate and talk to the agent
-    # @param [String] stemcell stemcell id that was once returned by {#create_stemcell}
+    # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
     # @param [Hash] resource_pool cloud specific properties describing the resources needed
     #               for this VM
     # @param [Hash] networks list of networks and their settings needed for this VM

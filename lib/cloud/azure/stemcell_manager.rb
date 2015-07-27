@@ -19,8 +19,8 @@ module Bosh::AzureCloud
       @blob_manager.blob_exist?(STEMCELL_CONTAINER, "#{name}.vhd")
     end
 
-    def delete_image(name)
-      @logger.info("delete_image(#{name})")
+    def delete_stemcell(name)
+      @logger.info("delete_stemcell(#{name})")
       @blob_manager.delete_blob(STEMCELL_CONTAINER, "#{name}.vhd")
     end
 
