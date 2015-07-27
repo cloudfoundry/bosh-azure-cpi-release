@@ -14,6 +14,7 @@ module Bosh::AzureCloud
 
     def create(uuid, stemcell_uri, cloud_opts, network_configurator, resource_pool)
       subnet = @client2.get_network_subnet_by_name(network_configurator.virtual_network_name, network_configurator.subnet_name)
+      raise "Cannot find the subnet #{network_configurator.virtual_network_name}/#{network_configurator.subnet_name}" if subnet.nil?
 
       public_ip = nil
       unless network_configurator.vip_network.nil?
@@ -61,14 +62,15 @@ module Bosh::AzureCloud
     def find(instance_id)
       @client2.get_virtual_machine_by_name(instance_id)
     rescue => e
-      @logger.warn("Cannot find instance by id #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
-      raise Bosh::Clouds::VMNotFound, "VM `#{instance_id}' not found"
+      @logger.warn("Unexpected error when find VM by id #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
+      raise Bosh::Clouds::CloudError, e.message
     end
 
     def delete(instance_id)
       @logger.info("delete(#{instance_id})")
 
       vm = find(instance_id)
+      return if vm.nil?
       @client2.delete_virtual_machine(instance_id)
 
       network_interface = vm[:network_interface]
