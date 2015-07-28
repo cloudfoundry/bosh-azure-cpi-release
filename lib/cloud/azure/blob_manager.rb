@@ -3,7 +3,7 @@ module Bosh::AzureCloud
     include Helpers
 
     VHDBlock = Struct.new(:id, :file_start_range, :size, :blob_start_range, :content)
-    ThreadFlag = Struct.new(:finish)
+    ThreadFlag = Struct.new(:finish, :fail, :message)
 
     def initialize
       @blob_service_client = Azure::BlobService.new
@@ -43,31 +43,6 @@ module Bosh::AzureCloud
       })
     end
 
-    def create_block_blob(container_name, file_path, blob_name)
-      @logger.info("create_block_blob(#{container_name}, #{file_path}, #{blob_name})")
-      block_list = []
-      counter    = 1
-
-      open(file_path, 'rb') do |f|
-        f.each_chunk {|chunk|
-          block_id = counter.to_s.rjust(5, '0')
-          block_list << [block_id, :uncommitted]
-
-          options = {
-            :content_md5 => Base64.strict_encode64(Digest::MD5.digest(chunk)),
-            :timeout     => 300 # seconds
-          }
-
-          md5 = @blob_service_client.create_blob_block(container_name, blob_name, block_id, chunk, options)
-          @logger.debug("Put file: counter: #{counter}, block_id: #{block_id}")
-          counter += 1
-        }
-      end
-
-      @logger.info("Commit file: block_list size: #{block_list.length}")
-      @blob_service_client.commit_blob_blocks(container_name, blob_name, block_list)
-    end
-
     def create_page_blob(container_name, file_path, blob_name)
       @logger.info("create_page_blob(#{container_name}, #{file_path}, #{blob_name})")
       begin
@@ -96,7 +71,7 @@ module Bosh::AzureCloud
         @logger.info("create_empty_vhd_blob: Start to generate vhd footer")
         opts = {
             :type => :fixed,
-            :name => "/tmp/tmp.vhd",
+            :name => "/tmp/footer.vhd", # Only used to initialize Vhd, no local file is generated.
             :size => blob_size_in_gb
         }
         vhd_footer = Vhd::Library.new(opts).footer.values.join
@@ -143,12 +118,6 @@ module Bosh::AzureCloud
       blobs
     end
 
-    def get_blob(container_name, blob_name, file_path)
-      @logger.info("get_blob(#{container_name}, #{blob_name}, #{file_path})")
-      blob, content = @blob_service_client.get_blob(container_name, blob_name)
-      File.open(file_path, 'wb') { |f| f.write(content) }
-    end
-
     def snapshot_blob(container_name, blob_name, metadata, snapshot_blob_name)
       @logger.info("snapshot_blob(#{container_name}, #{blob_name}, #{metadata}, #{snapshot_blob_name})")
       snapshot_time = @blob_service_client.create_blob_snapshot(container_name, blob_name, {:metadata => metadata})
@@ -186,8 +155,7 @@ module Bosh::AzureCloud
     def read_content_func(file_path, file_blocks, block_size, thread_num, finish_flag)
       id = 0
       open(file_path, 'rb') do |file|
-        file.sync = true
-        while true do
+        while !finish_flag.fail do
           if file_blocks.size > thread_num * 5
             sleep(0.01)
             next
@@ -196,7 +164,10 @@ module Bosh::AzureCloud
           chunk = nil
           file_start_range = file.pos
           chunk = file.read(block_size)
-          break if chunk.nil?
+          if chunk.nil?
+            finish_flag.finish = true
+            break
+          end
 
           block_is_not_empty = false
           chunk.each_byte do |b|
@@ -215,23 +186,37 @@ module Bosh::AzureCloud
         end
       end
 
-      @logger.debug("read_content_func: Read all content")
-      finish_flag.finish = true
+      @logger.debug("read_content_func: Exit")
     end
 
-    def upload_page_blob_func(id, container_name, blob_name, options, file_blocks, finish_flag)
-      while true do
+    def upload_page_blob_func(id, container_name, blob_name, options, file_blocks, finish_flag, max_retry_count)
+      while !finish_flag.fail do
+        block = nil
         begin
           block = file_blocks.pop(true)
-          @logger.debug("upload_page_blob_func: Thread #{id}: Uploading #{block.id}: #{block.blob_start_range}, length: #{block.size}")
-          @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
-              block.blob_start_range + block.size - 1, block.content, options)
         rescue
           break if finish_flag.finish
           sleep(0.01)
+          next
+        end
+
+        retry_count = 0
+        begin
+          @logger.debug("upload_page_blob_func: Thread #{id}: Uploading #{block.id}: #{block.blob_start_range}, length: #{block.size}, retry: #{retry_count}")
+          @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
+              block.blob_start_range + block.size - 1, block.content, options)
+        rescue => e
+          @logger.warn("upload_page_blob_func: Failed to create_blob_pages, error: #{e.message}\n#{e.backtrace.join("\n")}")
+          retry_count += 1
+          if retry_count > max_retry_count
+            finish_flag.fail = true
+            finish_flag.message = e.message
+            break
+          end
+          retry
         end
       end
-      @logger.debug("upload_page_blob_func: Thread #{id}: Done")
+      @logger.debug("upload_page_blob_func: Thread #{id}: Exit")
     end
 
     def upload_page_blob(container_name, blob_name, blob_size, file_path, thread_num)
@@ -247,7 +232,7 @@ module Bosh::AzureCloud
 
         @logger.info("Start to upload every block for page blob")
         threads = []
-        finish_flag = ThreadFlag.new(false)
+        finish_flag = ThreadFlag.new(false, false, nil)
         file_blocks = Queue.new()
 
         block_size = 2 * 1024 * 1024
@@ -258,11 +243,13 @@ module Bosh::AzureCloud
         }
         thread_num.times do |i|
           threads << Thread.new {
-            upload_page_blob_func(i + 1, container_name, blob_name, options, file_blocks, finish_flag)
+            upload_page_blob_func(i + 1, container_name, blob_name, options, file_blocks, finish_flag, 20)
           }
         end
 
         threads.each { |t| t.join }
+
+        raise finish_flag.message if finish_flag.fail
 
         duration = Time.new - start_time
         @logger.info("Duration: #{duration.inspect}")
@@ -270,12 +257,6 @@ module Bosh::AzureCloud
         @blob_service_client.delete_blob(container_name, blob_name) if blob_created
         cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")
       end
-    end
-  end
-  
-  class ::File
-    def each_chunk(chunk_size = 1024 * 1024)
-      yield read(chunk_size) until eof?
     end
   end
 end

@@ -126,6 +126,7 @@ module Bosh::AzureCloud
     # * +:username+             - String. User name for the virtual machine instance.
     # * +:custom_data+          - String. Specifies a base-64 encoded string of custom data. 
     # * +:image_uri+            - String. The URI of the image.
+    # * +:os_disk_name+         - String. The name of the OS disk for the virtual machine instance.
     # * +:os_vhd_uri+           - String. The URI of the OS disk for the virtual machine instance.
     # * +:ssh_cert_data+        - String. The content of SSH certificate.
     #
@@ -157,7 +158,7 @@ module Bosh::AzureCloud
           },
           'storageProfile' => {
             'osDisk' => {
-              'name'         => "#{vm_params[:name]}_os_disk",
+              'name'         => vm_params[:os_disk_name],
               'osType'       => 'Linux',
               'createOption' => 'FromImage',
               'caching'      => 'ReadWrite',
