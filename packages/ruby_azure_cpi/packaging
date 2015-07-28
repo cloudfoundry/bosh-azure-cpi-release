@@ -5,8 +5,8 @@ tar xzf ruby_azure_cpi/yaml-0.1.5.tar.gz
   set -e
   cd yaml-0.1.5
   CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-shared
-  make -j
-  make -j install
+  make
+  make install
 )
 
 tar xzf ruby_azure_cpi/ruby-1.9.3-p545.tar.gz
@@ -14,8 +14,8 @@ tar xzf ruby_azure_cpi/ruby-1.9.3-p545.tar.gz
   set -e
   cd ruby-1.9.3-p545
   LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET}
-  make -j
-  make -j install
+  make
+  make install
 )
 
 tar zxvf ruby_azure_cpi/rubygems-2.1.11.tgz
