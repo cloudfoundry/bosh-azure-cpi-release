@@ -31,10 +31,15 @@ module Bosh::AzureCloud
 
     def create_stemcell(image_path, cloud_properties)
       @logger.info("create_stemcell(#{image_path}, #{cloud_properties})")
-      vhd_path = extract_image(image_path)
-      @logger.info("Start to upload VHD")
-      stemcell_name = "#{STEMCELL_PREFIX}-#{SecureRandom.uuid}"
-      @blob_manager.create_page_blob(STEMCELL_CONTAINER, vhd_path, "#{stemcell_name}.vhd")
+
+      stemcell_name = nil
+      Dir.mktmpdir('sc-') do |tmp_dir|
+        @logger.info("Unpacking image: #{image_path}")
+        run_command("tar -zxf #{image_path} -C #{tmp_dir}")
+        @logger.info("Start to upload VHD")
+        stemcell_name = "#{STEMCELL_PREFIX}-#{SecureRandom.uuid}"
+        @blob_manager.create_page_blob(STEMCELL_CONTAINER, "#{tmp_dir}/root.vhd", "#{stemcell_name}.vhd")
+      end
       stemcell_name
     end
 
@@ -44,12 +49,6 @@ module Bosh::AzureCloud
     end
 
     private
-    def extract_image(image_path)
-      @logger.info("Unpacking image: #{image_path}")
-      tmp_dir = Dir.mktmpdir('sc-')
-      run_command("tar -zxf #{image_path} -C #{tmp_dir}")
-      "#{tmp_dir}/root.vhd"
-    end
 
     def run_command(command)
       output, status = Open3.capture2e(command)

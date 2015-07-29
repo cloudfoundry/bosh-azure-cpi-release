@@ -2,6 +2,8 @@ module Bosh::AzureCloud
   class VMManager
     include Helpers
 
+    OS_DISK_PREFIX = 'bosh-os'
+
     def initialize(azure_properties, registry_endpoint, disk_manager)
       @azure_properties = azure_properties
       @registry_endpoint = registry_endpoint
@@ -46,7 +48,8 @@ module Bosh::AzureCloud
         :username            => cloud_opts['ssh_user'],
         :custom_data         => get_user_data(instance_id, network_configurator.dns),
         :image_uri           => stemcell_uri,
-        :os_vhd_uri          => @disk_manager.get_disk_uri("#{instance_id}_os_disk"),
+        :os_disk_name        => "#{OS_DISK_PREFIX}-#{instance_id}",
+        :os_vhd_uri          => @disk_manager.get_disk_uri("#{OS_DISK_PREFIX}-#{instance_id}"),
         :ssh_cert_data       => cloud_opts['ssh_certificate']
       }
       @client2.create_virtual_machine(vm_params, network_interface)
@@ -69,22 +72,17 @@ module Bosh::AzureCloud
     def delete(instance_id)
       @logger.info("delete(#{instance_id})")
 
-      vm = find(instance_id)
-      return if vm.nil?
-      @client2.delete_virtual_machine(instance_id)
+      vm = @client2.get_virtual_machine_by_name(instance_id)
+      @client2.delete_virtual_machine(instance_id) unless vm.nil?
 
-      network_interface = vm[:network_interface]
-      unless network_interface[:load_balancer].nil?
-        load_balancer = network_interface[:load_balancer]
-        @client2.delete_load_balancer(load_balancer[:name])
-      end
-      @client2.delete_network_interface(network_interface[:name])
+      load_balancer = @client2.get_load_balancer_by_name(instance_id)
+      @client2.delete_load_balancer(instance_id) unless load_balancer.nil?
 
-      begin
-        @disk_manager.delete_disk(vm[:os_disk][:name])
-      rescue => e
-        @logger.warn("Cannot delete os disk #{vm[:os_disk][:name]} for #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
-      end
+      network_interface = @client2.get_network_interface_by_name(instance_id)
+      @client2.delete_network_interface(instance_id) unless network_interface.nil?
+
+      os_disk = "#{OS_DISK_PREFIX}-#{instance_id}"
+      @disk_manager.delete_disk(os_disk) if @disk_manager.has_disk?(os_disk)
 
       # Cleanup invalid VM status file
       @disk_manager.delete_vm_status_files(instance_id)
