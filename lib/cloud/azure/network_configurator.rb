@@ -75,7 +75,7 @@ module Bosh::AzureCloud
     end
 
     def tcp_endpoints
-      parse_endpoints(@network.cloud_properties['tcp_endpoints'])
+      parse_endpoints(@vip_network.cloud_properties['tcp_endpoints'])
     end
 
     def dns
@@ -83,7 +83,7 @@ module Bosh::AzureCloud
     end
 
     def udp_endpoints
-      parse_endpoints(@network.cloud_properties['udp_endpoints'])
+      parse_endpoints(@vip_network.cloud_properties['udp_endpoints'])
     end
 
     private
