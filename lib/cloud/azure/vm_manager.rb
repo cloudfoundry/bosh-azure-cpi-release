@@ -36,6 +36,8 @@ module Bosh::AzureCloud
       @client2.create_network_interface(nic_params, subnet, load_balancer)
       network_interface = @client2.get_network_interface_by_name(uuid)
 
+      @disk_manager.create_container()
+
       instance_id = uuid
       vm_params = {
         :name                => instance_id,
@@ -60,9 +62,6 @@ module Bosh::AzureCloud
 
     def find(instance_id)
       @client2.get_virtual_machine_by_name(instance_id)
-    rescue => e
-      @logger.warn("Unexpected error when find VM by id #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
-      raise Bosh::Clouds::CloudError, e.message
     end
 
     def delete(instance_id)
@@ -87,8 +86,6 @@ module Bosh::AzureCloud
     def reboot(instance_id)
       @logger.info("reboot(#{instance_id})")
       @client2.restart_virtual_machine(instance_id)
-    rescue => e
-      @logger.warn("Cannot reboot #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
     end
 
     def set_metadata(instance_id, metadata)
@@ -111,10 +108,7 @@ module Bosh::AzureCloud
 
     def detach_disk(instance_id, disk_name)
       @logger.info("detach_disk(#{instance_id}, #{disk_name})")
-        @client2.detach_disk_from_virtual_machine(instance_id, disk_name)
-    rescue => e
-      raise Bosh::Clouds::DiskNotAttached.new(true),
-            "Disk '#{disk_name}' is not attached to instance '#{instance_id}'"
+      @client2.detach_disk_from_virtual_machine(instance_id, disk_name)
     end
 
     private

@@ -8,10 +8,7 @@ module Bosh::AzureCloud
 
     def initialize(blob_manager)
       @blob_manager = blob_manager
-
       @logger = Bosh::Clouds::Config.logger
-
-      @blob_manager.create_container(STEMCELL_CONTAINER)
     end
 
     def has_stemcell?(name)
@@ -21,7 +18,7 @@ module Bosh::AzureCloud
 
     def delete_stemcell(name)
       @logger.info("delete_stemcell(#{name})")
-      @blob_manager.delete_blob(STEMCELL_CONTAINER, "#{name}.vhd")
+      @blob_manager.delete_blob(STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(name)
     end
 
     def stemcells
@@ -31,6 +28,10 @@ module Bosh::AzureCloud
 
     def create_stemcell(image_path, cloud_properties)
       @logger.info("create_stemcell(#{image_path}, #{cloud_properties})")
+
+      unless @blob_manager.container_exist?(STEMCELL_CONTAINER)
+        @blob_manager.create_container(STEMCELL_CONTAINER)
+      end
 
       stemcell_name = nil
       Dir.mktmpdir('sc-') do |tmp_dir|

@@ -18,19 +18,6 @@ module Bosh::AzureCloud
 
       init_registry
       @azure = Bosh::AzureCloud::AzureClient.new(azure_properties, @registry.endpoint)
-
-      @metadata_lock = Mutex.new
-    end
-
-    ##
-    # Get the current instance id of this host
-    #
-    # @return [String] opaque id later used by other methods of the CPI
-    def current_vm_id
-      @metadata_lock.synchronize do
-        return @current_vm_id if @current_vm_id
-        @current_vm_id = Socket.gethostname
-      end
     end
 
     ##
@@ -89,18 +76,20 @@ module Bosh::AzureCloud
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
+        unless @azure.stemcell_manager.has_stemcell?(stemcell_id)
+          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist"
+        end
+
+        stemcell_uri = @azure.stemcell_manager.get_stemcell_uri(stemcell_id)
+        instance_id = @azure.vm_manager.create(
+          agent_id,
+          stemcell_uri,
+          azure_properties,
+          NetworkConfigurator.new(networks),
+          resource_pool)
+        @logger.info("Created new instance '#{instance_id}'")
+
         begin
-          raise "Given stemcell '#{stemcell_id}' does not exist" unless @azure.stemcell_manager.has_stemcell?(stemcell_id)
-          stemcell_uri = @azure.stemcell_manager.get_stemcell_uri(stemcell_id)
-          instance_id = @azure.vm_manager.create(
-            agent_id,
-            stemcell_uri,
-            azure_properties,
-            NetworkConfigurator.new(networks),
-            resource_pool)
-
-          @logger.info("Created new instance '#{instance_id}'")
-
           registry_settings = initial_agent_settings(
             agent_id,
             instance_id,
