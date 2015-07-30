@@ -67,24 +67,12 @@ module Bosh::AzureCloud
       result
     end
 
-    def delete_resource_by_id(url)
-      begin
-        http_delete(url, nil, 10)
-      rescue => e
-        @logger.warn("delete_resource_by_id - error: #{e.message}\n#{e.backtrace.join("\n")}")
-        raise e
-      end
-    end
-
     def get_resource_by_id(url, params = {})
       result = nil
       begin
         result = http_get(url, params)
       rescue AzureNoFoundError => e
         result = nil
-      rescue => e
-        @logger.warn("get_resource_by_id - error: #{e.message}\n#{e.backtrace.join("\n")}")
-        raise e
       end
       result
     end
@@ -183,19 +171,11 @@ module Bosh::AzureCloud
         'validating' => 'true'
       }
       http_put(url, vm, 30, params)
-    rescue => e
-      @logger.warn("create_virtual_machine - error: #{e.message}\n#{e.backtrace.join("\n")}")
-      raise e
     end
 
     def restart_virtual_machine(name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name, 'restart')
-      begin
-        http_post(url)
-      rescue => e
-        @logger.warn("restart_virtual_machine - error: #{e.message}\n#{e.backtrace.join("\n")}")
-        raise e
-      end
+      http_post(url)
     end
 
     # Public: Set tags for a VM
@@ -208,13 +188,8 @@ module Bosh::AzureCloud
         raise AzureNoFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
-      begin
-        result['tags'] = tags
-        http_put(url, result)
-      rescue => e
-        @logger.warn("update_tags_of_virtual_machine - error: #{e.message}\n#{e.backtrace.join("\n")}")
-        raise e
-      end
+      result['tags'] = tags
+      http_put(url, result)
     end
 
     def attach_disk_to_virtual_machine(name, disk_name, disk_uri)
@@ -224,38 +199,33 @@ module Bosh::AzureCloud
         raise AzureNoFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
-      begin
-        lun = 0
-        data_disks = result['properties']['storageProfile']['dataDisks']
-        for i in 0..128
-          disk = data_disks.find { |disk| disk['lun'] == i}
-          if disk.nil?
-            lun = i
-            break
-          end
+      lun = 0
+      data_disks = result['properties']['storageProfile']['dataDisks']
+      for i in 0..128
+        disk = data_disks.find { |disk| disk['lun'] == i}
+        if disk.nil?
+          lun = i
+          break
         end
-
-        new_disk = {
-          'name'         => disk_name,
-          'lun'          => lun,
-          'createOption' => 'Attach',
-          'caching'      => 'ReadWrite',
-          'vhd'          => { 'uri' => disk_uri }
-        }
-        result['properties']['storageProfile']['dataDisks'].push(new_disk)
-        @logger.info("attach_disk_to_virtual_machine - attach disk #{disk_name} to #{lun}")
-        http_put(url, result)
-        disk = {
-          :name         => disk_name,
-          :lun          => lun,
-          :createOption => 'Attach',
-          :caching      => 'ReadWrite',
-          :vhd          => { :uri => disk_uri }
-        }
-      rescue => e
-        @logger.warn("attach_disk_to_virtual_machine - error: #{e.message}\n#{e.backtrace.join("\n")}")
-        raise e
       end
+
+      new_disk = {
+        'name'         => disk_name,
+        'lun'          => lun,
+        'createOption' => 'Attach',
+        'caching'      => 'ReadWrite',
+        'vhd'          => { 'uri' => disk_uri }
+      }
+      result['properties']['storageProfile']['dataDisks'].push(new_disk)
+      @logger.info("attach_disk_to_virtual_machine - attach disk #{disk_name} to #{lun}")
+      http_put(url, result)
+      disk = {
+        :name         => disk_name,
+        :lun          => lun,
+        :createOption => 'Attach',
+        :caching      => 'ReadWrite',
+        :vhd          => { :uri => disk_uri }
+      }
     end
 
     def detach_disk_from_virtual_machine(name, disk_name)
@@ -265,18 +235,14 @@ module Bosh::AzureCloud
         raise AzureNoFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
-      begin
-        disk = result['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name}
-        raise "the given disk #{disk_name} is not attached to the given virtual machine #{name}" if disk.nil?
+      disk = result['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name}
+      raise Bosh::Clouds::DiskNotAttached.new(true),
+        "The disk #{disk_name} is not attached to the virtual machine #{name}" if disk.nil?
 
-        result['properties']['storageProfile']['dataDisks'].delete_if { |disk| disk['name'] == disk_name}
-        
-        @logger.info("detach_disk_from_virtual_machine - detach disk #{disk_name} from lun #{disk['lun']}")
-        http_put(url, result)
-      rescue => e
-        @logger.warn("detach_disk_from_virtual_machine - error: #{e.message}\n#{e.backtrace.join("\n")}")
-        raise e
-      end
+      result['properties']['storageProfile']['dataDisks'].delete_if { |disk| disk['name'] == disk_name}
+
+      @logger.info("detach_disk_from_virtual_machine - detach disk #{disk_name} from lun #{disk['lun']}")
+      http_put(url, result)
     end
 
     def get_virtual_machine_by_name(name)
@@ -324,7 +290,7 @@ module Bosh::AzureCloud
     def delete_virtual_machine(name)
       @logger.debug("delete_virtual_machine - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
-      delete_resource_by_id(url)
+      http_delete(url, nil, 10)
     end
 
     # Network/Public IP
@@ -338,9 +304,6 @@ module Bosh::AzureCloud
         }
       }
       http_put(url, public_ip, 10)
-    rescue => e
-      @logger.warn("create_public_ip - error: #{e.message}\n#{e.backtrace.join("\n")}")
-      raise e
     end
 
     def get_public_ip_by_name(name)
@@ -399,7 +362,7 @@ module Bosh::AzureCloud
     def delete_public_ip(name)
       @logger.debug("delete_public_ip - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name)
-      delete_resource_by_id(url)
+      http_delete(url, nil, 10)
     end
 
     # Network/Load Balancer
@@ -460,9 +423,6 @@ module Bosh::AzureCloud
       end
 
       http_put(url, load_balancer, 10)
-    rescue => e
-      @logger.warn("create_load_balancer - error: #{e.message}\n#{e.backtrace.join("\n")}")
-      raise e
     end
 
     def get_load_balancer_by_name(name)
@@ -512,7 +472,7 @@ module Bosh::AzureCloud
     def delete_load_balancer(name)
       @logger.debug("delete_load_balancer - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name)
-      delete_resource_by_id(url)
+      http_delete(url, nil, 10)
     end
 
     # Network/Network Interface
@@ -569,9 +529,6 @@ module Bosh::AzureCloud
       end
 
       http_put(url, interface, 10)
-    rescue => e
-      @logger.warn("create_network_interface - error: #{e.message}\n#{e.backtrace.join("\n")}")
-      raise e
     end
 
     def get_network_interface_by_name(name)
@@ -615,7 +572,7 @@ module Bosh::AzureCloud
     def delete_network_interface(name)
       @logger.debug("delete_network_interface - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name)
-      delete_resource_by_id(url)
+      http_delete(url, nil, 10)
     end
 
     # Network/Subnet
@@ -719,8 +676,7 @@ module Bosh::AzureCloud
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
         response = http(uri).request(request)
         if response.code.to_i == HTTP_CODE_UNAUTHORIZED
-          @logger.warn("http_get_response - Azure authentication failed: Token is invalid.")
-          raise AzureUnauthorizedError, "http_get_response - http error: Unauthorized"
+          raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid."
         end
       rescue AzureUnauthorizedError => e
         unless refresh_token
@@ -728,6 +684,8 @@ module Bosh::AzureCloud
           retry
         end
         raise e
+      rescue => e
+        cloud_error("http_get_response - #{e.message}\n#{e.backtrace.join("\n")}")
       end
       response
     end

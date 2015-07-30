@@ -13,14 +13,15 @@ module Bosh::AzureCloud
 
     def create_container(container_name)
       @logger.info("create_container(#{container_name})")
-      @blob_service_client.create_container(container_name) unless container_exist?(container_name)
+      @blob_service_client.create_container(container_name)
     end
 
     def container_exist?(container_name)
       @logger.info("container_exist?(#{container_name})")
       @blob_service_client.get_container_properties(container_name)
       true
-    rescue
+    rescue => e
+      cloud_error("container_exist?: #{e.message}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
       false
     end
 
@@ -100,7 +101,8 @@ module Bosh::AzureCloud
       @logger.info("blob_exist?(#{container_name}, #{blob_name})")
       @blob_service_client.get_blob_properties(container_name, blob_name)
       true
-    rescue
+    rescue => e
+      cloud_error("blob_exist?: #{e.message}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
       false
     end
 
@@ -206,7 +208,7 @@ module Bosh::AzureCloud
           @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
               block.blob_start_range + block.size - 1, block.content, options)
         rescue => e
-          @logger.warn("upload_page_blob_func: Failed to create_blob_pages, error: #{e.message}\n#{e.backtrace.join("\n")}")
+          @logger.debug("upload_page_blob_func: Failed to create_blob_pages, error: #{e.message}\n#{e.backtrace.join("\n")}")
           retry_count += 1
           if retry_count > max_retry_count
             finish_flag.fail = true

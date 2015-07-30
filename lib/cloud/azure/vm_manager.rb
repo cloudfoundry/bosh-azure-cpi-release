@@ -18,14 +18,10 @@ module Bosh::AzureCloud
       subnet = @client2.get_network_subnet_by_name(network_configurator.virtual_network_name, network_configurator.subnet_name)
       raise "Cannot find the subnet #{network_configurator.virtual_network_name}/#{network_configurator.subnet_name}" if subnet.nil?
 
-      public_ip = nil
+      load_balancer = nil
       unless network_configurator.vip_network.nil?
         public_ip = @client2.list_public_ips().find { |ip| ip[:ip_address] == network_configurator.reserved_ip}
         cloud_error("Cannot find the reserved IP address #{network_configurator.reserved_ip}") if public_ip.nil?
-      end
-
-      load_balancer = nil
-      unless network_configurator.vip_network.nil?
         @client2.create_load_balancer(uuid, public_ip,
                                       network_configurator.tcp_endpoints,
                                       network_configurator.udp_endpoints)
@@ -35,10 +31,12 @@ module Bosh::AzureCloud
       nic_params = {
         :name                => uuid,
         :location            => @storage_account[:location],
-        :private_ip          => network_configurator.private_ip, 
+        :private_ip          => network_configurator.private_ip,
       }
       @client2.create_network_interface(nic_params, subnet, load_balancer)
       network_interface = @client2.get_network_interface_by_name(uuid)
+
+      @disk_manager.create_container()
 
       instance_id = uuid
       vm_params = {
@@ -64,9 +62,6 @@ module Bosh::AzureCloud
 
     def find(instance_id)
       @client2.get_virtual_machine_by_name(instance_id)
-    rescue => e
-      @logger.warn("Unexpected error when find VM by id #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
-      raise Bosh::Clouds::CloudError, e.message
     end
 
     def delete(instance_id)
@@ -91,8 +86,6 @@ module Bosh::AzureCloud
     def reboot(instance_id)
       @logger.info("reboot(#{instance_id})")
       @client2.restart_virtual_machine(instance_id)
-    rescue => e
-      @logger.warn("Cannot reboot #{instance_id}: #{e.message}\n#{e.backtrace.join("\n")}")
     end
 
     def set_metadata(instance_id, metadata)
@@ -115,10 +108,7 @@ module Bosh::AzureCloud
 
     def detach_disk(instance_id, disk_name)
       @logger.info("detach_disk(#{instance_id}, #{disk_name})")
-        @client2.detach_disk_from_virtual_machine(instance_id, disk_name)
-    rescue => e
-      raise Bosh::Clouds::DiskNotAttached.new(true),
-            "Disk '#{disk_name}' is not attached to instance '#{instance_id}'"
+      @client2.detach_disk_from_virtual_machine(instance_id, disk_name)
     end
 
     private

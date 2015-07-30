@@ -9,19 +9,17 @@ module Bosh::AzureCloud
     def initialize(blob_manager)
       @blob_manager = blob_manager
       @logger = Bosh::Clouds::Config.logger
+    end
 
-      @blob_manager.create_container(DISK_CONTAINER)
+    def create_container()
+      unless @blob_manager.container_exist?(DISK_CONTAINER)
+        @blob_manager.create_container(DISK_CONTAINER)
+      end
     end
 
     def delete_disk(disk_name)
       @logger.info("delete_disk(#{disk_name})")
-      begin
-        @blob_manager.delete_blob(DISK_CONTAINER, "#{disk_name}.vhd")
-      rescue => e
-        if e.message.include?("BlobNotFound")
-          raise Bosh::Clouds::DiskNotFound.new(false), "Disk '#{disk_name}' not found"
-        end
-      end
+      @blob_manager.delete_blob(DISK_CONTAINER, "#{disk_name}.vhd") if has_disk?(disk_name)
     end
 
     def delete_vm_status_files(prefix)
@@ -33,7 +31,7 @@ module Bosh::AzureCloud
         @blob_manager.delete_blob(DISK_CONTAINER, blob.name)
       end
     rescue => e
-      @logger.warn("delete_vm_status_files - error: #{e.message}")
+      @logger.debug("delete_vm_status_files - error: #{e.message}\n#{e.backtrace.join("\n")}")
     end
 
     def snapshot_disk(disk_name, metadata)
@@ -50,6 +48,7 @@ module Bosh::AzureCloud
     # @return [String] disk name
     def create_disk(size)
       @logger.info("create_disk(#{size})")
+      create_container()
       disk_name = "#{DISK_PREFIX}-#{SecureRandom.uuid}"
       @logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
       @blob_manager.create_empty_vhd_blob(DISK_CONTAINER, "#{disk_name}.vhd", size)
