@@ -87,7 +87,7 @@ module Bosh::AzureCloud
           azure_properties,
           NetworkConfigurator.new(networks),
           resource_pool)
-        @logger.info("Created new instance '#{instance_id}'")
+        @logger.info("Created new vm '#{instance_id}'")
 
         begin
           registry_settings = initial_agent_settings(
@@ -101,7 +101,7 @@ module Bosh::AzureCloud
 
           instance_id
         rescue => e
-          @logger.error(%Q[Failed to create instance: #{e.message}\n#{e.backtrace.join("\n")}])
+          @logger.error(%Q[Failed to update registry after new vm was created: #{e.message}\n#{e.backtrace.join("\n")}])
           @azure.vm_manager.delete(instance_id) if instance_id
           raise e
         end
