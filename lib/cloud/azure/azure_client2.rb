@@ -723,7 +723,7 @@ module Bosh::AzureCloud
               if ret['status'] == 'Succeeded'
                 return true
               else
-                error_msg = "status: #{ret[:status]}\n"
+                error_msg = "status: #{ret['status']}\n"
                 error_msg += "http code: #{status_code}\n"
                 error_msg += "request id: #{response['x-ms-request-id']}\n"
                 error_msg += "error:\n#{ret['error']}"
