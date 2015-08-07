@@ -8,6 +8,7 @@ cpi_gems_dir=$cpi_dir/src/bosh_azure_cpi
 cleanup() {
   cd $cpi_gems_dir
   rm -f *.gem Gemfile*
+  rm -fr bosh_azure_cpi
 }
 
 trap cleanup EXIT
@@ -16,11 +17,18 @@ trap cleanup EXIT
   cd $cpi_gems_dir
 
   rm -f *.gem
+  rm -fr bosh_azure_cpi
+  git clone https://github.com/Azure/bosh_azure_cpi.git
 
   cat > Gemfile <<EOF
 source "https://rubygems.org"
-gem "bosh_azure_cpi", github: "Azure/bosh_azure_cpi"
+gem "bosh_azure_cpi", path: "bosh_azure_cpi"
 EOF
 
   bundle package --all
+
+  rm -fr $cpi_gems_dir/vendor/cache/bosh_azure_cpi
+  cd bosh_azure_cpi
+  gem build bosh_azure_cpi.gemspec
+  cp bosh_azure_cpi*.gem $cpi_gems_dir/vendor/cache/
 )

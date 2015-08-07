@@ -5,25 +5,26 @@ tar xzf ruby_azure_cpi/yaml-0.1.5.tar.gz
   set -e
   cd yaml-0.1.5
   CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-shared
-  make
-  make install
+  make -j
+  make -j install
 )
 
-tar xzf ruby_azure_cpi/ruby-1.9.3-p545.tar.gz
+tar xzf ruby_azure_cpi/ruby-*.tar.gz
 (
   set -e
-  cd ruby-1.9.3-p545
-  LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET}
-  make
-  make install
+  cd ruby-2.1.4
+  LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET} --without-gmp
+  make -j
+  make -j install
 )
 
-tar zxvf ruby_azure_cpi/rubygems-2.1.11.tgz
+tar zxvf ruby_azure_cpi/rubygems-2.3.0.tgz
+
 (
   set -e
-  cd rubygems-2.1.11
+  cd rubygems-2.3.0
 
-  ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb
+  ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb --no-ri --no-rdoc
 
   if [[ $? != 0 ]] ; then
     echo "Cannot install rubygems"
