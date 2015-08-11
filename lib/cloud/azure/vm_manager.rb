@@ -36,8 +36,6 @@ module Bosh::AzureCloud
       @client2.create_network_interface(nic_params, subnet, load_balancer)
       network_interface = @client2.get_network_interface_by_name(uuid)
 
-      @disk_manager.create_container()
-
       instance_id = uuid
       vm_params = {
         :name                => instance_id,

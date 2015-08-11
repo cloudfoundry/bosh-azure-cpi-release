@@ -42,6 +42,7 @@ module Bosh::AzureCloud
     end
 
     ## Encode all values in metadata to string.
+    ## Add a tag user-agent, value is bosh.
     # @param [Hash] metadata
     # @return [Hash]
     def encode_metadata(metadata)
@@ -49,6 +50,7 @@ module Bosh::AzureCloud
       metadata.each do |key, value|
         ret[key] = value.to_s
       end
+      ret['user-agent'] = 'bosh'
       ret
     end
   end

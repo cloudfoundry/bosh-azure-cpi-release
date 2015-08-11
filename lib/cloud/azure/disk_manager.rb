@@ -11,12 +11,6 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create_container()
-      unless @blob_manager.container_exist?(DISK_CONTAINER)
-        @blob_manager.create_container(DISK_CONTAINER)
-      end
-    end
-
     def delete_disk(disk_name)
       @logger.info("delete_disk(#{disk_name})")
       @blob_manager.delete_blob(DISK_CONTAINER, "#{disk_name}.vhd") if has_disk?(disk_name)
@@ -48,7 +42,6 @@ module Bosh::AzureCloud
     # @return [String] disk name
     def create_disk(size)
       @logger.info("create_disk(#{size})")
-      create_container()
       disk_name = "#{DISK_PREFIX}-#{SecureRandom.uuid}"
       @logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
       @blob_manager.create_empty_vhd_blob(DISK_CONTAINER, "#{disk_name}.vhd", size)

@@ -29,10 +29,6 @@ module Bosh::AzureCloud
     def create_stemcell(image_path, cloud_properties)
       @logger.info("create_stemcell(#{image_path}, #{cloud_properties})")
 
-      unless @blob_manager.container_exist?(STEMCELL_CONTAINER)
-        @blob_manager.create_container(STEMCELL_CONTAINER)
-      end
-
       stemcell_name = nil
       Dir.mktmpdir('sc-') do |tmp_dir|
         @logger.info("Unpacking image: #{image_path}")

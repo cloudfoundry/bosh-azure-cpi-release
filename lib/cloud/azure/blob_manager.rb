@@ -11,20 +11,6 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create_container(container_name)
-      @logger.info("create_container(#{container_name})")
-      @blob_service_client.create_container(container_name)
-    end
-
-    def container_exist?(container_name)
-      @logger.info("container_exist?(#{container_name})")
-      @blob_service_client.get_container_properties(container_name)
-      true
-    rescue => e
-      cloud_error("container_exist?: #{e.message}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
-      false
-    end
-
     def delete_blob(container_name, blob_name)
       @logger.info("delete_blob(#{container_name}, #{blob_name})")
       @blob_service_client.delete_blob(container_name, blob_name, {
