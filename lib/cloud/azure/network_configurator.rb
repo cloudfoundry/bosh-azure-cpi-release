@@ -4,7 +4,7 @@ module Bosh::AzureCloud
   ##
   # Represents Azure instance network config. Azure VM has single NIC
   # with dynamic IP address and (optionally) Azure cloud service has a single 
-  # reserved IP address which VM is not aware of (vip). 
+  # public IP address which VM is not aware of (vip).
   #
   class NetworkConfigurator
     include Helpers
@@ -70,8 +70,8 @@ module Bosh::AzureCloud
       (@network.is_a? ManualNetwork) ? @network.private_ip : nil
     end
 
-    def reserved_ip
-      @vip_network.reserved_ip unless @vip_network.nil?
+    def public_ip
+      @vip_network.public_ip unless @vip_network.nil?
     end
 
     def tcp_endpoints

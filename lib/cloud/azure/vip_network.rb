@@ -10,7 +10,7 @@ module Bosh::AzureCloud
       super
     end
 
-    def reserved_ip
+    def public_ip
       @ip
     end
 

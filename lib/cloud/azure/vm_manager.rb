@@ -20,8 +20,8 @@ module Bosh::AzureCloud
 
       load_balancer = nil
       unless network_configurator.vip_network.nil?
-        public_ip = @client2.list_public_ips().find { |ip| ip[:ip_address] == network_configurator.reserved_ip}
-        cloud_error("Cannot find the reserved IP address #{network_configurator.reserved_ip}") if public_ip.nil?
+        public_ip = @client2.list_public_ips().find { |ip| ip[:ip_address] == network_configurator.public_ip}
+        cloud_error("Cannot find the public IP address #{network_configurator.public_ip}") if public_ip.nil?
         @client2.create_load_balancer(uuid, public_ip,
                                       network_configurator.tcp_endpoints,
                                       network_configurator.udp_endpoints)
