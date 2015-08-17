@@ -165,7 +165,7 @@ module Bosh::AzureCloud
     # @return [void]
     def set_vm_metadata(instance_id, metadata)
       @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
-      @azure.vm_manager.set_metadata(instance_id, encode_metadata(metadata))
+      @azure.vm_manager.set_metadata(instance_id, encode_metadata(metadata).merge({'user-agent' => 'bosh'}))
     end
 
     ##

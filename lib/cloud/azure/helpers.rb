@@ -50,7 +50,6 @@ module Bosh::AzureCloud
       metadata.each do |key, value|
         ret[key] = value.to_s
       end
-      ret['user-agent'] = 'bosh'
       ret
     end
   end
