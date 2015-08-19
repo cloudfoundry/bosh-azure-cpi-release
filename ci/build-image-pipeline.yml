@@ -1,0 +1,49 @@
+---
+groups:
+  - name: bosh-azure-cpi-release
+    jobs:
+      - build-candidate
+jobs:
+- name: build-candidate
+  serial: true
+  plan:
+  - aggregate:
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false, get: version-semver, params: {bump: patch}}
+
+  - put: version-semver
+    params: {file: version-semver/number}
+
+  - task: build
+    file: bosh-cpi-release/ci/tasks/build-candidate.yml
+
+  - put: bosh-cpi-dev-artifacts
+    params: {from: build/out/.*\.tgz}
+
+resources:
+- name: bosh-cpi-release-in
+  type: git
+  source:
+    uri: {{azure_cpi_bosh_release_repo}}
+    branch: {{azure_cpi_bosh_release_branch}}
+    ignore_paths:
+        - .final_builds/**/*.yml
+        - releases/**/*.yml
+
+- name: version-semver
+  type: semver
+  source:
+    key:               current-version # dev-release version
+    initial_version:   0.0.1
+    bucket:            {{s3_azure_cpi_pipeline_bucket}}
+    access_key_id:     {{s3_azure_cpi_access_key}}
+    secret_access_key: {{s3_azure_cpi_secret_key}}
+
+- name: bosh-cpi-dev-artifacts
+  type: s3
+  source:
+    regexp: bosh-azure-cpi\.tgz
+    bucket: {{s3_azure_cpi_pipeline_bucket}}
+    region_name: {{s3_azure_cpi_region}}
+    access_key_id: {{s3_azure_cpi_access_key}}
+    secret_access_key: {{s3_azure_cpi_secret_key}}

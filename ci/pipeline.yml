@@ -1,0 +1,325 @@
+---
+groups:
+  - name: bosh-aws-cpi-release
+    jobs:
+      - build-candidate
+
+  # - name: ubuntu
+  #   jobs:
+  #     - build-candidate
+  #     - terraform-ubuntu
+  #     - deploy-ubuntu
+  #     - bats-ubuntu
+  #     - promote-candidate
+
+  # - name: centos
+  #   jobs:
+  #     - build-candidate
+  #     - terraform-centos
+  #     - deploy-centos
+  #     - bats-centos
+  #     - promote-candidate
+
+jobs:
+- name: build-candidate
+  serial: true
+  plan:
+  - aggregate:
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false, get: version-semver, params: {bump: patch}}
+
+  - put: version-semver
+    params: {file: version-semver/number}
+
+  - task: build
+    file: bosh-cpi-release/ci/tasks/build-candidate.yml
+
+  - put: bosh-cpi-dev-artifacts
+    params: {from: build/out/.*\.tgz}
+
+# - name: lifecycle
+#   serial: true
+#   plan:
+#   - aggregate:
+#     - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+#     - {trigger: false,                            get: bosh-cpi-release, resource: bosh-cpi-release-in}
+#     - {trigger: false,                            get: bosh-src}
+
+#   - task: test
+#     file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
+#     config:
+#       params:
+#         BOSH_AWS_ACCESS_KEY_ID:       {{lifecycle_BOSH_AWS_ACCESS_KEY_ID}}
+#         BOSH_AWS_SECRET_ACCESS_KEY:   {{lifecycle_BOSH_AWS_SECRET_ACCESS_KEY}}
+#         BOSH_AWS_SUBNET_ID:           {{lifecycle_BOSH_AWS_SUBNET_ID}}
+#         BOSH_AWS_SUBNET_ZONE:         {{lifecycle_BOSH_AWS_SUBNET_ZONE}}
+#         BOSH_AWS_LIFECYCLE_MANUAL_IP: {{lifecycle_BOSH_AWS_LIFECYCLE_MANUAL_IP}}
+#         BOSH_AWS_DEFAULT_KEY_NAME:    {{lifecycle_BOSH_AWS_DEFAULT_KEY_NAME}}
+
+# - name: terraform-ubuntu
+#   serial_groups: [ubuntu]
+#   plan:
+#   - aggregate:
+#     - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
+
+#   - task: terraform
+#     file: bosh-cpi-release/ci/tasks/terraform.yml
+#     config:
+#       params:
+#         aws_access_key_id:          {{s3_aws_cpi_access_key}}
+#         aws_secret_access_key:      {{s3_aws_cpi_secret_key}}
+#         base_os:                    ubuntu
+#     ensure:
+#       do:
+#       - put: terraform-ubuntu-exports
+#         params: {from: terraform/terraform-ubuntu-exports.sh$}
+
+# - name: deploy-ubuntu
+#   serial_groups: [ubuntu]
+#   plan:
+#   - aggregate:
+#     - {trigger: true,  passed: [build-candidate],  get: bosh-cpi-dev-artifacts}
+#     - {trigger: false, passed: [build-candidate],  get: version-semver}
+#     - {trigger: false, passed: [build-candidate],  get: bosh-cpi-release, resource: bosh-cpi-release-in}
+#     - {trigger: false,                             get: director-state-file, resource: ubuntu-director-state-file}
+#     - {trigger: false, passed: [terraform-ubuntu], get: terraform-exports, resource: terraform-ubuntu-exports}
+#     - {trigger: false,                             get: bosh-init}
+#     - {trigger: false,                             get: bosh-release}
+#     - {trigger: false,                             get: stemcell, resource: aws-ubuntu-stemcell}
+
+#   - task: deploy
+#     file: bosh-cpi-release/ci/tasks/deploy.yml
+#     config:
+#       params:
+#         base_os:                    ubuntu
+#         aws_access_key_id:          {{s3_aws_cpi_access_key}}
+#         aws_secret_access_key:      {{s3_aws_cpi_secret_key}}
+#         private_key_data:           {{bosh_private_key}}
+#         region_name:                {{s3_aws_cpi_region}}
+#         AWS_NETWORK_CIDR:           {{AWS_NETWORK_CIDR}}
+#         AWS_NETWORK_GATEWAY:        {{AWS_NETWORK_GATEWAY}}
+#         PRIVATE_DIRECTOR_STATIC_IP: {{PRIVATE_DIRECTOR_STATIC_IP}}
+#     ensure:
+#       do:
+#       - put: ubuntu-director-state-file
+#         params: {from: deploy/director-state-file/ubuntu-director-manifest-state.json}
+
+# - name: bats-ubuntu
+#   serial_groups: [ubuntu]
+#   plan:
+#   - aggregate:
+#     - {trigger: true,  passed: [deploy-ubuntu],    get: bosh-cpi-dev-artifacts}
+#     - {trigger: false, passed: [deploy-ubuntu],    get: stemcell, resource: aws-ubuntu-stemcell}
+#     - {trigger: false, passed: [deploy-ubuntu],    get: bosh-cpi-release, resource: bosh-cpi-release-in}
+#     - {trigger: false, passed: [terraform-ubuntu], get: terraform-exports, resource: terraform-ubuntu-exports}
+#     - {trigger: false,                             get: bats}
+
+#   - task: test
+#     file: bosh-cpi-release/ci/tasks/run-bats.yml
+#     config:
+#       params:
+#         base_os:                    ubuntu
+#         BAT_VCAP_PASSWORD:          {{BAT_VCAP_PASSWORD}}
+#         private_key_data:           {{bosh_private_key}}
+#         BAT_STEMCELL_NAME:          {{BAT_STEMCELL_NAME_ubuntu}}
+#         BAT_SECOND_STATIC_IP:       {{BAT_SECOND_STATIC_IP}}
+#         BAT_NETWORK_STATIC_IP:      {{BAT_NETWORK_STATIC_IP}}
+#         BAT_NETWORK_CIDR:           {{AWS_NETWORK_CIDR}}
+#         BAT_NETWORK_RESERVED_RANGE: {{BAT_NETWORK_RESERVED_RANGE}}
+#         BAT_NETWORK_GATEWAY:        {{AWS_NETWORK_GATEWAY}}
+#         BAT_NETWORK_STATIC_RANGE:   {{BAT_NETWORK_STATIC_RANGE}}
+
+# - name: terraform-centos
+#   serial_groups: [centos]
+#   plan:
+#   - aggregate:
+#     - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
+
+#   - task: terraform
+#     file: bosh-cpi-release/ci/tasks/terraform.yml
+#     config:
+#       params:
+#         aws_access_key_id:          {{s3_aws_cpi_access_key}}
+#         aws_secret_access_key:      {{s3_aws_cpi_secret_key}}
+#         base_os:                    centos
+#     ensure:
+#       do:
+#       - put: terraform-centos-exports
+#         params: {from: terraform/terraform-centos-exports.sh$}
+
+# - name: deploy-centos
+#   serial_groups: [centos] # shouldn't deploy while bats run
+#   plan:
+#   - aggregate:
+#     - {trigger: true,  passed: [build-candidate],  get: bosh-cpi-dev-artifacts}
+#     - {trigger: false, passed: [build-candidate],  get: version-semver}
+#     - {trigger: false, passed: [build-candidate],  get: bosh-cpi-release, resource: bosh-cpi-release-in}
+#     - {trigger: false,                             get: director-state-file, resource: centos-director-state-file}
+#     - {trigger: false, passed: [terraform-centos], get: terraform-exports, resource: terraform-centos-exports}
+#     - {trigger: false,                             get: bosh-init}
+#     - {trigger: false,                             get: bosh-release}
+#     - {trigger: false,                             get: stemcell, resource: aws-centos-stemcell}
+
+#   - task: deploy
+#     file: bosh-cpi-release/ci/tasks/deploy.yml
+#     config:
+#       params:
+#         base_os:                    centos
+#         aws_access_key_id:          {{s3_aws_cpi_access_key}}
+#         aws_secret_access_key:      {{s3_aws_cpi_secret_key}}
+#         private_key_data:           {{bosh_private_key}}
+#         region_name:                {{s3_aws_cpi_region}}
+#         AWS_NETWORK_CIDR:           {{AWS_NETWORK_CIDR}}
+#         AWS_NETWORK_GATEWAY:        {{AWS_NETWORK_GATEWAY}}
+#         PRIVATE_DIRECTOR_STATIC_IP: {{PRIVATE_DIRECTOR_STATIC_IP}}
+#     ensure:
+#       do:
+#       - put: centos-director-state-file
+#         params: {from: deploy/director-state-file/centos-director-manifest-state.json}
+
+# - name: bats-centos
+#   serial_groups: [centos] # can't run while deploying
+#   plan:
+#   - aggregate:
+#     - {trigger: true,  passed: [deploy-centos],    get: bosh-cpi-dev-artifacts}
+#     - {trigger: false, passed: [deploy-centos],    get: stemcell, resource: aws-centos-stemcell}
+#     - {trigger: false, passed: [deploy-centos],    get: bosh-cpi-release, resource: bosh-cpi-release-in}
+#     - {trigger: false, passed: [terraform-centos], get: terraform-exports, resource: terraform-centos-exports}
+#     - {trigger: false,                             get: bats}
+
+#   - task: test
+#     file: bosh-cpi-release/ci/tasks/run-bats.yml
+#     config:
+#       params:
+#         base_os:                    centos
+#         BAT_VCAP_PASSWORD:          {{BAT_VCAP_PASSWORD}}
+#         private_key_data:           {{bosh_private_key}}
+#         BAT_STEMCELL_NAME:          {{BAT_STEMCELL_NAME_centos}}
+#         BAT_SECOND_STATIC_IP:       {{BAT_SECOND_STATIC_IP}}
+#         BAT_NETWORK_STATIC_IP:      {{BAT_NETWORK_STATIC_IP}}
+#         BAT_NETWORK_CIDR:           {{AWS_NETWORK_CIDR}}
+#         BAT_NETWORK_RESERVED_RANGE: {{BAT_NETWORK_RESERVED_RANGE}}
+#         BAT_NETWORK_GATEWAY:        {{AWS_NETWORK_GATEWAY}}
+#         BAT_NETWORK_STATIC_RANGE:   {{BAT_NETWORK_STATIC_RANGE}}
+
+# - name: promote-candidate
+#   plan:
+#   - aggregate:
+#     - {trigger: true,  passed: [lifecycle, bats-ubuntu, bats-centos], get: bosh-cpi-dev-artifacts}
+#     - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-out}
+
+#   - task: promote
+#     file: bosh-cpi-release/ci/tasks/promote-candidate.yml
+#     config:
+#       params:
+#         aws_access_key_id: {{s3_aws_cpi_access_key}}
+#         aws_secret_access_key: {{s3_aws_cpi_secret_key}}
+
+#   - put: bosh-cpi-release
+#     resource: bosh-cpi-release-out
+#     params: {repository: promote/bosh-cpi-release, rebase: true}
+
+# resources:
+# - name: bosh-cpi-dev-artifacts
+#   type: s3
+#   source:
+#     regexp: bosh-aws-cpi\.tgz
+#     bucket: {{s3_aws_cpi_pipeline_bucket}}
+#     region_name: {{s3_aws_cpi_region}}
+#     access_key_id: {{s3_aws_cpi_access_key}}
+#     secret_access_key: {{s3_aws_cpi_secret_key}}
+
+# - name: ubuntu-director-state-file
+#   type: s3
+#   source:
+#     bucket:            {{s3_aws_cpi_ubuntu_director_state_file_bucket}}
+#     versioned_file:    ubuntu-director-manifest-state.json
+#     region_name:       us-east-1
+#     access_key_id:     {{s3_aws_cpi_ubuntu_director_state_file_access_key}}
+#     secret_access_key: {{s3_aws_cpi_ubuntu_director_state_file_secret_key}}
+
+# - name: centos-director-state-file
+#   type: s3
+#   source:
+#     bucket:            {{s3_aws_cpi_centos_director_state_file_bucket}}
+#     versioned_file:    centos-director-manifest-state.json
+#     region_name:       us-east-1
+#     access_key_id:     {{s3_aws_cpi_centos_director_state_file_access_key}}
+#     secret_access_key: {{s3_aws_cpi_centos_director_state_file_secret_key}}
+
+- name: bosh-cpi-release-in
+  type: git
+  source:
+    uri: git@github.com:azure/bosh-azure-cpi-release.git
+    branch: master
+    private_key: {{github_deployment_key__bosh-azure-cpi-release}}
+    ignore_paths:
+      - .final_builds/**/*.yml
+      - releases/**/*.yml
+
+# - name: bosh-cpi-release-out
+#   type: git
+#   source:
+#     uri: git@github.com:cloudfoundry-incubator/bosh-aws-cpi-release.git
+#     branch: master
+#     private_key: {{github_deployment_key__bosh-aws-cpi-release}}
+
+# - name: version-semver
+#   type: semver
+#   source:
+#     key:               current-version # dev-release version
+#     bucket:            {{s3_aws_cpi_pipeline_bucket}}
+#     access_key_id:     {{s3_aws_cpi_access_key}}
+#     secret_access_key: {{s3_aws_cpi_secret_key}}
+
+# - name: bosh-init
+#   type: s3
+#   source:
+#     regexp: bosh-init-([0-9.]+)-linux-amd64
+#     bucket: {{s3_bosh_init_bucket}}
+#     region_name: {{s3_aws_cpi_region}}
+
+# - name: bosh-src
+#   type: git
+#   source:
+#     uri: https://github.com/cloudfoundry/bosh.git
+#     branch: master
+
+# - name: bats
+#   type: git
+#   source:
+#     uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
+#     branch: concourse
+
+# - name: bosh-release
+#   type: bosh-io-release
+#   source:
+#     repository: cloudfoundry/bosh
+
+# - name: aws-ubuntu-stemcell
+#   type: bosh-io-stemcell
+#   source:
+#     name: bosh-aws-xen-hvm-ubuntu-trusty-go_agent
+
+# - name: aws-centos-stemcell
+#   type: bosh-io-stemcell
+#   source:
+#     name: bosh-aws-xen-centos-7-go_agent
+
+# - name: terraform-ubuntu-exports
+#   type: s3
+#   source:
+#     versioned_file: terraform-ubuntu-exports.sh
+#     bucket: {{s3_bosh_aws_cpi_terraform_state_ubuntu_bucket}}
+#     region_name: {{s3_aws_cpi_region}}
+#     access_key_id: {{s3_bosh_aws_cpi_terraform_state_ubuntu_access_key_id}}
+#     secret_access_key: {{s3_bosh_aws_cpi_terraform_state_ubuntu_secret_access_key}}
+
+# - name: terraform-centos-exports
+#   type: s3
+#   source:
+#     versioned_file: terraform-centos-exports.sh
+#     bucket: {{s3_bosh_aws_cpi_terraform_state_centos_bucket}}
+#     region_name: {{s3_aws_cpi_region}}
+#     access_key_id: {{s3_bosh_aws_cpi_terraform_state_centos_access_key_id}}
+#     secret_access_key: {{s3_bosh_aws_cpi_terraform_state_centos_secret_access_key}}
