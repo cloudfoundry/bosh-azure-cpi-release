@@ -2,18 +2,18 @@
 
 # Overview #
 
-This documents describes the steps to create Cloud Foundry on Azure environment using Azure resource template, which involves setting up a Bosh VM and using it to provision Cloud Foundry in Azure. If you want to deploy your environment step by step, you can reference [the Step by Step Manual Guide](https://github.com/Azure/bosh-azure-cpi-release/blob/master/docs/beta-guide.md).
+This documents describes the steps to create Cloud Foundry on Azure environment using Azure resource template, which involves setting up a Bosh VM and using it to provision Cloud Foundry in Azure. If you want to deploy your environment step by step, you can reference [the Step by Step Manual Guide](https://github.com/Azure/bosh-azure-cpi-release/blob/master/docs/guide.md).
 
- 
+
 # Updates from last version #
 
 
 Following are updates from [Preview version of Cloud Foundry on Azure](http://azure.microsoft.com/blog/2015/05/29/try-cloud-foundry-on-azure-today/).
 
 •	Update Azure CPI code to pick up version 2972 from Cloud Foundry main branch
- 
+
 •	Support [bosh-init](https://github.com/cloudfoundry/bosh-init)
- 
+
 •	Support creating multiple Cloud Foundry VMs
 
 •	Support [Bosh snapshot](https://bosh.io/docs/snapshots.html)
@@ -41,7 +41,7 @@ Setting up Cloud Foundry in Azure involves the following steps:
 
 
 ## 1.1	Prepare your Azure Account ##
- 
+
 To configure your Azure account for BOSH and Cloud Foundry:
 
 1.	Prepare Azure CLI
@@ -64,7 +64,7 @@ Install and configure Azure CLI following the documentation [here](http://azure.
 #### 1.2.2.2	Login ####
 
 Please note this login method requires a work or school account.
- 
+
 If you do not currently have a work or school account, and are using a personal account to log in to your Azure subscription, you can easily create a work or school account, following this [guide](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/).
 
 If you have enabled MFA, creating the service principal may fail. You need to disable MFA and try again.
@@ -81,7 +81,7 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
 
 Ensure your default subscription is set to the one you want to create your service principal.
 
-First check whether you have multiple subscriptions: 
+First check whether you have multiple subscriptions:
 
 	azure account list
 
@@ -132,7 +132,7 @@ Example:
 
 	azure ad app create --name "Service Principal for BOSH" --password "password" --home-page "http://BOSHAzureCPI" --identifier-uris "http://BOSHAzureCPI"
 
-Below is a sample output you will get from the command, the "Application Id" is your **client id** you need to create the Service Principal. 
+Below is a sample output you will get from the command, the "Application Id" is your **client id** you need to create the Service Principal.
 
 	info:    Executing command ad app create
 	+ Creating application Service Principal for BOSH
@@ -157,7 +157,7 @@ Below is a sample output you will get from the command, the "Application Id" is 
 
 	azure ad sp create <client-id>
 
-Example: 
+Example:
 
 	azure ad sp create 246e4af7-75b5-494a-89b5-363addb9f0fa
 
@@ -176,7 +176,7 @@ Sample output:
 
 ### 1.3.4	Assigning roles to your Service Principal ###
 
-Now you have a Service Principal account, you need to grant this account access to proper resource use Azure CLI. 
+Now you have a Service Principal account, you need to grant this account access to proper resource use Azure CLI.
 
 #### 1.3.4.1	Assigning Roles ####
 
@@ -216,7 +216,7 @@ Here we’ll create the following Azure resources that’s required for running 
 
 •	A Virtual Machine with a public IP
 
-These resources can be setup by manual operations, and you can refer to [the manual guide](https://github.com/Azure/bosh-azure-cpi-release/blob/master/docs/beta-guide.md). Another way is to deploy an [Azure Template](https://azure.microsoft.com/en-us/documentation/articles/resource-group-authoring-templates/) with Azure Resource Manager. The template (in JSON format) will provide a declarative way to define deployment. 
+These resources can be setup by manual operations, and you can refer to [the manual guide](https://github.com/Azure/bosh-azure-cpi-release/blob/master/docs/guide.md). Another way is to deploy an [Azure Template](https://azure.microsoft.com/en-us/documentation/articles/resource-group-authoring-templates/) with Azure Resource Manager. The template (in JSON format) will provide a declarative way to define deployment.
 
 Click the button “Deploy to Azure” [here](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup) to provision the resources above in Azure.
 The template expects the following parameters:
@@ -225,18 +225,18 @@ The template expects the following parameters:
 <table><tr><td>Name</td><td>Description</td></tr><tr><td>location</td><td>location where the resources will be deployed</td></tr><tr><td>newStorageAccountName</td><td><b>Unique DNS Name</b> for the Storage Account where the Virtual Machine's disks will be placed. <br/><b>It can contain only lowercase letters and numbers. It has to be between 3 and 24 characters.</b></td></tr><tr><td>virtualNetworkName</td><td>name of the virtual network</td></tr><tr><td>subnetNameForBosh</td><td>name of the subnet for Bosh</td></tr><tr><td>subnetNameForCloudFoundry</td><td>name of the subnet for CloudFoundy</td></tr><tr><td>vmName</td><td>Name of Virtual Machine</td></tr><tr><td>vmSize</td><td>Size of the Virtual Machine</td></tr><tr><td>adminUsername</td><td>Username for the Virtual Machines</td></tr><tr><td>adminPassword</td><td>Password for the Virtual Machine</td></tr><tr><td>enableDNSOnDevbox</td><td>A default DNS will be setup in the dev-box if it is true. <br/><b>If you enable it, you should reboot the dev-box manually after you logon to dev-box at the first time. If the dev-box reboots, its public IP address may change. You need to manually update it in /etc/bind/cf.com.wan.</b></td></tr></table>
 
 
-After filling in all parameters, you can click the button “Deploy to Azure” to start the provision. 
+After filling in all parameters, you can click the button “Deploy to Azure” to start the provision.
 You can check ~/install.log to determine the status of the deployment. When the deployment succeeds you will find **Finish** at the end of the log file.
 
 Notes:
 
 1)	 Currently BOSH can be only deployed from a Virtual Machine in the same VNET on Azure.
 
-2)	 The default type of Azue storage account is "Standard_LRS" (Locally Redundant Storage). For a list of available Azure storage accounts, their capacities and prices, check [here](http://azure.microsoft.com/en-us/pricing/details/storage/). Please note Standard_ZRS account cannot be changed to another account type later, and the other account types cannot be changed to Standard_ZRS. The same goes for Premium_LRS accounts. 
+2)	 The default type of Azue storage account is "Standard_LRS" (Locally Redundant Storage). For a list of available Azure storage accounts, their capacities and prices, check [here](http://azure.microsoft.com/en-us/pricing/details/storage/). Please note Standard_ZRS account cannot be changed to another account type later, and the other account types cannot be changed to Standard_ZRS. The same goes for Premium_LRS accounts.
 
 
 # 3	Deploy #
- 
+
 ## 3.1	Deploy Bosh ##
 
 ### 3.1.1	Configure ###
@@ -261,7 +261,7 @@ More verbose logs are written to ~/run.log.
 ### 3.2.1	Configure ###
 
 
-1)	 Logon your BOSH director with below command. 
+1)	 Logon your BOSH director with below command.
 
 	bosh target 10.0.0.4 # Username: admin, Password: admin
 
@@ -288,7 +288,7 @@ Sample output:
   	snapshots  enabled
 
 	Deployment
- 	not set   
+ 	not set
 
 2)	 You can reference the example file [cf_212.yml](http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties.
 
@@ -306,7 +306,7 @@ Get the value of **resource_pools.name[vms].stemcell.url** in the file [http://c
 
 2)	Upload the Latest Cloud Foundry release
 
-	bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=212 
+	bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=212
 
 3)	Deploy
 

@@ -4,16 +4,16 @@
 
 This document describes the steps to setup and deploy Cloud Foundry on Azure, including preparing the Azure environment and deploying Cloud Foundry on Azure.
 
-Note this document provides the setup and deploy steps using step by step standalone commands; for alternation steps using pre-created Azure Resource Manager template, please reference [the template guide](https://github.com/Azure/bosh-azure-cpi-release/blob/master/docs/beta-template-guide.md).
+Note this document provides the setup and deploy steps using step by step standalone commands; for alternation steps using pre-created Azure Resource Manager template, please reference [the template guide](https://github.com/Azure/bosh-azure-cpi-release/blob/master/docs/template-guide.md).
 
 
 # Updates from last version #
 
 Following are updates from [Preview version of Cloud Foundry on Azure](http://azure.microsoft.com/blog/2015/05/29/try-cloud-foundry-on-azure-today/).
 
-•   Update Azure CPI code to pick up version 2972 from Cloud Foundry main branch 
+•   Update Azure CPI code to pick up version 2972 from Cloud Foundry main branch
 
-•   Support [bosh-init](https://github.com/cloudfoundry/bosh-init) 
+•   Support [bosh-init](https://github.com/cloudfoundry/bosh-init)
 
 •   Support creating multiple Cloud Foundry VMs
 
@@ -22,7 +22,7 @@ Following are updates from [Preview version of Cloud Foundry on Azure](http://az
 •   Remove NodeJS code and related dependencies, keeping all Azure CPI code Ruby based
 
 
- 
+
 # Prerequisites #
 
 •   [Creating an Azure account](https://azure.microsoft.com/en-us/pricing/free-trial/)
@@ -36,7 +36,7 @@ Following are updates from [Preview version of Cloud Foundry on Azure](http://az
 ## 1. Create a Deployment Manifest ##
 
 The deployment manifest is a YAML file that defines the components and properties of the Cloud Foundry deployment. You need to create a deployment manifest file named bosh.yml in your dev-box based on the template below.
- 
+
 You need to replace **BOSH-FOR-AZURE-URL**, **BOSH-FOR-AZURE-SHA1**, **BOSH-AZURE-CPI-URL**, **BOSH-AZURE-CPI-SHA1**, **STEMCELL-FOR-AZURE-URL** and **STEMCELL-FOR-AZURE-SHA1** with the values in the example file [bosh.yml](http://cloudfoundry.blob.core.windows.net/misc/bosh.yml).
 
 
@@ -59,7 +59,7 @@ You need to replace **BOSH-FOR-AZURE-URL**, **BOSH-FOR-AZURE-SHA1**, **BOSH-AZUR
         gateway: 10.0.0.1
         dns: [8.8.8.8]
         cloud_properties:
-          virtual_network_name: VNET-NAME 
+          virtual_network_name: VNET-NAME
             # <--- Replace VNET-NAME with your virtual network name
           subnet_name: SUBNET-NAME
             # <--- Replace SUBNET-NAME with subnet name for your BOSH VM
@@ -143,22 +143,22 @@ You need to replace **BOSH-FOR-AZURE-URL**, **BOSH-FOR-AZURE-SHA1**, **BOSH-AZUR
 
         azure: &azure
           environment: AzureCloud
-          subscription_id: SUBSCRIPTION-ID 
+          subscription_id: SUBSCRIPTION-ID
             # <--- Replace SUBSCRIPTION-ID with your subscription id
-          storage_account_name: STORAGE-ACCOUNT-NAME 
+          storage_account_name: STORAGE-ACCOUNT-NAME
             # <--- Replace STORAGE-ACCOUNT-NAME with your storage account name
-          storage_access_key: STORAGE-ACCESS-KEY 
+          storage_access_key: STORAGE-ACCESS-KEY
             # <--- Replace STORAGE-ACCESS-KEY with the access key of your storage account
-          resource_group_name: RESOURCE-GROUP-NAME 
+          resource_group_name: RESOURCE-GROUP-NAME
             # <--- Replace RESOURCE-GROUP-NAME with your resource group name
-          tenant_id: TENANT-ID 
+          tenant_id: TENANT-ID
             # <--- Replace TENANT-ID with your tenant id of the service principal
-          client_id: CLIENT-ID 
+          client_id: CLIENT-ID
             # <--- Replace CLIENT-ID with your client id of the service principal
-          client_secret: CLIENT-SECRET 
+          client_secret: CLIENT-SECRET
             # <--- Replace CLIENT-SECRET with your client secret of the service principal
           ssh_user: vcap
-          ssh_certificate: SSH-CERTIFICATE 
+          ssh_certificate: SSH-CERTIFICATE
             # <--- Replace SSH-CERTIFICATE with the content of your ssh certificate
 
         agent: {mbus: "nats://nats:nats-password@10.0.0.4:4222"}
@@ -214,7 +214,7 @@ Install and configure Azure CLI following the documentation [here](https://azure
 
 #### 2.1.2.2   Login ####
 
-Please note this login method requires a work or school account. 
+Please note this login method requires a work or school account.
 If you do not currently have a work or school account, and are using a personal account to log in to your Azure subscription, you can easily create a work or school account, following this [guide](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/). And then log in with your created work account to execute below commands.
 
 If you have enabled MFA, creating the service principal may fail. You need to disable MFA and try again.
@@ -232,7 +232,7 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
 
 Ensure your default subscription is set to the one you want to create your service principal.
 
-First check whether you have multiple subscriptions: 
+First check whether you have multiple subscriptions:
 
 	azure account list
 
@@ -286,7 +286,7 @@ Example:
 	azure ad app create --name "Service Principal for BOSH" --password "password" --home-page "http://BOSHAzureCPI" --identifier-uris "http://BOSHAzureCPI""
 
 
-Below is a sample output you will get from the command, the "Application Id" is your **client id** you need to create the Service Principal. 
+Below is a sample output you will get from the command, the "Application Id" is your **client id** you need to create the Service Principal.
 
 
 	info:    Executing command ad app create
@@ -311,7 +311,7 @@ Below is a sample output you will get from the command, the "Application Id" is 
 
 	azure ad sp create <client-id>
 
-Example: 
+Example:
 
 	azure ad sp create 246e4af7-75b5-494a-89b5-363addb9f0fa
 
@@ -332,7 +332,7 @@ Sample output:
 
 ###2.2.4	Assigning roles to your Service Principal ###
 
-Now you have a Service Principal account, you need to grant this account access to proper resource use Azure CLI.  
+Now you have a Service Principal account, you need to grant this account access to proper resource use Azure CLI.
 
 #### 2.2.4.1	Assigning Roles ####
 
@@ -374,10 +374,10 @@ Ensure your default subscription is set to the one you used for your service pri
 
 #### 2.3.1.2	Create an Azure Resource Group ####
 
-You will need to determine the deployment location for your group, then create the group in that data center. 
+You will need to determine the deployment location for your group, then create the group in that data center.
 
 	azure group create <resource-group-name> <location>
- 
+
 
 •	resource-group-name:
 
@@ -386,12 +386,12 @@ You will use this name for the following commands. Resource group name must uniq
 •	location:
 
 Specifies the supported Azure location for the resource group. For more information, see [List all of the available geo-locations](http://azure.microsoft.com/en-us/regions/).
- 
+
 Example:
- 
+
 	azure group create bosh-res-group "East US"
 
- 
+
 After you execute above command, use below command to check whether the resource group is ready for next steps. You should not proceed to next step until you see “**Provisioning State**” becomes “**Succeeded**” in our output.
 
 	azure group show <resource-group-name>
@@ -424,7 +424,7 @@ Sample output:
 
 	azure resource create <resource-group-name> <storage-account-name> Microsoft.Storage/storageAccounts <location> 2015-05-01-preview -p "{\"accountType\":\"<account-type>\"}"
 
-•	storage-account-name: 
+•	storage-account-name:
 
 A name for the storage account that is **unique within Azure**. **Storage account names must be between 3 and 24 characters in length and use numbers and lower-case letters only**.
 
@@ -443,7 +443,7 @@ Possible values are:
 •	Standard_RAGRS
 
 •	Premium_LRS
- 
+
 Please note **Standard_ZRS** account cannot be changed to another account type later, and the other account types cannot be changed to **Standard_ZRS**. The same goes for **Premium_LRS** accounts. You can learn more about the type of Azure storage account from [here](http://azure.microsoft.com/en-us/pricing/details/storage/).
 
 Example:
@@ -501,12 +501,12 @@ Sample output:
 
 ##### 2.3.1.4.1	Create the Public IP #####
 
-	azure resource create <resource-group-name> <public-ip-name> Microsoft.Network/publicIPAddresses <location> 2015-05-01-preview -p "{\"publicIPAllocationMethod\":\"static\"}" 
+	azure resource create <resource-group-name> <public-ip-name> Microsoft.Network/publicIPAddresses <location> 2015-05-01-preview -p "{\"publicIPAllocationMethod\":\"static\"}"
 
 Example:
 
-	azure resource create bosh-res-group public-ip-for-cf Microsoft.Network/publicIPAddresses "East US" 2015-05-01-preview -p "{\"publicIPAllocationMethod\":\"static\"}" 
- 
+	azure resource create bosh-res-group public-ip-for-cf Microsoft.Network/publicIPAddresses "East US" 2015-05-01-preview -p "{\"publicIPAllocationMethod\":\"static\"}"
+
 
 #### 2.3.1.4.2	Get the public IP Address ####
 
@@ -547,12 +547,12 @@ Sample output:
 
 #### 2.3.1.5	Create a Virtual Network ####
 
-Create a virtual network for your deployment. 
+Create a virtual network for your deployment.
 
 
-	azure resource create <resource-group-name> <virtual-network-name> Microsoft.Network/virtualNetworks <location> 2015-05-01-preview -p "{\"addressSpace\": {\"addressPrefixes\": [\"<virtual-network-cidr>\"]},\"subnets\": [{\"name\": \"<bosh-subnet-name>\",\"properties\" : { \"addressPrefix\": \"<bosh-subnet-cidr>\"}}, {\"name\": \"<cloudfoundry-subnet-name>\",\"properties\" : { \"addressPrefix\": \"<cloudfoundry-subnet-cidr>\"}}]}" 
+	azure resource create <resource-group-name> <virtual-network-name> Microsoft.Network/virtualNetworks <location> 2015-05-01-preview -p "{\"addressSpace\": {\"addressPrefixes\": [\"<virtual-network-cidr>\"]},\"subnets\": [{\"name\": \"<bosh-subnet-name>\",\"properties\" : { \"addressPrefix\": \"<bosh-subnet-cidr>\"}}, {\"name\": \"<cloudfoundry-subnet-name>\",\"properties\" : { \"addressPrefix\": \"<cloudfoundry-subnet-cidr>\"}}]}"
 
-•	virtual-network-name: 
+•	virtual-network-name:
 
 Names must start with a letter or number, and must contain only letters, numbers, or dashes. Spaces are not allowed.
 
@@ -584,17 +584,17 @@ Name: CloudFoundry, CIDR: 10.0.16.0/20. For Cloud Foundry VMs.
 
 Example:
 
-	azure resource create bosh-res-group boshvnet-crp Microsoft.Network/virtualNetworks "East US" 2015-05-01-preview -p "{\"addressSpace\": {\"addressPrefixes\": [\"10.0.0.0/8\"]},\"subnets\": [{\"name\": \"BOSH\",\"properties\" : { \"addressPrefix\": \"10.0.0.0/20\"}}, {\"name\": \"CloudFoundry\",\"properties\" : { \"addressPrefix\": \"10.0.16.0/20\"}}]}" 
+	azure resource create bosh-res-group boshvnet-crp Microsoft.Network/virtualNetworks "East US" 2015-05-01-preview -p "{\"addressSpace\": {\"addressPrefixes\": [\"10.0.0.0/8\"]},\"subnets\": [{\"name\": \"BOSH\",\"properties\" : { \"addressPrefix\": \"10.0.0.0/20\"}}, {\"name\": \"CloudFoundry\",\"properties\" : { \"addressPrefix\": \"10.0.16.0/20\"}}]}"
 
 
 # 3	Prepare Dev-Box #
 
 After you configure your azure account, please create an Azure VM based on **Ubuntu Server 14.04 LTS** in your virtual network.
 
-As a temporary limitation, **currently the dev machine should be on Azure and in the same VNET as BOSH VM and CF VMs**. 
+As a temporary limitation, **currently the dev machine should be on Azure and in the same VNET as BOSH VM and CF VMs**.
 
-It is better to avoid to use the internal IP addresses **10.0.0.4** and **10.0.16.4 for your dev-box**; if your dev-box uses one of those two IP addresses, you need to change the IP address in example files to other IP address. And then execute below commands. 
- 
+It is better to avoid to use the internal IP addresses **10.0.0.4** and **10.0.16.4 for your dev-box**; if your dev-box uses one of those two IP addresses, you need to change the IP address in example files to other IP address. And then execute below commands.
+
 
 
 	cd ~
@@ -612,7 +612,7 @@ It is better to avoid to use the internal IP addresses **10.0.0.4** and **10.0.1
 	chmod +x ./bosh-init-*
 	sudo mv ./bosh-init-* /usr/local/bin/bosh-init
 
-	echo "Finish" 
+	echo "Finish"
 
 
 # 4	Deploy #
@@ -647,7 +647,7 @@ Deploy:
 ### 4.2.1	Configure ###
 
 1)	 Logon your BOSH director with below command.
- 
+
 	bosh target 10.0.0.4 # Username: admin, Password: admin
 
 Get the UUID of your BOSH director with below command.
@@ -673,7 +673,7 @@ Sample output:
       snapshots  enabled
 
     Deployment
-     not set   
+     not set
 
 2)	 You can reference the example file [cf_212.yml](http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties.
 
