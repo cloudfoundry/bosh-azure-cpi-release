@@ -61,7 +61,13 @@ module Bosh::AzureCloud
     #  }
     #
     # Sample resource pool config (CPI specific):
-    #  {"instance_type" => "Small"}
+    #  {"instance_type" => "Standard_D1"}
+    #  {
+    #    "instance_type" => "Standard_D1",
+    #    "availability_set" => "DEA_set",
+    #    "platform_update_domain_count" => 5,
+    #    "platform_fault_domain_count" => 3
+    #  }
     #
     # @param [String] agent_id UUID for the agent that will be used later on by the director
     #                 to locate and talk to the agent
@@ -165,7 +171,7 @@ module Bosh::AzureCloud
     # @return [void]
     def set_vm_metadata(instance_id, metadata)
       @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
-      @azure.vm_manager.set_metadata(instance_id, encode_metadata(metadata).merge({'user-agent' => 'bosh'}))
+      @azure.vm_manager.set_metadata(instance_id, encode_metadata(metadata))
     end
 
     ##

@@ -194,7 +194,7 @@ module Bosh::AzureCloud
           @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
               block.blob_start_range + block.size - 1, block.content, options)
         rescue => e
-          @logger.debug("upload_page_blob_func: Failed to create_blob_pages, error: #{e.message}\n#{e.backtrace.join("\n")}")
+          @logger.debug("upload_page_blob_func: Thread #{id}: Failed to create_blob_pages, error: #{e.message}\n#{e.backtrace.join("\n")}")
           retry_count += 1
           if retry_count > max_retry_count
             finish_flag.fail = true
