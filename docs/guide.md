@@ -710,7 +710,8 @@ Get the value of **resource_pools.name[vms].stemcell.url** in the file [http://c
 
 # 5	Trouble Shooting #
 
-1.	If you see below error information in the log, you can try to rerun your command.
+1.	If your deployment fails because of timeout when creating VMs, you can delete your deployment and try to deploy it again.
+2.	If you see below error information in the log, you can try to rerun your command.
 ```
 	/var/vcap/packages/ruby_azure_cpi/lib/ruby/1.9.1/net/http.rb:763:in `initialize': getaddrinfo: Name or service not known (SocketError)
 	from /var/vcap/packages/ruby_azure_cpi/lib/ruby/1.9.1/net/http.rb:763:in `open'
@@ -722,6 +723,3 @@ Get the value of **resource_pools.name[vms].stemcell.url** in the file [http://c
 	from /var/vcap/packages/ruby_azure_cpi/lib/ruby/1.9.1/net/http.rb:745:in `start'
 	from /var/vcap/packages/ruby_azure_cpi/lib/ruby/1.9.1/net/http.rb:1285:in `request'
 ```
-
-2.	If your deployment fails because of timeout when creating VMs, you can delete your deployment and try to deploy it again.
-
