@@ -1,0 +1,20 @@
+{
+  "location": {
+    "value": "East Asia"
+  },
+  "newStorageAccountName": {
+    "value": "binxibeta10"
+  },
+  "virtualNetworkName": {
+    "value": "boshvnet-crp"
+  },
+  "subnetNameForBosh": {
+    "value": "Bosh"
+  },
+  "subnetNameForCloudFoundry": {
+    "value": "CloudFoundry"
+  },
+  "vmName": {
+    "value": "azurecf"
+  }
+}
