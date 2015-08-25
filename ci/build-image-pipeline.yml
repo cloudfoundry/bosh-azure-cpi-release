@@ -3,6 +3,7 @@ groups:
   - name: bosh-azure-cpi-release
     jobs:
       - build-candidate
+      - azure-ubuntu
 jobs:
 - name: build-candidate
   serial: true
@@ -19,6 +20,22 @@ jobs:
 
   - put: bosh-cpi-dev-artifacts
     params: {from: build/out/.*\.tgz}
+
+- name: azure-ubuntu
+  serial: true
+  plan:
+  - aggregate:
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
+
+  - task: azure-provision
+    file: bosh-cpi-release/ci/tasks/azure-provision.yml
+    config:
+      params:
+        AZURE_USER_NAME:          {{azure_subscription_user_name}}
+        AZURE_USER_PASSWORD:      {{azure_subscription_user_password}}
+        AZURE_GROUP_NAME: {{azure_group_name}}
+        AZURE_REGION_NAME: {{azure_region_name}}
+        base_os:                    ubuntu
 
 resources:
 - name: bosh-cpi-release-in
@@ -47,3 +64,24 @@ resources:
     region_name: {{s3_azure_cpi_region}}
     access_key_id: {{s3_azure_cpi_access_key}}
     secret_access_key: {{s3_azure_cpi_secret_key}}
+
+- name: bosh-init
+  type: s3
+  source:
+    regexp: bosh-init-([0-9.]+)-linux-amd64
+    bucket: {{s3_bosh_init_bucket}}
+    region_name: {{s3_azure_cpi_region}}
+
+- name: ubuntu-director-state-file
+  type: s3
+  source:
+    bucket:            {{s3_azure_cpi_ubuntu_director_state_file_bucket}}
+    versioned_file:    ubuntu-director-manifest-state.json
+    region_name:       {{s3_azure_cpi_ubuntu_director_state_file_region}}
+    access_key_id:     {{s3_azure_cpi_ubuntu_director_state_file_access_key}}
+    secret_access_key: {{s3_azure_cpi_ubuntu_director_state_file_secret_key}}
+
+- name: bosh-release
+  type: bosh-io-release
+  source:
+    repository: cloudfoundry/bosh
