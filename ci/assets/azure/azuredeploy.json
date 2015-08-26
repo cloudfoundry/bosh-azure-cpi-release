@@ -51,15 +51,10 @@
       "metadata": {
         "description": "name of the subnet for CloudFoundy"
       }
-    },
-    "vmName": {
-      "type": "string",
-      "metadata": {
-        "description": "Will be used as DNS Name for the Public IP used to access the Virtual Machine"
-      }
     }
   },
   "variables": {
+    "pubIPBaseName" : "pubIP",
     "api-version": "2015-05-01-preview",
     "vmStorageAccountContainerName": "vhds",
     "storageAccountType": "Standard_LRS",
@@ -72,7 +67,6 @@
     "subnet1Ref": "[concat(variables('vnetID'),'/subnets/', variables('subnet1Name'))]",
     "subnet2Name": "[parameters('subnetNameForCloudFoundry')]",
     "subnet2Prefix": "10.0.16.0/24",
-    "nicName": "[parameters('vmName')]",
     "devboxPrivateIPAddress": "10.0.0.100",
     "imagePublisher": "Canonical",
     "imageOffer": "UbuntuServer",
@@ -95,7 +89,7 @@
     {
       "apiVersion": "[variables('api-version')]",
       "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[concat(parameters('vmName'),'-bosh')]",
+      "name": "[concat(variables('pubIPBaseName'),'-bosh')]",
       "location": "[parameters('location')]",
       "properties": {
         "publicIPAllocationMethod": "static"
@@ -104,7 +98,7 @@
     {
       "apiVersion": "[variables('api-version')]",
       "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[concat(parameters('vmName'), '-cf')]",
+      "name": "[concat(variables('pubIPBaseName'), '-cf')]",
       "location": "[parameters('location')]",
       "properties": {
         "publicIPAllocationMethod": "static"
