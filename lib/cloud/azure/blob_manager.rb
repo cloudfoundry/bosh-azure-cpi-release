@@ -5,8 +5,9 @@ module Bosh::AzureCloud
     VHDBlock = Struct.new(:id, :file_start_range, :size, :blob_start_range, :content)
     ThreadFlag = Struct.new(:finish, :fail, :message)
 
-    def initialize
+    def initialize(parallel_upload_thread_num)
       @blob_service_client = Azure::BlobService.new
+      @parallel_upload_thread_num = parallel_upload_thread_num
 
       @logger = Bosh::Clouds::Config.logger
     end
@@ -38,7 +39,7 @@ module Bosh::AzureCloud
         
         @logger.info("create_page_blob: Calculate hash for every block")
 
-        upload_page_blob(container_name, blob_name, blob_size, file_path, 16)
+        upload_page_blob(container_name, blob_name, blob_size, file_path, @parallel_upload_thread_num)
       rescue => e
         cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")
       end

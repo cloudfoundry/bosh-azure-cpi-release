@@ -15,7 +15,9 @@ module Bosh::AzureCloud
         config.storage_access_key   = azure_properties['storage_access_key']
       end
 
-      @blob_manager     = Bosh::AzureCloud::BlobManager.new
+      parallel_upload_thread_num = 16
+      parallel_upload_thread_num = azure_properties['parallel_upload_thread_num'].to_i unless azure_properties['parallel_upload_thread_num'].nil?
+      @blob_manager     = Bosh::AzureCloud::BlobManager.new(parallel_upload_thread_num)
       @disk_manager     = Bosh::AzureCloud::DiskManager.new(@blob_manager)
       @stemcell_manager = Bosh::AzureCloud::StemcellManager.new(@blob_manager)
       @vm_manager       = Bosh::AzureCloud::VMManager.new(azure_properties, registry_endpoint, @disk_manager)

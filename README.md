@@ -26,6 +26,8 @@ These options are passed to the Azure CPI when it is instantiated.
   The user to use when spinning up new vms
 * `ssh_certificate` (required)
   The content of the default certificate to use when spinning up new vms
+* `parallel_upload_thread_num` (optional)
+  The number of threads to upload stemcells in parallel. The default value is 16.
 
 ### Registry options
 
