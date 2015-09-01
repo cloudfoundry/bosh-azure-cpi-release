@@ -20,6 +20,7 @@ module Bosh::AzureCloud
       raise "Cannot find the subnet #{network_configurator.virtual_network_name}/#{network_configurator.subnet_name}" if subnet.nil?
 
       load_balancer = nil
+      is_internal_load_balancer = false
       unless network_configurator.vip_network.nil?
         public_ip = @client2.list_public_ips().find { |ip| ip[:ip_address] == network_configurator.public_ip}
         cloud_error("Cannot find the public IP address #{network_configurator.public_ip}") if public_ip.nil?
@@ -27,6 +28,12 @@ module Bosh::AzureCloud
                                       network_configurator.tcp_endpoints,
                                       network_configurator.udp_endpoints)
         load_balancer = @client2.get_load_balancer_by_name(uuid)
+      end
+      if resource_pool.has_key?('load_balancer')
+        cloud_error("Cannot bind two load balancers to one VM") unless load_balancer.nil?
+        is_internal_load_balancer = true
+        load_balancer = @client2.get_load_balancer_by_name(resource_pool['load_balancer'])
+        cloud_error("Cannot find the load balancer #{resource_pool['load_balancer']}") if load_balancer.nil?
       end
 
       nic_params = {
@@ -77,7 +84,7 @@ module Bosh::AzureCloud
       @client2.delete_virtual_machine(instance_id) unless instance_id.nil?
       delete_availability_set(availability_set[:name]) unless availability_set.nil?
       @client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
-      @client2.delete_load_balancer(load_balancer[:name]) unless load_balancer.nil?
+      @client2.delete_load_balancer(load_balancer[:name]) unless load_balancer.nil? || is_internal_load_balancer
       raise Bosh::Clouds::VMCreationFailed.new(false), "#{e.message}\n#{e.backtrace.join("\n")}"
     end
 

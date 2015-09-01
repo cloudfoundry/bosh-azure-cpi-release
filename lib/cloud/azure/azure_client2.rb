@@ -533,7 +533,8 @@ module Bosh::AzureCloud
           ip[:id]                           = frontend_ip['id']
           ip[:provisioning_state]           = frontend_ip['properties']['provisioningState']
           ip[:private_ip_allocation_method] = frontend_ip['properties']['privateIPAllocationMethod']
-          ip[:public_ip]                    = get_public_ip(frontend_ip['properties']['publicIPAddress']['id'])
+          ip[:private_ip]                   = frontend_ip['properties']['privateIPAddress'] unless frontend_ip['properties']['privateIPAddress'].nil?
+          ip[:public_ip]                    = get_public_ip(frontend_ip['properties']['publicIPAddress']['id']) unless frontend_ip['properties']['publicIPAddress'].nil?
           ip[:inbound_nat_rules]            = frontend_ip['properties']['inboundNatRules']
           load_balancer[:frontend_ip_configurations].push(ip)
         end
