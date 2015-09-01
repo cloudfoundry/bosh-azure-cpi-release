@@ -4,6 +4,7 @@ groups:
     jobs:
       - build-candidate
       - azure-ubuntu
+      - promote-candidate
 jobs:
 - name: build-candidate
   serial: true
@@ -49,15 +50,43 @@ jobs:
       - put: azure-exports
         params: {from: azure-provision/azure-exports.sh$}
 
+- name: promote-candidate
+  serial: true
+  plan:
+  - aggregate:
+    # TODO: After the bosh-init and bats tasks are implemented, we should
+    # be able to add
+    - {trigger: true, passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
+
+  - task: promote
+    file: bosh-cpi-release/ci/tasks/promote-candidate.yml
+    config:
+      params:
+        aws_access_key_id: {{s3_azure_cpi_access_key}}
+        aws_secret_access_key: {{s3_azure_cpi_secret_key}}
+
+  - put: bosh-cpi-release
+    resource: bosh-cpi-release-out
+    params: {repository: promote/bosh-cpi-release, rebase: true}
+
 resources:
 - name: bosh-cpi-release-in
   type: git
   source:
     uri: {{azure_cpi_bosh_release_repo}}
     branch: {{azure_cpi_bosh_release_branch}}
+    private_key: {{github_deployment_key__bosh-azure-cpi-release}}
     ignore_paths:
         - .final_builds/**/*.yml
         - releases/**/*.yml
+
+- name: bosh-cpi-release-out
+  type: git
+  source:
+    uri: {{azure_cpi_bosh_release_repo}}
+    branch: {{github_deployment_branch}}
+    private_key: {{github_deployment_key__bosh-azure-cpi-release}}
 
 - name: version-semver
   type: semver
