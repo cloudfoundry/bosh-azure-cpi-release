@@ -3,7 +3,7 @@ groups:
   - name: bosh-aws-cpi-release
     jobs:
       - build-candidate
-
+      
   # - name: ubuntu
   #   jobs:
   #     - build-candidate
