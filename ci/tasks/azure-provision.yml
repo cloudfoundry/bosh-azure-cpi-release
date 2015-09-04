@@ -15,6 +15,5 @@ params:
     AZURE_REGION_SHORT_NAME: replace-me
     AZURE_STORAGE_ACCOUNT_NAME: replace-me
     AZURE_SUBSCRIPTION_ID: replace-me
-    AZURE_TENANT_ID: replace-me
     AUZRE_BOSH_SUBNET_NAME: replace-me
     AZURE_CF_SUBNET_NAME: replace-me
