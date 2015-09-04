@@ -4,6 +4,7 @@ groups:
     jobs:
       - build-candidate
       - azure-ubuntu
+      - deploy-director
       - promote-candidate
 jobs:
 - name: build-candidate
@@ -41,7 +42,6 @@ jobs:
         AZURE_REGION_SHORT_NAME: {{azure_region_short_name}}
         AZURE_STORAGE_ACCOUNT_NAME: {{azure_storage_account_name}}
         AZURE_SUBSCRIPTION_ID: {{azure_subscription_id}}
-        AZURE_TENANT_ID: {{azure_tenant_id}}
         AZURE_BOSH_SUBNET_NAME: {{azure_bosh_subnet_name}}
         AZURE_CF_SUBNET_NAME: {{azure_cf_subnet_name}}
         base_os:                    ubuntu
@@ -49,6 +49,37 @@ jobs:
       do:
       - put: azure-exports
         params: {from: azure-provision/azure-exports.sh$}
+- name: deploy-director
+  serial: true # find out serial vs. serial_groups and which previous job should trigger this job
+  plan:
+  - aggregate:
+    - {trigger: false,  passed: [build-candidate],  get: bosh-cpi-dev-artifacts, resource: bosh-cpi-dev-artifacts}
+    - {trigger: false, passed: [build-candidate],  get: version-semver, resource: version-semver}
+    - {trigger: false,  passed: [azure-ubuntu],     get: azure-exports, resource: azure-exports}
+    - {trigger: false, passed: [build-candidate],  get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false,                             get: director-state-file, resource: ubuntu-director-state-file}
+    - {trigger: false,                             get: bosh-init}
+    - {trigger: false,                             get: bosh-release}
+
+  - task: deploy
+    file: bosh-cpi-release/ci/tasks/deploy.yml
+    config:
+      params:
+        base_os:                    ubuntu
+        AZURE_CLIENT_ID:            {{azure_client_id}}
+        AZURE_CLIENT_SECRET:        {{azure_client_secret}}
+        AZURE_TENANT_ID:            {{azure_tenant_id}}
+        AZURE_GROUP_NAME:           {{azure_group_name}}
+        AZURE_VNET_NAME:            {{azure_vnet_name}}
+        AZURE_STORAGE_ACCOUNT_NAME: {{azure_storage_account_name}}
+        AZURE_SUBSCRIPTION_ID:      {{azure_subscription_id}}
+        AZURE_BOSH_SUBNET_NAME:     {{azure_bosh_subnet_name}}
+        private_key_data:           {{bosh_private_key}}
+        ssh_certificate:            {{ssh_certificate}}
+    ensure:
+      do:
+      - put: ubuntu-director-state-file
+        params: {from: deploy/director-state-file/ubuntu-director-manifest-state.json}
 
 - name: promote-candidate
   serial: true
