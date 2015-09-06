@@ -52,5 +52,28 @@ module Bosh::AzureCloud
       end
       ret
     end
+
+    def generate_instance_id(storage_account_name, uuid)
+      "#{storage_account_name}-#{uuid}"
+    end
+
+    def get_storage_account_name_from_instance_id(instance_id)
+      ret = instance_id.match('^([^-]*)-(.*)$')
+      cloud_error("Invalid instance id #{instance_id}") if ret.nil?
+      return ret[1]
+    end
+
+    def validate_disk_caching(caching)
+      if caching != 'None' && caching != 'ReadOnly' && caching != 'ReadWrite'
+        cloud_error("Unknown disk caching #{caching}")
+      end
+    end
+
+    def ignore_exception
+      begin
+        yield
+      rescue
+      end
+    end
   end
 end

@@ -41,7 +41,7 @@ resource_pools:
     url: STEMCELL-FOR-AZURE-URL
     sha1: STEMCELL-FOR-AZURE-SHA1
   cloud_properties:
-    instance_type: Standard_A2
+    instance_type: Standard_D1
 
 disk_pools:
 - name: disks
@@ -116,7 +116,6 @@ jobs:
       environment: AzureCloud
       subscription_id: SUBSCRIPTION-ID # <--- Replace with your subscription id
       storage_account_name: STORAGE-ACCOUNT-NAME # <--- Replace with your storage account name
-      storage_access_key: STORAGE-ACCESS-KEY # <--- Replace with the access key of your storage account
       resource_group_name: RESOURCE-GROUP-NAME # <--- Replace with your resource group name
       tenant_id: TENANT-ID # <--- Replace with your tenant id of the service principle
       client_id: CLIENT-ID # <--- Replace with your client id of the service principle

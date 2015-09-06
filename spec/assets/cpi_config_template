@@ -2,7 +2,6 @@ azure:
       environment: AzureCloud
       subscription_id: <your_subscription_id>
       storage_account_name: <your_storage_account_name>
-      storage_access_key: <your_storage_access_key>
       resource_group_name: <your_resource_group_name>
       tenant_id: <your_tenant_id>
       client_id: <your_client_id>

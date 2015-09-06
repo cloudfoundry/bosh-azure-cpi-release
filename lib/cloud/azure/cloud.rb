@@ -2,7 +2,6 @@ module Bosh::AzureCloud
   class Cloud < Bosh::Cloud
     attr_reader   :registry
     attr_reader   :options
-    attr_reader   :azure
 
     include Helpers
 
@@ -17,7 +16,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
 
       init_registry
-      @azure = Bosh::AzureCloud::AzureClient.new(azure_properties, @registry.endpoint)
+      init_azure
     end
 
     ##
@@ -29,7 +28,7 @@ module Bosh::AzureCloud
     # @return [String] opaque id later used by {#create_vm} and {#delete_stemcell}
     def create_stemcell(image_path, cloud_properties)
       with_thread_name("create_stemcell(#{image_path}...)") do
-        @azure.stemcell_manager.create_stemcell(image_path, cloud_properties)
+        @stemcell_manager.create_stemcell(image_path, cloud_properties)
       end
     end
 
@@ -40,7 +39,7 @@ module Bosh::AzureCloud
     # @return [void]
     def delete_stemcell(stemcell_id)
       with_thread_name("delete_stemcell(#{stemcell_id})") do
-        @azure.stemcell_manager.delete_stemcell(stemcell_id)
+        @stemcell_manager.delete_stemcell(stemcell_id)
       end
     end
 
@@ -82,17 +81,18 @@ module Bosh::AzureCloud
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        unless @azure.stemcell_manager.has_stemcell?(stemcell_id)
+        storage_account_name = @azure_properties['storage_account_name']
+        storage_account_name = resource_pool['storage_account_name'] if resource_pool.has_key?('storage_account_name')
+        unless @stemcell_manager.has_stemcell?(storage_account_name, stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist"
         end
 
-        stemcell_uri = @azure.stemcell_manager.get_stemcell_uri(stemcell_id)
-        instance_id = @azure.vm_manager.create(
+        instance_id = @vm_manager.create(
           agent_id,
-          stemcell_uri,
-          azure_properties,
-          NetworkConfigurator.new(networks),
-          resource_pool)
+          storage_account_name,
+          @stemcell_manager.get_stemcell_uri(storage_account_name, stemcell_id),
+          resource_pool,
+          NetworkConfigurator.new(networks))
         @logger.info("Created new vm '#{instance_id}'")
 
         begin
@@ -108,7 +108,7 @@ module Bosh::AzureCloud
           instance_id
         rescue => e
           @logger.error(%Q[Failed to update registry after new vm was created: #{e.message}\n#{e.backtrace.join("\n")}])
-          @azure.vm_manager.delete(instance_id) if instance_id
+          @vm_manager.delete(instance_id) if instance_id
           raise e
         end
       end
@@ -122,7 +122,7 @@ module Bosh::AzureCloud
     def delete_vm(instance_id)
       with_thread_name("delete_vm(#{instance_id})") do
         @logger.info("Deleting instance '#{instance_id}'")
-        @azure.vm_manager.delete(instance_id)
+        @vm_manager.delete(instance_id)
       end
     end
 
@@ -133,7 +133,7 @@ module Bosh::AzureCloud
     # @return [Boolean] True if the vm exists
     def has_vm?(instance_id)
       with_thread_name("has_vm?(#{instance_id})") do
-        vm = @azure.vm_manager.find(instance_id)
+        vm = @vm_manager.find(instance_id)
         !vm.nil? && vm[:provisioning_state] != 'Deleting'
       end
     end
@@ -145,7 +145,7 @@ module Bosh::AzureCloud
     # @return [Boolean] True if the disk exists
     def has_disk?(disk_id)
       with_thread_name("has_disk?(#{disk_id})") do
-        @azure.disk_manager.has_disk?(disk_id)
+        @disk_manager.has_disk?(disk_id)
       end
     end
 
@@ -155,9 +155,9 @@ module Bosh::AzureCloud
     # @param [String] instance_id Instance id that was once returned by {#create_vm}
     # @param [Optional, Hash] options CPI specific options (e.g hard/soft reboot)
     # @return [void]
-    def reboot_vm(instance_id, options=nil)
-      with_thread_name("reboot_vm(#{instance_id})") do
-        @azure.vm_manager.reboot(instance_id)
+    def reboot_vm(instance_id, options = nil)
+      with_thread_name("reboot_vm(#{instance_id}, #{options})") do
+        @vm_manager.reboot(instance_id)
       end
     end
 
@@ -171,7 +171,7 @@ module Bosh::AzureCloud
     # @return [void]
     def set_vm_metadata(instance_id, metadata)
       @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
-      @azure.vm_manager.set_metadata(instance_id, encode_metadata(metadata))
+      @vm_manager.set_metadata(instance_id, encode_metadata(metadata))
     end
 
     ##
@@ -182,6 +182,7 @@ module Bosh::AzureCloud
     #               same as the networks argument in {#create_vm}
     # @return [void]
     def configure_networks(instance_id, networks)
+      @logger.info("configure_networks(#{instance_id}, #{networks})")
       # Azure does not support to configure the network of an existing VM,
       # so we need to notify the InstanceUpdater to recreate it
       raise Bosh::Clouds::NotSupported
@@ -199,11 +200,16 @@ module Bosh::AzureCloud
     #                           be attached to
     # @return [String] opaque id later used by {#attach_disk}, {#detach_disk}, and {#delete_disk}
     def create_disk(size, cloud_properties, instance_id = nil)
-      with_thread_name("create_disk(#{size})") do
-        @logger.info("Create disk for vm #{instance_id}") unless instance_id.nil?
+      with_thread_name("create_disk(#{size}, #{cloud_properties})") do
+        storage_account_name = @azure_properties['storage_account_name']
+        unless instance_id.nil?
+          @logger.info("Create disk for vm #{instance_id}")
+          storage_account_name = get_storage_account_name_from_instance_id(instance_id)
+        end
+
         validate_disk_size(size)
 
-        @azure.disk_manager.create_disk(size/1024)
+        @disk_manager.create_disk(storage_account_name, size/1024, cloud_properties)
       end
     end
 
@@ -222,7 +228,7 @@ module Bosh::AzureCloud
     # @return [void]
     def delete_disk(disk_id)
       with_thread_name("delete_disk(#{disk_id})") do
-        @azure.disk_manager.delete_disk(disk_id)
+        @disk_manager.delete_disk(disk_id)
       end
     end
 
@@ -232,7 +238,7 @@ module Bosh::AzureCloud
     # @return [void]
     def attach_disk(instance_id, disk_id)
       with_thread_name("attach_disk(#{instance_id},#{disk_id})") do
-        volume_name = @azure.vm_manager.attach_disk(instance_id, disk_id)
+        volume_name = @vm_manager.attach_disk(instance_id, disk_id)
 
         update_agent_settings(instance_id) do |settings|
           settings["disks"] ||= {}
@@ -248,9 +254,9 @@ module Bosh::AzureCloud
     # @param [String] disk_id disk id of the disk to take the snapshot of
     # @param [Hash] metadata metadata key/value pairs
     # @return [String] snapshot id
-    def snapshot_disk(disk_id, metadata={})
+    def snapshot_disk(disk_id, metadata = {})
       with_thread_name("snapshot_disk(#{disk_id},#{metadata})") do
-        snapshot_id = @azure.disk_manager.snapshot_disk(disk_id, encode_metadata(metadata))
+        snapshot_id = @disk_manager.snapshot_disk(disk_id, encode_metadata(metadata))
 
         @logger.info("Take a snapshot disk '#{snapshot_id}' for '#{disk_id}'")
         snapshot_id
@@ -262,7 +268,7 @@ module Bosh::AzureCloud
     # @return [void]
     def delete_snapshot(snapshot_id)
       with_thread_name("delete_snapshot(#{snapshot_id})") do
-        @azure.disk_manager.delete_disk(snapshot_id)
+        @disk_manager.delete_snapshot(snapshot_id)
       end
     end
 
@@ -279,7 +285,7 @@ module Bosh::AzureCloud
           settings["disks"]["persistent"].delete(disk_id)
         end
 
-        @azure.vm_manager.detach_disk(instance_id, disk_id)
+        @vm_manager.detach_disk(instance_id, disk_id)
 
         @logger.info("Detached `#{disk_id}' from `#{instance_id}'")
       end
@@ -292,7 +298,7 @@ module Bosh::AzureCloud
     def get_disks(instance_id)
       with_thread_name("get_disks(#{instance_id})") do
         disks = []
-        vm = @azure.vm_manager.find(instance_id)
+        vm = @vm_manager.find(instance_id)
         raise Bosh::Clouds::VMNotFound, "VM '#{instance_id}' cannot be found" if vm.nil?
         vm[:data_disks].each do |disk|
           disks << disk[:name]
@@ -320,7 +326,6 @@ module Bosh::AzureCloud
           "azure" => ["environment",
             "subscription_id",
             "storage_account_name",
-            "storage_access_key",
             "resource_group_name",
             "ssh_user",
             "ssh_certificate",
@@ -356,6 +361,15 @@ module Bosh::AzureCloud
                                              registry_password)
     end
 
+    def init_azure
+      @azure_client2    = Bosh::AzureCloud::AzureClient2.new(azure_properties, @logger)
+      @blob_manager     = Bosh::AzureCloud::BlobManager.new(azure_properties, @azure_client2)
+      @table_manager    = Bosh::AzureCloud::TableManager.new(azure_properties, @azure_client2)
+      @stemcell_manager = Bosh::AzureCloud::StemcellManager.new(azure_properties, @blob_manager, @table_manager)
+      @disk_manager     = Bosh::AzureCloud::DiskManager.new(azure_properties, @blob_manager)
+      @vm_manager       = Bosh::AzureCloud::VMManager.new(azure_properties, @registry.endpoint, @disk_manager, @azure_client2)
+    end
+
     # Generates initial agent settings. These settings will be read by agent
     # from AZURE registry (also a BOSH component) on a target instance. Disk
     # conventions for Azure are:
@@ -375,7 +389,7 @@ module Bosh::AzureCloud
               "name" => vm_name
           },
           "agent_id" => agent_id,
-          "networks" => network_spec,
+          "networks" => agent_network_spec(network_spec),
           "disks" => {
               "system" => root_device_name,
               "ephemeral" => "/dev/sdb",
@@ -395,6 +409,13 @@ module Bosh::AzureCloud
       settings = registry.read_settings(instance_id)
       yield settings
       registry.update_settings(instance_id, settings)
+    end
+
+    def agent_network_spec(network_spec)
+      Hash[*network_spec.map do |name, settings|
+        settings["use_dhcp"] = true
+        [name, settings]
+      end.flatten]
     end
   end
 end

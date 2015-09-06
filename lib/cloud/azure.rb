@@ -29,7 +29,6 @@ require 'cloud'
 require 'cloud/azure/helpers'
 require 'cloud/azure/cloud'
 require 'cloud/azure/version'
-require 'cloud/azure/azure_client'
 require 'cloud/azure/azure_client2'
 
 require 'cloud/azure/network'
@@ -41,6 +40,7 @@ require 'cloud/azure/vm_manager'
 require 'cloud/azure/blob_manager'
 require 'cloud/azure/disk_manager'
 require 'cloud/azure/stemcell_manager'
+require 'cloud/azure/table_manager'
 
 require 'azure'
 

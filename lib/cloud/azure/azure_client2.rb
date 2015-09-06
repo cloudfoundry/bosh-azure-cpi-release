@@ -6,6 +6,7 @@ module Bosh::AzureCloud
   class AzureError < Bosh::Clouds::CloudError; end
   class AzureUnauthorizedError < AzureError; end
   class AzureNoFoundError < AzureError; end
+  class AzureConflictError < AzureError; end
 
   class AzureClient2
     include Helpers
@@ -25,6 +26,7 @@ module Bosh::AzureCloud
     HTTP_CODE_CONFLICT            = 409
     HTTP_CODE_LENGTHREQUIRED      = 411
     HTTP_CODE_PRECONDITIONFAILED  = 412
+    HTTP_CODE_INTERNALSERVERERROR = 500
 
     REST_API_PROVIDER_COMPUTER           = 'Microsoft.Compute'
     REST_API_COMPUTER_VIRTUAL_MACHINES   = 'virtualMachines'
@@ -119,6 +121,7 @@ module Bosh::AzureCloud
     # * +:image_uri+            - String. The URI of the image.
     # * +:os_disk_name+         - String. The name of the OS disk for the virtual machine instance.
     # * +:os_vhd_uri+           - String. The URI of the OS disk for the virtual machine instance.
+    # * #:caching+              - String. The caching option of the OS disk. Caching option: None, ReadOnly or ReadWrite
     # * +:ssh_cert_data+        - String. The content of SSH certificate.
     #
     def create_virtual_machine(vm_params, network_interface, availability_set = nil)
@@ -153,7 +156,7 @@ module Bosh::AzureCloud
               'name'         => vm_params[:os_disk_name],
               'osType'       => 'Linux',
               'createOption' => 'FromImage',
-              'caching'      => 'ReadWrite',
+              'caching'      => vm_params[:caching],
               'image'        => {
                 'uri' => vm_params[:image_uri]
               },
@@ -203,7 +206,12 @@ module Bosh::AzureCloud
       http_put(url, result)
     end
 
-    def attach_disk_to_virtual_machine(name, disk_name, disk_uri)
+    # Attach a specified disk to a VM
+    # @param [String] name Name of virtual machine.
+    # @param [String] disk_name Disk name.
+    # @param [String] disk_uri URI of disk
+    # @param [String] caching Caching option: None, ReadOnly or ReadWrite
+    def attach_disk_to_virtual_machine(name, disk_name, disk_uri, caching)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
       result = get_resource_by_id(url)
       if result.nil?
@@ -224,7 +232,7 @@ module Bosh::AzureCloud
         'name'         => disk_name,
         'lun'          => lun,
         'createOption' => 'Attach',
-        'caching'      => 'ReadWrite',
+        'caching'      => caching,
         'vhd'          => { 'uri' => disk_uri }
       }
       result['properties']['storageProfile']['dataDisks'].push(new_disk)
@@ -234,7 +242,7 @@ module Bosh::AzureCloud
         :name         => disk_name,
         :lun          => lun,
         :createOption => 'Attach',
-        :caching      => 'ReadWrite',
+        :caching      => caching,
         :vhd          => { :uri => disk_uri }
       }
     end
@@ -684,6 +692,77 @@ module Bosh::AzureCloud
     end
 
     # Storage/StorageAccounts
+    # https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
+    def create_storage_account(name, location, account_type, tags)
+      url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name)
+      storage_account = {
+        'location'   => location,
+        'tags'       => tags,
+        'properties' => {
+          'accountType' => account_type
+        }
+      }
+
+      uri = http_url(url)
+      @logger.info("create_storage_account - trying to put #{uri.to_s}")
+
+      request = Net::HTTP::Put.new(uri.request_uri)
+      request_body = storage_account.to_json
+      request.body = request_body
+      request['Content-Length'] = request_body.size
+      @logger.debug("create_storage_account - request body:\n#{request.body}")
+
+      response = http_get_response(uri, request)
+      @logger.debug("create_storage_account - response code: #{response.code}")
+
+      if response.code.to_i == HTTP_CODE_OK
+        return true
+      elsif response.code.to_i != HTTP_CODE_ACCEPTED
+        raise AzureError, "create_storage_account - Cannot create the storage account \"#{name}\". Error code: #{response.code}."
+      end
+
+      @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
+      retry_after = response.key?('Retry-After') ? response['Retry-After'].to_i : 10
+      uri = URI(response['Location'])
+      params = {}
+      params['api-version'] = API_VERSION
+      request = Net::HTTP::Get.new(uri.request_uri)
+      uri.query = URI.encode_www_form(params)
+      request.add_field('x-ms-version', API_VERSION)
+      while true
+        sleep(retry_after)
+
+        @logger.debug("create_storage_account - trying to get the status of asynchronous operation: #{uri.to_s}")
+        response = http_get_response(uri, request)
+        status_code = response.code.to_i
+        @logger.debug("create_storage_account - #{status_code}\n#{response.body}")
+        if status_code == HTTP_CODE_OK
+          return true
+        elsif status_code != HTTP_CODE_ACCEPTED && status_code != HTTP_CODE_INTERNALSERVERERROR
+          raise AzureError, "create_storage_account - http error: #{response.code}"
+        end
+      end
+    end
+
+    def check_storage_account_name_availability(name)
+      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url += "/providers/#{REST_API_PROVIDER_STORAGE}"
+      url += '/checkNameAvailability'
+      storage_account = {
+        'name' => name,
+        'type' => "#{REST_API_PROVIDER_STORAGE}/#{REST_API_STORAGE_ACCOUNTS}",
+      }
+
+      result = http_post(url, storage_account, 10)
+      raise AzureError, "Cannot check the availability of the storage account name \"#{name}\"." if result.nil?
+      ret = {
+        :available => result['nameAvailable'],
+        :reason    => result['reason'],
+        :message   => result['message']
+      }
+      ret
+    end
+
     def get_storage_account_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name)
       get_storage_account(url)
@@ -704,6 +783,23 @@ module Bosh::AzureCloud
         storage_account[:primary_endpoints]  = properties['primaryEndpoints']
       end
       storage_account
+    end
+
+    def get_storage_account_keys_by_name(name)
+      result = nil
+      begin
+        url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name, 'listKeys')
+        result = http_post(url)
+      rescue AzureNoFoundError => e
+        result = nil
+      end
+
+      keys = []
+      unless result.nil?
+        keys << result['key1']
+        keys << result['key2']
+      end
+      keys
     end
 
     private
@@ -780,14 +876,19 @@ module Bosh::AzureCloud
     end
 
     def check_completion(response, options)
-      @logger.debug("check_completion - response code: #{response.code} response.body: \n#{response.body}")
+      @logger.debug("check_completion - response code: #{response.code} azure-asyncoperation: #{response['azure-asyncoperation']} response.body: \n#{response.body}")
 
       operation_status_link = response['azure-asyncoperation']
       if options[:return_code].include?(response.code.to_i)
-        return true if operation_status_link.nil?
+        if operation_status_link.nil?
+          result = true
+          ignore_exception{ result = JSON(response.body) } unless response.body.nil? || response.body.empty?
+          return result
+        end
       elsif !options[:success_code].include?(response.code.to_i)
         error = "#{options[:operation]} - error: #{response.code}"
         error += " message: #{response.body}" unless response.body.nil?
+        raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
         raise AzureError, error
       end
 
@@ -805,7 +906,7 @@ module Bosh::AzureCloud
         response = http_get_response(uri, request)
         status_code = response.code.to_i
         @logger.debug("check_completion - #{status_code}\n#{response.body}")
-        if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
+        if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED && status_code != HTTP_CODE_INTERNALSERVERERROR
           raise AzureError, "check_completion - http error: #{response.code}"
         end
 
