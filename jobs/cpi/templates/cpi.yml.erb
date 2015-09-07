@@ -10,7 +10,6 @@ cloud:
 
       resource_group_name: <%= p('azure.resource_group_name') %>
       storage_account_name: <%= p('azure.storage_account_name') %>
-      storage_access_key: <%= p('azure.storage_access_key') %>
 
       tenant_id: <%= JSON.dump(p('azure.tenant_id')) %>
       client_id: <%= JSON.dump(p('azure.client_id')) %>
@@ -19,6 +18,9 @@ cloud:
       ssh_user: <%= p('azure.ssh_user') %>
       ssh_certificate: <%= JSON.dump(p('azure.ssh_certificate')) %>
 
+      <% if_p('azure.parallel_upload_thread_num') do %>
+      parallel_upload_thread_num: <%= p('azure.parallel_upload_thread_num') %>
+      <% end %>
     registry:
       endpoint: http://<%= p(['registry.username', 'registry.http.user']) %>:<%= p(['registry.password', 'registry.http.password']) %>@<%= p(['registry.host', 'registry.address']) %>:<%= p(['registry.port', 'registry.http.port']) %>
       user: <%= p(['registry.username', 'registry.http.user']) %>

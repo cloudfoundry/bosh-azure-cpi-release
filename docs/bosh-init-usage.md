@@ -41,8 +41,8 @@ To start experimenting with bosh-azure-cpi release and new bosh-init cli:
         gateway: 10.0.0.1
         dns: [8.8.8.8]
         cloud_properties:
-          virtual_network_name: boshnet
-          subnet_name: subnet1
+          virtual_network_name: boshvnet-crp
+          subnet_name: bosh
 
     resource_pools:
     - name: vms
@@ -52,14 +52,19 @@ To start experimenting with bosh-azure-cpi release and new bosh-init cli:
         url: file://~/Downloads/stemcell.tgz
       cloud_properties:
         instance_type: Standard_D1
+        caching: ReadWrite
+        storage_account_name: <your_storage_account_name>
 
     disk_pools:
     - name: disks
-      disk_size: 25_000
+      disk_size: 24_576
+      cloud_properties:
+        caching: None
 
     jobs:
     - name: bosh
       templates:
+      - {name: powerdns, release: bosh}
       - {name: nats, release: bosh}
       - {name: redis, release: bosh}
       - {name: postgres, release: bosh}
@@ -95,6 +100,26 @@ To start experimenting with bosh-azure-cpi release and new bosh-init cli:
           database: bosh
           adapter: postgres
 
+        dns:
+          address: 10.0.0.4
+         db:
+            user: postgres
+            password: postgres-password
+            host: 127.0.0.1
+            listen_address: 127.0.0.1
+            database: bosh
+          user: powerdns
+          password: powerdns
+          database:
+            name: powerdns
+          webserver:
+            password: powerdns
+          replication:
+            basic_auth: replication:zxKDUBeCfKYXk
+            user: replication
+            password: powerdns
+          recursor: 10.0.0.4
+
         # Tells the Director/agents how to contact registry
         registry:
           address: 10.0.0.4
@@ -127,7 +152,6 @@ To start experimenting with bosh-azure-cpi release and new bosh-init cli:
           environment: AzureCloud
           subscription_id: <your_subscription_id>
           storage_account_name: <your_storage_account_name>
-          storage_access_key: <your_storage_access_key>
           resource_group_name: <your_resource_group_name>
           tenant_id: <your_tenant_id>
           client_id: <your_client_id>

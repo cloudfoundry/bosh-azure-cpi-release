@@ -8,6 +8,10 @@ This release can be collocated with the BOSH release or used with new [bosh-init
 
 See [bosh-init usage doc](docs/bosh-init-usage.md).
 
-## Development
+### Development
 
 See [development doc](docs/development.md).
+
+### Configure Azure properties
+
+See [bosh_azure_cpi README](https://github.com/Azure/bosh_azure_cpi)

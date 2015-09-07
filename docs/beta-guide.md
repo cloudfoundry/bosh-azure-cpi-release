@@ -147,8 +147,6 @@ You need to replace **BOSH-FOR-AZURE-URL**, **BOSH-FOR-AZURE-SHA1**, **BOSH-AZUR
             # <--- Replace SUBSCRIPTION-ID with your subscription id
           storage_account_name: STORAGE-ACCOUNT-NAME 
             # <--- Replace STORAGE-ACCOUNT-NAME with your storage account name
-          storage_access_key: STORAGE-ACCESS-KEY 
-            # <--- Replace STORAGE-ACCESS-KEY with the access key of your storage account
           resource_group_name: RESOURCE-GROUP-NAME 
             # <--- Replace RESOURCE-GROUP-NAME with your resource group name
           tenant_id: TENANT-ID 
@@ -477,25 +475,6 @@ Sample output:
 	data:    Secondary Location:
 	data:    Creation Time:
 	info:    storage account show command OK
-
-##### 2.3.1.3.2	Get Storage Account Access Key #####
-
-	echo bosh-res-group | azure storage account keys list <storage_account_name>
-
-Example:
-
-	echo bosh-res-group | azure storage account keys list xxxxx
-
-
-The value of **PRIMARY** in the result is your **storage access key**.
-
-Sample output:
-
-	info:    Executing command storage account keys list
-	+ Getting storage account keys
-	data:    Primary: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	data:    Secondary: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-	info:    storage account keys list command OK
 
 #### 2.3.1.4	Create a Public IP for Cloud Foundry ####
 
