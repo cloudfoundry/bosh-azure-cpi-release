@@ -38,6 +38,13 @@
         "description": "name of the virtual network"
       }
     },
+    "virtualNetworkPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/16",
+      "metadata": {
+        "description": "the CIDR block of the azure virtual network"
+      }
+    },
     "subnetNameForBosh": {
       "type": "string",
       "defaultValue": "Bosh",
@@ -60,7 +67,7 @@
     "storageAccountType": "Standard_LRS",
     "storageid": "[resourceId('Microsoft.Storage/storageAccounts', parameters('newStorageAccountName'))]",
     "virtualNetworkName": "[parameters('virtualNetworkName')]",
-    "addressPrefix": "10.0.0.0/16",
+    "addressPrefix": "[parameters('virtualNetworkPrefix')]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
     "subnet1Name": "[parameters('subnetNameForBosh')]",
     "subnet1Prefix": "10.0.0.0/24",

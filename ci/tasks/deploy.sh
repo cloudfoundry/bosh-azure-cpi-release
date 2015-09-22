@@ -18,6 +18,8 @@ check_param private_key_data
 check_param ssh_certificate
 check_param DIRECTOR
 check_param AZURE_STORAGE_ACCESS_KEY
+check_param BAT_NETWORK_GATEWAY
+check_param STEMCELL_URL
 
 echo "Checking params from previous steps..."
 echo "show directory ip..."
@@ -80,7 +82,7 @@ resource_pools:
 - name: vms
   network: private
   stemcell:
-    url: http://cloudfoundry.blob.core.windows.net/stemcell/stemcell.beta.tgz
+    url: $STEMCELL_URL
     sha1: b05121f774aeaedbd66f6e735339be5c1bf85a5b
     # bosh-azure-hyperv-ubuntu-trusty-go_agent #TODO:replace after this is available in official repo
     #url: file://tmp/stemcell.tgz
@@ -192,7 +194,8 @@ jobs:
       client_id: $AZURE_CLIENT_ID
       client_secret: $AZURE_CLIENT_SECRET
       ssh_user: vcap
-      ssh_certificate: $ssh_certificate
+      ssh_certificate: | 
+        $ssh_certificate
 
     # Tells agents how to contact nats
     agent: {mbus: "nats://nats:nats-password@10.0.0.10:4222"}
@@ -228,13 +231,16 @@ EOF
 
 echo "normalizing paths to match values referenced in $manifest_filename"
 # manifest paths are now relative so the tmp inputs need to be updated
-mkdir ${manifest_dir}/tmp
-cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${manifest_dir}/tmp/${cpi_release_name}.tgz
+mkdir ${manifest_dir}/../tmp
+echo copying cpi...
+echo cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${manifest_dir}/../tmp/${cpi_release_name}.tgz
+cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${manifest_dir}/../tmp/${cpi_release_name}.tgz
 #cp ./bosh-release/release.tgz ${manifest_dir}/tmp/bosh-release.tgz ##TODO
 #cp ./stemcell/stemcell.tgz ${manifest_dir}/tmp/stemcell.tgz ##TODO
 
-initver=$(cat bosh-init/version)
-initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
+# TODO change this version back to the official
+#initver=$(cat bosh-init/version)
+initexe="$PWD/bosh-init/bosh-init-linux-amd64"
 chmod +x $initexe
 
 echo "using bosh-init CLI version..."
