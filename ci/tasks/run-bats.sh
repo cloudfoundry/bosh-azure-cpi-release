@@ -127,6 +127,8 @@ echo git submodule update --init
 git submodule update --init
 echo git submodule update --remote
 git submodule update --remote
+gem uninstall mini_portile -v '0.7.0.rc2' --ignore-dependencies
+gem install mini_portile -v '0.6.2'
 echo bundle install
 bundle install
 echo bundle exec rake bat:env
