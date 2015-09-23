@@ -64,7 +64,6 @@ properties:
     reserved: ['$BAT_NETWORK_RESERVED_RANGE']
     static: ['$BAT_NETWORK_STATIC_RANGE']
     gateway: $BAT_NETWORK_GATEWAY
-    dns: [8.8.8.8]
   - name: static
     type: vip
     cloud_properties:
