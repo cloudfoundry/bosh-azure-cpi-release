@@ -33,6 +33,7 @@ chmod go-r $PWD/keys/bats.pem
 ssh-add $PWD/keys/bats.pem
 
 export BAT_DIRECTOR=$DIRECTOR
+export BAT_DNS_HOST="8.8.8.8"
 export BAT_STEMCELL="${PWD}/stemcell/stemcell.tgz"
 export BAT_DEPLOYMENT_SPEC="${PWD}/${base_os}-bats-config.yml"
 export BAT_VCAP_PASSWORD=$BAT_VCAP_PASSWORD
