@@ -39,8 +39,5 @@ RUN ruby-install ruby 2.1.2
 # Bundler and BOSH CLI
 RUN /bin/bash -l -c "source /etc/profile.d/chruby.sh ;  \
                      chruby 2.1.2 ;                     \
-                     gem install bundler --no-ri --no-rdoc"
-RUN git clone http://github.com/AbelHu/bosh.git
-ADD tmp_gitsubmodule .gitmodules
-ADD install-bosh.sh install-bosh.sh
-RUN ./install-bosh.sh
+                     gem install bundler bosh_cli --no-ri --no-rdoc"
+
