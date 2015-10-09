@@ -18,7 +18,9 @@ check_param BAT_STEMCELL_SHA
 check_param AZURE_VNET_NAME
 check_param AZURE_CF_SUBNET_NAME
 check_param CF_IP_ADDRESS
-
+#TODO: debug purpose, remove after this is official
+export LOG_LEVEL='Debug'
+export LOG_PATH='./run.log'
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
@@ -42,7 +44,8 @@ export BAT_INFRASTRUCTURE=azure
 export BAT_NETWORKING=manual
 
 bosh -n target $BAT_DIRECTOR
-
+echo Using This version of bosh:
+bosh --version
 cat > "${BAT_DEPLOYMENT_SPEC}" <<EOF
 ---
 cpi: azure
@@ -127,8 +130,8 @@ echo git submodule update --init
 git submodule update --init
 echo git submodule update --remote
 git submodule update --remote
-gem uninstall mini_portile -v '0.7.0.rc2' --ignore-dependencies
-gem install mini_portile -v '0.6.2'
+#gem uninstall mini_portile -v '0.7.0.rc2' --ignore-dependencies
+#gem install mini_portile -v '0.6.2'
 echo bundle install
 bundle install
 echo bundle exec rake bat:env
