@@ -111,7 +111,7 @@ jobs:
   #  
   # passed: 
   - aggregate:
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+    - {trigger: true, passed: [build-candidate], passed: [deploy-director], get: bosh-cpi-dev-artifacts}
     - {trigger: true, passed: [deploy-director], get: bosh-cpi-release, resource: bosh-cpi-release-in}
     - {trigger: false, passed: [azure-ubuntu], get: azure-exports, resource: azure-exports}
     - {trigger: false, get: bosh}
