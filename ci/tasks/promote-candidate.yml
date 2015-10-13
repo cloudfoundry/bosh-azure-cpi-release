@@ -1,0 +1,11 @@
+---
+platform: linux
+image: docker:///sedouard/azure-cpi-release
+inputs:
+  - name: bosh-cpi-release
+  - name: bosh-cpi-dev-artifacts
+run:
+  path: bosh-cpi-release/ci/tasks/promote-candidate.sh
+params:
+  aws_access_key_id:     replace-me
+  aws_secret_access_key: replace-me
