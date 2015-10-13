@@ -179,6 +179,7 @@ jobs:
       db: *db
       cpi_job: cpi
       enable_snapshots: true
+      timeout: "180s"
 
     hm:
       http: {user: hm, password: hm-password}
