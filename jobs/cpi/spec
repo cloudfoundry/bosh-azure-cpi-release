@@ -3,7 +3,7 @@ name: cpi
 
 templates:
   cpi.erb: bin/cpi
-  cpi.yml.erb: config/cpi.yml
+  cpi.json.erb: config/cpi.json
 
 packages:
 - ruby_azure_cpi
@@ -43,6 +43,9 @@ properties:
   registry.port:
     description: Port of the Registry to connect to
     default: 25777
+  registry.endpoint:
+    description: Full URL for the registry endpoint that may include basic auth credentials
+    example: http://admin:admin-password@some-ip:port
 
   ntp:
     description: List of ntp server IPs. pool.ntp.org attempts to return IPs closest to your location, but you can still specify if needed.
@@ -101,3 +104,10 @@ properties:
   nats.port:
     description: Port that the nats server listens on
     default: 4222
+
+  env.http_proxy:
+    description: Http proxy to connect to cloud API's
+  env.https_proxy:
+    description: Https proxy to connect to cloud API's
+  env.no_proxy:
+    description: No proxy environment variable

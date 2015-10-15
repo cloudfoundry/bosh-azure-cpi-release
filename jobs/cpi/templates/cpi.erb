@@ -1,14 +1,33 @@
 #!/bin/bash
 
+<% if_p('env.http_proxy') do |http_proxy| %>
+export HTTP_PROXY=<%= http_proxy %>
+export http_proxy=<%= http_proxy %>
+<% end %>
+
+<% if_p('env.https_proxy') do |https_proxy| %>
+export HTTPS_PROXY=<%= https_proxy %>
+export https_proxy=<%= https_proxy %>
+<% end %>
+
+<% if_p('env.no_proxy') do |no_proxy| %>
+export NO_PROXY=<%= no_proxy %>
+export no_proxy=<%= no_proxy %>
+<% end %>
+
 read INPUT
 
-pkgs_dir=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
-jobs_dir=${BOSH_JOBS_DIR:-/var/vcap/jobs}
+BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
+BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
 
-export PATH=$pkgs_dir/ruby_azure_cpi/bin:$PATH
-export BUNDLE_GEMFILE=$pkgs_dir/bosh_azure_cpi/Gemfile
-export GEM_HOME=$pkgs_dir/bosh_azure_cpi/gem_home/ruby/2.1.0
+PATH=$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin:$PATH
+export PATH
 
-echo $INPUT | $pkgs_dir/bosh_azure_cpi/bin/azure_cpi $jobs_dir/cpi/config/cpi.yml
+export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/bosh_azure_cpi/Gemfile
+
+bundle_cmd="$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin/bundle"
+
+echo $INPUT | $bundle_cmd exec $BOSH_PACKAGES_DIR/bosh_azure_cpi/bin/azure_cpi \
+  $BOSH_JOBS_DIR/cpi/config/cpi.json
 
 exit 0

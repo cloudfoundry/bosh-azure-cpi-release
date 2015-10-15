@@ -12,6 +12,8 @@ With bundler installed, run the vendoring script:
 ./scripts/vendor_gems
 ```
 
+If you are using Ubuntu 14.04, you should replace the bundle in ./scripts/vendor_gems with /usr/local/bin/bundle.
+
 Then create the BOSH release:
 
 ```

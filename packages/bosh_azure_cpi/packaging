@@ -1,28 +1,14 @@
 set -e -x
 
-pkgs_dir=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
+BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 
-mkdir -p ${BOSH_INSTALL_TARGET}/{bin,gem_home}
+cp -a bosh_azure_cpi/* ${BOSH_INSTALL_TARGET}
 
-export PATH=${BOSH_INSTALL_TARGET}/bin:$PATH
-export GEM_HOME=${BOSH_INSTALL_TARGET}/gem_home
+bundle_cmd="$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin/bundle"
 
-cd bosh_azure_cpi
-
-cat >> Gemfile <<EOF
-gem 'bosh_azure_cpi'
-EOF
-
-# force bundler to use a clean config
-export BUNDLE_CONFIG=`pwd`/.cpi_bundle_config
-
-bundle_cmd="$pkgs_dir/ruby_azure_cpi/bin/bundle"
+cd ${BOSH_INSTALL_TARGET}
 
 $bundle_cmd install \
   --local           \
   --no-prune        \
-  --binstubs ${BOSH_INSTALL_TARGET}/bin \
-  --path ${GEM_HOME}
-
-cp Gemfile ${BOSH_INSTALL_TARGET}
-cp Gemfile.lock ${BOSH_INSTALL_TARGET}
+  --deployment

@@ -1,5 +1,13 @@
 set -e
 
+openssl_version=`PATH=/usr/local/opt/openssl/bin:$PATH openssl version`
+openssl_major_version=`echo $openssl_version | cut -f2 -d\ | cut -f1 -d.`
+if [ $openssl_major_version == 0 ]; then
+  echo "OpenSSL version 1 or greater is required."
+  echo "Currently available: ${openssl_version}"
+  exit 1
+fi
+
 tar xzf ruby_azure_cpi/yaml-0.1.5.tar.gz
 (
   set -e
@@ -8,6 +16,10 @@ tar xzf ruby_azure_cpi/yaml-0.1.5.tar.gz
   make -j
   make -j install
 )
+if [[ $? != 0 ]] ; then
+  echo "Cannot install yaml"
+  exit 1
+fi
 
 tar xzf ruby_azure_cpi/ruby-*.tar.gz
 (
@@ -17,9 +29,12 @@ tar xzf ruby_azure_cpi/ruby-*.tar.gz
   make -j
   make -j install
 )
+if [[ $? != 0 ]] ; then
+  echo "Cannot install ruby"
+  exit 1
+fi
 
 tar zxvf ruby_azure_cpi/rubygems-2.3.0.tgz
-
 (
   set -e
   cd rubygems-2.3.0
@@ -31,5 +46,9 @@ tar zxvf ruby_azure_cpi/rubygems-2.3.0.tgz
     exit 1
   fi
 )
+if [[ $? != 0 ]] ; then
+  echo "Cannot install rubygems"
+  exit 1
+fi
 
 ${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-1.8.2.gem --local --no-ri --no-rdoc

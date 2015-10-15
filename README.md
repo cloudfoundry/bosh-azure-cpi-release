@@ -1,17 +1,15 @@
 # BOSH Azure CPI Release
 
-This is a BOSH release for the external Azure CPI.
+* Documentation: [bosh.io/docs](https://bosh.io/docs)
+* IRC: [`#bosh` on freenode](https://webchat.freenode.net/?channels=bosh)
+* Mailing list: [cf-bosh](https://lists.cloudfoundry.org/pipermail/cf-bosh)
+* CI: <https://main.bosh-ci.cf-app.com/pipelines/bosh-azure-cpi>
+* Roadmap: [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/1133984) (label:azure)
 
-This release can be collocated with the BOSH release or used with new [bosh-init CLI](https://github.com/cloudfoundry/bosh-init).
+This is a BOSH release for the Azure CPI.
 
-### Experimental `bosh-init` usage
+See [Initializing a BOSH environment on Azure](https://bosh.io/docs/init-azure.html) for example usage.
 
-See [bosh-init usage doc](docs/bosh-init-usage.md).
-
-### Development
+## Development
 
 See [development doc](docs/development.md).
-
-### Configure Azure properties
-
-See [bosh_azure_cpi README](https://github.com/Azure/bosh_azure_cpi)
