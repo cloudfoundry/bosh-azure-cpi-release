@@ -28,7 +28,6 @@ require 'bosh/registry/client'
 require 'cloud'
 require 'cloud/azure/helpers'
 require 'cloud/azure/cloud'
-require 'cloud/azure/version'
 require 'cloud/azure/azure_client2'
 
 require 'cloud/azure/network'

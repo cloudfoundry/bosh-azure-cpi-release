@@ -1,0 +1,5 @@
+#!/bin/bash
+
+set -ex
+
+bundle package --all --all-platforms

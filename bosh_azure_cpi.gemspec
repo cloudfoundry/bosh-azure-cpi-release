@@ -1,30 +1,26 @@
 # coding: utf-8
-require File.expand_path('../lib/cloud/azure/version', __FILE__)
+Gem::Specification.new do |s|
+  s.name          = 'bosh_azure_cpi'
+  s.version       = '2.0.0'
+  s.platform      = Gem::Platform::RUBY
+  s.authors       = ['Nicholas Terry', 'Abel Hu']
+  s.email         = ['nick.i.terry@gmail.com', 'abelch@microsoft.com']
+  s.summary       = 'BOSH Azure CPI'
+  s.description   = 'BOSH Azure CPI'
+  s.homepage      = 'https://github.com/cloudfoundry/bosh'
+  s.license       = 'Apache 2.0'
+  s.required_ruby_version = Gem::Requirement.new('>= 1.9.3')
 
-version = Bosh::AzureCloud::VERSION
+  s.files         = Dir['README.md', 'lib/**/*', 'scripts/**/*'].select{ |f| File.file? f }
+  s.require_path  = 'lib'
+  s.bindir        = 'bin'
+  s.executables   = %w(azure_cpi bosh_azure_console)
 
-Gem::Specification.new do |spec|
-  spec.name          = 'bosh_azure_cpi'
-  spec.version       = version
-  spec.platform      = Gem::Platform::RUBY
-  spec.authors       = ['Nicholas Terry', 'Abel Hu']
-  spec.email         = ['nick.i.terry@gmail.com', 'abelch@microsoft.com']
-  spec.summary       = 'BOSH Azure CPI'
-  spec.description   = "BOSH Azure CPI\n#{`git rev-parse HEAD`[0, 6]}"
-  spec.homepage      = 'https://github.com/nterry/bosh_azure_cpi'
-  spec.license       = 'Apache 2.0'
-  spec.required_ruby_version = Gem::Requirement.new('>= 1.9.3')
-
-  spec.files         = `git ls-files -- bin/* lib/*`.split("\n") + %w(README.md)
-  spec.require_path  = 'lib'
-  spec.bindir        = 'bin'
-  spec.executables   = %w(azure_cpi bosh_azure_console)
-
-  spec.add_dependency 'azure', '~> 0.7.0'
-
-  spec.add_dependency 'bosh_common',      "~>#{version}"
-  spec.add_dependency 'bosh_cpi',         "~>#{version}"
-  spec.add_dependency 'bosh-registry',    "~>#{version}"
-  spec.add_dependency 'vhd',              "~> 0.0.4"
-  spec.add_dependency 'httpclient',       "=2.4.0"
+  s.add_dependency 'bosh_common'
+  s.add_dependency 'bosh_cpi'
+  s.add_dependency 'bosh-registry'
+  s.add_dependency 'azure',         '~>0.7.0'
+  s.add_dependency 'vhd',           '~>0.0.4'
+  s.add_dependency 'httpclient',    '=2.4.0'
+  s.add_dependency 'yajl-ruby',     '>=0.8.2'
 end
