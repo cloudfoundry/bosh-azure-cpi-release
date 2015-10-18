@@ -1,0 +1,64 @@
+#!/usr/bin/env ruby
+
+# Copyright (c) 2009-2012 VMware, Inc.
+
+# Usage example:
+# irb(main):001:0> cpi.create_vm("test",
+#                                "b39f27a8b8c64d52b05eac6a62ebad85__Ubuntu-14_04-LTS-amd64-server-20140528-en-us-30GB",
+#                                {"instance_type" => "Standard_D1"},
+#                                {"default" => {"type" => "dynamic", "cloud_properties" => {"virtual_network_name"=>"abel-boshvnet", "subnet_name"=>"BOSH"}},
+#                                [],
+#                                {"foo" =>"bar"})
+
+require "bosh_azure_cpi"
+require "irb"
+require "irb/completion"
+require "ostruct"
+require "optparse"
+
+config_file = nil
+
+opts_parser = OptionParser.new do |opts|
+  opts.on("-c", "--config FILE") { |file| config_file = file }
+end
+
+opts_parser.parse!
+
+unless config_file
+  puts opts_parser
+  exit(1)
+end
+
+@config = Psych.load_file(config_file)
+
+module ConsoleHelpers
+  def cpi
+    @cpi ||= Bosh::AzureCloud::Cloud.new(@config)
+  end
+
+  def azure
+    cpi.azure
+  end
+
+  def registry
+    cpi.registry
+  end
+end
+
+cloud_config = OpenStruct.new(:logger => Logger.new(STDOUT))
+
+Bosh::Clouds::Config.configure(cloud_config)
+
+include ConsoleHelpers
+
+begin
+  require "ruby-debug"
+  puts "=> Debugger enabled"
+rescue LoadError
+  puts "=> ruby-debug not found, debugger disabled"
+end
+
+puts "=> Welcome to BOSH Azure CPI console"
+puts "You can use 'cpi' to access CPI methods"
+
+IRB.start

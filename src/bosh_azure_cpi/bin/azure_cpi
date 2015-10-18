@@ -1,0 +1,34 @@
+#!/usr/bin/env ruby
+
+require 'yaml'
+require 'ostruct'
+require 'bosh/cpi'
+require 'bundler'
+
+Bundler.setup(:default)
+require 'cloud/azure'
+
+cpi_config = YAML.load_file(ARGV.shift)
+
+cloud_config = OpenStruct.new(:logger => Logger.new(STDERR))
+
+Bosh::Clouds::Config.configure(cloud_config)
+
+cpi_log = StringIO.new
+
+cpi_lambda = lambda do
+  unless cpi_config.has_key?('cloud') && cpi_config['cloud'].has_key?('properties')
+    raise "Could not find cloud properties in the configuration"
+  end
+
+  cloud_properties = cpi_config['cloud']['properties']
+  cloud_properties['cpi_log'] = cpi_log
+  Bosh::Clouds::Azure.new(cloud_properties)
+end
+
+# Redefine $stdout because azure libraries use print for info logging
+$stdout = STDERR
+
+cli = Bosh::Cpi::Cli.new(cpi_lambda, cpi_log, STDOUT)
+
+cli.run(ARGF.read)

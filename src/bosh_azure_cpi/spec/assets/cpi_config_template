@@ -1,0 +1,20 @@
+azure:
+      environment: AzureCloud
+      subscription_id: <your_subscription_id>
+      storage_account_name: <your_storage_account_name>
+      resource_group_name: <your_resource_group_name>
+      tenant_id: <your_tenant_id>
+      client_id: <your_client_id>
+      client_secret: <your_client_secret>
+      ssh_certificate: <content_of_your_ssh_certificate>
+registry:
+      endpoint: http://admin:admin@localhost:25888
+      user: admin
+      password: admin
+agent:
+      ntp: 
+      blobstore:
+        provider: local
+        options:
+          blobstore_path: /var/vcap/micro_bosh/data/cache
+      mbus: 
