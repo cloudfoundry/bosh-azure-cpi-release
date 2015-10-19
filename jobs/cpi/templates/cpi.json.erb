@@ -12,6 +12,7 @@
           'client_id' => p('azure.client_id'),
           'client_secret' => p('azure.client_secret'),
           'ssh_user' => p('azure.ssh_user'),
+          'parallel_upload_thread_num' => p('azure.parallel_upload_thread_num'),
           'ssh_certificate' => p('azure.ssh_certificate'),
         },
         'registry' => {
@@ -30,9 +31,6 @@
       }
     }
   }
-
-  azure_params = params['cloud']['properties']['azure']
-  if_p('azure.parallel_upload_thread_num')                     { |value| azure_params['parallel_upload_thread_num'] = value }
 
   if_p('registry.endpoint') do |endpoint|
     params['cloud']['properties']['registry']['endpoint'] = endpoint
