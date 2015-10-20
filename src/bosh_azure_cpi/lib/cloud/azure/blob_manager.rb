@@ -13,7 +13,7 @@ module Bosh::AzureCloud
 
       @logger = Bosh::Clouds::Config.logger
       @blob_client_mutex = Mutex.new
-      @blob_service_clients = {}
+      @storage_accounts_keys = {}
     end
 
     def delete_blob(storage_account_name, container_name, blob_name)
@@ -47,9 +47,6 @@ module Bosh::AzureCloud
         begin
           blob_size = File.lstat(file_path).size
           @logger.info("create_page_blob: blob_name: #{blob_name}, blob_size: #{blob_size}")
-
-          @logger.info("create_page_blob: Calculate hash for every block")
-
           upload_page_blob(container_name, blob_name, blob_size, file_path, @parallel_upload_thread_num)
         rescue => e
           cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")
@@ -293,15 +290,14 @@ module Bosh::AzureCloud
 
     def initialize_blob_client(storage_account_name)
       @blob_client_mutex.synchronize do
-        unless @blob_service_clients.has_key?(storage_account_name)
+        unless @storage_accounts_keys.has_key?(storage_account_name)
           keys = @azure_client2.get_storage_account_keys_by_name(storage_account_name)
-
-          @azure_client = Azure.client(storage_account_name: storage_account_name, storage_access_key: keys[0])
-          @azure_client.storage_blob_host = AZURE_ENVIRONMENTS[@azure_properties['environment']]['managementEndpointUrl'].gsub('management', "#{storage_account_name}.blob")
-          @blob_service_clients[storage_account_name] = @azure_client.blobs
+          @storage_accounts_keys[storage_account_name] = keys[0]
         end
 
-        @blob_service_client = @blob_service_clients[storage_account_name]
+        @azure_client = Azure.client(storage_account_name: storage_account_name, storage_access_key: @storage_accounts_keys[storage_account_name])
+        @azure_client.storage_blob_host = AZURE_ENVIRONMENTS[@azure_properties['environment']]['managementEndpointUrl'].gsub('management', "#{storage_account_name}.blob")
+        @blob_service_client = @azure_client.blobs
         yield
       end
     end

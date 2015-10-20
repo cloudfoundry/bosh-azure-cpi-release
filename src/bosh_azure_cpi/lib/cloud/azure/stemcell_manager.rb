@@ -135,7 +135,7 @@ module Bosh::AzureCloud
         }
         entities = @table_manager.query_entities(STEMCELL_TABLE, options)
         unless entities.size > 0
-          cloud_error("Cannot find the stemcell #{STEMCELL_TABLE} in the table #{STEMCELL_TABLE} in the default storage account #{@default_storage_account_name}")
+          cloud_error("Cannot find the stemcell #{name} in the table #{STEMCELL_TABLE} in the default storage account #{@default_storage_account_name}")
         end
 
         return true if entities[0]['Status'] == STEMCELL_STATUS_SUCCESS
