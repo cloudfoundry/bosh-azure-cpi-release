@@ -1,0 +1,8 @@
+---
+platform: linux
+image: docker:///sedouard/azure-cpi-release
+inputs:
+  - name: bosh-cpi-release
+  - name: version-semver
+run:
+  path: bosh-cpi-release/ci/tasks/build-candidate.sh
