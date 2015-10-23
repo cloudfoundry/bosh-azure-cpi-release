@@ -12,27 +12,37 @@ describe Bosh::AzureCloud::Cloud do
     @tenant_id            = ENV['BOSH_AZURE_TENANT_ID']            || raise("Missing BOSH_AZURE_TENANT_ID")
     @client_id            = ENV['BOSH_AZURE_CLIENT_ID']            || raise("Missing BOSH_AZURE_CLIENT_ID")
     @client_secret        = ENV['BOSH_AZURE_CLIENT_SECRET']        || raise("Missing BOSH_AZURE_CLIENT_secret")
-    @certificate_file     = ENV['BOSH_AZURE_CERTIFICATE_FILE']     || raise("Missing BOSH_AZURE_CERTIFICATE_FILE")
     @stemcell_file        = ENV['BOSH_AZURE_STEMCELL_FILE']        || raise("Missing BOSH_AZURE_STEMCELL_FILE")
+    @certificate_file     = ENV['BOSH_AZURE_CERTIFICATE_FILE']     || raise("Missing BOSH_AZURE_CERTIFICATE_FILE")
+    raise("#{@certificate_file} not exists") unless FileTest::exist?(@certificate_file)
   end
 
-  let(:manual_ip)       { ENV.fetch('BOSH_AZURE_LIFECYCLE_MANUAL_IP', '10.0.0.6') }
+  let(:ssh_certificate) { IO.read(@certificate_file) }
+
+  subject(:cpi) do
+    described_class.new(
+      'azure' => {
+        'environment' => 'AzureCloud',
+        'subscription_id' => @subscription_id,
+        'storage_account_name' => @storage_account_name,
+        'resource_group_name' => @resource_group_name,
+        'tenant_id' => @tenant_id,
+        'client_id' => @client_id,
+        'client_secret' => @client_secret,
+        'ssh_user' => 'vcap',
+        'ssh_certificate' => ssh_certificate,
+        'parallel_upload_thread_num' => 16
+      },
+      'registry' => {
+        'endpoint' => 'fake',
+        'user' => 'fake',
+        'password' => 'fake'
+      }
+    )
+  end
+
   let(:vnet_name)       { ENV.fetch('BOSH_AZURE_VNET_NAME', 'boshvnet-crp') }
   let(:subnet_name)     { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'Bosh') }
-
-  let(:manual_networks) {
-    {
-      "bosh" => {
-        "type"    => "manual",
-        "ip"      => manual_ip,
-        "cloud_properties" => {
-          "virtual_network_name" => vnet_name,
-          "subnet_name" => subnet_name
-        }
-      }
-    }
-  }
-
   let(:dynamic_networks) {
     {
       'default' => {
@@ -45,34 +55,6 @@ describe Bosh::AzureCloud::Cloud do
     }
   }
 
-  let(:ssh_user)        { ENV.fetch('BOSH_AZURE_SSH_USER', 'vcap') }
-  let(:ssh_certificate) {
-    raise("#{@certificate_file} not exists") unless FileTest::exist?(@certificate_file)
-    IO.read(@certificate_file)
-  }
-
-  subject(:cpi) do
-    described_class.new(
-      'azure' => {
-        'environment' => 'AzureCloud',
-        'subscription_id' => @subscription_id,
-        'storage_account_name' => @storage_account_name,
-        'resource_group_name' => @resource_group_name,
-        'tenant_id' => @tenant_id,
-        'client_id' => @client_id,
-        'client_secret' => @client_secret,
-        'ssh_user' => ssh_user,
-        'ssh_certificate' => ssh_certificate,
-        'parallel_upload_thread_num' => 16
-      },
-      'registry' => {
-        'endpoint' => 'fake',
-        'user' => 'fake',
-        'password' => 'fake'
-      }
-    )
-  end
-
   let(:instance_type)   { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1') }
   let(:resource_pool)   { { 'instance_type' => instance_type } }
   let(:vm_metadata)   { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
@@ -83,8 +65,7 @@ describe Bosh::AzureCloud::Cloud do
   }
 
   before { allow(Bosh::Clouds::Config).to receive_messages(logger: logger) }
-  #let(:logger) { Logger.new(STDERR) }
-  let(:logger) { Logger.new('lifecycle.log') }
+  let(:logger) { Logger.new(STDERR) }
 
   before { allow(Bosh::Registry::Client).to receive_messages(new: double('registry').as_null_object) }
 
@@ -94,14 +75,14 @@ describe Bosh::AzureCloud::Cloud do
   before { @disk_id = nil }
   after  { cpi.delete_disk(@disk_id) if @disk_id }
 
-  #before { @stemcell_id = create_stemcell() }
-  #after  { cpi.delete_stemcell(@stemcell_id) if @stemcell_id }
-  before { @stemcell_id = "bosh-stemcell-410cc7cb-ac4a-4bf2-ae81-58c9c7145da2" }
+  before(:all) { @stemcell_path = extract_image(@stemcell_file) }
+  before { @stemcell_id = create_stemcell(@stemcell_path) }
+  after  { cpi.delete_stemcell(@stemcell_id) if @stemcell_id }
 
   context 'manual networking' do
     context 'without existing disks' do
       it 'should exercise the vm lifecycle' do
-        vm_lifecycle(@stemcell_id, manual_networks) do |instance_id|
+        vm_lifecycle(@stemcell_id, get_manual_networks()) do |instance_id|
           disk_id = cpi.create_disk(2048, {}, instance_id)
           expect(disk_id).not_to be_nil
 
@@ -133,7 +114,7 @@ describe Bosh::AzureCloud::Cloud do
       after  { cpi.delete_disk(existing_disk_id) if existing_disk_id }
 
       it 'can excercise the vm lifecycle and list the disks' do
-        vm_lifecycle(@stemcell_id, manual_networks) do |instance_id|
+        vm_lifecycle(@stemcell_id, get_manual_networks()) do |instance_id|
           disk_id = cpi.create_disk(2048, {}, instance_id)
           expect(disk_id).not_to be_nil
 
@@ -153,7 +134,7 @@ describe Bosh::AzureCloud::Cloud do
         disk_id = cpi.create_disk(2048, {})
         expect(disk_id).not_to be_nil
 
-        vm_lifecycle(@stemcell_id, manual_networks) do |instance_id|
+        vm_lifecycle(@stemcell_id, get_manual_networks()) do |instance_id|
           cpi.attach_disk(instance_id, disk_id)
           expect(cpi.get_disks(instance_id)).to include(disk_id)
         end
@@ -163,7 +144,7 @@ describe Bosh::AzureCloud::Cloud do
             SecureRandom.uuid,
             @stemcell_id,
             resource_pool,
-            manual_networks
+            get_manual_networks()
           )
 
           expect {
@@ -244,7 +225,7 @@ describe Bosh::AzureCloud::Cloud do
             SecureRandom.uuid,
             @stemcell_id,
             resource_pool,
-            manual_networks
+            get_manual_networks()
           )
 
           expect {
@@ -324,21 +305,26 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
-  def create_stemcell
-    path = extract_image(@stemcell_file)
+  def create_stemcell(path)
     stemcell_id = cpi.create_stemcell(path, {})
   end
 
   def extract_image(image_path)
-    puts ("Unpacking image: #{image_path}")
-    run_command("tar -xf #{image_path} -C /mnt/")
+    Open3.capture2e("tar -xf #{image_path} -C /mnt/")
     "/mnt/image"
   end
-  
-  def run_command(command)
-    output, status = Open3.capture2e(command)
-    if status.exitstatus != 0
-      puts "'#{command}' failed with exit status=#{status.exitstatus} [#{output}]"
-    end
+
+  def get_manual_networks
+    manual_networks = {
+      "bosh" => {
+        "type"    => "manual",
+        "ip"      => "10.0.0.#{Random.rand(10..99)}",
+        "cloud_properties" => {
+          "virtual_network_name" => vnet_name,
+          "subnet_name" => subnet_name
+        }
+      }
+    }
+    manual_networks
   end
 end
