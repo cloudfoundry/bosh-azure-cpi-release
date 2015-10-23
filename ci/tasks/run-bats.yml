@@ -1,0 +1,26 @@
+---
+platform: linux
+image: docker:///sedouard/azure-cpi-release
+inputs:
+- name: bosh-cpi-dev-artifacts
+- name: stemcell
+- name: bosh-cpi-release
+- name: azure-exports
+- name: bosh
+run:
+  path: bosh-cpi-release/ci/tasks/run-bats.sh
+params:
+  base_os:                      replace-me
+  private_key_data:             replace-me
+  BAT_VCAP_PASSWORD:            replace-me
+  BAT_STEMCELL_URL:             replace-me
+  BAT_STEMCELL_SHA:             replace-me
+  BAT_SECOND_STATIC_IP:         replace-me
+  BAT_NETWORK_STATIC_IP:        replace-me
+  BAT_NETWORK_CIDR:             replace-me
+  BAT_NETWORK_RESERVED_RANGE:   replace-me
+  BAT_NETWORK_STATIC_RANGE:     replace-me
+  BAT_NETWORK_GATEWAY:          replace-me
+  AZURE_VNET_NAME:              replace-me
+  AZURE_CF_SUBNET_NAME:         replace-me
+

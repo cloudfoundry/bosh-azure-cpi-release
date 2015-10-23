@@ -1,0 +1,19 @@
+---
+platform: linux
+image: docker:///sedouard/azure-cpi-release
+inputs:
+  - name: bosh-cpi-release
+run:
+  path: bosh-cpi-release/ci/tasks/azure-provision.sh
+params:
+    AZURE_CLIENT_ID:          replace-me
+    AZURE_CLIENT_SECRET:      replace-me
+    AZURE_TENANT_ID: replace-me
+    AZURE_GROUP_NAME: replace-me
+    AZURE_REGION_NAME: replace-me
+    AZURE_VNET_NAME: replace-me
+    AZURE_REGION_SHORT_NAME: replace-me
+    AZURE_STORAGE_ACCOUNT_NAME: replace-me
+    AZURE_SUBSCRIPTION_ID: replace-me
+    AUZRE_BOSH_SUBNET_NAME: replace-me
+    AZURE_CF_SUBNET_NAME: replace-me
