@@ -172,9 +172,10 @@ module Bosh::AzureCloud
         availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
       rescue AzureConflictError => e
         @logger.debug("create_availability_set - Another process is creating the same availability set #{avset_params[:name]}")
-        begin
+        loop do
           availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
-        end while availability_set.nil?
+          break unless availability_set.nil?
+        end
       end
       availability_set
     end
