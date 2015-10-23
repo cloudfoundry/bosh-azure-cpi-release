@@ -232,26 +232,49 @@ Ensure your default subscription is set to the one you want to create your servi
 
 First check whether you have multiple subscriptions:
 
-	azure account list
+	azure account list --json
 
 Below is a sample output from the command.
 
-You can get **subscription Id** from the column "Id" in the result.
+You can get **SUBSCRIPTION-ID** from the column "Id" in the result.
 
-You can get **tenant id** from the column "Tenant Id" in the result. Please note **if your tenant id is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See section 2.1.2 Configure Azure CLI on how to fix this**.
+You can get **TENANT-ID** from the row "tenantId" in the result. Please note **if your tenant id is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See section 2.1.2 Configure Azure CLI on how to fix this**.
 
 Sample output:
-
-	info:    Executing command account list
-	data:    Name                       Id                                    Tenant Id                            Current
-	data:    -------------------------  ------------------------------------  ------------------------------------  -------
-	data:    Sample Subscription         4be8920b-2178-43d7-ab14-04d8e49c1d05  52f988bf-86f1-41af-61ab-2d7cd011db47  false
-	data:    Sample Subscription 1       5692920b-2178-43d7-ab14-04d8e49c1d04  52f988bf-86f1-41af-61ab-2d7cd011db47  true
-	info:    account list command OK
+```
+[
+  {
+    "id": "4be8920b-2978-43d7-ab14-04d8549c1d05",
+    "name": "Sample Subscription1",
+    "user": {
+      "name": "Sample Account1",
+      "type": "user"
+    },
+    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "state": "Enabled",
+    "isDefault": true,
+    "registeredProviders": [],
+    "environmentName": "AzureCloud"
+  },
+  {
+    "id": "c4528d9e-c99a-48bb-b12d-fde2176a43b8",
+    "name": "Sample Subscription2",
+    "user": {
+      "name": "Sample Account2",
+      "type": "user"
+    },
+    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "state": "Enabled",
+    "isDefault": false,
+    "registeredProviders": [],
+    "environmentName": "AzureCloud"
+  }
+]
+```
 
 If you have multiple subscriptions, use below command to set the particular subscription to default which you used for your service principal in above steps.
 
-	azure account set <subscription-id>
+	azure account set <SUBSCRIPTION-ID>
 
 Example:
 
