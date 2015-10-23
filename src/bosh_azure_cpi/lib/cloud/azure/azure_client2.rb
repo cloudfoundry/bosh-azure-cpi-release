@@ -482,7 +482,7 @@ module Bosh::AzureCloud
       tcp_endpoints.each do |endpoint|
         ports = endpoint.split(':')
         inbound_nat_rules = {
-          'name'        => "NatRule-TcpEndPoints-#{ports[0].to_s}",
+          'name'        => "NatRule-TcpEndPoints-#{ports[0]}",
           'properties'  => {
             'frontendPort'        => ports[0],
             'backendPort'         => ports[1],
@@ -498,7 +498,7 @@ module Bosh::AzureCloud
       udp_endpoints.each do |endpoint|
         ports = endpoint.split(':')
         inbound_nat_rules = {
-          'name' => "NatRule-UdpEndPoints-#{ports[0].to_s}",
+          'name' => "NatRule-UdpEndPoints-#{ports[0]}",
           'properties'  => {
             'frontendPort'        => ports[0],
             'backendPort'         => ports[1],
@@ -704,7 +704,7 @@ module Bosh::AzureCloud
       }
 
       uri = http_url(url)
-      @logger.info("create_storage_account - trying to put #{uri.to_s}")
+      @logger.info("create_storage_account - trying to put #{uri}")
 
       request = Net::HTTP::Put.new(uri.request_uri)
       request_body = storage_account.to_json
@@ -732,7 +732,7 @@ module Bosh::AzureCloud
       while true
         sleep(retry_after)
 
-        @logger.debug("create_storage_account - trying to get the status of asynchronous operation: #{uri.to_s}")
+        @logger.debug("create_storage_account - trying to get the status of asynchronous operation: #{uri}")
         response = http_get_response(uri, request)
         status_code = response.code.to_i
         @logger.debug("create_storage_account - #{status_code}\n#{response.body}")
@@ -902,7 +902,7 @@ module Bosh::AzureCloud
       while true
         sleep(options[:retry_after])
 
-        @logger.debug("check_completion - trying to get the status of asynchronous operation: #{uri.to_s}")
+        @logger.debug("check_completion - trying to get the status of asynchronous operation: #{uri}")
         response = http_get_response(uri, request)
         status_code = response.code.to_i
         @logger.debug("check_completion - #{status_code}\n#{response.body}")
@@ -933,7 +933,7 @@ module Bosh::AzureCloud
 
     def http_get(url, params = {})
       uri = http_url(url, params)
-      @logger.info("http_get - trying to get #{uri.to_s}")
+      @logger.info("http_get - trying to get #{uri}")
 
       request = Net::HTTP::Get.new(uri.request_uri)
       response = http_get_response(uri, request)
@@ -956,7 +956,7 @@ module Bosh::AzureCloud
 
     def http_put(url, body = nil, retry_after = 30, params = {})
       uri = http_url(url, params)
-      @logger.info("http_put - trying to put #{uri.to_s}")
+      @logger.info("http_put - trying to put #{uri}")
 
       request = Net::HTTP::Put.new(uri.request_uri)
       unless body.nil?
@@ -978,7 +978,7 @@ module Bosh::AzureCloud
 
     def http_delete(url, body = nil, retry_after = 10, params = {})
       uri = http_url(url, params)
-      @logger.info("http_delete - trying to delete #{uri.to_s}")
+      @logger.info("http_delete - trying to delete #{uri}")
 
       request = Net::HTTP::Delete.new(uri.request_uri)
       unless body.nil?
@@ -1000,7 +1000,7 @@ module Bosh::AzureCloud
 
     def http_post(url, body = nil, retry_after = 30, params = {})
       uri = http_url(url, params)
-      @logger.info("http_post - trying to post #{uri.to_s}")
+      @logger.info("http_post - trying to post #{uri}")
 
       request = Net::HTTP::Post.new(uri.request_uri)
       request['Content-Length'] = 0

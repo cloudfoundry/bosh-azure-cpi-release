@@ -63,8 +63,13 @@ describe Bosh::AzureCloud::BlobManager do
   end  
 
   describe "#create_page_blob" do
-    file_path = "/tmp/fake_image"
-    File.open(file_path, 'wb') { |f| f.write("Hello CloudFoundry!") }
+    before do
+      @file_path = "/tmp/fake_image"
+      File.open(@file_path, 'wb') { |f| f.write("Hello CloudFoundry!") }
+    end
+    after do
+      File.delete(@file_path) if File.exist?(@file_path)
+    end
 
     context "when uploading page blob succeeds" do
       before do
@@ -74,7 +79,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       it "raise no error" do
         expect {
-          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, file_path, blob_name)        
+          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name) 
         }.not_to raise_error
       end
     end
@@ -86,7 +91,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       it "raise an error" do
         expect {
-          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, file_path, blob_name)        
+          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name) 
         }.to raise_error /Failed to upload page blob/
       end
     end
@@ -114,6 +119,7 @@ describe Bosh::AzureCloud::BlobManager do
 
         it "raise an error and do not delete blob" do
           expect(blob_service).not_to receive(:delete_blob)
+
           expect {
             blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)    
           }.to raise_error /Failed to create empty vhd blob/
@@ -128,6 +134,7 @@ describe Bosh::AzureCloud::BlobManager do
 
         it "raise an error and delete blob" do
           expect(blob_service).to receive(:delete_blob)
+
           expect {
             blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)    
           }.to raise_error /Failed to create empty vhd blob/
@@ -200,6 +207,87 @@ describe Bosh::AzureCloud::BlobManager do
       expect(
         blob_manager.snapshot_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, metadata)
       ).to eq(snapshot_time)
+    end
+  end
+
+  describe "#copy_blob" do
+    storage_account_name = "another-storage-account-name"
+    source_blob_uri = "fake-source-blob-uri"
+
+    before do
+      allow(Azure).to receive(:client).
+        with(storage_account_name: storage_account_name, storage_access_key: keys[0]).
+        and_return(azure_client)
+      allow(blob_service).to receive(:service_properties_headers).and_return({})
+      allow(blob_service).to receive(:generate_uri).and_return("fake-uri")
+    end
+
+    class Response
+      attr_accessor :headers
+      def initialize
+        @headers = {}
+      end
+    end
+
+    context "when copy status is success" do
+      before do
+        response = Response.new
+        response.headers["x-ms-copy-id"] = "copy-id-1"
+        response.headers["x-ms-copy-status"] = "success"
+        allow(blob_service).to receive(:call).and_return(response)
+      end
+
+      it "succeeds to copy the blob" do
+        expect {
+          blob_manager.copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
+        }.not_to raise_error
+      end
+    end
+
+    context "when copy status is not success or pending" do
+      before do
+        response = Response.new
+        response.headers["x-ms-copy-id"] = "copy-id-1"
+        response.headers["x-ms-copy-status"] = "failed"
+        allow(blob_service).to receive(:call).and_return(response)
+      end
+
+      it "fails to copy the blob" do
+        expect(blob_service).to receive(:delete_blob).
+          with(container_name, blob_name)
+
+        expect {
+          blob_manager.copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
+        }.to raise_error /Failed to copy the blob/
+      end
+    end
+
+    context "when the progress of copying is interrupted" do
+      class MyBlob
+        attr_accessor :properties
+        def initialize
+          @properties = {}
+        end
+      end
+
+      before do
+        response = Response.new
+        response.headers["x-ms-copy-id"] = "copy-id-1"
+        response.headers["x-ms-copy-status"] = "pending"
+        allow(blob_service).to receive(:call).and_return(response)
+        blob = MyBlob.new
+        blob.properties = { :copy_id => "copy-id-2" }
+        allow(blob_service).to receive(:get_blob_properties).and_return(blob)
+      end
+
+      it "raises an error" do
+        expect(blob_service).to receive(:delete_blob).
+          with(container_name, blob_name)
+
+        expect {
+          blob_manager.copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
+        }.to raise_error /The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted/
+      end
     end
   end
 end

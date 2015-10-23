@@ -195,6 +195,7 @@ describe Bosh::AzureCloud::Cloud do
       before do
         allow(registry).to receive(:update_settings).and_raise(StandardError)
       end
+
       it 'deletes the vm' do
         expect(vm_manager).to receive(:delete).with(instance_id)
 
@@ -223,26 +224,40 @@ describe Bosh::AzureCloud::Cloud do
   describe '#has_vm?' do
     let(:instance) { double("instance") }
 
-    before do
-      allow(vm_manager).to receive(:find).with(instance_id).
-        and_return(instance)
-      allow(instance).to receive(:[]).with(:provisioning_state).
-        and_return('Running')
+    context "when the instance exists" do
+      before do
+        allow(vm_manager).to receive(:find).with(instance_id).
+          and_return(instance)
+        allow(instance).to receive(:[]).with(:provisioning_state).
+          and_return('Running')
+      end
+
+      it "returns true" do
+        expect(cloud.has_vm?(instance_id)).to be(true)
+      end
     end
 
-    it 'returns true if the instance exists' do
-      expect(cloud.has_vm?(instance_id)).to be(true)
+    context "when the instance doesn't exists" do
+      before do
+        allow(vm_manager).to receive(:find).with(instance_id).and_return(nil)
+      end
+
+      it "returns false if the instance doesn't exists" do
+        expect(cloud.has_vm?(instance_id)).to be(false)
+      end
     end
 
-    it "returns false if the instance doesn't exists" do
-      allow(vm_manager).to receive(:find).with(instance_id).and_return(nil)
-      expect(cloud.has_vm?(instance_id)).to be(false)
-    end
+    context "when the instance state is deleting" do
+      before do
+        allow(vm_manager).to receive(:find).with(instance_id).
+          and_return(instance)
+        allow(instance).to receive(:[]).with(:provisioning_state).
+          and_return('Deleting')
+      end
 
-    it 'returns false if the instance state is deleting' do
-      allow(instance).to receive(:[]).with(:provisioning_state).
-        and_return('Deleting')
-      expect(cloud.has_vm?(instance_id)).to be(false)
+      it 'returns false if the instance state is deleting' do
+        expect(cloud.has_vm?(instance_id)).to be(false)
+      end
     end
   end
 
@@ -374,6 +389,7 @@ describe Bosh::AzureCloud::Cloud do
       expect(disk_manager).to receive(:snapshot_disk).
         with(disk_id, metadata).
         and_return(snapshot_id)
+
       expect(cloud.snapshot_disk(disk_id, metadata)).to eq(snapshot_id)
     end
   end
@@ -412,7 +428,6 @@ describe Bosh::AzureCloud::Cloud do
       expect(registry).to receive(:read_settings).
         with(instance_id).
         and_return(old_settings)
-
       expect(registry).to receive(:update_settings).
         with(instance_id, new_settings)
 

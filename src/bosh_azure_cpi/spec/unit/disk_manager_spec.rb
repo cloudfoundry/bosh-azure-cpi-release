@@ -30,6 +30,7 @@ describe Bosh::AzureCloud::DiskManager do
         allow(blob_manager).to receive(:get_blob_properties).
           and_return(nil)
       end
+
       it "does not delete the disk" do
         expect(blob_manager).not_to receive(:delete_blob)
 
