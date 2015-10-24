@@ -83,25 +83,49 @@ Ensure your default subscription is set to the one you want to create your servi
 
 First check whether you have multiple subscriptions:
 
-	azure account list
+	azure account list --json
 
 Below is a sample output from the command.
 
-You can get **subscription Id** from the column "Id" in the result.
-You can get **tenant id** from the column "Tenant Id" in the result. Please note **if your tenant id is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See section 1.2.2 Configure Azure CLI on how to fix this**.
+You can get **SUBSCRIPTION-ID** from the row "id" in the result.
+
+You can get **TENANT-ID** from the row "tenantId" in the result. Please note **if your tenant id is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See section 1.2.2 Configure Azure CLI on how to fix this**.
 
 Sample output:
-
-	info:    Executing command account list
-	data:    Name                       Id                                    Tenant Id                            Current
-	data:    -------------------------  ------------------------------------  ------------------------------------  -------
-	data:    Sample Subscription         4be8920b-2178-43d7-ab14-04d8e49c1d05  52f988bf-86f1-41af-61ab-2d7cd011db47  false
-	data:    Sample Subscription 1       5692920b-2178-43d7-ab14-04d8e49c1d04  52f988bf-86f1-41af-61ab-2d7cd011db47  true
-	info:    account list command OK
+```
+[
+  {
+    "id": "4be8920b-2978-43d7-ab14-04d8549c1d05",
+    "name": "Sample Subscription",
+    "user": {
+      "name": "Sample Account",
+      "type": "user"
+    },
+    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "state": "Enabled",
+    "isDefault": true,
+    "registeredProviders": [],
+    "environmentName": "AzureCloud"
+  },
+  {
+    "id": "c4528d9e-c99a-48bb-b12d-fde2176a43b8",
+    "name": "Sample Subscription1",
+    "user": {
+      "name": "Sample Account1",
+      "type": "user"
+    },
+    "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
+    "state": "Enabled",
+    "isDefault": false,
+    "registeredProviders": [],
+    "environmentName": "AzureCloud"
+  }
+]
+```
 
 If you have multiple subscriptions, use below command to set the particular subscription to default which you used for your service principal in above steps.
 
-	azure account set <subscription-id>
+	azure account set <SUBSCRIPTION-ID>
 
 Example:
 
@@ -122,7 +146,7 @@ Create an AAD application with your information.
 
 •	name: The display name for the application
 
-•	password: The value for the password credential associated with the application that will be valid for one year by default. This is your **client secret**.
+•	password: The value for the password credential associated with the application that will be valid for one year by default. This is your **CLIENT-SECRET**.
 
 •	home-page: The URL to the application homepage. You can use a faked URL here.
 
@@ -132,7 +156,7 @@ Example:
 
 	azure ad app create --name "Service Principal for BOSH" --password "password" --home-page "http://BOSHAzureCPI" --identifier-uris "http://BOSHAzureCPI"
 
-Below is a sample output you will get from the command, the "Application Id" is your **client id** you need to create the Service Principal.
+Below is a sample output you will get from the command, the "Application Id" is your **CLIENT-ID** you need to create the Service Principal.
 
 	info:    Executing command ad app create
 	+ Creating application Service Principal for BOSH
@@ -155,7 +179,7 @@ Below is a sample output you will get from the command, the "Application Id" is 
 
 ### 1.3.3	Create a Service Principal ###
 
-	azure ad sp create <client-id>
+	azure ad sp create <CLIENT-ID>
 
 Example:
 
@@ -243,7 +267,7 @@ Notes:
 
 The Azure template pre-creates the deployment manifest file bosh.yml in your home directory.
 
-Update the template bosh.yml to replace the **TENANT-ID**, **CLIENT-ID**, **CLIENT-SECRET** properties. The **TENANT-ID**, **CLIENT-ID**, **CLIENT-SECRET** are created in step 2.2 Creating a Service Principal above.
+Update the template bosh.yml to replace the **TENANT-ID**, **CLIENT-ID**, **CLIENT-SECRET** properties. The **TENANT-ID**, **CLIENT-ID**, **CLIENT-SECRET** are created in step 1.3 Creating a Service Principal above.
 
 
 ### 3.1.2	Deploy ###
@@ -290,7 +314,7 @@ Sample output:
 	Deployment
  	not set
 
-2)	 You can reference the example file [cf_212.yml](http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties.
+2)	 You can reference the example file [cf_212.yml](http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties. The BOSH-DIRECTOR-UUID, VNET-NAME and SUBNET-NAME are created in step 2. The RESERVED-IP can be found in the row "cf-ip" in /home/YOUR-USERNAME/settings. To replace the SSL-CERT-AND-KEY, you need to concatenate the cert in /home/YOUR-USERNAME/bosh.yml and the key in /home/YOUR-USERNAME/bosh.
 
 3)	 If you set enableDNSOnDevbox true, the dev box can serve as a DNS and it has been pre-configured in cf_212.yml. **You must reboot your dev box before deploying cloud foundry**.
 
