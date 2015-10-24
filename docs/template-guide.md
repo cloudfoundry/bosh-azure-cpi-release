@@ -314,7 +314,7 @@ Sample output:
 	Deployment
  	not set
 
-2)	 You can reference the example file [cf_212.yml](http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties. The BOSH-DIRECTOR-UUID, VNET-NAME and SUBNET-NAME are created in step 2. The RESERVED-IP can be gotten from the row "cf-ip" in /home/YOUR-USERNAME/settings. To replace the SSL-CERT-AND-KEY, you need to concatenate the cert in /home/YOUR-USERNAME/bosh.yml and the key in /home/YOUR-USERNAME/bosh.
+2)	 You can reference the example file [cf_212.yml](http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties. The BOSH-DIRECTOR-UUID, VNET-NAME and SUBNET-NAME are created in step 2. The RESERVED-IP can be found in the row "cf-ip" in /home/YOUR-USERNAME/settings. To replace the SSL-CERT-AND-KEY, you need to concatenate the cert in /home/YOUR-USERNAME/bosh.yml and the key in /home/YOUR-USERNAME/bosh.
 
 3)	 If you set enableDNSOnDevbox true, the dev box can serve as a DNS and it has been pre-configured in cf_212.yml. **You must reboot your dev box before deploying cloud foundry**.
 
