@@ -87,7 +87,9 @@ First check whether you have multiple subscriptions:
 
 Below is a sample output from the command.
 
-You can get **SUBSCRIPTION-ID** from the row "id" in the result. You can get **TENANT-ID** from the row "tenantId" in the result. Please note **if your tenant id is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See section 1.2.2 Configure Azure CLI on how to fix this**.
+You can get **SUBSCRIPTION-ID** from the row "id" in the result.
+
+You can get **TENANT-ID** from the row "tenantId" in the result. Please note **if your tenant id is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See section 1.2.2 Configure Azure CLI on how to fix this**.
 
 Sample output:
 ```
