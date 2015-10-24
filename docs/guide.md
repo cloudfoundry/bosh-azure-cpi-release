@@ -686,7 +686,7 @@ Sample output:
     Deployment
      not set
 
-2)	 You can reference the example file (http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties The BOSH-DIRECTOR-UUID, VNET-NAME and SUBNET-NAME are created in step 2. The RESERVED-IP can be got from the row "cf-ip" in /home/YOUR-USERNAME/settings. To replace the SSL-CERT-AND-KEY, you need to link the cert in /home/YOUR-USERNAME/bosh.yml and the key in /home/YOUR-USERNAME/bosh.
+2)	 You can reference the example file [cf_212.yml](http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties The BOSH-DIRECTOR-UUID, VNET-NAME and SUBNET-NAME are created in step 2. The RESERVED-IP can be got from the row "cf-ip" in /home/YOUR-USERNAME/settings. To replace the SSL-CERT-AND-KEY, you need to concatenate the cert in /home/YOUR-USERNAME/bosh.yml and the key in /home/YOUR-USERNAME/bosh.
 
 3)	 If you want to use your domain name, you can replace all ‘**cf.azurelovecf.com**’ in the example file. And please replace **10.0.0.100** with the IP address of your DNS server.
 
