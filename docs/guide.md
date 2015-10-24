@@ -236,7 +236,7 @@ First check whether you have multiple subscriptions:
 
 Below is a sample output from the command.
 
-You can get **SUBSCRIPTION-ID** from the column "Id" in the result.
+You can get **SUBSCRIPTION-ID** from the row "id" in the result.
 
 You can get **TENANT-ID** from the row "tenantId" in the result. Please note **if your tenant id is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See section 2.1.2 Configure Azure CLI on how to fix this**.
 
@@ -245,9 +245,9 @@ Sample output:
 [
   {
     "id": "4be8920b-2978-43d7-ab14-04d8549c1d05",
-    "name": "Sample Subscription1",
+    "name": "Sample Subscription",
     "user": {
-      "name": "Sample Account1",
+      "name": "Sample Account",
       "type": "user"
     },
     "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
@@ -258,9 +258,9 @@ Sample output:
   },
   {
     "id": "c4528d9e-c99a-48bb-b12d-fde2176a43b8",
-    "name": "Sample Subscription2",
+    "name": "Sample Subscription1",
     "user": {
-      "name": "Sample Account2",
+      "name": "Sample Account1",
       "type": "user"
     },
     "tenantId": "72f988bf-86f1-41af-91ab-2d7cd011db47",
@@ -295,7 +295,7 @@ Create an AAD application with your information.
 
 •	name: The display name for the application
 
-•	password: The value for the password credential associated with the application that will be valid for one year by default. This is your **client secret**.
+•	password: The value for the password credential associated with the application that will be valid for one year by default. This is your **CLIENT-SECRET**.
 
 •	home-page: The URL to the application homepage. You can use a faked URL here.
 
@@ -307,7 +307,7 @@ Example:
 	azure ad app create --name "Service Principal for BOSH" --password "password" --home-page "http://BOSHAzureCPI" --identifier-uris "http://BOSHAzureCPI""
 
 
-Below is a sample output you will get from the command, the "Application Id" is your **client id** you need to create the Service Principal.
+Below is a sample output you will get from the command, the "Application Id" is your **CLIENT-ID** you need to create the Service Principal.
 
 
 	info:    Executing command ad app create
@@ -330,7 +330,7 @@ Below is a sample output you will get from the command, the "Application Id" is 
 
 ### 2.2.3	Create a Service Principal ###
 
-	azure ad sp create <client-id>
+	azure ad sp create <CLIENT-ID>
 
 Example:
 
@@ -686,7 +686,7 @@ Sample output:
     Deployment
      not set
 
-2)	 You can reference the example file [cf_212.yml](http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties.
+2)	 You can reference the example file (http://cloudfoundry.blob.core.windows.net/misc/cf_212.yml) to replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties The BOSH-DIRECTOR-UUID, VNET-NAME and SUBNET-NAME are created in step 2. The RESERVED-IP can be got from the row "cf-ip" in /home/YOUR-USERNAME/settings. To replace the SSL-CERT-AND-KEY, you need to link the cert in /home/YOUR-USERNAME/bosh.yml and the key in /home/YOUR-USERNAME/bosh.
 
 3)	 If you want to use your domain name, you can replace all ‘**cf.azurelovecf.com**’ in the example file. And please replace **10.0.0.100** with the IP address of your DNS server.
 
