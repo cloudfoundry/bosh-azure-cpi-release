@@ -1,0 +1,20 @@
+---
+platform: linux
+image: docker:///sedouard/azure-cpi-release
+inputs:
+- name: bosh-cpi-dev-artifacts
+- name: bosh-cpi-release
+- name: bosh
+run:
+  path: bosh-cpi-release/ci/tasks/run-lifecycle.sh
+params:
+  AZURE_CLIENT_ID:			replace-me
+  AZURE_CLIENT_SECRET:		replace-me
+  AZURE_TENANT_ID:			replace-me
+  AZURE_GROUP_NAME:			replace-me
+  AZURE_STORAGE_ACCOUNT_NAME:	replace-me
+  AZURE_SUBSCRIPTION_ID:	replace-me
+  BAT_STEMCELL_URL:			replace-me
+  ssh_certificate:			replace-me
+  AZURE_VNET_NAME:          replace-me
+  AZURE_BOSH_SUBNET_NAME:   replace-me

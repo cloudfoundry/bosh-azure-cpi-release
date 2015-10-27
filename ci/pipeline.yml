@@ -6,6 +6,7 @@ groups:
       - azure-ubuntu
       - deploy-director
       - bats-ubuntu
+      - lifecycle
       - promote-candidate
 jobs:
 - name: build-candidate
@@ -134,7 +135,29 @@ jobs:
         BAT_NETWORK_RESERVED_RANGE: {{BAT_NETWORK_RESERVED_RANGE}}
         BAT_NETWORK_GATEWAY:        {{BAT_NETWORK_GATEWAY}}
         BAT_NETWORK_STATIC_RANGE:   {{BAT_NETWORK_STATIC_RANGE}}
-        AZURE_CF_SUBNET_NAME: {{azure_cf_subnet_name}}
+        AZURE_CF_SUBNET_NAME:       {{azure_cf_subnet_name}}
+- name: lifecycle
+  serial: true
+  plan:
+  - aggregate:
+    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+    - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false, get: bosh}
+
+  - task: test
+    file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
+    config:
+      params:
+        BAT_STEMCELL_URL:           {{BAT_STEMCELL_URL_UBUNTU}}
+        ssh_certificate:            {{bosh_public_cert}}
+        AZURE_CLIENT_ID:            {{azure_client_id}}
+        AZURE_CLIENT_SECRET:        {{azure_client_secret}}
+        AZURE_TENANT_ID:            {{azure_tenant_id}}
+        AZURE_GROUP_NAME:           {{azure_group_name}}
+        AZURE_STORAGE_ACCOUNT_NAME: {{azure_storage_account_name}}
+        AZURE_SUBSCRIPTION_ID:      {{azure_subscription_id}}
+        AZURE_VNET_NAME:            {{azure_vnet_name}}
+        AZURE_BOSH_SUBNET_NAME:     {{azure_bosh_subnet_name}}
 
 resources:
 - name: bosh-cpi-release-in
