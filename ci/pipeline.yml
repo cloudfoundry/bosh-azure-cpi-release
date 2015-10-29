@@ -4,9 +4,9 @@ groups:
     jobs:
       - build-candidate
       - azure-ubuntu
+      - lifecycle
       - deploy-director
       - bats-ubuntu
-      - lifecycle
       - promote-candidate
 jobs:
 - name: build-candidate
@@ -53,14 +53,38 @@ jobs:
       - put: azure-exports
         params: {from: azure-provision/azure-exports.sh$}
 
-- name: deploy-director
-  serial: true # find out serial vs. serial_groups and which previous job should trigger this job
+- name: lifecycle
+  serial: true
   plan:
   - aggregate:
-    - {trigger: false,  passed: [build-candidate],  get: bosh-cpi-dev-artifacts, resource: bosh-cpi-dev-artifacts}
+    - {trigger: false,  passed: [build-candidate],  get: bosh-cpi-dev-artifacts}
+    - {trigger: false,  passed: [build-candidate],  get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false,                              get: bosh}
+    - {trigger: true, passed: [azure-ubuntu],       get: azure-exports}
+
+  - task: test
+    file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
+    config:
+      params:
+        BAT_STEMCELL_URL:           {{BAT_STEMCELL_URL_UBUNTU}}
+        ssh_certificate:            {{bosh_public_cert}}
+        AZURE_CLIENT_ID:            {{azure_client_id}}
+        AZURE_CLIENT_SECRET:        {{azure_client_secret}}
+        AZURE_TENANT_ID:            {{azure_tenant_id}}
+        AZURE_GROUP_NAME:           {{azure_group_name}}
+        AZURE_STORAGE_ACCOUNT_NAME: {{azure_storage_account_name}}
+        AZURE_SUBSCRIPTION_ID:      {{azure_subscription_id}}
+        AZURE_VNET_NAME:            {{azure_vnet_name}}
+        AZURE_BOSH_SUBNET_NAME:     {{azure_bosh_subnet_name}}
+
+- name: deploy-director
+  serial: true
+  plan:
+  - aggregate:
+    - {trigger: true, passed: [lifecycle], get: bosh-cpi-dev-artifacts}
     - {trigger: false, passed: [build-candidate],  get: version-semver, resource: version-semver}
-    - {trigger: true,  passed: [azure-ubuntu],     get: azure-exports, resource: azure-exports}
-    - {trigger: false,  get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false, passed: [azure-ubuntu],     get: azure-exports, resource: azure-exports}
+    - {trigger: false,                             get: bosh-cpi-release, resource: bosh-cpi-release-in}
     - {trigger: false,                             get: director-state-file, resource: ubuntu-director-state-file}
     - {trigger: false,                             get: bosh-init}
     - {trigger: false,                             get: bosh-release}
@@ -88,32 +112,12 @@ jobs:
       - put: ubuntu-director-state-file
         params: {from: deploy/director-state-file/ubuntu-director-manifest-state.json}
 
-- name: promote-candidate
-  serial: true
-  plan:
-  - aggregate:
-    # TODO: After the bosh-init and bats tasks are implemented, we should
-    # be able to add
-    - {trigger: true, passed: [build-candidate], passed: [bats-ubuntu], get: bosh-cpi-dev-artifacts}
-    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
-
-  - task: promote
-    file: bosh-cpi-release/ci/tasks/promote-candidate.yml
-    config:
-      params:
-        aws_access_key_id: {{s3_azure_cpi_access_key}}
-        aws_secret_access_key: {{s3_azure_cpi_secret_key}}
-
-  - put: bosh-cpi-release
-    resource: bosh-cpi-release-out
-    params: {repository: promote/bosh-cpi-release, rebase: true}
-
 - name: bats-ubuntu
   plan:
   #  
   # passed: 
   - aggregate:
-    - {trigger: true, passed: [build-candidate], passed: [deploy-director], get: bosh-cpi-dev-artifacts}
+    - {trigger: true, passed: [deploy-director], get: bosh-cpi-dev-artifacts}
     - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
     - {trigger: false, passed: [azure-ubuntu], get: azure-exports, resource: azure-exports}
     - {trigger: false, get: bosh}
@@ -136,28 +140,26 @@ jobs:
         BAT_NETWORK_GATEWAY:        {{BAT_NETWORK_GATEWAY}}
         BAT_NETWORK_STATIC_RANGE:   {{BAT_NETWORK_STATIC_RANGE}}
         AZURE_CF_SUBNET_NAME:       {{azure_cf_subnet_name}}
-- name: lifecycle
+
+- name: promote-candidate
   serial: true
   plan:
   - aggregate:
-    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-cpi-release-in}
-    - {trigger: false, get: bosh}
+    # TODO: After the bosh-init and bats tasks are implemented, we should
+    # be able to add
+    - {trigger: true, passed: [bats-ubuntu], get: bosh-cpi-dev-artifacts}
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
 
-  - task: test
-    file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
+  - task: promote
+    file: bosh-cpi-release/ci/tasks/promote-candidate.yml
     config:
       params:
-        BAT_STEMCELL_URL:           {{BAT_STEMCELL_URL_UBUNTU}}
-        ssh_certificate:            {{bosh_public_cert}}
-        AZURE_CLIENT_ID:            {{azure_client_id}}
-        AZURE_CLIENT_SECRET:        {{azure_client_secret}}
-        AZURE_TENANT_ID:            {{azure_tenant_id}}
-        AZURE_GROUP_NAME:           {{azure_group_name}}
-        AZURE_STORAGE_ACCOUNT_NAME: {{azure_storage_account_name}}
-        AZURE_SUBSCRIPTION_ID:      {{azure_subscription_id}}
-        AZURE_VNET_NAME:            {{azure_vnet_name}}
-        AZURE_BOSH_SUBNET_NAME:     {{azure_bosh_subnet_name}}
+        aws_access_key_id: {{s3_azure_cpi_access_key}}
+        aws_secret_access_key: {{s3_azure_cpi_secret_key}}
+
+  - put: bosh-cpi-release
+    resource: bosh-cpi-release-out
+    params: {repository: promote/bosh-cpi-release, rebase: true}
 
 resources:
 - name: bosh-cpi-release-in
