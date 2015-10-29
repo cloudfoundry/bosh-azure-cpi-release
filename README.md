@@ -1,4 +1,4 @@
-# BOSH Azure CPI Release
+# BOSH Azure CPI Release [beta]
 
 * Documentation: [bosh.io/docs](https://bosh.io/docs)
 * IRC: [`#bosh` on freenode](https://webchat.freenode.net/?channels=bosh)
