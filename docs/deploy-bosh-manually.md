@@ -72,9 +72,9 @@ data:
 info:    group show command OK
 ```
 
-## 1.3 Setup an Azure Storage Account
+## 1.3 Setup a default Storage Account
 
-### 1.3.1 Create an Azure Storage Account
+### 1.3.1 Create a default Storage Account
 
 ```
 azure resource create <resource-group-name> <storage-account-name> Microsoft.Storage/storageAccounts <location> 2015-05-01-preview -p "{\"accountType\":\"<account-type>\"}"
@@ -136,7 +136,26 @@ data:    Creation Time:
 info:    storage account show command OK
 ```
 
-### 1.3.2 Create Containers
+### 1.3.2 List storage account keys
+
+```
+azure storage account keys list -g <resource-group-name> <storage-account-name>
+```
+
+Sample Output:
+
+```
+info:    Executing command storage account keys list
+Resource group name: bosh-res-group
++ Getting storage account keys
+data:    Primary: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+data:    Secondary: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+info:    storage account keys list command OK
+```
+
+You can get the primary key as your `storage-account-key`.
+
+### 1.3.3 Create Containers
 
 You need to create the following containers in the storage account:
 
@@ -144,51 +163,58 @@ You need to create the following containers in the storage account:
   * Stores the OS and data disks for BOSH VMs
 * stemcell
   * Stores the stemcells
-  * The permission is set to Public read access for blobs only
+  * To support multiple storage accounts, you need to set the permission of the container `stemcell` as `Public read access for blobs only`
 
-1. List storage account keys
+```
+azure storage container create -a <storage-account-name> -k <storage-account-key> bosh
+azure storage container create -a <storage-account-name> -k <storage-account-key> -p Blob stemcell
+```
 
-  ```
-  azure storage account keys list -g <resource-group-name> <storage-account-name>
-  ```
+You can list the containers with the following command:
 
-  Sample Output:
+```
+azure storage container list -a <storage-account-name> -k <storage-account-key>
+```
 
-  ```
-  info:    Executing command storage account keys list
-  Resource group name: bosh-res-group
-  + Getting storage account keys
-  data:    Primary: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  data:    Secondary: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-  info:    storage account keys list command OK
-  ```
+Sample Output:
 
-  You can get the primary key as your `storage-account-key`.
+```
+info:    Executing command storage container list
++ Getting storage containers
+data:    Name      Public-Access  Last-Modified
+data:    --------  -------------  -----------------------------
+data:    bosh      Off            Mon, 02 Nov 2015 01:52:33 GMT
+data:    stemcell  Blob           Mon, 02 Nov 2015 02:02:59 GMT
+info:    storage container list command OK
+```
 
-2. Create containers
+### 1.3.4 Create Tables
 
-  ```
-  azure storage container create -a <storage-account-name> -k <storage-account-key> bosh
-  azure storage container create -a <storage-account-name> -k <storage-account-key> -p Blob stemcell
-  ```
+To support multiple storage accounts, you need to create the following tables in the default storage account:
 
-  You can list the containers with the following command:
+* stemcells
+  * Stores the metadata of stemcells in multiple storage accounts
 
-  ```
-  azure storage container list -a <storage-account-name> -k <storage-account-key>
-  ```
+```
+azure storage table create -a <storage-account-name> -k <storage-account-key> stemcells
+```
 
-  Sample Output:
+You can list the tables with the following command:
 
-  ```
-  info:    Executing command storage container list
-  + Getting storage containers
-  data:    Name      Public-Access  Last-Modified
-  data:    --------  -------------  -----------------------------
-  data:    bosh      Off            Mon, 02 Nov 2015 01:52:33 GMT
-  data:    stemcell  Blob           Mon, 02 Nov 2015 02:02:59 GMT
-  info:    storage container list command OK
-  ```
+```
+azure storage table list -a <storage-account-name> -k <storage-account-key>
+```
+
+Sample Output:
+
+```
+info:    Executing command storage table list
++ Getting storage tables
+data:    Name
+data:    ---------
+data:    stemcells
+info:    storage table list command OK
+```
 
 ## 1.4 Create a Public IP for Cloud Foundry
 
