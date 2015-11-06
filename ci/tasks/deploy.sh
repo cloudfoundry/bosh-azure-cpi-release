@@ -19,8 +19,6 @@ check_param ssh_certificate
 check_param DIRECTOR
 check_param AZURE_STORAGE_ACCESS_KEY
 check_param BAT_NETWORK_GATEWAY
-check_param STEMCELL_URL
-check_param STEMCELL_SHA
 
 echo "Checking params from previous steps..."
 echo "show directory ip..."
@@ -31,28 +29,26 @@ chruby 2.1.2
 
 semver=`cat version-semver/number`
 cpi_release_name=bosh-azure-cpi
-working_dir=$PWD
-manifest_dir="${working_dir}/director-state-file"
-manifest_filename=${manifest_dir}/${base_os}-director-manifest.yml
+deployment_dir="${PWD}/director-state-file"
+manifest_filename=${base_os}-director-manifest.yml
 
-mkdir -p $manifest_dir/keys
-echo "$private_key_data" > $manifest_dir/keys/bats.pem
+mkdir -p $deployment_dir
+echo "$private_key_data" > $deployment_dir/bats.pem
 
 eval $(ssh-agent)
-chmod go-r $manifest_dir/keys/bats.pem
-ssh-add $manifest_dir/keys/bats.pem
+chmod go-r $deployment_dir/bats.pem
+ssh-add $deployment_dir/bats.pem
 
 #create director manifest as heredoc
-cat > "${manifest_filename}"<<EOF
+cat > "${deployment_dir}/${manifest_filename}"<<EOF
 ---
 name: bosh
 
 releases:
 - name: bosh
-  url: http://cloudfoundry.blob.core.windows.net/azureci/bosh-214+dev.1.tgz
-  sha1: c28477c7e08cce06add980bed0ab1ab113a7c825
+  url: file://bosh-release.tgz
 - name: bosh-azure-cpi
-  url: file://tmp/bosh-azure-cpi.tgz
+  url: file://bosh-azure-cpi.tgz
 
 networks:
 - name: public
@@ -82,8 +78,7 @@ resource_pools:
 - name: vms
   network: private
   stemcell:
-    url: $STEMCELL_URL
-    sha1: $STEMCELL_SHA
+    url: file://stemcell.tgz
   cloud_properties:
     instance_type: Standard_D1
 
@@ -207,7 +202,7 @@ cloud_provider:
     #host: 10.0.0.10
     port: 22
     user: vcap
-    private_key: $manifest_dir/keys/bats.pem
+    private_key: $deployment_dir/bats.pem
 
   # Tells bosh-init how to contact remote agent
   mbus: https://mbus-user:mbus-password@$DIRECTOR:6868
@@ -227,25 +222,30 @@ EOF
 
 echo "normalizing paths to match values referenced in $manifest_filename"
 # manifest paths are now relative so the tmp inputs need to be updated
-mkdir ${manifest_dir}/../tmp
-echo copying cpi...
-echo cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${manifest_dir}/../tmp/${cpi_release_name}.tgz
-cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${manifest_dir}/../tmp/${cpi_release_name}.tgz
-#cp ./bosh-release/release.tgz ${manifest_dir}/tmp/bosh-release.tgz ##TODO
-#cp ./stemcell/stemcell.tgz ${manifest_dir}/tmp/stemcell.tgz ##TODO
+echo cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${deployment_dir}/${cpi_release_name}.tgz
+cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${deployment_dir}/${cpi_release_name}.tgz
+echo cp ./stemcell/stemcell.tgz ${deployment_dir}/stemcell.tgz
+cp ./stemcell/stemcell.tgz ${deployment_dir}/stemcell.tgz
+echo cp ./bosh-release/release.tgz ${deployment_dir}/bosh-release.tgz
+cp ./bosh-release/release.tgz ${deployment_dir}/bosh-release.tgz
 
-initexe="$PWD/bosh-init/bosh-init-linux-amd64"
+initver=$(cat bosh-init/version)
+initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
 chmod +x $initexe
 
 echo "using bosh-init CLI version..."
 $initexe version
 
-cat $manifest_filename
-echo "deleting existing BOSH Director VM..."
-$initexe delete $manifest_filename
-#TODO: debug purpose, remove after this is official
-export BOSH_INIT_LOG_LEVEL='Debug'
-export BOSH_INIT_LOG_PATH='./run.log'
-echo "deploying BOSH..."
+pushd ${deployment_dir}
+  cat $manifest_filename
 
-$initexe deploy $manifest_filename
+  echo "deleting existing BOSH Director VM..."
+  $initexe delete $manifest_filename
+
+  #TODO: debug purpose, remove after this is official
+  export BOSH_INIT_LOG_LEVEL='Debug'
+  export BOSH_INIT_LOG_PATH='./run.log'
+  echo "deploying BOSH..."
+
+  $initexe deploy $manifest_filename
+popd

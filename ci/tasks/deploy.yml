@@ -9,6 +9,7 @@ inputs:
   - name: bosh-init              # --- bosh-init executable to do deploy
   - name: bosh-release           # -\
   - name: azure-exports          # -/
+  - name: stemcell
 run:
   path: bosh-cpi-release/ci/tasks/deploy.sh
 params:
@@ -24,5 +25,3 @@ params:
   BAT_NETWORK_GATEWAY:        replace-me
   private_key_data:           replace-me
   ssh_certificate:            replace-me
-  STEMCELL_URL:               replace-me
-  STEMCELL_SHA:               replace-me

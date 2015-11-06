@@ -8,7 +8,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box = "ubuntu/trusty64"
 
   config.vm.provider(:virtualbox) do |v|
-    v.name = 'bosh-aws-cpi-release-docker-builder'
+    v.name = 'bosh-azure-cpi-release-docker-builder'
     v.customize ['modifyvm', :id, '--cpus', '4']
     v.customize ['modifyvm', :id, '--memory', '4096']
   end
@@ -20,5 +20,5 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   config.vm.provision('docker')
-  config.vm.synced_folder "../../", "/vagrant/bosh.aws-cpi-release/cpi-release"
+  config.vm.synced_folder "../../", "/vagrant/bosh.azure-cpi-release/cpi-release"
 end
