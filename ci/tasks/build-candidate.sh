@@ -11,6 +11,12 @@ mkdir out
 
 cd bosh-cpi-release
 
+echo "running unit tests"
+pushd src/bosh_azure_cpi
+  bundle install
+  bundle exec rspec spec/unit/*
+popd
+
 echo "using bosh CLI version..."
 bosh version
 
