@@ -14,4 +14,5 @@ This document describes how to deploy [BOSH](http://bosh.io/) and [Cloud Foundry
   * [Deploy BOSH using ARM templates (**RECOMMENDED**)](./deploy-bosh-using-arm-templates.md)
   * [Deploy BOSH manually](./deploy-bosh-manually.md)
 2. [Deploy Cloud Foundry](./deploy-cloudfoundry.md)
-3. [Known issues](./known-issues.md)
+3. [Migration from Preview 2](./migration.md)
+4. [Known issues](./known-issues.md)
