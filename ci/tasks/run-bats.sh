@@ -212,64 +212,8 @@ properties:
 EOF
 echo Using Deployment Spec:
 cat $BAT_DEPLOYMENT_SPEC
-cd bosh
-ls
-# THIS WILL GO AWAY AFTER BATS CODE IS MERGED
-rm .gitmodules
-cat > ".gitmodules" <<EOF
-[submodule "go/src/github.com/cloudfoundry/bosh-agent"]
-      path = go/src/github.com/cloudfoundry/bosh-agent
-      url = https://github.com/AbelHu/bosh-agent.git
-      branch = abelhu
-[submodule "spec/assets/uaa"]
-      path = spec/assets/uaa
-      url = https://github.com/cloudfoundry/uaa.git
-[submodule "bat"]
-      path = bat
-      url = https://github.com/AbelHu/bosh-acceptance-tests.git
-      branch = abelhu
-[submodule "go/src/github.com/cloudfoundry/bosh-davcli"]
-      path = go/src/github.com/cloudfoundry/bosh-davcli
-      url = https://github.com/cloudfoundry/bosh-davcli.git
-EOF
-pwd
-echo cat .gitmodules
-cat .gitmodules
-rm .git/config
-cat > ".git/config" <<EOF
-[core]
-  repositoryformatversion = 0
-  filemode = true
-  bare = false
-  logallrefupdates = true
-[remote "origin"]
-  url = https://github.com/AbelHu/bosh
-  fetch = +refs/heads/*:refs/remotes/origin/*
-[submodule "bat"]
-  url = https://github.com/AbelHu/bosh-acceptance-tests.git
-  branch = master
-[submodule "go/src/github.com/cloudfoundry/bosh-agent"]
-  url = https://github.com/AbelHu/bosh-agent.git
-  branch = abelhu
-[submodule "spec/assets/uaa"]
-  url = https://github.com/cloudfoundry/uaa.git
-EOF
-cd bat
-git config remote.origin.url https://github.com/AbelHu/bosh-acceptance-tests.git
-cd ..
-pushd go/src/github.com/cloudfoundry/bosh-agent
-git config remote.origin.url https://github.com/AbelHu/bosh-agent.git
-popd
-echo Current Directory:
-echo git submodule update --init
-git submodule update --init
-echo git submodule update --remote
-git submodule update --remote
-#gem uninstall mini_portile -v '0.7.0.rc2' --ignore-dependencies
-#gem install mini_portile -v '0.6.2'
-echo bundle install
+
+cd bats
+./write_gemfile
 bundle install
-echo bundle exec rake bat:env
-bundle exec rake bat:env
-echo bundle exec rake bat
-bundle exec rake bat
+bundle exec rspec spec

@@ -15,8 +15,8 @@ cat > config/private.yml << EOF
 ---
 blobstore:
   s3:
-    access_key_id: $aws_access_key_id
-    secret_access_key: $aws_secret_access_key
+    access_key_id: $s3_access_key_id
+    secret_access_key: $s3_secret_access_key
 EOF
 set -x
 

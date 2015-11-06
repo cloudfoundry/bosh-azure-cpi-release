@@ -30,10 +30,7 @@ export BOSH_AZURE_SUBNET_NAME=${AZURE_BOSH_SUBNET_NAME}
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
-echo downloading $BAT_STEMCELL_URL
-wget -O /tmp/stemcell-ubuntu.tgz $BAT_STEMCELL_URL
-echo download completed
-export BOSH_AZURE_STEMCELL_FILE="/tmp/stemcell-ubuntu.tgz"
+export BOSH_AZURE_STEMCELL_FILE="${PWD}/stemcell/stemcell.tgz"
 echo $BOSH_AZURE_STEMCELL_FILE
 
 echo write cert to file
