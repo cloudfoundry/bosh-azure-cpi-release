@@ -416,6 +416,7 @@ echo "Finish"
 
 # 2 Deploy BOSH
 
+<a name="configure_bosh_yml"></a>
 ## 2.1 Configure
 
 1. Create a Deployment Manifest
