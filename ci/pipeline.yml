@@ -198,7 +198,7 @@ resources:
 - name: bats
   type: git
   source:
-    uri: https://github.com/AbelHu/bosh-acceptance-tests.git
+    uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
     branch: master
 
 - name: azure-ubuntu-stemcell
