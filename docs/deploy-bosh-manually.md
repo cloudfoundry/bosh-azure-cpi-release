@@ -38,7 +38,7 @@ azure group create <resource-group-name> <location>
 Example:
 
 ```
-azure group create bosh-res-group "East US"
+azure group create bosh-res-group "East Asia"
 ```
 
 You can check whether the resource group is ready for next steps with the following command. You should not proceed to next step until you see "**Provisioning State**" becomes "**Succeeded**" in your output.
@@ -61,7 +61,7 @@ info:    Executing command group show
 + Listing resources for the group
 data:    Id:                  /subscriptions/87654321-1234-5678-1234-678912345678/resourceGroups/bosh-res-group
 data:    Name:                bosh-res-group
-data:    Location:            eastus
+data:    Location:            eastasia
 data:    Provisioning State:  Succeeded
 data:    Tags: null
 data:    Resources:  []
@@ -77,7 +77,7 @@ info:    group show command OK
 ### 1.3.1 Create a default Storage Account
 
 ```
-azure resource create <resource-group-name> <storage-account-name> Microsoft.Storage/storageAccounts <location> 2015-05-01-preview -p "{\"accountType\":\"<account-type>\"}"
+azure storage account create -l <location> --type <account-type> -g <resource-group-name> <storage-account-name>
 ```
 
 * storage-account-name:
@@ -91,48 +91,51 @@ azure resource create <resource-group-name> <storage-account-name> Microsoft.Sto
 
   Possible values are:
 
-  * Standard_LRS   - locally-redundant storage
-  * Standard_ZRS   - zone-redundant storage
-  * Standard_GRS   - geo-redundant storage
-  * Standard_RAGRS - read access geo-redundant storage
-  * Premium_LRS    - premium locally-redundant storage
+  * LRS   - locally-redundant storage
+  * ZRS   - zone-redundant storage
+  * GRS   - geo-redundant storage
+  * RAGRS - read access geo-redundant storage
+  * PLRS  - premium locally-redundant storage
 
   **NOTE:**
 
-  **Standard_ZRS** account cannot be changed to another account type later, and the other account types cannot be changed to **Standard_ZRS**. The same goes for **Premium_LRS** accounts. You can click [**HERE**](http://azure.microsoft.com/en-us/pricing/details/storage/) to learn more about the type of Azure storage account.
+  **ZRS** account cannot be changed to another account type later, and the other account types cannot be changed to **ZRS**. The same goes for **PLRS** accounts. You can click [**HERE**](http://azure.microsoft.com/en-us/pricing/details/storage/) to learn more about the type of Azure storage account.
 
 Example:
 
 ```
-azure resource create bosh-res-group xxxxx Microsoft.Storage/storageAccounts "East US" 2015-05-01-preview -p "{\"accountType\":\"Standard_GRS\"}"
+azure storage account create -l "East Asia" --type GRS -g bosh-res-group xxxxx
 ```
 
 **NOTE:** Even if you see error in the response of creating the storage account, you still can check whether the storage account is created successfully under your resource group with the following command.
 
 ```
-azure storage account show <storage-account-name> -g <resource-group-name>
+azure storage account show -g <resource-group-name> <storage-account-name>
 ```
 
 Example:
 
 ```
-azure storage account show xxxxx -g bosh-res-group
+azure storage account show -g bosh-res-group xxxxx
 ```
 
 Sample Output:
 
 ```
 + Getting storage account
-data:    Name:
-data:    Url:
-data:    Type: Standard_LRS
-data:    Resource Group:
-data:    Location: East US
-data:    Provisioning State: Creating
-data:    Primary Location:
-data:    Primary Status:
-data:    Secondary Location:
-data:    Creation Time:
+data:    Name: xxxxx
+data:    Url: /subscriptions/87654321-1234-5678-1234-678912345678/resourceGroups/bosh-res-group/providers/Microsoft.Storage/storageAccounts/xxxxx
+data:    Type: Standard_GRS
+data:    Resource Group: bosh-res-group
+data:    Location: East Asia
+data:    Provisioning State: Succeeded
+data:    Primary Location: East Asia
+data:    Primary Status: available
+data:    Secondary Location: Southeast Asia
+data:    Creation Time: 2015-11-02T05:35:27.0572370Z
+data:    Primary Endpoints: blob https://xxxxx.blob.core.windows.net/
+data:    Primary Endpoints: queue https://xxxxx.queue.core.windows.net/
+data:    Primary Endpoints: table https://xxxxx.table.core.windows.net/
 info:    storage account show command OK
 ```
 
@@ -221,155 +224,126 @@ info:    storage table list command OK
 ### 1.4.1 Create the Public IP
 
 ```
-azure resource create <resource-group-name> <public-ip-name> Microsoft.Network/publicIPAddresses <location> 2015-05-01-preview -p "{\"publicIPAllocationMethod\":\"static\"}"
+azure network public-ip create -g <resource-group-name> -l <location> -a Static -n <public-ip-name>
 ```
 
 Example:
 
 ```
-azure resource create bosh-res-group public-ip-for-cf Microsoft.Network/publicIPAddresses "East US" 2015-05-01-preview -p "{\"publicIPAllocationMethod\":\"static\"}"
+azure network public-ip create -g bosh-res-group -l "East Asia" -a Static -n public-ip-for-cf
 ```
 
 <a name="get_public_ip"></a>
 ### 1.4.2 Get the Public IP Address
 
 ```
-azure resource show <resource-group-name> <public-ip-name> Microsoft.Network/publicIPAddresses 2015-05-01-preview
+azure network public-ip show -g <resource-group-name> -n <public-ip-name>
 ```
 
 Example:
 
 ```
-azure resource show bosh-res-group public-ip-for-cf Microsoft.Network/publicIPAddresses 2015-05-01-preview
+azure network public-ip show -g bosh-res-group -n public-ip-for-cf
 ```
 
 Sample Output:
 
 ```
-info:    Executing command resource show
-+ Getting resource bosh
-data:    Id:        /subscriptions/87654321-1234-5678-1234-678912345678/resourceGroups/bosh-res-group/providers/Microsoft.Network/publicIPAddresses/public-ip-for-cf
-data:    Name:      public-ip-for-cf
-data:    Type:      Microsoft.Network/publicIPAddresses
-data:    Parent:
-data:    Location:  eastus
-data:    Tags:
-data:
-data:    Properties:
-data:    Property provisioningState Succeeded
-data:    Property resourceGuid 6d08437a-7170-431e-985a-1860045f6fc9
-data:    Property ipAddress 12.34.56.78
-data:    Property publicIPAllocationMethod Static
-data:    Property idleTimeoutInMinutes 4
-data:
-data:    Permissions:
-data:      Actions: *
-data:      NotActions: Microsoft.Authorization/*/Write,Microsoft.Authorization/*/Delete
-info:    resource show command OK
+info:    Executing command network public-ip show
++ Looking up the public ip "public-ip-for-cf"
+data:    Id                              : /subscriptions/87654321-1234-5678-1234-678912345678/resourceGroups/bosh-res-group/providers/Microsoft.Network/publicIPAddresses/public-ip-for-cf
+data:    Name                            : public-ip-for-cf
+data:    Type                            : Microsoft.Network/publicIPAddresses
+data:    Location                        : eastasia
+data:    Provisioning state              : Succeeded
+data:    Allocation method               : Static
+data:    Idle timeout                    : 4
+data:    IP Address                      : 23.99.103.110
+info:    network public-ip show command OK
 ```
 
-The value of **ipAddress** in the result is your **reserved IP for Cloud Foundry**.
+The value of **IP Address** in the output is your **reserved IP for Cloud Foundry**.
 
 ## 1.5 Create a Virtual Network
 
-```
-azure resource create <resource-group-name> <virtual-network-name> Microsoft.Network/virtualNetworks <location> 2015-05-01-preview -p "{\"addressSpace\": {\"addressPrefixes\": [\"<virtual-network-cidr>\"]},\"subnets\": [{\"name\": \"<bosh-subnet-name>\",\"properties\" : { \"addressPrefix\": \"<bosh-subnet-cidr>\"}}, {\"name\": \"<cloudfoundry-subnet-name>\",\"properties\" : { \"addressPrefix\": \"<cloudfoundry-subnet-cidr>\"}}]}"
-```
+1. Create a Virtual Network
 
-* virtual-network-name
+  ```
+  azure network vnet create -g <resource-group-name> -n <virtual-network-name> -l <location> -a <virtual-network-cidr>
+  ```
 
-  Names must start with a letter or number, and must contain only letters, numbers, or dashes. Spaces are not allowed.
+  Options:
 
-* virtual-network-cidr
+  * virtual-network-name: Names must start with a letter or number, and must contain only letters, numbers, or dashes. Spaces are not allowed.
+  * virtual-network-cidr: The address space network mask in CIDR format for the virtual network.
 
-  The address space network mask in CIDR format for the virtual network.
+  Example:
 
-* bosh-subnet-name
+  ```
+  azure network vnet create -g bosh-res-group -n boshvnet-crp -l "East Asia" -a 10.0.0.0/8
+  ```
 
-  The name of the subnet where VMs for BOSH will locate.
+2. Create two subnets in the Virtual Network
 
-* bosh-subnet-cidr
+  ```
+  azure network vnet subnet create -g <resource-group-name> -e <virtual-network-name> -n <bosh-subnet-name> -a <bosh-subnet-cidr>
+  azure network vnet subnet create -g <resource-group-name> -e <virtual-network-name> -n <cloudfoundry-subnet-name> -a <cloudfoundry-subnet-cidr>
+  ```
 
-  The subnet network mask in CIDR format for bosh subnet.
+  Options:
 
-* cloudfoundry-subnet-name
+  * bosh-subnet-name: The name of the subnet where VMs for BOSH will locate.
+  * bosh-subnet-cidr: The subnet network mask in CIDR format for bosh subnet.
+  * cloudfoundry-subnet-name: The name of bosh subnet where VMs for Cloud Foundry will locate.
+  * cloudfoundry-subnet-cidr: The subnet network mask in CIDR format for Cloud Foundry.
 
-  The name of bosh subnet where VMs for Cloud Foundry will locate.
+  You need to create two subnets:
 
-* cloudfoundry-subnet-cidr
+  * Name: BOSH, CIDR: 10.0.0.0/20. For BOSH VMs.
+  * Name: CloudFoundry, CIDR: 10.0.16.0/20. For Cloud Foundry VMs.
 
-  The subnet network mask in CIDR format for Cloud Foundry.
-Below command will create a virtual network with two subnets.
+  Example:
 
-Subnets:
+  ```
+  azure network vnet subnet create -g bosh-res-group -e boshvnet-crp -n BOSH -a 10.0.0.0/20
+  azure network vnet subnet create -g bosh-res-group -e boshvnet-crp -n CloudFoundry -a 10.0.16.0/20
+  ```
 
-* Name: BOSH, CIDR: 10.0.0.0/20. For BOSH VMs.
+3. Verify the Virtual Network
 
-* Name: CloudFoundry, CIDR: 10.0.16.0/20. For Cloud Foundry VMs.
+  You can check whether the virtual network is created successfully under your resource group with the following command.
 
-Example:
+  ```
+  azure network vnet show -g <resource-group-name> -n <virtual-network-name>
+  ```
 
-```
-azure resource create bosh-res-group boshvnet-crp Microsoft.Network/virtualNetworks "East US" 2015-05-01-preview -p "{\"addressSpace\": {\"addressPrefixes\": [\"10.0.0.0/8\"]},\"subnets\": [{\"name\": \"BOSH\",\"properties\" : { \"addressPrefix\": \"10.0.0.0/20\"}}, {\"name\": \"CloudFoundry\",\"properties\" : { \"addressPrefix\": \"10.0.16.0/20\"}}]}"
-```
+  Example:
 
-Sample Output:
+  ```
+  azure network vnet show -g bosh-res-group -n boshvnet-crp
+  ```
 
-```
-info:    Executing command resource create
-+ Getting resource boshvnet-crp
-+ Creating resource boshvnet-crp
-info:    Resource boshvnet-crp is updated
-data:
-data:    Id:        /subscriptions/87654321-1234-5678-1234-678912345678/resource
-Groups/bosh-res-group/providers/Microsoft.Network/virtualNetworks/boshvnet-crp
-data:    Name:      boshvnet-crp
-data:    Type:      Microsoft.Network/virtualNetworks
-data:    Parent:
-data:    Location:  eastasia
-data:    Tags:
-data:
-info:    resource create command OK
-```
+  Sample Output:
 
-You can check whether the virtual network is created successfully under your resource group with the following command.
-
-Example:
-
-```
-azure resource show bosh-res-group boshvnet-crp Microsoft.Network/virtualNetworks 2015-05-01-preview
-```
-
-Sample Output:
-
-```
-info:    Executing command resource show
-+ Getting resource boshvnet-crp
-data:    Id:        /subscriptions/87654321-1234-5678-1234-678912345678/resource
-Groups/bosh-res-group/providers/Microsoft.Network/virtualNetworks/boshvnet-crp
-data:    Name:      boshvnet-crp
-data:    Type:      Microsoft.Network/virtualNetworks
-data:    Parent:
-data:    Location:  eastasia
-data:    Tags:
-data:
-data:    Properties:
-data:    Property provisioningState Succeeded
-data:    Property resourceGuid e515b2be-2608-438d-87ec-5c6a6f6792bc
-data:    Property addressSpace addressPrefixes=[10.0.0.0/8]
-data:    Property subnets name=BOSH, id=/subscriptions/87654321-1234-5678-1234-678912345678/resourceGroups/bosh-res-group/providers/Microsoft.Network/virtualNetwor
-ks/boshvnet-crp/subnets/BOSH, etag=W/"7b620284-88ee-4306-94c1-09fe262d93eb", pro
-visioningState=Succeeded, addressPrefix=10.0.0.0/20, name=CloudFoundry, id=/subs
-criptions/87654321-1234-5678-1234-678912345678/resourceGroups/bosh-res-group/provid
-ers/Microsoft.Network/virtualNetworks/boshvnet-crp/subnets/CloudFoundry, etag=W/
-"7b620284-88ee-4306-94c1-09fe262d93eb", provisioningState=Succeeded, addressPref
-ix=10.0.16.0/20
-data:
-data:    Permissions:
-data:      Actions: *
-data:      NotActions:
-info:    resource show command OK
-```
+  ```
+  info:    Executing command network vnet show
+  + Looking up virtual network "boshvnet-crp"
+  data:    Id                              : /subscriptions/87654321-1234-5678-1234-678912345678/resourceGroups/bosh-res-group/providers/Microsoft.Network/virtualNetworks/boshvnet-crp
+  data:    Name                            : boshvnet-crp
+  data:    Type                            : Microsoft.Network/virtualNetworks
+  data:    Location                        : eastasia
+  data:    ProvisioningState               : Succeeded
+  data:    Address prefixes:
+  data:      10.0.0.0/8
+  data:    Subnets:
+  data:      Name                          : BOSH
+  data:      Address prefix                : 10.0.0.0/20
+  data:
+  data:      Name                          : CloudFoundry
+  data:      Address prefix                : 10.0.16.0/20
+  data:
+  info:    network vnet show command OK
+  ```
 
 ## 1.6 Setup a dev-box
 
