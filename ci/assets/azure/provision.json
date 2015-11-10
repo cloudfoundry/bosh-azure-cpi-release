@@ -31,11 +31,18 @@
         "description": "Unique DNS Name for the Storage Account where the Virtual Machine's disks will be placed. It must be between 3 and 24 characters in length and use numbers and lower-case letters only."
       }
     },
-    "virtualNetworkName": {
+    "virtualNetworkNameForBats": {
       "type": "string",
-      "defaultValue": "boshvnet-crp",
+      "defaultValue": "boshvnet-bats",
       "metadata": {
-        "description": "name of the virtual network"
+        "description": "name of the virtual network for BATs"
+      }
+    },
+    "virtualNetworkNameForLifecycle": {
+      "type": "string",
+      "defaultValue": "boshvnet-lifecycle",
+      "metadata": {
+        "description": "name of the virtual network for lifecycle"
       }
     },
     "virtualNetworkPrefix": {
@@ -47,9 +54,16 @@
     },
     "subnetNameForBosh": {
       "type": "string",
-      "defaultValue": "Bosh",
+      "defaultValue": "BOSH",
       "metadata": {
         "description": "name of the subnet for Bosh"
+      }
+    },
+    "boshSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "description": "the CIDR block of the subnet for Bosh"
       }
     },
     "subnetNameForCloudFoundry": {
@@ -58,30 +72,26 @@
       "metadata": {
         "description": "name of the subnet for CloudFoundy"
       }
+    },
+    "cfSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.16.0/24",
+      "metadata": {
+        "description": "the CIDR block of the subnet for CloudFoundy"
+      }
     }
   },
   "variables": {
-    "pubIPBaseName" : "pubIP",
+    "pubIPBaseName" : "AzureCPICI",
     "api-version": "2015-05-01-preview",
-    "vmStorageAccountContainerName": "vhds",
     "storageAccountType": "Standard_LRS",
-    "storageid": "[resourceId('Microsoft.Storage/storageAccounts', parameters('newStorageAccountName'))]",
-    "virtualNetworkName": "[parameters('virtualNetworkName')]",
-    "addressPrefix": "[parameters('virtualNetworkPrefix')]",
-    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
-    "subnet1Name": "[parameters('subnetNameForBosh')]",
-    "subnet1Prefix": "10.0.0.0/24",
-    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/', variables('subnet1Name'))]",
-    "subnet2Name": "[parameters('subnetNameForCloudFoundry')]",
-    "subnet2Prefix": "10.0.16.0/24",
     "devboxPrivateIPAddress": "10.0.0.100",
     "imagePublisher": "Canonical",
     "imageOffer": "UbuntuServer",
     "ubuntuOSVersion": "14.04.2-LTS",
     "repository": "Azure",
     "branch": "master",
-    "githubPath": "[concat('https://raw.githubusercontent.com/', variables('repository'), '/azure-quickstart-templates/', variables('branch'), '/bosh-setup/')]",
-    "cloudfoundryBlob": "http://cloudfoundry.blob.core.windows.net/misc/"
+    "githubPath": "[concat('https://raw.githubusercontent.com/', variables('repository'), '/azure-quickstart-templates/', variables('branch'), '/bosh-setup/')]"
   },
   "resources": [
     {
@@ -114,25 +124,52 @@
     {
       "apiVersion": "[variables('api-version')]",
       "type": "Microsoft.Network/virtualNetworks",
-      "name": "[variables('virtualNetworkName')]",
+      "name": "[parameters('virtualNetworkNameForBats')]",
       "location": "[parameters('location')]",
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
-            "[variables('addressPrefix')]"
+            "[parameters('virtualNetworkPrefix')]"
           ]
         },
         "subnets": [
           {
-            "name": "[variables('subnet1Name')]",
+            "name": "[parameters('subnetNameForBosh')]",
             "properties": {
-              "addressPrefix": "[variables('subnet1Prefix')]"
+              "addressPrefix": "[parameters('boshSubnetPrefix')]"
             }
           },
           {
-            "name": "[variables('subnet2Name')]",
+            "name": "[parameters('subnetNameForCloudFoundry')]",
             "properties": {
-              "addressPrefix": "[variables('subnet2Prefix')]"
+              "addressPrefix": "[parameters('cfSubnetPrefix')]"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('api-version')]",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('virtualNetworkNameForLifecycle')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('virtualNetworkPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[parameters('subnetNameForBosh')]",
+            "properties": {
+              "addressPrefix": "[parameters('boshSubnetPrefix')]"
+            }
+          },
+          {
+            "name": "[parameters('subnetNameForCloudFoundry')]",
+            "properties": {
+              "addressPrefix": "[parameters('cfSubnetPrefix')]"
             }
           }
         ]

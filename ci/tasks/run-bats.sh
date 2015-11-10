@@ -3,9 +3,13 @@
 set -e
 
 source bosh-cpi-release/ci/tasks/utils.sh
-source azure-exports/azure-exports.sh
-check_param base_os
-check_param private_key_data
+
+check_param BASE_OS
+check_param AZURE_CLIENT_ID
+check_param AZURE_CLIENT_SECRET
+check_param AZURE_TENANT_ID
+check_param AZURE_GROUP_NAME
+check_param PRIVATE_KEY_DATA
 check_param BAT_VCAP_PASSWORD
 check_param BAT_SECOND_STATIC_IP
 check_param BAT_NETWORK_CIDR
@@ -15,21 +19,22 @@ check_param BAT_NETWORK_GATEWAY
 check_param BAT_NETWORK_STATIC_IP
 check_param BAT_STEMCELL_URL
 check_param BAT_STEMCELL_SHA
-check_param AZURE_VNET_NAME
+check_param AZURE_VNET_NAME_FOR_BATS
 check_param AZURE_CF_SUBNET_NAME
-check_param CF_IP_ADDRESS
-#TODO: debug purpose, remove after this is official
-export LOG_LEVEL='Debug'
-export LOG_PATH='./run.log'
+
+azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
+azure config mode arm
+
+DIRECTOR=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)
+CF_IP_ADDRESS=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-cf --json | jq '.ipAddress' -r)
+
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
-
-
 
 echo "DirectorIP =" $DIRECTOR
 
 mkdir -p $PWD/keys
-echo "$private_key_data" > $PWD/keys/bats.pem
+echo "$PRIVATE_KEY_DATA" > $PWD/keys/bats.pem
 eval $(ssh-agent)
 chmod go-r $PWD/keys/bats.pem
 ssh-add $PWD/keys/bats.pem
@@ -37,7 +42,7 @@ ssh-add $PWD/keys/bats.pem
 export BAT_DIRECTOR=$DIRECTOR
 export BAT_DNS_HOST=$DIRECTOR
 export BAT_STEMCELL="${PWD}/stemcell/stemcell.tgz"
-export BAT_DEPLOYMENT_SPEC="${PWD}/${base_os}-bats-config.yml"
+export BAT_DEPLOYMENT_SPEC="${PWD}/${BASE_OS}-bats-config.yml"
 export BAT_VCAP_PASSWORD=$BAT_VCAP_PASSWORD
 export BAT_VCAP_PRIVATE_KEY=$PWD/keys/bats.pem
 export BAT_INFRASTRUCTURE=azure
@@ -64,7 +69,7 @@ properties:
     type: manual
     static_ip: $BAT_NETWORK_STATIC_IP
     cloud_properties:
-      virtual_network_name: $AZURE_VNET_NAME
+      virtual_network_name: $AZURE_VNET_NAME_FOR_BATS
       subnet_name: $AZURE_CF_SUBNET_NAME
     cidr: $BAT_NETWORK_CIDR
     reserved: ['$BAT_NETWORK_RESERVED_RANGE']
@@ -210,8 +215,6 @@ properties:
     drain_type: <%= properties.batlight.drain_type %>
     <% end %>
 EOF
-echo Using Deployment Spec:
-cat $BAT_DEPLOYMENT_SPEC
 
 cd bats
 ./write_gemfile

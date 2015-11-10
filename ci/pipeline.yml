@@ -2,13 +2,36 @@
 groups:
   - name: bosh-azure-cpi-release
     jobs:
+      - recreate-infrastructure-primary
       - build-candidate
-      - azure-ubuntu
       - lifecycle
-      - deploy-director
       - bats-ubuntu
       - promote-candidate
 jobs:
+- name: recreate-infrastructure-primary
+  serial: true
+  plan:
+  - aggregate:
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
+
+  - task: azure-provision
+    file: bosh-cpi-release/ci/tasks/azure-provision.yml
+    config:
+      params:
+        AZURE_CLIENT_ID:                {{azure_client_id}}
+        AZURE_CLIENT_SECRET:            {{azure_client_secret}}
+        AZURE_TENANT_ID:                {{azure_tenant_id}}
+        AZURE_GROUP_NAME:               {{azure_group_name}}
+        AZURE_REGION_NAME:              {{azure_region_name}}
+        AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
+        AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
+        AZURE_REGION_SHORT_NAME:        {{azure_region_short_name}}
+        AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
+        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
+        AZURE_TENANT_ID:                {{azure_tenant_id}}
+        AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
+        AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
+
 - name: build-candidate
   serial: true
   plan:
@@ -25,138 +48,111 @@ jobs:
   - put: bosh-cpi-dev-artifacts
     params: {from: build/out/.*\.tgz}
 
-- name: azure-ubuntu
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
-
-  - task: azure-provision
-    file: bosh-cpi-release/ci/tasks/azure-provision.yml
-    config:
-      params:
-        AZURE_CLIENT_ID:            {{azure_client_id}}
-        AZURE_CLIENT_SECRET:        {{azure_client_secret}}
-        AZURE_TENANT_ID:            {{azure_tenant_id}}
-        AZURE_GROUP_NAME:           {{azure_group_name}}
-        AZURE_REGION_NAME:          {{azure_region_name}}
-        AZURE_VNET_NAME:            {{azure_vnet_name}}
-        AZURE_REGION_SHORT_NAME:    {{azure_region_short_name}}
-        AZURE_STORAGE_ACCOUNT_NAME: {{azure_storage_account_name}}
-        AZURE_SUBSCRIPTION_ID:      {{azure_subscription_id}}
-        AZURE_TENANT_ID:            {{azure_tenant_id}}
-        AZURE_BOSH_SUBNET_NAME:     {{azure_bosh_subnet_name}}
-        AZURE_CF_SUBNET_NAME:       {{azure_cf_subnet_name}}
-    ensure:
-      do:
-      - put: azure-exports
-        params: {from: azure-provision/azure-exports.sh$}
-
 - name: lifecycle
   serial: true
   plan:
   - aggregate:
-    - {trigger: false,  passed: [build-candidate],  get: bosh-cpi-dev-artifacts}
-    - {trigger: false,  passed: [build-candidate],  get: bosh-cpi-release, resource: bosh-cpi-release-in}
-    - {trigger: true,   passed: [azure-ubuntu],     get: azure-exports}
-    - {trigger: false,                              get: stemcell, resource: azure-ubuntu-stemcell}
+    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+    - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
 
   - task: test
     file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
     config:
       params:
-        ssh_certificate:            {{bosh_public_cert}}
-        AZURE_CLIENT_ID:            {{azure_client_id}}
-        AZURE_CLIENT_SECRET:        {{azure_client_secret}}
-        AZURE_TENANT_ID:            {{azure_tenant_id}}
-        AZURE_GROUP_NAME:           {{azure_group_name}}
-        AZURE_STORAGE_ACCOUNT_NAME: {{azure_storage_account_name}}
-        AZURE_SUBSCRIPTION_ID:      {{azure_subscription_id}}
-        AZURE_VNET_NAME:            {{azure_vnet_name}}
-        AZURE_BOSH_SUBNET_NAME:     {{azure_bosh_subnet_name}}
+        SSH_CERTIFICATE:                {{bosh_public_cert}}
+        AZURE_CLIENT_ID:                {{azure_client_id}}
+        AZURE_CLIENT_SECRET:            {{azure_client_secret}}
+        AZURE_TENANT_ID:                {{azure_tenant_id}}
+        AZURE_GROUP_NAME:               {{azure_group_name}}
+        AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
+        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
+        AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
+        AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
 
-- name: deploy-director
+- name: bats-ubuntu
   serial: true
   plan:
   - aggregate:
-    - {trigger: true,  passed: [lifecycle],        get: bosh-cpi-dev-artifacts}
-    - {trigger: false, passed: [build-candidate],  get: version-semver, resource: version-semver}
-    - {trigger: false, passed: [azure-ubuntu],     get: azure-exports, resource: azure-exports}
-    - {trigger: false,                             get: bosh-cpi-release, resource: bosh-cpi-release-in}
-    - {trigger: false,                             get: director-state-file, resource: ubuntu-director-state-file}
-    - {trigger: false,                             get: bosh-init}
-    - {trigger: false,                             get: bosh-release}
-    - {trigger: false,                             get: stemcell, resource: azure-ubuntu-stemcell}
+    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
+    - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false,                            get: bats}
+    - {trigger: false,                            get: bosh-init}
+    - {trigger: false, passed: [build-candidate], get: version-semver, resource: version-semver}
+    - {trigger: false,                            get: bosh-release}
 
-  - task: deploy
-    file: bosh-cpi-release/ci/tasks/deploy.yml
+  - task: setup-director
+    file: bosh-cpi-release/ci/tasks/setup-director.yml
     config:
       params:
-        base_os:                    ubuntu
+        BASE_OS:                    ubuntu
         AZURE_CLIENT_ID:            {{azure_client_id}}
         AZURE_CLIENT_SECRET:        {{azure_client_secret}}
         AZURE_TENANT_ID:            {{azure_tenant_id}}
         AZURE_GROUP_NAME:           {{azure_group_name}}
-        AZURE_VNET_NAME:            {{azure_vnet_name}}
+        AZURE_VNET_NAME_FOR_BATS:   {{azure_vnet_name_for_bats}}
         AZURE_STORAGE_ACCOUNT_NAME: {{azure_storage_account_name}}
         AZURE_SUBSCRIPTION_ID:      {{azure_subscription_id}}
         AZURE_BOSH_SUBNET_NAME:     {{azure_bosh_subnet_name}}
-        BAT_NETWORK_GATEWAY:        {{BAT_NETWORK_GATEWAY}}
-        private_key_data:           {{bosh_private_key}}
-        ssh_certificate:            {{bosh_public_cert}}
-    ensure:
-      do:
-      - put: ubuntu-director-state-file
-        params: {from: deploy/director-state-file/ubuntu-director-manifest-state.json}
+        BAT_NETWORK_GATEWAY:        {{bat_network_gateway}}
+        PRIVATE_KEY_DATA:           {{bosh_private_key}}
+        SSH_CERTIFICATE:            {{bosh_public_cert}}
 
-- name: bats-ubuntu
-  plan:
-  #  
-  # passed: 
-  - aggregate:
-    - {trigger: true,  passed: [deploy-director], get: bosh-cpi-dev-artifacts}
-    - {trigger: false,                            get: bosh-cpi-release, resource: bosh-cpi-release-in}
-    - {trigger: false, passed: [azure-ubuntu],    get: azure-exports, resource: azure-exports}
-    - {trigger: false,                            get: bats}
-    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
-
-  - task: test
+  - task: run-bats
     file: bosh-cpi-release/ci/tasks/run-bats.yml
     config:
       params:
-        base_os:                    ubuntu
-        BAT_VCAP_PASSWORD:          {{BAT_VCAP_PASSWORD}}
-        private_key_data:           {{bosh_private_key}}
-        AZURE_VNET_NAME:            {{azure_vnet_name}}
-        BAT_SECOND_STATIC_IP:       {{BAT_SECOND_STATIC_IP}}
-        BAT_NETWORK_STATIC_IP:      {{BAT_NETWORK_STATIC_IP}}
-        BAT_NETWORK_CIDR:           {{BAT_NETWORK_CIDR}}
-        BAT_NETWORK_RESERVED_RANGE: {{BAT_NETWORK_RESERVED_RANGE}}
-        BAT_NETWORK_GATEWAY:        {{BAT_NETWORK_GATEWAY}}
-        BAT_NETWORK_STATIC_RANGE:   {{BAT_NETWORK_STATIC_RANGE}}
+        BASE_OS:                    ubuntu
+        AZURE_CLIENT_ID:            {{azure_client_id}}
+        AZURE_CLIENT_SECRET:        {{azure_client_secret}}
+        AZURE_TENANT_ID:            {{azure_tenant_id}}
+        AZURE_GROUP_NAME:           {{azure_group_name}}
+        BAT_VCAP_PASSWORD:          {{bat_vcap_password}}
+        PRIVATE_KEY_DATA:           {{bosh_private_key}}
+        AZURE_VNET_NAME_FOR_BATS:   {{azure_vnet_name_for_bats}}
+        BAT_SECOND_STATIC_IP:       {{bat_second_static_ip}}
+        BAT_NETWORK_STATIC_IP:      {{bat_network_static_ip}}
+        BAT_NETWORK_CIDR:           {{bat_network_cidr}}
+        BAT_NETWORK_RESERVED_RANGE: {{bat_network_reserved_range}}
+        BAT_NETWORK_GATEWAY:        {{bat_network_gateway}}
+        BAT_NETWORK_STATIC_RANGE:   {{bat_network_static_range}}
         AZURE_CF_SUBNET_NAME:       {{azure_cf_subnet_name}}
 
+  - task: teardown-director
+    file: bosh-cpi-release/ci/tasks/teardown-director.yml
+
 - name: promote-candidate
-  serial: true
   plan:
   - aggregate:
-    # TODO: After the bosh-init and bats tasks are implemented, we should
-    # be able to add
-    - {trigger: true,  passed: [bats-ubuntu], get: bosh-cpi-dev-artifacts}
-    - {trigger: false,                        get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: true,  get: bosh-cpi-dev-artifacts, passed: [lifecycle, bats-ubuntu]}
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-out}
+    - {trigger: false, get: release-version-semver, params: {bump: major}}
 
   - task: promote
     file: bosh-cpi-release/ci/tasks/promote-candidate.yml
     config:
       params:
-        s3_access_key_id:     {{s3_access_key__primary}}
-        s3_secret_access_key: {{s3_secret_key__primary}}
+        S3_ACCESS_KEY_ID:     {{s3_access_key__primary}}
+        S3_SECRET_ACCESS_KEY: {{s3_secret_key__primary}}
 
   - put: bosh-cpi-release
     resource: bosh-cpi-release-out
-    params: {repository: promote/bosh-cpi-release, rebase: true}
+    params: {repository: promote/bosh-cpi-release, rebase: true, tag_prefix: "v", tag: promote/integer_version}
+
+  - put: release-version-semver
+    params: {file: release-version-semver/number}
 
 resources:
+- name: bosh-cpi-dev-artifacts
+  type: s3
+  source:
+    regexp: bosh-azure-cpi\.tgz
+    bucket: {{s3_azure_cpi_pipeline_bucket}}
+    region_name: {{s3_region__primary}}
+    access_key_id: {{s3_access_key__primary}}
+    secret_access_key: {{s3_secret_key__primary}}
+
 - name: bosh-cpi-release-in
   type: git
   source:
@@ -178,7 +174,14 @@ resources:
   type: semver
   source:
     key:               current-version # dev-release version
-    initial_version:   0.0.1
+    bucket:            {{s3_azure_cpi_pipeline_bucket}}
+    access_key_id:     {{s3_access_key__primary}}
+    secret_access_key: {{s3_secret_key__primary}}
+
+- name: release-version-semver
+  type: semver
+  source:
+    key:               release-current-version
     bucket:            {{s3_azure_cpi_pipeline_bucket}}
     access_key_id:     {{s3_access_key__primary}}
     secret_access_key: {{s3_secret_key__primary}}
@@ -208,31 +211,4 @@ resources:
     versioned_file: stemcell.tgz
     region_name: {{s3_region__primary}}
     access_key_id: {{s3_access_key__primary}}
-    secret_access_key: {{s3_secret_key__primary}}
-
-- name: bosh-cpi-dev-artifacts
-  type: s3
-  source:
-    regexp: bosh-azure-cpi\.tgz
-    bucket: {{s3_azure_cpi_pipeline_bucket}}
-    region_name: {{s3_region__primary}}
-    access_key_id: {{s3_access_key__primary}}
-    secret_access_key: {{s3_secret_key__primary}}
-
-- name: ubuntu-director-state-file
-  type: s3
-  source:
-    bucket:            {{s3_azure_cpi_ubuntu_director_state_file_bucket}}
-    versioned_file:    ubuntu-director-manifest-state.json
-    region_name:       {{s3_region__primary}}
-    access_key_id:     {{s3_access_key__primary}}
-    secret_access_key: {{s3_secret_key__primary}}
-
-- name: azure-exports
-  type: s3
-  source:
-    versioned_file: azure-exports.sh
-    bucket:            {{s3_azure_state_file_bucket}}
-    region_name:       {{s3_region__primary}}
-    access_key_id:     {{s3_access_key__primary}}
     secret_access_key: {{s3_secret_key__primary}}

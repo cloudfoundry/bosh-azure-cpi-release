@@ -1,39 +1,38 @@
 #!/usr/bin/env bash
 
 set -e
-echo "deploy.sh..."
+
 source bosh-cpi-release/ci/tasks/utils.sh
-source azure-exports/azure-exports.sh
 
 check_param AZURE_CLIENT_ID
 check_param AZURE_CLIENT_SECRET
 check_param AZURE_TENANT_ID
 check_param AZURE_GROUP_NAME
-check_param AZURE_VNET_NAME
+check_param AZURE_VNET_NAME_FOR_BATS
 check_param AZURE_STORAGE_ACCOUNT_NAME
 check_param AZURE_SUBSCRIPTION_ID
 check_param AZURE_BOSH_SUBNET_NAME
-check_param base_os
-check_param private_key_data
-check_param ssh_certificate
-check_param DIRECTOR
-check_param AZURE_STORAGE_ACCESS_KEY
+check_param BASE_OS
+check_param PRIVATE_KEY_DATA
+check_param SSH_CERTIFICATE
 check_param BAT_NETWORK_GATEWAY
 
-echo "Checking params from previous steps..."
-echo "show directory ip..."
-echo "$DIRECTOR"
+azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
+azure config mode arm
+
+DIRECTOR=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)
+AZURE_STORAGE_ACCESS_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} -g ${AZURE_GROUP_NAME} --json | jq '.storageAccountKeys.key1' -r)
 
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
 semver=`cat version-semver/number`
 cpi_release_name=bosh-azure-cpi
-deployment_dir="${PWD}/director-state-file"
-manifest_filename=${base_os}-director-manifest.yml
+deployment_dir="${PWD}/deployment"
+manifest_filename="director-manifest.yml"
 
 mkdir -p $deployment_dir
-echo "$private_key_data" > $deployment_dir/bats.pem
+echo "$PRIVATE_KEY_DATA" > $deployment_dir/bats.pem
 
 eval $(ssh-agent)
 chmod go-r $deployment_dir/bats.pem
@@ -71,7 +70,7 @@ networks:
     gateway: 10.0.0.1
     dns: [8.8.8.8]
     cloud_properties:
-      virtual_network_name: $AZURE_VNET_NAME
+      virtual_network_name: $AZURE_VNET_NAME_FOR_BATS
       subnet_name: $AZURE_BOSH_SUBNET_NAME
 
 resource_pools:
@@ -186,7 +185,7 @@ jobs:
       client_secret: $AZURE_CLIENT_SECRET
       ssh_user: vcap
       ssh_certificate: | 
-        $ssh_certificate
+        $SSH_CERTIFICATE
 
     # Tells agents how to contact nats
     agent: {mbus: "nats://nats:nats-password@10.0.0.10:4222"}
@@ -237,15 +236,10 @@ echo "using bosh-init CLI version..."
 $initexe version
 
 pushd ${deployment_dir}
-  cat $manifest_filename
-
-  echo "deleting existing BOSH Director VM..."
-  $initexe delete $manifest_filename
-
-  #TODO: debug purpose, remove after this is official
-  export BOSH_INIT_LOG_LEVEL='Debug'
-  export BOSH_INIT_LOG_PATH='./run.log'
   echo "deploying BOSH..."
-
   $initexe deploy $manifest_filename
+  echo "Final state of director deployment:"
+  echo "=========================================="
+  cat director-manifest-state.json
+  echo "=========================================="
 popd
