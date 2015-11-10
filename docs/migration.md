@@ -53,7 +53,7 @@ If you are customers of [Cloud Foundry on Azure Preview 2](https://azure.microso
   3. Create another storage account and containers in it manually.
 
     ```
-    azure resource create <resource-group-name> <another-storage-account-name> Microsoft.Storage/storageAccounts <location> 2015-05-01-preview -p "{\"accountType\":\"<account-type>\"}"
+    azure storage account create -l <location> --type <account-type> -g <resource-group-name> <another-storage-account-name>
     azure storage container create -a <storage-account-name> -k <storage-account-key> bosh
     azure storage container create -a <storage-account-name> -k <storage-account-key> stemcell
     ```
