@@ -4,24 +4,23 @@ image: docker:///sedouard/azure-cpi-release
 inputs:
   - name: bosh-cpi-dev-artifacts # -++ used for deployment manifest referenced by manifest_path
   - name: version-semver         # -//
-  - name: director-state-file
   - name: bosh-cpi-release
   - name: bosh-init              # --- bosh-init executable to do deploy
   - name: bosh-release           # -\
-  - name: azure-exports          # -/
   - name: stemcell
 run:
-  path: bosh-cpi-release/ci/tasks/deploy.sh
+  path: bosh-cpi-release/ci/tasks/setup-director.sh
 params:
-  base_os:                    replace-me
+  BASE_OS:                    replace-me
   AZURE_CLIENT_ID:            replace-me
   AZURE_CLIENT_SECRET:        replace-me
   AZURE_TENANT_ID:            replace-me
   AZURE_GROUP_NAME:           replace-me
-  AZURE_VNET_NAME:            replace-me
+  AZURE_VNET_NAME_FOR_BATS:   replace-me
   AZURE_STORAGE_ACCOUNT_NAME: replace-me
   AZURE_SUBSCRIPTION_ID:      replace-me
   AZURE_BOSH_SUBNET_NAME:     replace-me
   BAT_NETWORK_GATEWAY:        replace-me
-  private_key_data:           replace-me
-  ssh_certificate:            replace-me
+  PRIVATE_KEY_DATA:           replace-me
+  SSH_CERTIFICATE:            replace-me
+  BOSH_INIT_LOG_LEVEL:        warn

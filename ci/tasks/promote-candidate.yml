@@ -4,8 +4,9 @@ image: docker:///sedouard/azure-cpi-release
 inputs:
   - name: bosh-cpi-release
   - name: bosh-cpi-dev-artifacts
+  - name: release-version-semver
 run:
   path: bosh-cpi-release/ci/tasks/promote-candidate.sh
 params:
-  s3_access_key_id:     replace-me
-  s3_secret_access_key: replace-me
+  S3_ACCESS_KEY_ID:     replace-me
+  S3_SECRET_ACCESS_KEY: replace-me

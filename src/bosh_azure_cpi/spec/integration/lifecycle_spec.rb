@@ -12,7 +12,7 @@ describe Bosh::AzureCloud::Cloud do
     @tenant_id            = ENV['BOSH_AZURE_TENANT_ID']            || raise("Missing BOSH_AZURE_TENANT_ID")
     @client_id            = ENV['BOSH_AZURE_CLIENT_ID']            || raise("Missing BOSH_AZURE_CLIENT_ID")
     @client_secret        = ENV['BOSH_AZURE_CLIENT_SECRET']        || raise("Missing BOSH_AZURE_CLIENT_secret")
-    @stemcell_file        = ENV['BOSH_AZURE_STEMCELL_FILE']        || raise("Missing BOSH_AZURE_STEMCELL_FILE")
+    @stemcell_id          = ENV['BOSH_AZURE_STEMCELL_ID']          || raise("Missing BOSH_AZURE_STEMCELL_ID")
     @certificate_file     = ENV['BOSH_AZURE_CERTIFICATE_FILE']     || raise("Missing BOSH_AZURE_CERTIFICATE_FILE")
     raise("#{@certificate_file} not exists") unless FileTest::exist?(@certificate_file)
   end
@@ -74,10 +74,6 @@ describe Bosh::AzureCloud::Cloud do
 
   before { @disk_id = nil }
   after  { cpi.delete_disk(@disk_id) if @disk_id }
-
-  before(:all) { @stemcell_path = extract_image(@stemcell_file) }
-  before { @stemcell_id = create_stemcell(@stemcell_path) }
-  after  { cpi.delete_stemcell(@stemcell_id) if @stemcell_id }
 
   context 'manual networking' do
     context 'without existing disks' do
@@ -277,7 +273,7 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
-  def vm_lifecycle(stemcell_id, network_spec, nums=1)
+  def vm_lifecycle(stemcell_id, network_spec, nums = 1)
     instance_id_pool = Array.new
     for i in 1..nums 
       logger.info("Creating VM with stemcell_id=#{stemcell_id}")
@@ -303,15 +299,6 @@ describe Bosh::AzureCloud::Cloud do
     instance_id_pool.each do |instance_id|
       cpi.delete_vm(instance_id) unless instance_id.nil?
     end
-  end
-
-  def create_stemcell(path)
-    stemcell_id = cpi.create_stemcell(path, {})
-  end
-
-  def extract_image(image_path)
-    Open3.capture2e("tar -xf #{image_path} -C /mnt/")
-    "/mnt/image"
   end
 
   def get_manual_networks
