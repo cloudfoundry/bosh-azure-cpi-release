@@ -59,7 +59,7 @@ properties:
   uuid: $(bosh status --uuid)
   stemcell:
     name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-    version: '0000'
+    version: latest
   vip: $CF_IP_ADDRESS
   pool_size: 1
   instances: 1
