@@ -194,9 +194,8 @@ resources:
 - name: bosh-init
   type: s3
   source:
-    regexp: bosh-init-([0-9.]+)-linux-amd64
+    regexp: bosh-init-([0-9\.]+)-linux-amd64
     bucket: {{s3_bosh_init_bucket}}
-    region_name: {{s3_region__primary}}
 
 - name: bats
   type: git
@@ -207,8 +206,5 @@ resources:
 - name: azure-ubuntu-stemcell
   type: s3
   source:
-    bucket: {{s3_temp_stemcell_bucket}}
-    versioned_file: stemcell.tgz
-    region_name: {{s3_region__primary}}
-    access_key_id: {{s3_access_key__primary}}
-    secret_access_key: {{s3_secret_key__primary}}
+    bucket: bosh-azure-stemcells
+    regexp: bosh-stemcell-([0-9\.]+)-azure-hyperv-ubuntu-trusty-go_agent.tgz
