@@ -40,8 +40,7 @@ export AZURE_STORAGE_ACCESS_KEY
 set +e
 azure storage blob show stemcell ${BOSH_AZURE_STEMCELL_ID}.vhd
 if [ $? -eq 1 ]; then
-  # Upload stemcell
-  tar -xf "${PWD}/stemcell/stemcell.tgz" -C /mnt/
+  tar -xf ${PWD}/stemcell/*.tgz -C /mnt/
   tar -xf /mnt/image -C /mnt/
   azure storage blob upload -q --blobtype PAGE /mnt/root.vhd stemcell ${BOSH_AZURE_STEMCELL_ID}.vhd
 fi

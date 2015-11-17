@@ -34,11 +34,6 @@ manifest_filename="director-manifest.yml"
 mkdir -p $deployment_dir
 echo "$PRIVATE_KEY_DATA" > $deployment_dir/bats.pem
 
-eval $(ssh-agent)
-chmod go-r $deployment_dir/bats.pem
-ssh-add $deployment_dir/bats.pem
-
-#create director manifest as heredoc
 cat > "${deployment_dir}/${manifest_filename}"<<EOF
 ---
 name: bosh
@@ -184,7 +179,7 @@ jobs:
       client_id: $AZURE_CLIENT_ID
       client_secret: $AZURE_CLIENT_SECRET
       ssh_user: vcap
-      ssh_certificate: | 
+      ssh_certificate: |
         $SSH_CERTIFICATE
 
     # Tells agents how to contact nats
@@ -205,7 +200,6 @@ cloud_provider:
 
   # Tells bosh-init how to contact remote agent
   mbus: https://mbus-user:mbus-password@$DIRECTOR:6868
-#  mbus: https://mbus-user:mbus-password@10.0.0.10:6868
 
   properties:
     azure: *azure
@@ -216,30 +210,23 @@ cloud_provider:
     blobstore: {provider: local, path: /var/vcap/micro_bosh/data/cache}
 
     ntp: *ntp
-
 EOF
 
-echo "normalizing paths to match values referenced in $manifest_filename"
-# manifest paths are now relative so the tmp inputs need to be updated
-echo cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${deployment_dir}/${cpi_release_name}.tgz
 cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${deployment_dir}/${cpi_release_name}.tgz
-echo cp ./stemcell/stemcell.tgz ${deployment_dir}/stemcell.tgz
-cp ./stemcell/stemcell.tgz ${deployment_dir}/stemcell.tgz
-echo cp ./bosh-release/release.tgz ${deployment_dir}/bosh-release.tgz
+cp ./stemcell/*.tgz ${deployment_dir}/stemcell.tgz
 cp ./bosh-release/release.tgz ${deployment_dir}/bosh-release.tgz
 
 initver=$(cat bosh-init/version)
 initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
-chmod +x $initexe
 
-echo "using bosh-init CLI version..."
+chmod +x $initexe
 $initexe version
 
-pushd ${deployment_dir}
-  echo "deploying BOSH..."
-  $initexe deploy $manifest_filename
-  echo "Final state of director deployment:"
-  echo "=========================================="
-  cat director-manifest-state.json
-  echo "=========================================="
-popd
+cd $deployment_dir
+
+$initexe deploy $manifest_filename
+
+echo "Final state of director deployment:"
+echo "=========================================="
+cat director-manifest-state.json
+echo "=========================================="

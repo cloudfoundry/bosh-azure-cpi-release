@@ -41,7 +41,7 @@ ssh-add $PWD/keys/bats.pem
 
 export BAT_DIRECTOR=$DIRECTOR
 export BAT_DNS_HOST=$DIRECTOR
-export BAT_STEMCELL="${PWD}/stemcell/stemcell.tgz"
+export BAT_STEMCELL=`echo $PWD/stemcell/*.tgz`
 export BAT_DEPLOYMENT_SPEC="${PWD}/${BASE_OS}-bats-config.yml"
 export BAT_VCAP_PASSWORD=$BAT_VCAP_PASSWORD
 export BAT_VCAP_PRIVATE_KEY=$PWD/keys/bats.pem
