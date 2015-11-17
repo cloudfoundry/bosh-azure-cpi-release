@@ -2,7 +2,7 @@
 
 set -e
 
-DOCKER_IMAGE=${DOCKER_IMAGE:-sedouard/azure-cpi-release}
+DOCKER_IMAGE=${DOCKER_IMAGE:-boshcpi/azure-cpi-release}
 
 docker login
 

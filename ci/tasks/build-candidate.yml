@@ -1,6 +1,6 @@
 ---
 platform: linux
-image: docker:///sedouard/azure-cpi-release
+image: docker:///boshcpi/azure-cpi-release
 inputs:
   - name: bosh-cpi-release
   - name: version-semver
