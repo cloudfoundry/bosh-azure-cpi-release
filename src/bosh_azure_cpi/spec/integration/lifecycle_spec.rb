@@ -69,9 +69,6 @@ describe Bosh::AzureCloud::Cloud do
 
   before { allow(Bosh::Registry::Client).to receive_messages(new: double('registry').as_null_object) }
 
-  before { @instance_id = nil }
-  after  { cpi.delete_vm(@instance_id) if @instance_id }
-
   before { @disk_id = nil }
   after  { cpi.delete_disk(@disk_id) if @disk_id }
 
@@ -79,10 +76,10 @@ describe Bosh::AzureCloud::Cloud do
     context 'without existing disks' do
       it 'should exercise the vm lifecycle' do
         vm_lifecycle(@stemcell_id, get_manual_networks()) do |instance_id|
-          disk_id = cpi.create_disk(2048, {}, instance_id)
-          expect(disk_id).not_to be_nil
+          @disk_id = cpi.create_disk(2048, {}, instance_id)
+          expect(@disk_id).not_to be_nil
 
-          cpi.attach_disk(instance_id, disk_id)
+          cpi.attach_disk(instance_id, @disk_id)
 
           snapshot_metadata = vm_metadata.merge(
             bosh_data: 'bosh data',
@@ -92,13 +89,13 @@ describe Bosh::AzureCloud::Cloud do
             director_uuid: SecureRandom.uuid
           )
 
-          snapshot_id = cpi.snapshot_disk(disk_id, snapshot_metadata)
+          snapshot_id = cpi.snapshot_disk(@disk_id, snapshot_metadata)
           expect(snapshot_id).not_to be_nil
 
           cpi.delete_snapshot(snapshot_id)
 
           Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
-            cpi.detach_disk(instance_id, disk_id)
+            cpi.detach_disk(instance_id, @disk_id)
             true
           end
         end
@@ -111,14 +108,14 @@ describe Bosh::AzureCloud::Cloud do
 
       it 'can excercise the vm lifecycle and list the disks' do
         vm_lifecycle(@stemcell_id, get_manual_networks()) do |instance_id|
-          disk_id = cpi.create_disk(2048, {}, instance_id)
-          expect(disk_id).not_to be_nil
+          @disk_id = cpi.create_disk(2048, {}, instance_id)
+          expect(@disk_id).not_to be_nil
 
-          cpi.attach_disk(instance_id, disk_id)
-          expect(cpi.get_disks(instance_id)).to include(disk_id)
+          cpi.attach_disk(instance_id, @disk_id)
+          expect(cpi.get_disks(instance_id)).to include(@disk_id)
 
           Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
-            cpi.detach_disk(instance_id, disk_id)
+            cpi.detach_disk(instance_id, @disk_id)
             true
           end
         end
@@ -127,12 +124,12 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when vm with a attached disk is removed' do
       it 'should attach disk to a new vm' do
-        disk_id = cpi.create_disk(2048, {})
-        expect(disk_id).not_to be_nil
+        @disk_id = cpi.create_disk(2048, {})
+        expect(@disk_id).not_to be_nil
 
         vm_lifecycle(@stemcell_id, get_manual_networks()) do |instance_id|
-          cpi.attach_disk(instance_id, disk_id)
-          expect(cpi.get_disks(instance_id)).to include(disk_id)
+          cpi.attach_disk(instance_id, @disk_id)
+          expect(cpi.get_disks(instance_id)).to include(@disk_id)
         end
 
         begin
@@ -144,13 +141,12 @@ describe Bosh::AzureCloud::Cloud do
           )
 
           expect {
-            cpi.attach_disk(new_instance_id, disk_id)
+            cpi.attach_disk(new_instance_id, @disk_id)
           }.to_not raise_error
 
-          expect(cpi.get_disks(new_instance_id)).to include(disk_id)
+          expect(cpi.get_disks(new_instance_id)).to include(@disk_id)
         ensure
           cpi.delete_vm(new_instance_id) if new_instance_id
-          cpi.delete_disk(disk_id) if disk_id
         end
       end
     end
@@ -160,10 +156,10 @@ describe Bosh::AzureCloud::Cloud do
     context 'without existing disks' do
       it 'should exercise the vm lifecycle' do
         vm_lifecycle(@stemcell_id, dynamic_networks) do |instance_id|
-          disk_id = cpi.create_disk(2048, {}, instance_id)
-          expect(disk_id).not_to be_nil
+          @disk_id = cpi.create_disk(2048, {}, instance_id)
+          expect(@disk_id).not_to be_nil
 
-          cpi.attach_disk(instance_id, disk_id)
+          cpi.attach_disk(instance_id, @disk_id)
 
           snapshot_metadata = vm_metadata.merge(
             bosh_data: 'bosh data',
@@ -173,13 +169,13 @@ describe Bosh::AzureCloud::Cloud do
             director_uuid: SecureRandom.uuid
           )
 
-          snapshot_id = cpi.snapshot_disk(disk_id, snapshot_metadata)
+          snapshot_id = cpi.snapshot_disk(@disk_id, snapshot_metadata)
           expect(snapshot_id).not_to be_nil
 
           cpi.delete_snapshot(snapshot_id)
 
           Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
-            cpi.detach_disk(instance_id, disk_id)
+            cpi.detach_disk(instance_id, @disk_id)
             true
           end
         end
@@ -192,14 +188,14 @@ describe Bosh::AzureCloud::Cloud do
 
       it 'can excercise the vm lifecycle and list the disks' do
         vm_lifecycle(@stemcell_id, dynamic_networks) do |instance_id|
-          disk_id = cpi.create_disk(2048, {}, instance_id)
-          expect(disk_id).not_to be_nil
+          @disk_id = cpi.create_disk(2048, {}, instance_id)
+          expect(@disk_id).not_to be_nil
 
-          cpi.attach_disk(instance_id, disk_id)
-          expect(cpi.get_disks(instance_id)).to include(disk_id)
+          cpi.attach_disk(instance_id, @disk_id)
+          expect(cpi.get_disks(instance_id)).to include(@disk_id)
 
           Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
-            cpi.detach_disk(instance_id, disk_id)
+            cpi.detach_disk(instance_id, @disk_id)
             true
           end
         end
@@ -208,12 +204,12 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when vm with a attached disk is removed' do
       it 'should attach disk to a new vm' do
-        disk_id = cpi.create_disk(2048, {})
-        expect(disk_id).not_to be_nil
+        @disk_id = cpi.create_disk(2048, {})
+        expect(@disk_id).not_to be_nil
 
         vm_lifecycle(@stemcell_id, dynamic_networks) do |instance_id|
-          cpi.attach_disk(instance_id, disk_id)
-          expect(cpi.get_disks(instance_id)).to include(disk_id)
+          cpi.attach_disk(instance_id, @disk_id)
+          expect(cpi.get_disks(instance_id)).to include(@disk_id)
         end
 
         begin
@@ -225,13 +221,12 @@ describe Bosh::AzureCloud::Cloud do
           )
 
           expect {
-            cpi.attach_disk(new_instance_id, disk_id)
+            cpi.attach_disk(new_instance_id, @disk_id)
           }.to_not raise_error
 
-          expect(cpi.get_disks(new_instance_id)).to include(disk_id)
+          expect(cpi.get_disks(new_instance_id)).to include(@disk_id)
         ensure
           cpi.delete_vm(new_instance_id) if new_instance_id
-          cpi.delete_disk(disk_id) if disk_id
         end
       end
     end
@@ -269,6 +264,8 @@ describe Bosh::AzureCloud::Cloud do
           cpi.detach_disk(instance_id, disk_id)
           true
         end
+
+        cpi.delete_disk(disk_id) if disk_id
       end
     end
   end
