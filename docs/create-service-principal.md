@@ -9,6 +9,8 @@ This topic shows you how to permit a service principal (such as an automated pro
 Install and configure Azure CLI following the documentation [**HERE**](http://azure.microsoft.com/en-us/documentation/articles/xplat-cli/).
 
 **NOTE:**
+
+* If you already have npm / Node.js installed, run `npm install azure-cli -g`
 * It is suggested to run Azure CLI using Ubuntu Server 14.04 LTS or Windows 10.
 * If you are using Windows, it is suggested that you use **command line** but not PowerShell to run Azure CLI.
 
@@ -184,13 +186,19 @@ Now you have a service principal account, you need to grant this account access 
 ### 2.4.1 Assigning Roles
 
 ```
-azure role assignment create --spn <service-principal-name> -o "Contributor" --subscription <subscription-id>
+azure role assignment create \
+  --spn <service-principal-name> \
+  --roleName "Contributor" \
+  --subscription <subscription-id>
 ```
 
 Example:
 
 ```
-azure role assignment create --spn "http://BOSHAzureCPI" -o "Contributor" --subscription 87654321-1234-5678-1234-678912345678
+azure role assignment create \
+  --spn "http://BOSHAzureCPI" \
+  --roleName "Contributor" \
+  --subscription 87654321-1234-5678-1234-678912345678
 ```
 
 You can verify the assignment with the following command:
@@ -199,7 +207,7 @@ You can verify the assignment with the following command:
 azure role assignment list --spn <service-principal-name>
 ```
 
-Sample Output:
+Sample Output from Nov 2nd 2015: 
 
 ```
 data:    AD Object:
@@ -213,4 +221,21 @@ data:      Name:            Contributor
 data:      Permissions:
 data:        Actions:      *
 data:        NotActions:   Microsoft.Authorization/*/Write,Microsoft.Authorization/*/Delete
+```
+
+Sample Output from Nov 30th 2015:
+
+```
+info:    Executing command role assignment list
++ Searching for role assignments
+data:    RoleAssignmentId     : /subscriptions/7edbd93a-ce94-44f8-acd1-4bcf9750abc3/providers/Microsoft.Authorization/roleAssignments/be7fae6f-6e6f-43b1-addc-033750dd20a6
+data:    RoleDefinitionName   : Contributor
+data:    RoleDefinitionId     : b24988ac-6180-42a0-ab88-20f7382dd24c
+data:    Scope                : /subscriptions/7edbd93a-ce94-44f8-acd1-4bcf9750abc3
+data:    Display Name         : fordtestad
+data:    SignInName           :
+data:    ObjectId             : 242dc638-dd49-4fe7-aeac-6fb54a4ee1c7
+data:    ObjectType           : ServicePrincipal
+data:
+info:    role assignment list command OK
 ```
