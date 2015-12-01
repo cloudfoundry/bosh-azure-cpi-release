@@ -1,0 +1,13 @@
+---
+platform: linux
+image: docker:///boshcpi/azure-cpi-release
+inputs:
+  - name: bosh-cpi-release
+run:
+  path: bosh-cpi-release/ci/tasks/reset-resources.sh
+params:
+    AZURE_TENANT_ID:               replace-me
+    AZURE_CLIENT_ID:               replace-me
+    AZURE_CLIENT_SECRET:           replace-me
+    AZURE_GROUP_NAME:              replace-me
+    AZURE_STORAGE_ACCOUNT_NAME:    replace-me
