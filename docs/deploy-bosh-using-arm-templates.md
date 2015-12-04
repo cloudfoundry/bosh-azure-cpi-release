@@ -52,6 +52,7 @@ You can check `~/install.log` to determine the status of the deployment. When th
 * Currently BOSH can be only deployed from a Virtual Machine in the same VNET on Azure.
 * The default type of Azue storage account is "Standard_GRS" (Geo-redundant storage). For a list of available Azure storage accounts, their capacities and prices, check [**HERE**](http://azure.microsoft.com/en-us/pricing/details/storage/). Please note Standard_ZRS account cannot be changed to another account type later, and the other account types cannot be changed to Standard_ZRS. The same goes for Premium_LRS accounts.
 
+
 # 2 Deploy BOSH
 
 ## 2.1 Configure
@@ -70,5 +71,17 @@ Run the following commands in your home directory to deploy bosh:
 
 **NOTE:**
 
-* Never use root to do it.
+* Never use root to perform these steps.
 * More verbose logs are written to `~/run.log`.
+
+**TROUBLESHOOT:**
+
+* Invalid Service Principal
+
+In some cases, if the service principal (`tenant_id`, `client_id`, `client_secret`) provided is invalid, then the deployment will fail. Errors in `~/run.log` will show `get_token - http error` like this [reported issue](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/49). In such scenario, you can verify you have a valid service principal with the following operations:
+
+1. Use Azure CLI to login with your service principal. You can find the `tenant_id`, `client_id`, and `client_secret` properties in the `~/bosh.yml` file. If you cannot login, then the service principal is invalid.
+
+2. Verify that the subscription which the service principal belongs to is the same subscription that is used to create your resource group. (This may happen when you have multiple subscriptions.)
+
+3. Refer to the [Create Service Principal guide](./create-service-principal.md) to recreate a service principal on your tenant.
