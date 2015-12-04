@@ -214,3 +214,17 @@ data:      Permissions:
 data:        Actions:      *
 data:        NotActions:   Microsoft.Authorization/*/Write,Microsoft.Authorization/*/Delete
 ```
+
+## 2.5 Verify Your Service Principal
+After your service principal is created, please verify it with the following command:
+
+### 2.5.1 Login With your Service Principal
+
+```
+azure login --username <CLIENT-ID> --password <CLIENT-SECRET> --service-principal --tenant <TENANT-ID>
+```
+
+Example:
+```
+azure login -u 246e4af7-75b5-494a-89b5-363addb9f0fa -p "password" --service-principal --tenant 22222222-1234-5678-1234-678912345678
+```
