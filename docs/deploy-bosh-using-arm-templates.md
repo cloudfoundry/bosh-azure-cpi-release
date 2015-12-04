@@ -78,9 +78,12 @@ Run the following commands in your home directory to deploy bosh:
 
 * Invalid Service Principal
 
-In some cases, if the service principal (`tenant_id`, `client_id`, `client_secret`) provided is invalid, then the deployment will fail. Errors in `~/run.log` will show `get_token - http error` like this [reported issue](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/49). In such scenario, you can verify you have a valid service principal with the following operations:
+In some cases, if the service principal (**TENANT-ID**, **CLIENT-ID**, **CLIENT-SECRET**) provided is invalid, then the deployment will fail. Errors in `~/run.log` will show `get_token - http error` like this [reported issue](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/49). In such scenario, you can verify you have a valid service principal with the following operations:
 
-1. Use Azure CLI to login with your service principal. You can find the `tenant_id`, `client_id`, and `client_secret` properties in the `~/bosh.yml` file. If you cannot login, then the service principal is invalid.
+1. Use Azure CLI to login with your service principal. You can find the `TENANT-ID`, `CLIENT-ID`, and `CLIENT-SECRET` properties in the `~/bosh.yml` file. If you cannot login, then the service principal is invalid.
+```
+azure login --username <CLIENT-ID> --password <CLIENT-SECRET> --service-principal --tenant <TENANT-ID>
+```
 
 2. Verify that the subscription which the service principal belongs to is the same subscription that is used to create your resource group. (This may happen when you have multiple subscriptions.)
 
