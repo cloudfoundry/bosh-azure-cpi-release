@@ -4,22 +4,23 @@
 
 ## 1.1 Create a Service Principal
 
-You can refer to the document [**HERE**](./create-service-principal.md) to create a service principal on your tenant.
+[Create a service principal on your tenant.](./create-service-principal.md) For later reference, save:
 
-After this step, you will get:
+To save time and allow the copy/pasting of code snippets in this guide please set any environmental variables you see in the code as needed.
 
 - **TENANT-ID**
-- **CLIENT-ID**
-- **CLIENT-SECRET** 
+- **CLIENT-ID** (also known as id in `azure account list --json`)
+- **CLIENT-SECRET** (also known as password)
 
 These three values are reusable. Ensure your default subscription is set to the one you used for your service principal.
+
 
 ## 1.2 Create an Azure Resource Group
 
 You will need to determine the deployment location for your group, then create the group in that data center.
 
 ```
-azure group create <resource-group-name> <location>
+azure group create $RESOURCE_GROUP_NAME $LOCATION
 ```
 
 * resource-group-name:
@@ -44,7 +45,7 @@ azure group create bosh-res-group "East Asia"
 You can check whether the resource group is ready for next steps with the following command. You should not proceed to next step until you see "**Provisioning State**" becomes "**Succeeded**" in your output.
 
 ```
-azure group show <resource-group-name>
+azure group show $RESOURCE_GROUP_NAME
 ```
 
 Example:
@@ -76,8 +77,19 @@ info:    group show command OK
 
 ### 1.3.1 Create a default Storage Account
 
+If this is a new account you may have to register for a storage provider using the command
+
 ```
-azure storage account create -l <location> --type <account-type> -g <resource-group-name> <storage-account-name>
+	azure provider register Microsoft.Storage
+```
+
+You may now create a storage account
+
+```
+  azure storage account create \
+  --location $LOCATION \
+  --type $ACCOUNT_TYPE \
+  --resource-group $RESOURCE_GROUP_NAME $STORAGE_ACCOUNT_NAME
 ```
 
 * storage-account-name:
@@ -110,7 +122,7 @@ azure storage account create -l "East Asia" --type GRS -g bosh-res-group xxxxx
 **NOTE:** Even if you see error in the response of creating the storage account, you still can check whether the storage account is created successfully under your resource group with the following command.
 
 ```
-azure storage account show -g <resource-group-name> <storage-account-name>
+azure storage account show -g $RESOURCE_GROUP_NAME $STORAGE_ACCOUNT_NAME
 ```
 
 Example:
@@ -142,7 +154,7 @@ info:    storage account show command OK
 ### 1.3.2 List storage account keys
 
 ```
-azure storage account keys list -g <resource-group-name> <storage-account-name>
+azure storage account keys list -g $RESOURCE_GROUP_NAME $STORAGE_ACCOUNT_NAME
 ```
 
 Sample Output:
@@ -158,9 +170,15 @@ info:    storage account keys list command OK
 
 You can get the primary key as your `storage-account-key`.
 
-### 1.3.3 Create Containers
+### 1.3.3 Create Storage Containers
 
-You need to create the following containers in the storage account:
+In the context of Azure a Container is:
+
+> A container contains properties, metadata, and zero or more blobs. A blob is any single entity comprised of binary data, properties, and metadata.
+
+Don't think of Docker.
+
+You need to create the following "storage containers" in the storage account:
 
 * bosh
   * Stores the OS and data disks for BOSH VMs
@@ -169,14 +187,14 @@ You need to create the following containers in the storage account:
   * To support multiple storage accounts, you need to set the permission of the container `stemcell` as `Public read access for blobs only`
 
 ```
-azure storage container create -a <storage-account-name> -k <storage-account-key> bosh
-azure storage container create -a <storage-account-name> -k <storage-account-key> -p Blob stemcell
+azure storage container create --account-name $STORAGE_ACCOUNT_NAME --account-key $STORAGE_ACCOUNT_KEY bosh
+azure storage container create --account-name $STORAGE_ACCOUNT_NAME --account-key $STORAGE_ACCOUNT_KEY --permission Blob stemcell
 ```
 
 You can list the containers with the following command:
 
 ```
-azure storage container list -a <storage-account-name> -k <storage-account-key>
+azure storage container list --account-name $STORAGE_ACCOUNT_NAME --account-key $STORAGE_ACCOUNT_KEY
 ```
 
 Sample Output:
@@ -199,13 +217,13 @@ To support multiple storage accounts, you need to create the following tables in
   * Stores the metadata of stemcells in multiple storage accounts
 
 ```
-azure storage table create -a <storage-account-name> -k <storage-account-key> stemcells
+azure storage table create -a $STORAGE_ACCOUNT_NAME -k $STORAGE_ACCOUNT_KEY stemcells
 ```
 
 You can list the tables with the following command:
 
 ```
-azure storage table list -a <storage-account-name> -k <storage-account-key>
+azure storage table list -a $STORAGE_ACCOUNT_NAME -k $STORAGE_ACCOUNT_KEY
 ```
 
 Sample Output:
@@ -223,8 +241,19 @@ info:    storage table list command OK
 
 ### 1.4.1 Create the Public IP
 
+If this is a new account you may have to register for a network provider using the command: 
+
 ```
-azure network public-ip create -g <resource-group-name> -l <location> -a Static -n <public-ip-name>
+	azure provider register Microsoft.Network
+```
+
+This may fail after a couple of minutes; a retry succeeded. 
+
+After you have registered:
+
+
+```
+azure network public-ip create -g $RESOURCE_GROUP_NAME -l "$LOCATION" -a Static -n $PUBLIC_IP_NAME
 ```
 
 Example:
@@ -233,11 +262,14 @@ Example:
 azure network public-ip create -g bosh-res-group -l "East Asia" -a Static -n public-ip-for-cf
 ```
 
+The output should have the public IP address.
+
 <a name="get_public_ip"></a>
 ### 1.4.2 Get the Public IP Address
 
+
 ```
-azure network public-ip show -g <resource-group-name> -n <public-ip-name>
+azure network public-ip show -g $RESOURCE_GROUP_NAME -n $PUBLIC_IP_NAME
 ```
 
 Example:
@@ -269,7 +301,7 @@ The value of **IP Address** in the output is your **reserved IP for Cloud Foundr
 1. Create a Virtual Network
 
   ```
-  azure network vnet create -g <resource-group-name> -n <virtual-network-name> -l <location> -a <virtual-network-cidr>
+  azure network vnet create --resource-group $RESOURCE_GROUP_NAME --name $VIRTUAL_NETWORK_NAME --location "$LOCATION" --address-prefixes $VIRTUAL_NETWORK_CIDR
   ```
 
   Options:
@@ -280,14 +312,14 @@ The value of **IP Address** in the output is your **reserved IP for Cloud Foundr
   Example:
 
   ```
-  azure network vnet create -g bosh-res-group -n boshvnet-crp -l "East Asia" -a 10.0.0.0/8
+  azure network vnet create --resource-group bosh-res-group --name boshvnet-crp --location "East Asia" --address-prefixes 10.0.0.0/8
   ```
 
 2. Create two subnets in the Virtual Network
 
   ```
-  azure network vnet subnet create -g <resource-group-name> -e <virtual-network-name> -n <bosh-subnet-name> -a <bosh-subnet-cidr>
-  azure network vnet subnet create -g <resource-group-name> -e <virtual-network-name> -n <cloudfoundry-subnet-name> -a <cloudfoundry-subnet-cidr>
+  azure network vnet subnet create -g $RESOURCE_GROUP_NAME -e $VIRTUAL_NETWORK_NAME -n $BOSH_SUBNET_NAME -a $BOSH_SUBNET_CIDR
+  azure network vnet subnet create -g $RESOURCE_GROUP_NAME -e $VIRTUAL_NETWORK_NAME -n $CLOUDFOUNDRY_SUBNET_NAME -a $CLOUD_FOUNDRY_SUBNET_CIDR
   ```
 
   Options:
@@ -314,7 +346,7 @@ The value of **IP Address** in the output is your **reserved IP for Cloud Foundr
   You can check whether the virtual network is created successfully under your resource group with the following command.
 
   ```
-  azure network vnet show -g <resource-group-name> -n <virtual-network-name>
+  azure network vnet show -g $RESOURCE_GROUP_NAME -n $VIRTUAL_NETWORK_NAME
   ```
 
   Example:
@@ -353,7 +385,7 @@ You can create a virtual machine based on **Ubuntu Server 14.04 LTS** on Azure P
 
 **NOTE:**
 
-* As a temporary limitation, **currently the dev-box should be on Azure and in the same virutal network with BOSH VMs and CF VMs**. And the dev-box should be in the subnet `BOSH`.
+* As a temporary limitation, **currently the dev-box should be on Azure and in the same virtual network with BOSH VMs and CF VMs**. And the dev-box should be in the subnet `BOSH`.
 * Select **Resource Manager** as the deployment model.
 * **(RECOMMENDED)** Avoid using the private IP addresses **10.0.0.4** and **10.0.16.4** for your dev-box. On Azure Portal, you can manually change the private IP address to a default value **10.0.0.100** after the dev-box is created. Afthe the IP address is changed, the dev-box may reboot.
 * **(NOT RECOMMENDED)** If you would like to use **10.0.0.4** or **10.0.16.4** for your dev-box, you need to change the IP address in example YAML files to stay the same.
