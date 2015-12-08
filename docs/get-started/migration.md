@@ -33,8 +33,8 @@ If you are customers of [Cloud Foundry on Azure Preview 2](https://azure.microso
   1. You need to set the permission of the container `stemcell` as `Blob` in your default storage account.
 
     ```
-    azure storage account keys list -g <resource-group-name> <storage-account-name>
-    azure storage container set -a <storage-account-name> -k <storage-account-key> -p Blob stemcell
+    azure storage account keys list --resource-group <resource-group-name> <storage-account-name>
+    azure storage container set --account-name <storage-account-name> --account-key <storage-account-key> --permission Blob stemcell
     ```
 
     To support multiple storage accounts, the permission of the container `stemcell` in your default storage account should be set as `Blob` which means `Public read access for blobs only`.
@@ -44,23 +44,27 @@ If you are customers of [Cloud Foundry on Azure Preview 2](https://azure.microso
   2. To support multiple storage accounts, you need to create a table `stemcells` in your default storage account.
 
     ```
-    azure storage account keys list -g <resource-group-name> <storage-account-name>
-    azure storage table create -a <storage-account-name> -k <storage-account-key> stemcells
+    azure storage account keys list --resource-group <resource-group-name> <storage-account-name>
+    azure storage table create --account-name <storage-account-name> --account-key <storage-account-key> stemcells
     ```
 
     If this step is not done, you may hit the error [**#4**](#table_not_found).
 
-  3. Create another storage account and containers in it manually.
+  3. Create a new storage account and containers in it manually.
 
     ```
-    azure storage account create -l <location> --type <account-type> -g <resource-group-name> <another-storage-account-name>
-    azure storage container create -a <storage-account-name> -k <storage-account-key> bosh
-    azure storage container create -a <storage-account-name> -k <storage-account-key> stemcell
+    azure storage account create --location <location> --type <account-type> --resource-group <resource-group-name> <storage-account-name>
+    ```
+
+    ```
+    azure storage account keys list --resource-group <resource-group-name> <storage-account-name> # Get your storage account key
+    azure storage container create --account-name <storage-account-name> --account-key <storage-account-key> bosh
+    azure storage container create --account-name <storage-account-name> --account-key <storage-account-key> stemcell
     ```
 
     If this step is not done, you may hit the error [**#5**](#storage_account_not_found).
 
-  Please click [**HERE**](../src/bosh_azure_cpi/README.md) to learn more new settings.
+  Please click [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/blob/master/src/bosh_azure_cpi/README.md) to learn more new settings.
 
 ## Error
 
