@@ -8,9 +8,9 @@ This topic shows you how to permit a service principal (such as an automated pro
 
 Install and configure Azure CLI following the documentation [**HERE**](http://azure.microsoft.com/en-us/documentation/articles/xplat-cli/).
 
-**NOTE:**
-* It is suggested to run Azure CLI using Ubuntu Server 14.04 LTS or Windows 10.
-* If you are using Windows, it is suggested that you use **command line** but not PowerShell to run Azure CLI.
+>**NOTE:**
+  * It is suggested to run Azure CLI using Ubuntu Server 14.04 LTS or Windows 10.
+  * If you are using Windows, it is suggested that you use **command line** but not PowerShell to run Azure CLI.
 
 <a name="configure_azure_cli"></a>
 ## 1.2 Configure Azure CLI
@@ -28,10 +28,9 @@ azure config mode arm
 azure login
 ```
 
-**NOTE:**
-
-* `azure login` requires a work or school account. Never login with your personal account.
-* If you do not have a work or school account currently, you can easily create a work or school account with the [**guide**](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/).
+>**NOTE:**
+  * `azure login` requires a work or school account. Never login with your personal account.
+  * If you do not have a work or school account currently, you can easily create a work or school account with the [**guide**](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/).
 
 # 2 Create a Service Principal
 
@@ -83,7 +82,7 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
   * **SUBSCRIPTION-ID** - the row `id`
   * **TENANT-ID**       - the row `tenantId`
 
-  **NOTE:** If your **TENANT-ID** is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See [1.2 Configure Azure CLI](#configure_azure_cli) on how to fix this.
+  >**NOTE:** If your **TENANT-ID** is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See [1.2 Configure Azure CLI](#configure_azure_cli) on how to fix this.
 
 2. Ensure your default subscription is set to the one you want to create your service principal.
 
@@ -184,13 +183,13 @@ Now you have a service principal account, you need to grant this account access 
 ### 2.4.1 Assigning Roles
 
 ```
-azure role assignment create --spn <service-principal-name> -o "Contributor" --subscription <subscription-id>
+azure role assignment create --spn <service-principal-name> --roleName "Contributor" --subscription <subscription-id>
 ```
 
 Example:
 
 ```
-azure role assignment create --spn "http://BOSHAzureCPI" -o "Contributor" --subscription 87654321-1234-5678-1234-678912345678
+azure role assignment create --spn "http://BOSHAzureCPI" --roleName "Contributor" --subscription 87654321-1234-5678-1234-678912345678
 ```
 
 You can verify the assignment with the following command:
@@ -215,16 +214,33 @@ data:        Actions:      *
 data:        NotActions:   Microsoft.Authorization/*/Write,Microsoft.Authorization/*/Delete
 ```
 
+<a name="verify-your-service-principal"></a>
 ## 2.5 Verify Your Service Principal
-After your service principal is created, please verify it with the following command:
 
-### 2.5.1 Login With your Service Principal
+Your service principal is created as follows:
 
-```
-azure login --username <CLIENT-ID> --password <CLIENT-SECRET> --service-principal --tenant <TENANT-ID>
-```
+- **TENANT-ID**
+- **CLIENT-ID**
+- **CLIENT-SECRET** 
 
-Example:
-```
-azure login -u 246e4af7-75b5-494a-89b5-363addb9f0fa -p "password" --service-principal --tenant 22222222-1234-5678-1234-678912345678
-```
+Please verify it with the following steps:
+
+1. Use Azure CLI to login with your service principal.
+
+  You can find the `TENANT-ID`, `CLIENT-ID`, and `CLIENT-SECRET` properties in the `~/bosh.yml` file. If you cannot login, then the service principal is invalid.
+
+  ```
+  azure login --username <CLIENT-ID> --password <CLIENT-SECRET> --service-principal --tenant <TENANT-ID>
+  ```
+
+  Example:
+
+  ```
+  azure login --username 246e4af7-75b5-494a-89b5-363addb9f0fa --password "password" --service-principal --tenant 22222222-1234-5678-1234-678912345678
+  ```
+
+2. Verify that the subscription which the service principal belongs to is the same subscription that is used to create your resource group. (This may happen when you have multiple subscriptions.)
+
+3. Recreate a service principal on your tenant if the service principal is invalid.
+
+> **NOTE:** In some cases, if the service principal is invalid, then the deployment of BOSH will fail. Errors in `~/run.log` will show `get_token - http error` like this [reported issue](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/49).

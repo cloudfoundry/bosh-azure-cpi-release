@@ -1,19 +1,19 @@
-# Deploy Cloud Foundry
+# Prepare the manifest for Cloud Foundry
 
-All the following commands must be run in your dev-box.
+>**NOTE:**
+  * The section shows how to configure a get-started manifest to deploy Cloud Foundry. For a more robust deployment, please refer to [**deploy-cloudfoundry-for-enterprise**](./deploy-cloudfoundry-for-enterprise.md)
+  * All the following commands must be run in your dev-box.
 
-## Configure
-
-A manifest YAML file is needed to deploy Cloud Foundry. In this section, we will show how to configure the YAML file.
+A manifest is needed to deploy Cloud Foundry. In this section, we will show how to configure the manifest.
 
 We provide two sample configurations:
 
-* [**single-vm-cf-224.yml**](http://cloudfoundry.blob.core.windows.net/misc/single-vm-cf-224.yml): Configuration to deploy Single-VM Cloud Foundry.
-* [**multiple-vm-cf-224.yml**](http://cloudfoundry.blob.core.windows.net/misc/multiple-vm-cf-224.yml): Configuration to deploy Multi-VM Cloud Foundry.
+* [**single-vm-cf-224.yml**](../example_manifests/single-vm-cf-224.yml): Configuration to deploy Single-VM Cloud Foundry.
+* [**multiple-vm-cf-224.yml**](../example_manifests/multiple-vm-cf-224.yml): Configuration to deploy Multi-VM Cloud Foundry.
 
-### Common Configurations
+You can choose one of them based on your needs.
 
-You should replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties. The configurations in this section work for both **single-vm-cf-224.yml** and **multiple-vm-cf-224.yml**.
+You should replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, **RESERVED-IP** and **SSL-CERT-AND-KEY** properties.
 
 1. Configure **BOSH-DIRECTOR-UUID**
 
@@ -126,93 +126,7 @@ You should replace the **BOSH-DIRECTOR-UUID**, **VNET-NAME**, **SUBNET-NAME**, *
       -----END RSA PRIVATE KEY-----
   ```
 
-**NOTE:**
-
-* **Never use the certificate and key in the example.**
-* If you set `enableDNSOnDevbox` true, the dev box can serve as a DNS and it has been pre-configured in example YAML file.
-* If you want to use your own domain name, you can replace all **cf.azurelovecf.com** in the example YAML file. And please replace **10.0.0.100** with the IP address of your DNS server.
-
-### Configurations for Multiple-VM Cloud Foundry
-
-The configurations in this section work for **multiple-vm-cf-224.yml**. Click [**HERE**](../src/bosh_azure_cpi/README.md) to learn more about the configuration of the availability set and multiple storage accounts.
-
-#### Availability Set
-
-An [availability set](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-manage-availability/) helps keep your virtual machines available during downtime, such as during maintenance.
-
-You can add the following configuration into your `resource_pools`.
-
-```
-- name: resource_router
-  network: cf_private
-  stemcell:
-    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-    version: '0000'
-  cloud_properties:
-    availability_set: <availability-set-name>
-    instance_type: Standard_D1
-```
-
-And specify the resource_pool as `resource_router`. Then these 2 VMs will be in the availability set `<availability-set-name>`.
-
-```
-- name: router_z1
-  instances: 2
-  resource_pool: resource_router
-  templates:
-  - {name: gorouter, release: cf}
-  - {name: metron_agent, release: cf}
-  networks:
-  - name: cf_private
-    static_ips: [10.0.16.12, 10.0.16.22]
-  properties:
-    dropsonde: {enabled: true}
-```
-
-**NOTE:**
-
-1. Avoid leaving a single instance virtual machine in an Availability Set by itself.
-2. You should plan your availability sets before deploying Cloud Foundry.
-
-#### Multiple Storage Account
-
-Because of [Azure Storage Limits](https://azure.microsoft.com/en-us/documentation/articles/azure-subscription-service-limits/#storage-limits), the maximum number of highly utilized disks is about 40 (20,000/500 IOPS per disk) for a Standard Tier VM.
-
-You need to create another storage account before you configure it in `resource_pools`. Then the VMs in this pool `resource_router` will be in `<another-storage-account>`.
-
-```
-- name: resource_router
-  network: cf_private
-  stemcell:
-    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-    version: '0000'
-  cloud_properties:
-    storage_account_name: <another-storage-account>
-    instance_type: Standard_D1
-```
-
-## Deploy
-
-1. Upload stemcell
-
-  Get the value of **resource_pools.name[vms].stemcell.url** in [**bosh.yml**](https://github.com/Azure/azure-quickstart-templates/blob/master/bosh-setup/bosh.yml), then use it to replace **STEMCELL-FOR-AZURE-URL** in below command:
-
-  ```
-  bosh upload stemcell STEMCELL-FOR-AZURE-URL
-  ```
-
-2. Upload Cloud Foundry release v224
-
-  ```
-  bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=224
-  ```
-
-  **NOTE:**
-  * If you want to use the latest Cloud Foundry version, the Azure part in the YAML file is same but other configurations may be different. You need to change them manually.
-
-3. Deploy
-
-  ```
-  bosh deployment YOUR_CLOUD_FOUNDRY_CONFIGURATION_YAML_FILE # cf_224.yml
-  bosh deploy
-  ```
+>**NOTE:**
+  * **Never use the certificate and key in the example.**
+  * If you set `enableDNSOnDevbox` true, the dev box can serve as a DNS and it has been pre-configured in example YAML file.
+  * If you want to use your own domain name, you can replace all **cf.azurelovecf.com** in the example YAML file. And please replace **10.0.0.100** with the IP address of your DNS server.

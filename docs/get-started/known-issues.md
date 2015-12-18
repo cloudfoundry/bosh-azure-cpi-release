@@ -16,11 +16,3 @@
   ```
 
   If you hits the similar issue, you can retry the same command manually. If it does not work, you can file a support ticket. Please refer to https://azure.microsoft.com/en-us/support/options/ and https://azure.microsoft.com/en-us/support/faq/.
-
-3. api.cf.azurelovecf.com: no such host
-
-  ```
-  Error performing request: Get https://api.cf.azurelovecf.com/v2/info: dial tcp: lookup api.cf.azurelovecf.com: no such host
-  ```
-
-  If you hit the error when you try to login Cloud Foundry, you should check if your DNS is ready. You can prepare your own DNS and configure it properly. Otherwise, you can follow [**HERE**](./deploy-bosh-manually.md#3-setup-dns) to setup a DNS for testing quickly.
