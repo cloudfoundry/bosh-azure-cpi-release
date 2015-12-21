@@ -336,7 +336,7 @@ The value of **IP Address** in the output is your **reserved IP for Cloud Foundr
 
 ### 1.5.1 Create a virtual machine
 
-You can create a virtual machine based on **Ubuntu Server 14.04 LTS** on Azure Portal. The VM will be a **dev-box** to deploy BOSH and Cloud Foundry.
+In the same resource group, you can create a virtual machine based on **Ubuntu Server 14.04 LTS** on Azure Portal. The VM will be a **dev-box** to deploy BOSH and Cloud Foundry.
 
 >**NOTE:**
   * As a temporary limitation, **currently the dev-box should be on Azure and in the same virutal network with BOSH VMs and CF VMs**. And the dev-box should be in the subnet `BOSH`.
@@ -344,7 +344,11 @@ You can create a virtual machine based on **Ubuntu Server 14.04 LTS** on Azure P
   * **(RECOMMENDED)** Avoid using the private IP addresses **10.0.0.4** and **10.0.16.4** for your dev-box. On Azure Portal, you can manually change the private IP address to a default value **10.0.0.100** after the dev-box is created. Afthe the IP address is changed, the dev-box may reboot.
   * **(NOT RECOMMENDED)** If you would like to use **10.0.0.4** or **10.0.16.4** for your dev-box, you need to change the IP address in example YAML files to stay the same.
 
-### 1.5.2 Setup your dev-box
+### 1.5.2 Login your dev-box
+
+You can find the public IP address of the dev-box on Azure Portal. Login your dev-box with the `username` and `password` which you specified.
+
+### 1.5.3 Setup your dev-box
 
 ```
 cd ~
