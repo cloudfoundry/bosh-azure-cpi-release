@@ -45,7 +45,7 @@ resource_pools:
     instance_type: Standard_D1
 
 compilation:
-  workers: 6
+  workers: 1
   network: cf_private
   reuse_compilation_vms: true
   cloud_properties:

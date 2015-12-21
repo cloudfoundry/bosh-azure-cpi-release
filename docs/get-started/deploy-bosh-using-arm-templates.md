@@ -3,6 +3,8 @@
 <a name="bosh_setup"></a>
 # 1 Setup a Development Environment on Azure 
 
+## 1.1 Prepare Azure Resources
+
 Here we’ll create the following Azure resources that’s required for deploying BOSH and Cloud Foundry:
 
 * An Azure Storage Account
@@ -31,11 +33,21 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 | clientID | ID of the client | CLIENT-ID |
 | clientSecret | secret of the client | CLIENT-SECRET |
 
-You can check `~/install.log` to determine the status of the deployment. When the deployment succeeds, you will find **Finish** at the end of the log file and no **ERROR** message in it.
-
 >**NOTE:**
   * Currently BOSH can be only deployed from a Virtual Machine in the same VNET on Azure.
   * The default type of Azue storage account is "Standard_GRS" (Geo-redundant storage). For a list of available Azure storage accounts, their capacities and prices, check [**HERE**](http://azure.microsoft.com/en-us/pricing/details/storage/). Please note Standard_ZRS account cannot be changed to another account type later, and the other account types cannot be changed to Standard_ZRS. The same goes for Premium_LRS accounts.
+
+## 1.2 Login your dev-box
+
+After the deployment succeeded, you can find the resource group with the name you specified on Azure Portal. The VM in the resource group is your dev-box. You can find the public IP address of the dev-box.
+
+Login your dev-box with the ARM template parameter `adminUsername` and `adminPassword`.
+
+```
+ssh <adminUsername>@<public-IP-address>
+```
+
+After you login, you can check `~/install.log` to determine the status of the deployment. When the deployment succeeds, you will find **Finish** at the end of the log file and no **ERROR** message in it.
 
 # 2 Deploy BOSH
 
