@@ -1,0 +1,121 @@
+---
+name: cf-mongodb-azure
+director_uuid: REPLACE_WITH_DIRECTOR_ID
+
+releases:
+  - name: cf-services-contrib
+    version: 6
+
+compilation:
+  workers: 3
+  network: default
+  reuse_compilation_vms: true
+  cloud_properties:
+    instance_type: Standard_D1
+
+update:
+  canaries: 1
+  canary_watch_time: 30000-60000
+  update_watch_time: 30000-60000
+  max_in_flight: 4
+
+networks:
+  - name: default
+    type: manual
+    subnets: # Update the subnet
+    - range: 10.0.64.0/24
+      gateway: 10.0.64.1
+      dns: [10.0.0.100]
+      reserved: ["10.0.64.2 - 10.0.64.3"]
+      cloud_properties:
+        virtual_network_name: REPLACE_WITH_VIRTUAL_NETWORK_NAME
+        subnet_name: REPLACE_WITH_SUBNET_NAME_FOR_MONGODB
+
+resource_pools:
+  - name: common
+    network: default
+    size: 2
+    stemcell: # Run "bosh stemcells" to get the name and version
+      name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+      version: REPLACE_WITH_STEMCELL_VERSION
+    cloud_properties:
+      instance_type: Standard_D1
+
+jobs:
+  - name: gateways
+    release: cf-services-contrib
+    template:
+    - mongodb_gateway
+    instances: 1
+    resource_pool: common
+    networks:
+      - name: default
+        default: [dns, gateway]
+    properties:
+      # Service credentials
+      uaa_client_id: "cf"
+      uaa_endpoint: http://uaa.REPLACE_WITH_YOUR_CF_SYSTEM_DOMAIN
+      uaa_client_auth_credentials:
+        username: admin
+        password: c1oudc0w
+
+  - name: mongodb_service_node
+    release: cf-services-contrib
+    template: mongodb_node_ng
+    instances: 1
+    resource_pool: common
+    persistent_disk: 10000
+    properties:
+      plan: default
+    networks:
+      - name: default
+        default: [dns, gateway]
+
+properties:
+  networks:
+    apps: default
+    management: default
+
+  cc:
+    srv_api_uri: http://api.REPLACE_WITH_YOUR_CF_SYSTEM_DOMAIN
+
+  nats:
+    address: REPLACE_WITH_NATS_ADDRESS # e.g. 10.0.16.4
+    port: 4222
+    user: nats
+    password: c1oudc0w
+    authorization_timeout: 5
+
+  service_plans:
+    mongodb:
+      default:
+        description: "Developer, shared VM, 250MB storage, 10 connections"
+        free: true
+        job_management:
+          high_water: 230
+          low_water: 20
+        configuration:
+          capacity: 125
+          max_clients: 10
+          quota_files: 4
+          quota_data_size: 240
+          enable_journaling: true
+          backup:
+            enable: true
+          lifecycle:
+            enable: true
+            serialization: enable
+            snapshot:
+              quota: 1
+
+  mongodb_gateway:
+    token: REPLACE_WITH_A_MONGODB_SERVICE_TOKEN_YOU_MAKE_UP # The token you use later with `cf create-service-auth-token`
+    default_plan: default
+    supported_versions: ["2.2"]
+    version_aliases:
+      current: "2.2"
+    cc_api_version: v2
+  mongodb_node:
+    supported_versions: ["2.2"]
+    default_version: "2.2"
+    max_tmp: 900
