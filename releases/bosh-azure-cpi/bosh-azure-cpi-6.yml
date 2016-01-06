@@ -3,7 +3,7 @@ packages:
 - name: bosh_azure_cpi
   version: 6b06b4117b9952ff9f4e13211120a2f92fc4ed10
   fingerprint: 6b06b4117b9952ff9f4e13211120a2f92fc4ed10
-  sha1: b9f616cba35636ad7fd8c54230c877fe9b59194e
+  sha1: 4c485d2c8ed0040244b1c197759fa2cf62c7db31
   dependencies:
   - ruby_azure_cpi
 - name: ruby_azure_cpi
