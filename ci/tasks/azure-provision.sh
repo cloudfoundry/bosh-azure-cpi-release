@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 source bosh-cpi-release/ci/tasks/utils.sh
 
 check_param AZURE_CLIENT_ID
@@ -15,6 +17,8 @@ check_param AZURE_CF_SUBNET_NAME
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
+
+set +e
 
 # check if group already exists
 echo "azure group list | grep ${AZURE_GROUP_NAME}"
