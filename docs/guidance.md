@@ -32,6 +32,10 @@ You have two options to deploy BOSH on Azure. One is ARM templates which can hel
 
 * [Deploy Cloud Foundry using multiple storage accounts and availability sets](./get-started/deploy-cloudfoundry-for-enterprise.md)
 
+# Deployment for Diego with .NET support
+
+* [Push your first .NET application to cloud foundry on Azure](./push-your-first-net-application-to-cloud-foundry-on-azure.md)
+
 # Additional Information
 
 If you hit some issues when you deploy BOSH and Cloud Foundry, you can refer to the following documents. If it does not work, please open an issue.
