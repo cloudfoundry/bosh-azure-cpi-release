@@ -23,6 +23,7 @@ Azure Application Gateway provides application-level routing and load balancing 
   openssl genrsa -out domain.name.key 2048
   openssl req -new -x509 -days 365 -key domain.name.key -out domain.name.crt
   openssl pkcs12 -export -out domain.name.pfx -inkey domain.name.key -in domain.name.crt
+  # You will be asked to input the password for the ".pfx" certificate
   ```
 
 * It is assumed that you have already created a basic Cloud Foundry deployment, with multiple routers specified in the manifest. In this example, we create 2 routers (10.0.16.12 and 10.0.16.22).
@@ -40,7 +41,7 @@ Azure Application Gateway provides application-level routing and load balancing 
   ```
   Example:
   ```
-  azure network vnet subnet create -g “MyResourceGroup” -e “myvnet” -n “ApplicationGateway” -a 10.0.1.0/24
+  azure network vnet subnet create -g "MyResourceGroup" -e "myvnet" -n "ApplicationGateway" -a 10.0.1.0/24
   ```
 
 3. Open the PowerShell command window and Log in.
@@ -51,21 +52,74 @@ Azure Application Gateway provides application-level routing and load balancing 
   PS C:\> Select-AzureRmSubscription -Subscriptionid <GUID of your subscription>
   ```
 
-4. Download the PowerShell script "New-AG.ps1".
+4. Download the PowerShell script [**New-AG.ps1**](./New-AG.ps1) for a single certificate and [**New-AG-multi-certs.ps1**](./New-AG-multi-certs.ps1) for multiple certificates.
 
-  http://cloudfoundry.blob.core.windows.net/misc/New-AG.ps1
-
-5. Configure the parameters in "New-AG.ps1".
-
-  Following the instructions in the script, you need to replace the parameters with new AG name and settings from your CF manifest.
-
-6. Run "New-AG.ps1". 
+5. Run the script and follow the prompts to specify the configurations.
 
   This script will create and configure a new Application Gateway with SSL offloading enabled. Note it may take around 15 to 30 minutes to finish.
 
   If the Application Gateway is created successfully, `New-AG.ps1` will output the public IP address of the AG.
 
-7. Configure DNS for your Cloud Foundry domain.
+  * Example for a single certificate:
+
+    ```
+    Input your location (e.g. East Asia): East Asia
+    Input your resource group name: binxi1109ag
+    Input your application gateway name: ApplicationGateway
+    Will create the application gateway ApplicationGateway in your resrouce group binxi1109ag
+    Input your virtual network name [boshvnet-crp]: 
+    Input your subnet name for the application gateway [ApplicationGateway]: 
+    Input your public IP name[publicIP01]: 
+    Input the list of router IP addresses (split by ";"): 10.0.16.12;10.0.16.22
+    Input your system domain[cf.azurelovecf.com]: 
+    Input the path of the certificate: D:\domain1.pfx
+    Input the password of the certificate: User@111
+    Removing it if the application gateway exists
+    Adding the subnet for the application gateway
+    Creating public IP address for front end configuration
+    Creating IP configuration
+    Configuring the back end IP address pool
+    Configuring a probe
+    Configuring pool settings
+    Creating the front end IP configuration
+    Configuring the front end IP port (80 and 443)
+    Configuring the certificate used for SSL connection
+    Configuring the instance size of the AG
+    Creating the application gateway
+    Succeed to create the application gateway.
+    The public IP of the application gateway is: <Public IP Address of Application Gateway>
+    ```
+
+  * Example for multiple certificates:
+
+    ```
+    Input your location (e.g. East Asia): East Asia
+    Input your resource group name: binxi1109ag
+    Input your application gateway name: ApplicationGateway
+    Will create the application gateway ApplicationGateway in your resrouce group binxi1109ag
+    Input your virtual network name [boshvnet-crp]: 
+    Input your subnet name for the application gateway [ApplicationGateway]: 
+    Input your public IP name[publicIP01]: 
+    Input the list of router IP addresses (split by ";"): 10.0.16.12;10.0.16.22
+    Input your system domain[cf.azurelovecf.com]: 
+    Input the hostname, path and password of the certificates (Format: hostname1,path1,password1;hostname2,path2,password2;...): api.cf.azurelovecf.com,D:\domain1.pfx,Password1;game-2048.cf.azurelovecf.com,D:\A.pfx,Password1;demo.cf.azurelovecf.com,D:\B.pfx,Password2
+    Removing it if the application gateway exists
+    Adding the subnet for the application gateway
+    Creating public IP address for front end configuration
+    Creating IP configuration
+    Configuring the back end IP address pool
+    Configuring a probe
+    Configuring pool settings
+    Creating the front end IP configuration
+    Configuring the front end IP port (80 and 443)
+    Configuring the certificate used for SSL connection
+    Configuring the instance size of the AG
+    Creating the application gateway
+    Succeed to create the application gateway.
+    The public IP of the application gateway is: <Public IP Address of Application Gateway>
+    ```
+
+6. Configure DNS for your Cloud Foundry domain.
 
   * For production, you need to update the DNS configuration according to the belew sample.
   * For testing only, you can also update local host file instead.
@@ -83,7 +137,7 @@ Azure Application Gateway provides application-level routing and load balancing 
 
   You can find the IP addresses mentioned above on Azure Portal in your resource group. 
 
-8. Login to your Cloud Foundry: `cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation`.
+7. Login to your Cloud Foundry: `cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation`.
 
   If you can login successfully, the Application Gateway is created successfully.
 
@@ -93,51 +147,8 @@ Azure Application Gateway provides application-level routing and load balancing 
   If you want to create an AG without SSL offloading, reference this:
   https://azure.microsoft.com/en-us/documentation/articles/application-gateway-create-gateway-arm
 
-# 4 Multiple Certs
-
-The following steps are for supporting multiple certificates in AG.
-
-1. Download the PowerShell script "New-AG-multi-cert.ps1".
-
-  http://cloudfoundry.blob.core.windows.net/misc/New-AG-multi-cert.ps1
-
-2. Configure the parameters in “New-AG-multi-cert.ps1” and run it.
-
-  You need to specify two different certs in the script.
-  After the script is finished, each cert will be bound to a listener which has a different front end port (443 and 8443).
-
-3. Configure DNS for your Cloud Foundry domain.
-
-  * For production, you need to update the DNS configuration according to the belew sample.
-  * For testing only, you can also update local host file instead.
-    * Windows: `C:\Windows\System32\drivers\etc\hosts`
-    * Linux: `/etc/hosts`
-
-  Sample DNS entries after Application Gateway is created:
-
-  ```
-  <Public IP Address of Application Gateway>   api.cf.azurelovecf.com
-  <Public IP Address of Application Gateway>   uaa.cf.azurelovecf.com
-  <Public IP Address of Application Gateway>   login.cf.azurelovecf.com
-  <Original Public IP Address of the Cloud Foundry instance>  loggregator.cf.azurelovecf.com
-  ```
-
-  You can find the IP addresses mentioned above on Azure Portal in your resource group. 
-
-4. Login CF
-
-  `cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation`
-
-5. Push your APP.
-
-  You can visit the app via different certs
-  ```
-  https://<YOUR-APP-NAME>.cf.azurelovecf.com:443	# cert1
-  https://<YOUR-APP-NAME>.cf.azurelovecf.com:8443	# cert2
-  ```
-
 <a name="known-issues" />
-# 5 Known issues
+# 4 Known issues
 
 1. Application Gateway does not support Websocket.
 
@@ -156,6 +167,6 @@ The following steps are for supporting multiple certificates in AG.
 
   >**NOTE:** Once WebSocket is supported by Application Gateway we will provide an updated guidance regarding removing HAProxy and re-create Application Gateway.
 
-2. Azure CLI is not supported for creating Application Gateway.
+2. Azure CLI is not supported for creating Application Gateway in ARM mode.
 
-  The script that creates and configures Application Gateway is currently implemented in PowerShell, once CLI is supported, we will also provide the CLI version of the script.
+  The script that creates and configures Application Gateway is currently implemented in PowerShell. Once CLI is supported, we will also provide the CLI version of the script.
