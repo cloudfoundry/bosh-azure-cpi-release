@@ -12,7 +12,7 @@ You have deployed your **BOSH director VM** on Azure by following this [guide](h
     - Name: **Diego**, CIDR: **10.0.32.0/20**
     - Name: **Windows**, CIDR: **10.0.48.0/20**
 
-![create-two-subnets](push-your-first-net-application-to-cloud-foundry-on-azure/create-two-subnets.png "create-two-subnets")
+![create-two-subnets](./create-two-subnets.png "create-two-subnets")
 
 ## Deploy you cloud foundry on Azure ##
 1. Log on to your dev-box.
@@ -98,28 +98,28 @@ You have deployed your **BOSH director VM** on Azure by following this [guide](h
 1. Sign in to the Azure portal.
 2. On the Hub menu, click **New** > **Compute** > **Windows Server 2012 R2 Datacenter**.
 
-  ![select-windows-server-2k12R2](push-your-first-net-application-to-cloud-foundry-on-azure/windows-stack-select-windows-server-2k12R2.png "select-windows-server-2k12R2")
+  ![select-windows-server-2k12R2](./windows-stack-select-windows-server-2k12R2.png "select-windows-server-2k12R2")
 
 3. On the **Windows Server 2012 R2 Datacenter** page, under **Select a deployment model**, select **Resource Manager**. Click **Create**.
 
-  ![windows-stack-select-resource-manager](push-your-first-net-application-to-cloud-foundry-on-azure/windows-stack-select-resource-manager.png "windows-stack-select-resource-manager")
+  ![windows-stack-select-resource-manager](./windows-stack-select-resource-manager.png "windows-stack-select-resource-manager")
 
 4. On the **Create virtual machine** blade, click **Basics**. Enter a **Name** you want for the virtual machine, the administrative **User name**, and a strong **Password**. Please select the **subscription** which you used to deploy cloud foundry. And specify the existing **Resource group** which was created for your cloud foundry and the same **Location** as that for your default storage account.
 
-  ![windows-stack-basics](push-your-first-net-application-to-cloud-foundry-on-azure/windows-stack-basics.png "windows-stack-basics")
+  ![windows-stack-basics](./windows-stack-basics.png "windows-stack-basics")
   _**NOTE:** **User name** refers to the administrative account that you'll use to manage the server. Create a password that's hard for others to guess but that you can remember. **You'll need the user name and password to log on to the virtual machine.**_
 
 5. Click **Size** and select an appropriate virtual machine size for your needs. For example, Standard D1. Each size specifies the number of compute cores, memory, and other features, such as support for Premium Storage, which will affect the price. Azure recommends certain sizes automatically depending on the image you choose.
 
-  ![windows-stack-size](push-your-first-net-application-to-cloud-foundry-on-azure/windows-stack-size.png "windows-stack-size")
+  ![windows-stack-size](./windows-stack-size.png "windows-stack-size")
   _**NOTE:** Premium storage is available for DS-series virtual machines in certain regions. Premium storage is the best storage option for data intensive workloads such as a database. For details, see [Premium Storage: High-Performance Storage for Azure Virtual Machine Workloads](https://azure.microsoft.com/en-us/documentation/articles/storage-premium-storage-preview-portal/)._
 
 6. Click **Settings** to see storage and networking settings for the new virtual machine. Please select the default **Storage account** for your cloud foundry. And please specify the **Virtual network** for your cloud foundry and select Windows as your **Subnet**.
 
-  ![windows-stack-settings](push-your-first-net-application-to-cloud-foundry-on-azure/windows-stack-settings.png "windows-stack-settings")
+  ![windows-stack-settings](./windows-stack-settings.png "windows-stack-settings")
 7. Click **Summary** to review your configuration choices. When you're done reviewing or updating the settings, click **OK**.
 
-  ![windows-stack-summary](push-your-first-net-application-to-cloud-foundry-on-azure/windows-stack-summary.png "windows-stack-summary")
+  ![windows-stack-summary](./windows-stack-summary.png "windows-stack-summary")
 8. While Azure creates the virtual machine, you can track the progress in **Notifications**, in the Hub menu. After Azure creates the virtual machine, you'll see it on your Startboard unless you cleared **Pin to Startboard** in the **Create virtual machine** blade.
 9. After you create the virtual machine, you need to log on to it.
 
@@ -128,7 +128,7 @@ You have deployed your **BOSH director VM** on Azure by following this [guide](h
 11. Click your virtual machine on the Startboard. If you need to find it, click **Browse All** > **Recent** or **Browse All** > **Virtual machines**. Then, select your virtual machine from the list.
 12. On the virtual machine blade, click **Connect**.
 
-  ![windows-stack-connect](push-your-first-net-application-to-cloud-foundry-on-azure/windows-stack-connect.png "windows-stack-connect")
+  ![windows-stack-connect](./windows-stack-connect.png "windows-stack-connect")
 13. Click **Open** to use the Remote Desktop Protocol file that's automatically created for the Windows Server virtual machine.
 14. Click **Connect**.
 15. Type the user name and password you set when you created the virtual machine, and then click **OK**.
@@ -217,4 +217,4 @@ You have deployed your **BOSH director VM** on Azure by following this [guide](h
     ```
 2. Open your web browser, type [http://diegomvc.cf.azurelovecf.com/](http://diegomvc.cf.azurelovecf.com/). Now you can see your .NET Page.
 
-  ![diegomvc](push-your-first-net-application-to-cloud-foundry-on-azure/diegomvc.png "diegomvc")
+  ![diegomvc](./diegomvc.png "diegomvc")

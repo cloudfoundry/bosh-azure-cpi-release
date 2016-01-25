@@ -1,6 +1,6 @@
-# Integrating Application Gateway with Cloud Foundry
+# Integrating Application Gateway with Cloud Foundry on Azure
 
-This document provides steps to create and configure [Azure Application Gateway](https://azure.microsoft.com/en-us/services/application-gateway/), that will be used as load balancer with SSL offloading enabled for Cloud Foundry. We also introduce how to create the application gateway with a single certificate or multiple certificates.
+To enable advanced feature like SSL termination on your Cloud Foundry network, you can integrate Azure Application gateway. This document provides steps to create and configure [Azure Application Gateway](https://azure.microsoft.com/en-us/services/application-gateway/), that will be used as load balancer with SSL offloading enabled for Cloud Foundry. We also introduce how to create the application gateway with a single certificate or multiple certificates.
 
 # 1 What is Azure Application Gateway
 
@@ -52,7 +52,7 @@ Azure Application Gateway provides application-level routing and load balancing 
   PS C:\> Select-AzureRmSubscription -Subscriptionid <GUID of your subscription>
   ```
 
-4. Download the PowerShell script [**New-AG.ps1**](./New-AG.ps1) for a single certificate and [**New-AG-multi-certs.ps1**](./New-AG-multi-certs.ps1) for multiple certificates.
+4. Download the PowerShell script [**New-AG.ps1**](./New-AG.ps1) to create the Application Gateway. Note AG supports multiple certificates, alternatively you can download this script [**New-AG-multi-certs.ps1**](./New-AG-multi-certs.ps1) for multiple certificate scenario.
 
 5. Run the script and follow the prompts to specify the configurations.
 
@@ -60,7 +60,7 @@ Azure Application Gateway provides application-level routing and load balancing 
 
   If the Application Gateway is created successfully, `New-AG.ps1` will output the public IP address of the AG.
 
-  * Example for a single certificate:
+  * Example of the expected inputs and outputs for a single certificate:
 
     ```
     Input your location (e.g. East Asia): East Asia
@@ -90,7 +90,7 @@ Azure Application Gateway provides application-level routing and load balancing 
     The public IP of the application gateway is: <Public IP Address of Application Gateway>
     ```
 
-  * Example for multiple certificates:
+  * Example of the expected inputs and outputs for multiple certificates:
 
     ```
     Input your location (e.g. East Asia): East Asia
@@ -122,20 +122,20 @@ Azure Application Gateway provides application-level routing and load balancing 
 6. Configure DNS for your Cloud Foundry domain.
 
   * For production, you need to update the DNS configuration according to the belew sample.
-  * For testing only, you can also update local host file instead.
+  * For testing only, you can also update local host file.
     * Windows: `C:\Windows\System32\drivers\etc\hosts`
     * Linux: `/etc/hosts`
 
   Sample DNS entries after Application Gateway is created:
 
   ```
-  <Public IP Address of Application Gateway>   api.cf.azurelovecf.com
-  <Public IP Address of Application Gateway>   uaa.cf.azurelovecf.com
-  <Public IP Address of Application Gateway>   login.cf.azurelovecf.com
-  <Original Public IP Address of the Cloud Foundry instance>  loggregator.cf.azurelovecf.com
+  <Public IP Address of Application Gateway>   api.<SYSTEM-DOMAIN>
+  <Public IP Address of Application Gateway>   uaa.<SYSTEM-DOMAIN>
+  <Public IP Address of Application Gateway>   login.<SYSTEM-DOMAIN>
+  <Original Public IP Address of the Cloud Foundry instance>  loggregator.<SYSTEM-DOMAIN>
   ```
 
-  You can find the IP addresses mentioned above on Azure Portal in your resource group. 
+  You can find the IP addresses mentioned above on Azure Portal in your resource group. `<SYSTEM-DOMAIN>` is specified in your manifest for Cloud Foundry. For example, `cf.azurelovecf.com`.
 
 7. Login to your Cloud Foundry: `cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation`.
 
