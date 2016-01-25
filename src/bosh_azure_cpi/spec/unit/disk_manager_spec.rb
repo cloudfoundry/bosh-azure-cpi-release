@@ -10,6 +10,35 @@ describe Bosh::AzureCloud::DiskManager do
   let(:data_disk_prefix) { "bosh-data" }
   let(:disk_name) { "#{data_disk_prefix}-#{storage_account_name}-#{SecureRandom.uuid}-None" }
 
+  describe "#prepare" do
+    context "when the container exists" do
+      before do
+        allow(blob_manager).to receive(:has_container?).
+          and_return(true)
+      end
+
+      it "does not create the container" do
+        expect(blob_manager).not_to receive(:create_container)
+
+        disk_manager.prepare(storage_account_name)
+      end
+    end
+
+    context "when the container does not exist" do
+      before do
+        allow(blob_manager).to receive(:has_container?).
+          and_return(false)
+      end
+
+      it "create the container" do
+        expect(blob_manager).to receive(:create_container).
+          with(storage_account_name, disk_container)
+
+        disk_manager.prepare(storage_account_name)
+      end
+    end
+  end
+
   describe "#delete_disk" do
     context "when the disk exists" do
       before do
@@ -90,7 +119,7 @@ describe Bosh::AzureCloud::DiskManager do
     context "when caching is invalid" do
       let(:cloud_properties) { {'caching' => 'Invalid'} }
 
-      it "raises an error" do
+      it "should raise an error" do
         allow(blob_manager).to receive(:create_empty_vhd_blob)
 
         expect{
@@ -131,7 +160,7 @@ describe Bosh::AzureCloud::DiskManager do
           and_return({})
       end
 
-      it "returns true" do
+      it "should return true" do
         expect(disk_manager.has_disk?(disk_name)).to be(true)
       end
     end
@@ -142,7 +171,7 @@ describe Bosh::AzureCloud::DiskManager do
           and_return(nil)
       end
 
-      it "returns false" do
+      it "should return false" do
         expect(disk_manager.has_disk?(disk_name)).to be(false)
       end
     end

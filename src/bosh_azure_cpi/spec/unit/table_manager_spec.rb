@@ -47,7 +47,7 @@ describe Bosh::AzureCloud::TableManager do
           with(table_name)
       end
 
-      it "returns true" do
+      it "should return true" do
         expect(table_manager.has_table?(table_name)).to be(true)
       end
     end
@@ -69,7 +69,7 @@ describe Bosh::AzureCloud::TableManager do
           and_raise("error")
       end
 
-      it "raises an error" do
+      it "should raise an error" do
         expect{
           table_manager.has_table?(table_name)
         }.to raise_error
@@ -123,7 +123,7 @@ describe Bosh::AzureCloud::TableManager do
           with(table_name, entity)
       end
 
-      it "returns true" do
+      it "should return true" do
         expect(table_manager.insert_entity(table_name, entity)).to be(true)
       end
     end
@@ -135,7 +135,7 @@ describe Bosh::AzureCloud::TableManager do
           and_raise("(409)")
       end
 
-      it "returns false" do
+      it "should return false" do
         expect(table_manager.insert_entity(table_name, entity)).to be(false)
       end
     end
@@ -147,7 +147,7 @@ describe Bosh::AzureCloud::TableManager do
           and_raise("error")
       end
 
-      it "raises an error" do
+      it "should raise an error" do
         expect{
           table_manager.insert_entity(table_name, entity)
         }.to raise_error
@@ -165,7 +165,7 @@ describe Bosh::AzureCloud::TableManager do
           with(table_name, partition_key, row_key)
       end
 
-      it "does not raise an error" do
+      it "should not raise an error" do
         expect{
           table_manager.delete_entity(table_name, partition_key, row_key)
         }.not_to raise_error
@@ -179,7 +179,7 @@ describe Bosh::AzureCloud::TableManager do
           and_raise("(404)")
       end
 
-      it "does not raise an error" do
+      it "should not raise an error" do
         expect{
           table_manager.delete_entity(table_name, partition_key, row_key)
         }.not_to raise_error
@@ -193,7 +193,7 @@ describe Bosh::AzureCloud::TableManager do
           and_raise("error")
       end
 
-      it "raises an error" do
+      it "should raise an error" do
         expect{
           table_manager.delete_entity(table_name, partition_key, row_key)
         }.to raise_error

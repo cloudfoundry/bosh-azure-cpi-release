@@ -82,7 +82,12 @@ module Bosh::AzureCloud
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
         storage_account_name = @azure_properties['storage_account_name']
-        storage_account_name = resource_pool['storage_account_name'] if resource_pool.has_key?('storage_account_name')
+        if resource_pool.has_key?('storage_account_name')
+          storage_account_name = resource_pool['storage_account_name']
+          storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+          create_storage_account(storage_account_name) if storage_account.nil?
+        end
+
         unless @stemcell_manager.has_stemcell?(storage_account_name, stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist"
         end
@@ -416,6 +421,24 @@ module Bosh::AzureCloud
         settings["use_dhcp"] = true
         [name, settings]
       end.flatten]
+    end
+
+    def create_storage_account(storage_account_name)
+      @logger.debug("create_storage_account(#{storage_account_name})")
+      result = @azure_client2.check_storage_account_name_availability(storage_account_name)
+      @logger.debug("create_storage_account - The result of check_storage_account_name_availability is #{result}")
+      cloud_error("The storage account name is invalid. #{result[:reason]}: #{result[:message]}") unless result[:available]
+
+      begin
+        resource_group = @azure_client2.get_resource_group()
+        created = @azure_client2.create_storage_account(storage_account_name, resource_group[:location], 'Standard_RAGRS', {})
+        @stemcell_manager.prepare(storage_account_name)
+        @disk_manager.prepare(storage_account_name)
+        true
+      rescue => e
+        @azure_client2.delete_storage_account(storage_account_name) if created
+        raise e
+      end
     end
   end
 end
