@@ -89,7 +89,7 @@ describe Bosh::AzureCloud::BlobManager do
         allow(blob_service).to receive(:create_page_blob).and_raise(StandardError)
       end
 
-      it "raise an error" do
+      it "should raise an error" do
         expect {
           blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name) 
         }.to raise_error /Failed to upload page blob/
@@ -117,7 +117,7 @@ describe Bosh::AzureCloud::BlobManager do
           allow(blob_service).to receive(:create_page_blob).and_raise(StandardError)
         end
 
-        it "raise an error and do not delete blob" do
+        it "should raise an error and do not delete blob" do
           expect(blob_service).not_to receive(:delete_blob)
 
           expect {
@@ -132,7 +132,7 @@ describe Bosh::AzureCloud::BlobManager do
           allow(blob_service).to receive(:create_blob_pages).and_raise(StandardError)
         end
 
-        it "raise an error and delete blob" do
+        it "should raise an error and delete blob" do
           expect(blob_service).to receive(:delete_blob)
 
           expect {
@@ -280,13 +280,86 @@ describe Bosh::AzureCloud::BlobManager do
         allow(blob_service).to receive(:get_blob_properties).and_return(blob)
       end
 
-      it "raises an error" do
+      it "should raise an error" do
         expect(blob_service).to receive(:delete_blob).
           with(container_name, blob_name)
 
         expect {
           blob_manager.copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
         }.to raise_error /The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted/
+      end
+    end
+  end
+
+  describe "#create_container" do
+    let(:options) { {} }
+
+    context "when creating container succeeds" do
+
+      before do
+        allow(blob_service).to receive(:create_container).
+          with(container_name, options)
+      end
+
+      it "should return true" do
+        expect(
+          blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, options)
+        ).to be(true)
+      end
+    end
+
+    context "when creating container fails" do
+      before do
+        allow(blob_service).to receive(:create_container).and_raise(StandardError)
+      end
+
+      it "should raise an error" do
+        expect {
+          blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, options)
+        }.to raise_error /Failed to create container/
+      end
+    end
+  end
+
+  describe "#has_container?" do
+    context "when the container exists" do
+      before do
+        allow(blob_service).to receive(:get_container_properties).
+          with(container_name)
+      end
+
+      it "should return true" do
+        expect(
+          blob_manager.has_container?(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)
+        ).to be(true)
+      end
+    end
+
+    context "when the container does not exist" do
+      before do
+        allow(blob_service).to receive(:get_container_properties).
+          with(container_name).
+          and_raise("Error code: (404). This is a test!")
+      end
+
+      it "should return false" do
+        expect(
+          blob_manager.has_container?(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)
+        ).to be(false)
+      end
+    end
+
+    context "when the server returns an error" do
+      before do
+        allow(blob_service).to receive(:get_container_properties).
+          with(container_name).
+          and_raise(StandardError)
+      end
+
+      it "should raise an error" do
+        expect {
+          blob_manager.has_container?(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)
+        }.to raise_error /has_container/
       end
     end
   end

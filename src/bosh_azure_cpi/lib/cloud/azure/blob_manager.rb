@@ -179,6 +179,31 @@ module Bosh::AzureCloud
       end
     end
 
+    def create_container(storage_account_name, container_name, options = {})
+      @logger.info("create_container(#{storage_account_name}, #{container_name}, #{options})")
+      initialize_blob_client(storage_account_name) do
+        begin
+          @blob_service_client.create_container(container_name, options)
+          true
+        rescue => e
+          cloud_error("Failed to create container: #{e.message}\n#{e.backtrace.join("\n")}")
+        end
+      end
+    end
+
+    def has_container?(storage_account_name, container_name)
+      @logger.info("has_container?(#{storage_account_name}, #{container_name})")
+      initialize_blob_client(storage_account_name) do
+        begin
+          @blob_service_client.get_container_properties(container_name)
+          true
+        rescue => e
+          cloud_error("has_container?: #{e.message}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
+          false
+        end
+      end
+    end
+
     private
 
     def read_content_func(file_path, file_blocks, block_size, thread_num, finish_flag)

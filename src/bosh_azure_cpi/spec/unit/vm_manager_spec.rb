@@ -37,7 +37,7 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context "when subnet is not found" do
-      it "raise an error" do
+      it "should raise an error" do
         allow(client2).to receive(:get_network_subnet_by_name).
           and_return(nil)
         expect {
@@ -54,7 +54,7 @@ describe Bosh::AzureCloud::VMManager do
         }
       }
 
-      it "raise an error" do
+      it "should raise an error" do
         allow(client2).to receive(:get_network_subnet_by_name).
           and_return(subnet)
 
@@ -75,7 +75,7 @@ describe Bosh::AzureCloud::VMManager do
       end
  
       context "when the public ip list azure returns is empty" do
-        it "raises an error" do
+        it "should raise an error" do
           allow(client2).to receive(:list_public_ips).
             and_return([])
           allow(network_configurator).to receive(:public_ip).
@@ -103,7 +103,7 @@ describe Bosh::AzureCloud::VMManager do
           ]
         }
 
-        it "raises an error" do
+        it "should raise an error" do
           allow(client2).to receive(:get_network_subnet_by_name).
             and_return(subnet)
           allow(network_configurator).to receive(:vip_network).
@@ -155,7 +155,7 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         context "when public load balancer is not created" do
-          it "raises an error" do
+          it "should raise an error" do
             allow(client2).to receive(:create_load_balancer).
               and_raise("load balancer is not created")
 
@@ -183,7 +183,7 @@ describe Bosh::AzureCloud::VMManager do
             }
           }
 
-          it "raises an error" do
+          it "should raise an error" do
             allow(client2).to receive(:create_load_balancer)
             allow(client2).to receive(:get_load_balancer_by_name).
               and_return(load_balancer)
@@ -209,7 +209,7 @@ describe Bosh::AzureCloud::VMManager do
             }
           }
 
-          it "raises an error" do
+          it "should raise an error" do
             allow(network_configurator).to receive(:vip_network).
               and_return(nil)
             allow(client2).to receive(:get_load_balancer_by_name).
@@ -268,7 +268,7 @@ describe Bosh::AzureCloud::VMManager do
           and_return('10.0.0.100')
       end
 
-      it "raises an error" do
+      it "should raise an error" do
         allow(client2).to receive(:create_network_interface).
           and_raise("network interface is not created")
 
@@ -334,7 +334,7 @@ describe Bosh::AzureCloud::VMManager do
           and_return(nil)
       end
 
-      it "raises an error" do
+      it "should raise an error" do
         allow(client2).to receive(:create_availability_set).
           and_raise("availability set is not created")
 
@@ -408,7 +408,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context "when VM is not created" do
-        it "raises an error" do
+        it "should raise an error" do
           allow(client2).to receive(:create_virtual_machine).
             and_raise("virtual machine is not created")
 
@@ -424,7 +424,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context "when VM is created" do
-        it "does not raise an error" do
+        it "should not raise an error" do
           allow(client2).to receive(:create_virtual_machine)
 
           expect(client2).not_to receive(:delete_virtual_machine)

@@ -254,6 +254,7 @@ module Bosh::AzureCloud
         raise AzureNoFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
+      @logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(result)}")
       disk = result['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name}
       raise Bosh::Clouds::DiskNotAttached.new(true),
         "The disk #{disk_name} is not attached to the virtual machine #{name}" if disk.nil?
@@ -800,6 +801,12 @@ module Bosh::AzureCloud
         keys << result['key2']
       end
       keys
+    end
+
+    def delete_storage_account(name)
+      @logger.debug("delete_storage_account - trying to delete #{name}")
+      url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name)
+      http_delete(url, nil, 10)
     end
 
     private
