@@ -23,18 +23,16 @@ You have two options to deploy BOSH on Azure. One is ARM templates which can hel
 
 ## Deploy Cloud Foundry
 
-1. Prepare a manifest
-  * [A basic configuration](./get-started/prepare-manifest-for-cloudfoundry.md)
-  * Advanced configurations (**OPTIONAL**) (Refer to the section "Deployment for Enterprise Environment")
+1. [Prepare a manifest for a basic configuration](./get-started/prepare-manifest-for-cloudfoundry.md)
 2. [Deploy](./get-started/deploy-cloudfoundry.md)
 
-# Deployment for Enterprise Environment
+# Advanced Configurations and Deployments
 
-* [Deploy Cloud Foundry using multiple storage accounts and availability sets](./get-started/deploy-cloudfoundry-for-enterprise.md)
-
-# Deployment for Diego with .NET support
-
-* [Push your first .NET application to cloud foundry on Azure](./push-your-first-net-application-to-cloud-foundry-on-azure.md)
+* [Deploy Cloud Foundry using multiple storage accounts and availability sets](./advanced/deploy-cloudfoundry-for-enterprise.md)
+* [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
+* [Integrating Application Gateway with Cloud Foundry on Azure](./advanced/application-gateway/)
+* [Deploy MySQL Service to Cloud Foundry on Azure](./advanced/deploy-mysql/)
+* [Deploy Mongodb Service to Cloud Foundry on Azure](./advanced/deploy-mongodb/)
 
 # Additional Information
 
