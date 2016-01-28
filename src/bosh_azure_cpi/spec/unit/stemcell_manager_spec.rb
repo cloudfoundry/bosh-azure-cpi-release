@@ -7,6 +7,40 @@ describe Bosh::AzureCloud::StemcellManager do
   let(:stemcell_manager) { Bosh::AzureCloud::StemcellManager.new(azure_properties, blob_manager, table_manager) }
 
   let(:stemcell_name) { "fake-stemcell-name" }
+  let(:storage_account_name) { "fake-storage-account-name" }
+
+  describe "#prepare" do
+    context "when the container exists" do
+      before do
+        allow(blob_manager).to receive(:has_container?).
+          and_return(true)
+      end
+
+      it "should not create the container" do
+        expect(blob_manager).not_to receive(:create_container)
+
+        expect {
+          stemcell_manager.prepare(storage_account_name)
+        }.not_to raise_error
+      end
+    end
+
+    context "when the container does not exist" do
+      before do
+        allow(blob_manager).to receive(:has_container?).
+          and_return(false)
+      end
+
+      it "should create the container" do
+        expect(blob_manager).to receive(:create_container).
+          and_return(true)
+
+        expect {
+          stemcell_manager.prepare(storage_account_name)
+        }.not_to raise_error
+      end
+    end
+  end
 
   describe "#create_stemcell" do
     before do
@@ -39,7 +73,6 @@ describe Bosh::AzureCloud::StemcellManager do
     end
 
     context "the stemcell exists in different storage accounts" do
-      let(:storage_account_name) { "different-storage-account" }
       let(:entities) {
         [
           {
@@ -131,7 +164,7 @@ describe Bosh::AzureCloud::StemcellManager do
             and_return(entities)
         end
 
-        it "returns true" do
+        it "should return true" do
           expect(blob_manager).not_to receive(:get_blob_properties)
 
           expect(
@@ -156,7 +189,7 @@ describe Bosh::AzureCloud::StemcellManager do
             and_return(entities)
         end
 
-        it "raises an error" do
+        it "should raise an error" do
           expect(blob_manager).not_to receive(:get_blob_properties)
 
           expect{
@@ -184,7 +217,7 @@ describe Bosh::AzureCloud::StemcellManager do
             and_return(entities)
         end
 
-        it "raises an error" do
+        it "should raise an error" do
           expect(blob_manager).not_to receive(:get_blob_properties)
           expect(table_manager).to receive(:delete_entity).
             with(stemcell_table, stemcell_name, storage_account_name)

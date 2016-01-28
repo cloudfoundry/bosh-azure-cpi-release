@@ -254,6 +254,7 @@ module Bosh::AzureCloud
         raise AzureNoFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
+      @logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(result)}")
       disk = result['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name}
       raise Bosh::Clouds::DiskNotAttached.new(true),
         "The disk #{disk_name} is not attached to the virtual machine #{name}" if disk.nil?
@@ -870,7 +871,7 @@ module Bosh::AzureCloud
         end
         raise e
       rescue => e
-        cloud_error("http_get_response - #{e.message}\n#{e.backtrace.join("\n")}")
+        cloud_error("http_get_response - #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
       response
     end
