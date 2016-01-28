@@ -123,7 +123,7 @@ do
   azure availset delete --resource-group ${AZURE_GROUP_NAME} --name $availset --quiet
 done
 
-containers="bosh stemcell"
+containers="stemcell"
 for container in $containers
 do
   blobs=$(azure storage blob list --account-name ${AZURE_STORAGE_ACCOUNT_NAME} --account-key ${AZURE_ACCOUNT_KEY} --container $container --json | jq '.[].name' -r)
@@ -135,5 +135,27 @@ do
     fi
   done
 done
+
+container='bosh'
+echo "azure storage container delete --account-name ${AZURE_STORAGE_ACCOUNT_NAME} --account-key ${AZURE_ACCOUNT_KEY} --container $container"
+azure storage container delete --account-name ${AZURE_STORAGE_ACCOUNT_NAME} --account-key ${AZURE_ACCOUNT_KEY} --container $container --quiet
+
+set +e
+count=0
+while [ true ]; do
+  sleep 15
+  echo "azure storage container create --account-name ${AZURE_STORAGE_ACCOUNT_NAME} --account-key ${AZURE_ACCOUNT_KEY} --container $container"
+  azure storage container create --account-name ${AZURE_STORAGE_ACCOUNT_NAME} --account-key ${AZURE_ACCOUNT_KEY} --container $container
+
+  if [ $? == 0 ]; then
+    break
+  fi
+  let count=count+1
+  if [ $count -gt 10 ]; then
+    echo "The task failed because the container ${container} cannot be created"
+    exit_if_error
+  fi
+done
+set -e
 
 echo "The unneeded resources are deleted"
