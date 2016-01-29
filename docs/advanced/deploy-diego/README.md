@@ -174,4 +174,4 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
   ```
 
   _**NOTE:**
-  If you have not login to CF, you should use "cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation -u admin -p c1oudc0w" to login and select diego as your orgazination._
+  If you have not login to CF, you should use "cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation -u admin -p c1oudc0w" to login and select diego as your orgazination. You can use 'cf ssh game-2048' to ssh into the running container for your application._
