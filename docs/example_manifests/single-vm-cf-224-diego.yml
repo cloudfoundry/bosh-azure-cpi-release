@@ -152,30 +152,30 @@ jobs:
       - name: api
         port: 9022
         uris:
-        - "api.cf.azurelovecf.com"
+        - "api.SYSTEM-DOMAIN"
       - name: hm9000
         port: 5155
         uris:
-        - "hm9000.cf.azurelovecf.com"
+        - "hm9000.SYSTEM-DOMAIN"
       - name: doppler
         port: 8081
         uris:
-        - "doppler.cf.azurelovecf.com"
+        - "doppler.SYSTEM-DOMAIN"
       - name: loggregator
         port: 8080
         uris:
-          - "loggregator.cf.azurelovecf.com"
+          - "loggregator.SYSTEM-DOMAIN"
       - name: uaa
         port: 8082
         uris:
-        - "uaa.cf.azurelovecf.com"
-        - "*.uaa.cf.azurelovecf.com"
-        - "login.cf.azurelovecf.com"
-        - "*.login.cf.azurelovecf.com"
+        - "uaa.SYSTEM-DOMAIN"
+        - "*.uaa.SYSTEM-DOMAIN"
+        - "login.SYSTEM-DOMAIN"
+        - "*.login.SYSTEM-DOMAIN"
 
 properties:
   networks: {apps: cf_private}
-  app_domains: [cf.azurelovecf.com]
+  app_domains: [SYSTEM-DOMAIN]
   app_ssh:
     host_key_fingerprint: a6:d1:08:0b:b0:cb:9b:5f:c4:ba:44:2a:97:26:19:8a
     oauth_client_id: ssh-proxy
@@ -220,7 +220,7 @@ properties:
       rules:
       - {destination: 0.0.0.0/0, ports: '53', protocol: tcp}
       - {destination: 0.0.0.0/0, ports: '53', protocol: udp}
-    srv_api_uri: http://api.cf.azurelovecf.com
+    srv_api_uri: http://api.SYSTEM-DOMAIN
     staging_upload_password: c1oudc0w
     staging_upload_user: staging_upload_user
     external_host: api
@@ -396,7 +396,7 @@ properties:
     heartbeat_interval_in_seconds: 10
     memory_mb: 33996
   description: Cloud Foundry sponsored by Pivotal
-  domain: cf.azurelovecf.com
+  domain: SYSTEM-DOMAIN
   doppler:
     blacklisted_syslog_ranges: null
     debug: false
@@ -420,7 +420,7 @@ properties:
       password: c1oudc0w
       username: nats
   hm9000:
-    url: http://hm9000.cf.azurelovecf.com
+    url: http://hm9000.SYSTEM-DOMAIN
   logger_endpoint:
     port: 4443
   loggregator:
@@ -442,8 +442,8 @@ properties:
     enabled: true
     invitations_enabled: null
     links:
-      passwd: https://console.cf.azurelovecf.com/password_resets/new
-      signup: https://console.cf.azurelovecf.com/register
+      passwd: https://console.SYSTEM-DOMAIN/password_resets/new
+      signup: https://console.SYSTEM-DOMAIN/register
     logout: null
     messages: null
     notifications:
@@ -483,7 +483,7 @@ properties:
     - 10.0.32.0/20
   ssl:
     skip_cert_verify: true
-  system_domain: cf.azurelovecf.com
+  system_domain: SYSTEM-DOMAIN
   system_domain_organization: default_organization
   request_timeout_in_seconds: 900
   router:
@@ -566,14 +566,14 @@ properties:
         authorities: oauth.login,scim.write,clients.read,notifications.write,critical_notifications.write,emails.write,scim.userids,password.write
         authorized-grant-types: authorization_code,client_credentials,refresh_token
         override: true
-        redirect-uri: http://login.cf.azurelovecf.com
+        redirect-uri: http://login.SYSTEM-DOMAIN
         scope: openid,oauth.approvals
         secret: c1oudc0w
       servicesmgmt:
         authorities: uaa.resource,oauth.service,clients.read,clients.write,clients.secret
         authorized-grant-types: authorization_code,client_credentials,password,implicit
         autoapprove: true
-        redirect-uri: http://servicesmgmt.cf.azurelovecf.com/auth/cloudfoundry/callback
+        redirect-uri: http://servicesmgmt.SYSTEM-DOMAIN/auth/cloudfoundry/callback
         scope: openid,cloud_controller.read,cloud_controller.write
         secret: c1oudc0w
       notifications:
@@ -620,8 +620,8 @@ properties:
         spULZVNRxq7veq/fzwIDAQAB
         -----END PUBLIC KEY-----
     no_ssl: true
-    url: http://uaa.cf.azurelovecf.com
-    issuer: https://uaa.cf.azurelovecf.com
+    url: http://uaa.SYSTEM-DOMAIN
+    issuer: https://uaa.SYSTEM-DOMAIN
     zones:
       internal:
         hostnames:
