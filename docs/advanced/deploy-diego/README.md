@@ -42,12 +42,31 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
   sed -i -e "s/BOSH-DIRECTOR-UUID/$(bosh status --uuid)/" ~/single-vm-cf-224-diego.yml
   ```
 
-6. Update CF **RESERVED-IP** in **~/single-vm-cf-224-diego.yml**
+6. Update **SYSTEM-DOMAIN** in **~/single-vm-cf-224-diego.yml**
+
+  Domains in Cloud Foundry provide a namespace from which to create routes. The presence of a domain in Cloud Foundry indicates to a developer that requests for any route created from the domain will be routed to Cloud Foundry. Cloud Foundry supports two domains, one is called **SYSTEM-DOMAIN** for system applications and one for general applications. To deploy Cloud Foundry, you need to specify the **SYSTEM-DOMAIN**, and it should be resolvable to an IP address.
+
+  * If you deploy BOSH via [the bosh-setup template](../../get-started/deploy-bosh-using-arm-templates.md), DNS is setup by default which can resolve the domain `cf.azurelovecf.com`. In such a case, you can use `cf.azurelovecf.com` as the system domain name.
+
+    ```
+    sed -i -e "s/SYSTEM-DOMAIN/cf.azurelovecf.com/" ~/single-vm-cf-224-diego.yml
+    ```
+
+  * If you deploy BOSH via [the manual steps](../../get-started/deploy-bosh-manually.md) or set `enableDNSOnDevbox` as false in [the bosh-setup template](../../get-started/deploy-bosh-using-arm-templates.md), you need to setup DNS to resolve your domain by yourself.
+
+    For quickly test, http://xip.io/ is an option to resolve your domain. For example:
+
+    ```
+    sed -i -e "s/SYSTEM-DOMAIN/$(cat ~/settings |grep cf-ip| sed 's/.*: "\(.*\)",/\1/').xip.io/" ~/single-vm-cf-224-diego.yml
+    ```
+
+7. Update CF **RESERVED-IP** in **~/single-vm-cf-224-diego.yml**
 
   ```
   sed -i -e "s/RESERVED-IP/$(cat ~/settings |grep cf-ip| sed 's/.*: "\(.*\)",/\1/')/" ~/single-vm-cf-224-diego.yml
   ```
-7. Update **SSL-CERT-AND-KEY** in **~/single-vm-cf-224-diego.yml**
+
+8. Update **SSL-CERT-AND-KEY** in **~/single-vm-cf-224-diego.yml**
 
   You should use your certificate and key. If you do not want to use yours, please use below command to generate a new one and update SSL-CERT-AND-KEY in ~/single-vm-cf-224-diego.yml automatically.
 
@@ -59,13 +78,13 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
   mv -f tmp ~/single-vm-cf-224-diego.yml
   ```
 
-8. Set BOSH deployment
+9. Set BOSH deployment
 
   ```
   bosh deployment ~/single-vm-cf-224-diego.yml
   ```
 
-9. Deploy cloud foundry
+10. Deploy cloud foundry
 
   ```
   bosh -n deploy
@@ -95,13 +114,17 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
   sed -i -e "s/BOSH-DIRECTOR-UUID/$(bosh status --uuid)/" ~/single-vm-diego.yml
   ```
 
-5. Set BOSH deployment
+5. Update **SYSTEM-DOMAIN** in **~/single-vm-diego.yml**
+
+  **Please keep it the same as the system domain name in **~/single-vm-cf-224-diego.yml**.
+
+6. Set BOSH deployment
 
   ```
   bosh deployment ~/single-vm-diego.yml
   ```
 
-6. Deploy Diego
+7. Deploy Diego
 
   ```
   bosh -n deploy

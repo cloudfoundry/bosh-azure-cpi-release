@@ -542,7 +542,7 @@ properties:
         -----END RSA PRIVATE KEY-----
     cc_uploader:
       cc:
-        base_url: https://api.cf.azurelovecf.com
+        base_url: https://api.SYSTEM-DOMAIN
         basic_auth_password: c1oudc0w
         staging_upload_password: c1oudc0w
         staging_upload_user: staging_upload_user
@@ -752,7 +752,7 @@ properties:
         max_idle_conns_per_host: null
         require_ssl: true
       cc:
-        base_url: https://api.cf.azurelovecf.com
+        base_url: https://api.SYSTEM-DOMAIN
         basic_auth_password: c1oudc0w
         staging_upload_password: c1oudc0w
         staging_upload_user: staging_upload_user
@@ -1074,7 +1074,7 @@ properties:
       servers:
       - 10.0.32.4
       uaa_secret: c1oudc0w
-      uaa_token_url: https://uaa.cf.azurelovecf.com/oauth/token
+      uaa_token_url: https://uaa.SYSTEM-DOMAIN/oauth/token
     ssl:
       skip_cert_verify: true
     stager:
@@ -1168,7 +1168,7 @@ properties:
         max_idle_conns_per_host: null
         require_ssl: true
       cc:
-        base_url: https://api.cf.azurelovecf.com
+        base_url: https://api.SYSTEM-DOMAIN
         basic_auth_password: c1oudc0w
         staging_upload_password: c1oudc0w
         staging_upload_user: staging_upload_user
@@ -1266,13 +1266,13 @@ properties:
         max_idle_conns_per_host: null
         require_ssl: true
       cc:
-        base_url: https://api.cf.azurelovecf.com
+        base_url: https://api.SYSTEM-DOMAIN
         basic_auth_password: c1oudc0w
         staging_upload_password: c1oudc0w
         staging_upload_user: staging_upload_user
       dropsonde_port: null
       log_level: null
-      traffic_controller_url: wss://doppler.cf.azurelovecf.com:443
+      traffic_controller_url: wss://doppler.SYSTEM-DOMAIN:443
   etcd:
     ca_cert: |+
       -----BEGIN CERTIFICATE-----
