@@ -16,7 +16,7 @@ echo $mainkey
 azure storage table create --table stemcells --account-name $2 --account-key $mainkey
 
 #Create new Storage account
-azure storage account create --location $4 --type LRS --resource-group $1 $3
+azure storage account create --location "$4" --type LRS --resource-group $1 $3
 
 #Get Keys from storage account
 newkey=$(azure storage account keys list --resource-group $1 $3 | grep --line-buffered Primary | awk -F " " '{print $3}')
