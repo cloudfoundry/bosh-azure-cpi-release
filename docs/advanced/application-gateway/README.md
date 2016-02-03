@@ -163,7 +163,7 @@ Azure Application Gateway provides application-level routing and load balancing 
   Logging traffic < ----- > HAProxy < -----------
   ```
 
-  Hence, in the DNS record, we still use the original CF public IP address for log aggregator.
+  This will require you to have two DNS records.  One pointing to loggregator.<SYSTEM-DOMAIN> pointing to the HAProxy and wildcard *.<SYSTEM-DOMAIN> to the Application Gateway
 
   >**NOTE:** Once WebSocket is supported by Application Gateway we will provide an updated guidance regarding removing HAProxy and re-create Application Gateway.
 
