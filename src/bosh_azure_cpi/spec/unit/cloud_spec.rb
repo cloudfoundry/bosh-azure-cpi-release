@@ -38,7 +38,7 @@ describe Bosh::AzureCloud::Cloud do
 
   describe '#initialize' do
     context 'when all the required configurations are present' do
-      it 'does not raise an error ' do
+      it 'should not raise an error ' do
         expect { cloud }.not_to raise_error
       end
     end
@@ -60,7 +60,7 @@ describe Bosh::AzureCloud::Cloud do
 
       let(:cloud) { mock_cloud(options) }
 
-      it 'raises an error' do
+      it 'should raise an error' do
         expect { cloud }.to raise_error(
           ArgumentError,
           'missing configuration parameters > azure:ssh_user, azure:tenant_id, azure:client_id, azure:client_secret, registry:endpoint, registry:user, registry:password'
@@ -117,8 +117,88 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'when everything is fine' do
-      it 'raises no error' do
-        expect(
+      context "when using the default storage account" do
+          it 'should not raise any error' do
+            expect(
+              cloud.create_vm(
+                agent_id,
+                stemcell_id,
+                resource_pool,
+                networks_spec,
+                disk_locality,
+                environment
+              )
+            ).to eq(instance_id)
+          end
+      end
+
+      context "when do not use the default storage account" do
+        let(:storage_account_name) { 'fake-storage-account-name' }
+        let(:resource_pool) { {'storage_account_name'=>'fake-storage-account-name'} }
+
+        before do
+          allow(stemcell_manager).to receive(:has_stemcell?).
+            with(storage_account_name, stemcell_id).
+            and_return(true)
+          allow(stemcell_manager).to receive(:get_stemcell_uri).
+            with(storage_account_name, stemcell_id).
+            and_return(stemcell_uri)
+        end
+
+        context "when the storage account does not exist" do
+          before do
+            allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
+            allow(cloud).to receive(:create_storage_account).and_return(true)
+          end
+
+          it 'should not raise any error' do
+            expect(
+              cloud.create_vm(
+                agent_id,
+                stemcell_id,
+                resource_pool,
+                networks_spec,
+                disk_locality,
+                environment
+              )
+            ).to eq(instance_id)
+          end
+        end
+
+        context "when the storage account exists" do
+          let(:storage_account) { 'fake-storage-account' }
+
+          before do
+            allow(client2).to receive(:get_storage_account_by_name).and_return(storage_account)
+          end
+
+          it 'should not raise any error' do
+            expect(cloud).not_to receive(:create_storage_account)
+            expect(
+              cloud.create_vm(
+                agent_id,
+                stemcell_id,
+                resource_pool,
+                networks_spec,
+                disk_locality,
+                environment
+              )
+            ).to eq(instance_id)
+          end
+        end
+      end
+    end
+
+    context "when the storage account name is invalid" do
+      let(:resource_pool) { {'storage_account_name'=>'fake-storage-account'} }
+
+      before do
+        allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
+        allow(cloud).to receive(:create_storage_account).and_raise("The storage account name is invalid")
+      end
+
+      it 'should raise an error' do
+        expect {
           cloud.create_vm(
             agent_id,
             stemcell_id,
@@ -127,7 +207,7 @@ describe Bosh::AzureCloud::Cloud do
             disk_locality,
             environment
           )
-        ).to eq(instance_id)
+        }.to raise_error(/The storage account name is invalid/)
       end
     end
 
@@ -138,7 +218,7 @@ describe Bosh::AzureCloud::Cloud do
           and_return(false)
       end
 
-      it 'raises an error' do
+      it 'should raise an error' do
         expect {
           cloud.create_vm(
             agent_id,
@@ -232,7 +312,7 @@ describe Bosh::AzureCloud::Cloud do
           and_return('Running')
       end
 
-      it "returns true" do
+      it "should return true" do
         expect(cloud.has_vm?(instance_id)).to be(true)
       end
     end
@@ -315,7 +395,7 @@ describe Bosh::AzureCloud::Cloud do
     context 'when disk size is not an integer' do
       let(:disk_size) { 1024.42 }
 
-      it 'raises an error' do
+      it 'should raise an error' do
         expect {
           cloud.create_disk(disk_size, cloud_properties, instance_id)
         }.to raise_error(
@@ -328,7 +408,7 @@ describe Bosh::AzureCloud::Cloud do
     context 'when disk size is smaller than 1 GiB' do
       let(:disk_size) { 100 }
 
-      it 'raises an error' do
+      it 'should raise an error' do
         expect {
           cloud.create_disk(disk_size, cloud_properties, instance_id)
         }.to raise_error /Azure CPI minimum disk size is 1 GiB/
@@ -338,7 +418,7 @@ describe Bosh::AzureCloud::Cloud do
     context 'when disk size is larger than 1 TiB' do
       let(:disk_size) { 2000000 }
 
-      it 'raises an error' do
+      it 'should raise an error' do
         expect {
           cloud.create_disk(disk_size, cloud_properties, instance_id)
         }.to raise_error /Azure CPI maximum disk size is 1 TiB/

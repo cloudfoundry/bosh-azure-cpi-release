@@ -1,9 +1,9 @@
 ---
 packages:
 - name: bosh_azure_cpi
-  version: 7f7074c6a2df2f6967ed59cbbbcc9125941afdf3
-  fingerprint: 7f7074c6a2df2f6967ed59cbbbcc9125941afdf3
-  sha1: 21b5de8edbfbe44dfdd1757d5dc048f6fd6c73e0
+  version: 6b06b4117b9952ff9f4e13211120a2f92fc4ed10
+  fingerprint: 6b06b4117b9952ff9f4e13211120a2f92fc4ed10
+  sha1: 4c485d2c8ed0040244b1c197759fa2cf62c7db31
   dependencies:
   - ruby_azure_cpi
 - name: ruby_azure_cpi
@@ -19,8 +19,8 @@ jobs:
 license:
   version: b3166b115212b5158f7e5f398088dc52cdaef8ce
   fingerprint: b3166b115212b5158f7e5f398088dc52cdaef8ce
-  sha1: d47500f87a4d3fbc2d7f5379ebf02a6532abad89
-commit_hash: 4d4e9a64
+  sha1: de57ee7cf171e40382f1f48f41f44996bccdc065
+commit_hash: '27878459'
 uncommitted_changes: false
 name: bosh-azure-cpi
-version: '2'
+version: '5'

@@ -94,7 +94,7 @@ module Bosh::AzureCloud
       delete_availability_set(availability_set[:name]) unless availability_set.nil?
       @azure_client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
       @azure_client2.delete_load_balancer(load_balancer[:name]) unless load_balancer.nil? || is_internal_load_balancer
-      raise Bosh::Clouds::VMCreationFailed.new(false), "#{e.message}\n#{e.backtrace.join("\n")}"
+      raise Bosh::Clouds::VMCreationFailed.new(false), "#{e.inspect}\n#{e.backtrace.join("\n")}"
     end
 
     def find(instance_id)

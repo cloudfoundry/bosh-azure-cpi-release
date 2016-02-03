@@ -49,7 +49,7 @@ module Bosh::AzureCloud
           @logger.info("create_page_blob: blob_name: #{blob_name}, blob_size: #{blob_size}")
           upload_page_blob(container_name, blob_name, blob_size, file_path, @parallel_upload_thread_num)
         rescue => e
-          cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")
+          cloud_error("Failed to upload page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -91,7 +91,7 @@ module Bosh::AzureCloud
           @blob_service_client.create_blob_pages(container_name, blob_name, vhd_size, blob_size - 1, vhd_footer, options)
         rescue => e
           @blob_service_client.delete_blob(container_name, blob_name) if blob_created
-          cloud_error("Failed to create empty vhd blob: #{e.message}\n#{e.backtrace.join("\n")}")
+          cloud_error("Failed to create empty vhd blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -103,7 +103,7 @@ module Bosh::AzureCloud
           blob = @blob_service_client.get_blob_properties(container_name, blob_name)
           blob.properties
         rescue => e
-          cloud_error("get_blob_properties: #{e.message}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
+          cloud_error("get_blob_properties: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
           nil
         end
       end
@@ -179,6 +179,33 @@ module Bosh::AzureCloud
       end
     end
 
+    def create_container(storage_account_name, container_name, options = {})
+      @logger.info("create_container(#{storage_account_name}, #{container_name}, #{options})")
+      initialize_blob_client(storage_account_name) do
+        begin
+          @blob_service_client.create_container(container_name, options)
+          true
+        rescue => e
+          # Still return true if the container is created by others.
+          return true if e.message.include?("(409)")
+          cloud_error("Failed to create container: #{e.inspect}\n#{e.backtrace.join("\n")}")
+        end
+      end
+    end
+
+    def has_container?(storage_account_name, container_name)
+      @logger.info("has_container?(#{storage_account_name}, #{container_name})")
+      initialize_blob_client(storage_account_name) do
+        begin
+          @blob_service_client.get_container_properties(container_name)
+          true
+        rescue => e
+          cloud_error("has_container?: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
+          false
+        end
+      end
+    end
+
     private
 
     def read_content_func(file_path, file_blocks, block_size, thread_num, finish_flag)
@@ -235,7 +262,7 @@ module Bosh::AzureCloud
           @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
               block.blob_start_range + block.size - 1, block.content, options)
         rescue => e
-          @logger.debug("upload_page_blob_func: Thread #{id}: Failed to create_blob_pages, error: #{e.message}\n#{e.backtrace.join("\n")}")
+          @logger.debug("upload_page_blob_func: Thread #{id}: Failed to create_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
           retry_count += 1
           if retry_count > max_retry_count
             finish_flag.fail = true
@@ -284,7 +311,7 @@ module Bosh::AzureCloud
         @logger.info("Duration: #{duration.inspect}")
       rescue => e
         @blob_service_client.delete_blob(container_name, blob_name) if blob_created
-        cloud_error("Failed to upload page blob: #{e.message}\n#{e.backtrace.join("\n")}")
+        cloud_error("Failed to upload page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
     end
 

@@ -1,7 +1,7 @@
-# BOSH Azure CPI Release [beta]
+# BOSH Azure CPI Release
 
 * Documentation: [bosh.io/docs](https://bosh.io/docs)
-* IRC: [`#bosh` on freenode](https://webchat.freenode.net/?channels=bosh)
+* Slack: #bosh-azure-cpi on <https://slack.cloudfoundry.org>
 * Mailing list: [cf-bosh](https://lists.cloudfoundry.org/pipermail/cf-bosh)
 * CI: <https://bosh-azure-cpi.ci.cf-app.com/>
 * Roadmap: [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/1133984) (label:azure)

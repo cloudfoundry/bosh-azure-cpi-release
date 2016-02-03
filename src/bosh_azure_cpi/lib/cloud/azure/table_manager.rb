@@ -22,7 +22,7 @@ module Bosh::AzureCloud
         @table_service_client.get_table(table_name)
         true
       rescue => e
-        cloud_error("has_table?: #{e.message}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
+        cloud_error("has_table?: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
         false
       end
     end
@@ -52,7 +52,7 @@ module Bosh::AzureCloud
         true
       rescue => e
         # Azure EntityAlreadyExists (409) if the specified entity already exists.
-        cloud_error("insert_entity: #{e.message}\n#{e.backtrace.join("\n")}") unless e.message.include?("(409)")
+        cloud_error("insert_entity: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(409)")
         false
       end
     end
@@ -62,7 +62,7 @@ module Bosh::AzureCloud
       begin
         @table_service_client.delete_entity(table_name, partition_key, row_key)
       rescue => e
-        cloud_error("delete_entity: #{e.message}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
+        cloud_error("delete_entity: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
       end
     end
 

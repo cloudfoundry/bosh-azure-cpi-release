@@ -18,6 +18,14 @@ module Bosh::AzureCloud
       @default_storage_account_name = azure_properties['storage_account_name']
     end
 
+    def prepare(storage_account_name)
+      @logger.info("prepare(#{storage_account_name})")
+      unless @blob_manager.has_container?(storage_account_name, STEMCELL_CONTAINER)
+        @logger.debug("Prepare to create container #{STEMCELL_CONTAINER} in #{storage_account_name}")
+        @blob_manager.create_container(storage_account_name, STEMCELL_CONTAINER, {})
+      end
+    end
+
     def delete_stemcell(name)
       @logger.info("delete_stemcell(#{name})")
       if @table_manager.has_table?(STEMCELL_TABLE)
