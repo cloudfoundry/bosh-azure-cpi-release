@@ -170,3 +170,8 @@ Azure Application Gateway provides application-level routing and load balancing 
 2. Azure CLI is not supported for creating Application Gateway in ARM mode.
 
   The script that creates and configures Application Gateway is currently implemented in PowerShell. Once CLI is supported, we will also provide the CLI version of the script.
+
+
+3. App Gateway does not forward x-forward-proto header that the UAAC component uses to ensure the request was sent from a trusted source.  If you intend to use this platform for a production instance you will need either use HAProxy or turn off the SSL check, and ensure that Application Gateway is setup to only accept encrypted, trusted traffic on port 443.
+
+  >**NOTE:** Once x-forward-proto is supported by Application Gateway we will provide an updated guidance.
