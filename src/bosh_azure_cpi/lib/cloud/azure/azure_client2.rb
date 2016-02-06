@@ -832,6 +832,9 @@ module Bosh::AzureCloud
         request = Net::HTTP::Post.new(uri.request_uri)
         request['Content-Type'] = 'application/x-www-form-urlencoded'
         request.body = URI.encode_www_form(params)
+        @logger.debug("get_token - request.header:")
+        request.each_header { |k,v| @logger.debug("\t#{k} = #{v}") }
+        @logger.debug("get_token - request.body:\n#{request.body}")
 
         response = http(uri).request(request)
         if response.code.to_i == HTTP_CODE_OK
