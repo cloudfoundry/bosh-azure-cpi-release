@@ -2,7 +2,7 @@
 
 This document provides additional configuration options for high availability and performance of your Cloud Foundry infrastructure. You can configure these advanced settings at your initial deployment, or at ongoing deployment.
 
-For basic Cloud Foundry deployment steps, click [**HERE**](./deploy-cloudfoundry.md).
+For basic Cloud Foundry deployment steps, please check the section [**Get Started**](../../guidance.md#get-started).
  
 ## Availability Set
 
@@ -21,7 +21,7 @@ There are two types of Microsoft Azure platform events that can affect the avail
     network: default
     stemcell:
       name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-      version: '0000'
+      version: latest
     cloud_properties:
       availability_set: <availability-set-name>
       instance_type: Standard_D1
@@ -72,7 +72,7 @@ By default there is one Standard Tier storage account created for each resource 
     network: default
     stemcell:
       name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-      version: '0000'
+      version: latest
     cloud_properties:
       storage_account_name: <origin-storage-account>
       instance_type: Standard_D1
@@ -80,7 +80,7 @@ By default there is one Standard Tier storage account created for each resource 
     network: default
     stemcell:
       name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-      version: '0000'
+      version: latest
     cloud_properties:
       storage_account_name: <new-storage-account>
       instance_type: Standard_D1
@@ -110,7 +110,7 @@ By default there is one Standard Tier storage account created for each resource 
 
 Below is an example manifest for deploying Cloud Foundry with availability sets and multiple storage accounts. 
 
-* [**cf-for-enterprise-224.yml**](../example_manifests/cf-for-enterprise-224.yml)
+* [**cf-for-enterprise-224.yml**](./cf-for-enterprise-224.yml)
 
 The deployment includes a typical scenario with 21 VMs and additional 13 storage accounts. There is a specific resource pool for each job. And for each resource pool, an availability set and a unique storage account are specified. Due to the disk needs of runners, 2 resource pools are configured. You can adjust the number of resource pools based on your needs.
 

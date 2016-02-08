@@ -35,16 +35,16 @@ Below is a sample deployment, which you can adjust based on your workload and pe
 
 Create an Azure Load Balancer named `haproxylb` using the [script](./create-load-balancer.sh). If you change the LB name in the script, you also need to update it in the CF manifest `multiple-vm-cf-224-multiple-haproxy.yml`.
 
-Please update the value which starts with `REPLACE-ME` and run it after you [login Azure CLI](../../get-started/create-service-principal.md#25-verify-your-service-principal).
+Please update the value which starts with `REPLACE-ME` and run it after you [login Azure CLI](../../get-started/create-service-principal.md#verify-your-service-principal).
 
 ## Deploy Cloud Foundry with multiple HAProxy instances
 
 1. Log on to your dev-box.
 
-2. Download [multiple-vm-cf-224-multiple-haproxy.yml](../../example_manifests/multiple-vm-cf-224-multiple-haproxy.yml)
+2. Download [multiple-vm-cf-224-multiple-haproxy.yml](./multiple-vm-cf-224-multiple-haproxy.yml)
 
   ```
-  wget -O ~/multiple-vm-cf-224-multiple-haproxy.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/example_manifests/multiple-vm-cf-224-multiple-haproxy.yml
+  wget -O ~/multiple-vm-cf-224-multiple-haproxy.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/advanced/deploy-multiple-haproxy/multiple-vm-cf-224-multiple-haproxy.yml
   ```
 
 3. Login to your BOSH director VM
@@ -62,10 +62,10 @@ Please update the value which starts with `REPLACE-ME` and run it after you [log
   bosh upload stemcell https://bosh.io/d/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent?v=3169
   ```
 
-5. Update **BOSH-DIRECTOR-UUID** in `~/multiple-vm-cf-224-multiple-haproxy.yml`
+5. Update **REPLACE_WITH_DIRECTOR_ID** in `~/multiple-vm-cf-224-multiple-haproxy.yml`
 
   ```
-  sed -i -e "s/BOSH-DIRECTOR-UUID/$(bosh status --uuid)/" ~/multiple-vm-cf-224-multiple-haproxy.yml
+  sed -i -e "s/REPLACE_WITH_DIRECTOR_ID/$(bosh status --uuid)/" ~/multiple-vm-cf-224-multiple-haproxy.yml
   ```
 
 6. Update **SYSTEM-DOMAIN** in `~/multiple-vm-cf-224-multiple-haproxy.yml`

@@ -37,13 +37,19 @@ azure network vnet subnet create --resource-group <resource-group-name> --vnet-n
 For example:
 
 ```
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "vnet" --name "mongodb" --address-prefix "10.0.64.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mongodb" --address-prefix "10.0.64.0/24"
 ```
 
 <a name="create-manifest"/>
 ### 4 Create the manifest
 
-We provide a sample manifest [**cf-mongodb-azure-sample.yml**](./cf-mongodb-azure-sample.yml). You need to rename `cf-mongodb-azure-sample.yml` into `cf-mongodb-azure.yml` and update the following values.
+We provide a sample manifest [**cf-mongodb-azure-sample.yml**](./cf-mongodb-azure-sample.yml). You need to rename `cf-mongodb-azure-sample.yml` into `cf-mongodb-azure.yml`.
+
+```
+wget -O cf-mongodb-azure.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/advanced/deploy-mongodb/cf-mongodb-azure-sample.yml
+```
+
+Update the following values.
 
 * `REPLACE_WITH_DIRECTOR_ID`
 
@@ -65,7 +71,7 @@ We provide a sample manifest [**cf-mongodb-azure-sample.yml**](./cf-mongodb-azur
   +------------------------------------------+---------------+---------+----------------------------------------------------+
   | Name                                     | OS            | Version | CID                                                |
   +------------------------------------------+---------------+---------+----------------------------------------------------+
-  | bosh-azure-hyperv-ubuntu-trusty-go_agent | ubuntu-trusty | 0000*   | bosh-stemcell-bd80bc85-994d-4271-b2c3-12e530a72a44 |
+  | bosh-azure-hyperv-ubuntu-trusty-go_agent | ubuntu-trusty | 3619*   | bosh-stemcell-bd80bc85-994d-4271-b2c3-12e530a72a44 |
   +------------------------------------------+---------------+---------+----------------------------------------------------+
 
   (*) Currently in-use
@@ -230,7 +236,7 @@ This section demonstrates how to generate an Azure manifest file for `cf-service
       subnets: # Update the subnet
       - range: 10.0.64.0/24
         gateway: 10.0.64.1
-        dns: [10.0.0.100]
+        dns: [8.8.8.8]
         reserved: ["10.0.64.2 - 10.0.64.3"]
         cloud_properties:
           virtual_network_name: REPLACE_WITH_VIRTUAL_NETWORK_NAME

@@ -1,6 +1,6 @@
 ---
 name: cf-azure
-director_uuid: BOSH-DIRECTOR-UUID
+director_uuid: REPLACE_WITH_DIRECTOR_ID
 
 releases:
 - {name: cf, version: 224}
@@ -11,9 +11,9 @@ networks:
   subnets:
   - range: 10.0.16.0/20
     gateway: 10.0.16.1
-    dns: [10.0.0.100]
+    dns: [8.8.8.8]
     reserved: ["10.0.16.2 - 10.0.16.3"]
-    static: ["10.0.16.4 - 10.0.16.10"]
+    static: ["10.0.16.4 - 10.0.16.100"]
     cloud_properties:
       virtual_network_name: boshvnet-crp
       subnet_name: CloudFoundry
@@ -25,6 +25,7 @@ networks:
     - "22:22"
     - "80:80"
     - "443:443"
+    - "2222:2222"
     - "4222:4222"
     - "4443:4443"
     - "6868:6868"
@@ -43,9 +44,12 @@ resource_pools:
     version: latest
   cloud_properties:
     instance_type: Standard_D1
+  env:
+    bosh:
+      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
 
 compilation:
-  workers: 1
+  workers: 6
   network: cf_private
   reuse_compilation_vms: true
   cloud_properties:
@@ -59,123 +63,300 @@ update:
   update_watch_time: 5000-600000
 
 jobs:
-- name: cf_z1
+- name: consul_z1
   instances: 1
-  persistent_disk: 102400
-  resource_pool: resource_z1
-  templates:
-  - {name: consul_agent, release: cf}
-  - {name: nats, release: cf}
-  - {name: nats_stream_forwarder, release: cf}
-  - {name: metron_agent, release: cf}
-  - {name: etcd, release: cf}
-  - {name: etcd_metrics_server, release: cf}
-  - {name: debian_nfs_server, release: cf}
-  - {name: postgres, release: cf}
-  - {name: cloud_controller_ng, release: cf}
-  - {name: cloud_controller_worker, release: cf}
-  - {name: cloud_controller_clock, release: cf}
-  - {name: nfs_mounter, release: cf}
-  - {name: route_registrar, release: cf}
-  - {name: haproxy, release: cf}
-  - {name: hm9000, release: cf}
-  - {name: doppler, release: cf}
-  - {name: loggregator_trafficcontroller, release: cf}
-  - {name: uaa, release: cf}
-  - {name: gorouter, release: cf}
-  - {name: dea_next, release: cf}
-  - {name: dea_logging_agent, release: cf}
   networks:
-  - name: reserved
-    static_ips: RESERVED-IP
   - name: cf_private
-    default: [gateway, dns]
-    static_ips: [10.0.16.4]
-  update:
-    serial: true
+    static_ips:
+    - 10.0.16.16
+  persistent_disk: 1024
   properties:
     consul:
       agent:
         mode: server
-        services:
-          uaa: {}
-          cloud_controller_ng: {}
-          routing-api: {}
-    etcd_metrics_server:
-      nats:
-        machines: [10.0.16.4]
-        password: c1oudc0w
-        username: nats
-    nfs_server:
-      address: 10.0.16.4
-      allow_from_entries: 
-      - 10.0.16.0/20
-      - 10.0.32.0/20
+    metron_agent:
+      zone: z1
+  resource_pool: resource_z1
+  templates:
+  - {name: consul_agent, release: cf}
+  - {name: metron_agent, release: cf}
+  update:
+    max_in_flight: 1
+    serial: true
+- name: ha_proxy_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: haproxy, release: cf}
+  - {name: metron_agent, release: cf}
+  - {name: consul_agent, release: cf}
+  networks:
+  - name: reserved
+    static_ips: REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP
+  - name: cf_private
+    default: [gateway, dns]
+    static_ips: [10.0.16.4]
+  properties:
     ha_proxy:
       ssl_pem: |
         SSL-CERT-AND-KEY
     router:
       servers:
-        z1: [10.0.16.4]
-    doppler: {zone: z1}
-    doppler_endpoint:
-      shared_secret: c1oudc0w
-    traffic_controller: {zone: z1}
-    login:
-      catalina_opts: -Xmx768m -XX:MaxPermSize=256m
-      port: 8082
+        z1: [10.0.16.12]
+    metron_agent:
+      zone: z1
+- name: nats_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: nats, release: cf}
+  - {name: nats_stream_forwarder, release: cf}
+  - {name: metron_agent, release: cf}
+  networks:
+  - name: cf_private
+    static_ips: [10.0.16.13]
+  properties:
+    metron_agent:
+      zone: z1
+- name: nfs_z1
+  instances: 1
+  persistent_disk: 102400
+  resource_pool: resource_z1
+  templates:
+  - {name: debian_nfs_server, release: cf}
+  - {name: metron_agent, release: cf}
+  networks:
+  - name: cf_private
+    static_ips: [10.0.16.15]
+  properties:
+    metron_agent:
+      zone: z1
+- name: etcd_z1
+  instances: 1
+  resource_pool: resource_z1
+  persistent_disk: 102400
+  templates:
+  - {name: etcd, release: cf}
+  - {name: etcd_metrics_server, release: cf}
+  - {name: metron_agent, release: cf}
+  networks:
+  - name: cf_private
+    static_ips: [10.0.16.14]
+  properties:
+    metron_agent:
+      zone: z1
+  update:
+    max_in_flight: 1
+- name: postgres_z1
+  instances: 1
+  persistent_disk: 1024
+  resource_pool: resource_z1
+  templates:
+  - {name: postgres, release: cf}
+  - {name: metron_agent, release: cf}
+  networks:
+  - name: cf_private
+    static_ips: [10.0.16.11]
+  properties:
+    metron_agent:
+      zone: z1
+  update:
+    serial: true
+- name: uaa_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: uaa, release: cf}
+  - {name: metron_agent, release: cf}
+  - {name: route_registrar, release: cf}
+  - {name: consul_agent, release: cf}
+  networks:
+  - name: cf_private
+  properties:
+    consul:
+      agent:
+        services:
+          uaa: {}
+    metron_agent:
+      zone: z1
+    route_registrar:
+      routes:
+      - name: uaa
+        port: 8080
+        uris:
+        - "uaa.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io"
+        - "*.uaa.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io"
+        - "login.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io"
+        - "*.login.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io"
     uaa:
-      admin:
-        client_secret: c1oudc0w
-      batch:
-        password: c1oudc0w
-        username: batch_user
-      cc:
-        client_secret: c1oudc0w
-      scim:
-        userids_enabled: true
-        users:
-        - admin|c1oudc0w|scim.write,scim.read,openid,cloud_controller.admin,doppler.firehose,routing.router_groups.read
-      port: 8082
-    uaadb:
-      address: 10.0.16.4
-      databases:
-      - {name: uaadb, tag: uaa}
-      db_scheme: postgresql
-      port: 5524
-      roles:
-      - {name: uaaadmin, password: c1oudc0w, tag: admin}
-    dropsonde: {enabled: true}
-    dea_next: {zone: z1}
+      proxy:
+        servers:
+        - 10.244.0.22
+- name: api_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: cloud_controller_ng, release: cf}
+  - {name: cloud_controller_worker, release: cf}
+  - {name: cloud_controller_clock, release: cf}
+  - {name: metron_agent, release: cf}
+  - {name: nfs_mounter, release: cf}
+  - {name: route_registrar, release: cf}
+  - {name: consul_agent, release: cf}
+  - {name: routing-api, release: cf}
+  - {name: statsd-injector, release: cf}
+  networks:
+  - name: cf_private
+  properties:
+    consul:
+      agent:
+        services:
+          cloud_controller_ng: {}
+          routing-api: {}
+    metron_agent:
+      zone: z1
     route_registrar:
       routes:
       - name: api
         port: 9022
+        tags:
+          component: CloudController
         uris:
-        - "api.SYSTEM-DOMAIN"
+        - "api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io"
+    nfs_server:
+      address: 10.0.16.15
+      allow_from_entries:
+      - 10.0.16.0/20
+      - 10.0.32.0/20
+      - 10.0.48.0/20
+- name: hm9000_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: hm9000, release: cf}
+  - {name: metron_agent, release: cf}
+  - {name: route_registrar, release: cf}
+  networks:
+  - name: cf_private
+  properties:
+    metron_agent:
+      zone: z1
+    route_registrar:
+      routes:
       - name: hm9000
         port: 5155
+        tags:
+          component: HM9K
         uris:
-        - "hm9000.SYSTEM-DOMAIN"
+        - "hm9000.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io"
+- name: runner_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: dea_next, release: cf}
+  - {name: dea_logging_agent, release: cf}
+  - {name: metron_agent, release: cf}
+  networks:
+  - name: cf_private
+  properties:
+    dea_next: {zone: z1}
+    metron_agent:
+      zone: z1
+- name: doppler_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: doppler, release: cf}
+  - {name: syslog_drain_binder, release: cf}
+  - {name: metron_agent, release: cf}
+  networks:
+  - name: cf_private
+  properties:
+    doppler: {zone: z1}
+    metron_agent:
+      zone: z1
+- name: loggregator_trafficcontroller_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: loggregator_trafficcontroller, release: cf}
+  - {name: metron_agent, release: cf}
+  - {name: route_registrar, release: cf}
+  networks:
+  - name: cf_private
+  properties:
+    metron_agent:
+      zone: z1
+    traffic_controller: {zone: z1}
+    route_registrar:
+      routes:
       - name: doppler
         port: 8081
         uris:
-        - "doppler.SYSTEM-DOMAIN"
+        - "doppler.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io"
       - name: loggregator
         port: 8080
         uris:
-          - "loggregator.SYSTEM-DOMAIN"
-      - name: uaa
-        port: 8082
-        uris:
-        - "uaa.SYSTEM-DOMAIN"
-        - "*.uaa.SYSTEM-DOMAIN"
-        - "login.SYSTEM-DOMAIN"
-        - "*.login.SYSTEM-DOMAIN"
-
+          - "loggregator.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io"
+- name: router_z1
+  instances: 1
+  resource_pool: resource_z1
+  templates:
+  - {name: gorouter, release: cf}
+  - {name: metron_agent, release: cf}
+  - {name: consul_agent, release: cf}
+  networks:
+  - name: cf_private
+    static_ips: [10.0.16.12]
+  properties:
+    dropsonde: {enabled: true}
+    consul:
+      agent:
+        services:
+          uaa: {}
+    metron_agent:
+      zone: z1
+- name: acceptance_tests
+  lifecycle: errand
+  instances: 1
+  networks:
+  - name: cf_private
+  resource_pool: resource_z1
+  templates:
+  - {name: acceptance-tests, release: cf}
+- name: smoke_tests
+  lifecycle: errand
+  instances: 1
+  networks:
+  - name: cf_private
+  properties: {}
+  resource_pool: resource_z1
+  templates:
+  - {name: smoke-tests, release: cf}
 properties:
+  acceptance_tests:
+    admin_password: c1oudc0w
+    admin_user: admin
+    api: api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
+    apps_domain: REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
+    client_secret: tcp-emitter-secret
+    include_routing: true
+    nodes: 1
+    skip_ssl_validation: true
+    system_domain: REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
+    use_http: true
+  smoke_tests:
+    api: api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
+    apps_domain: REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
+    ginkgo_opts: null
+    org: SMOKE_TEST_ORG
+    password: c1oudc0w
+    skip_ssl_validation: true
+    space: SMOKE_TEST_SPACE
+    user: admin
+    enable_windows_tests: true
   networks: {apps: cf_private}
-  app_domains: [SYSTEM-DOMAIN]
+  app_domains: [REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io]
   app_ssh:
     host_key_fingerprint: a6:d1:08:0b:b0:cb:9b:5f:c4:ba:44:2a:97:26:19:8a
     oauth_client_id: ssh-proxy
@@ -220,7 +401,7 @@ properties:
       rules:
       - {destination: 0.0.0.0/0, ports: '53', protocol: tcp}
       - {destination: 0.0.0.0/0, ports: '53', protocol: udp}
-    srv_api_uri: http://api.SYSTEM-DOMAIN
+    srv_api_uri: http://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
     staging_upload_password: c1oudc0w
     staging_upload_user: staging_upload_user
     external_host: api
@@ -228,8 +409,10 @@ properties:
     stacks:
       - name: "cflinuxfs2"
         description: "Cloud Foundry Linux-based filesystem"
+      - name: "windows2012R2"
+        description: "Windows Server 2012 R2"
   ccdb:
-    address: 10.0.16.4
+    address: 10.0.16.11
     databases:
     - {name: ccdb, tag: cc}
     db_scheme: postgres
@@ -241,7 +424,7 @@ properties:
       log_level: null
       servers:
         lan:
-        - 10.0.16.4
+        - 10.0.16.16
     agent_cert: |+
       -----BEGIN CERTIFICATE-----
       MIIEITCCAgugAwIBAgIQTDMCJHBiQrY8hlM78doHTzALBgkqhkiG9w0BAQswEzER
@@ -396,7 +579,7 @@ properties:
     heartbeat_interval_in_seconds: 10
     memory_mb: 33996
   description: Cloud Foundry sponsored by Pivotal
-  domain: SYSTEM-DOMAIN
+  domain: REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
   doppler:
     blacklisted_syslog_ranges: null
     debug: false
@@ -411,23 +594,20 @@ properties:
   doppler_endpoint:
     shared_secret: c1oudc0w
   etcd:
-    machines: [10.0.16.4]
+    machines: [10.0.16.14]
     peer_require_ssl: false
     require_ssl: false
   etcd_metrics_server:
     nats:
-      machines: [10.0.16.4]
+      machines: [10.0.16.13]
       password: c1oudc0w
       username: nats
   hm9000:
-    url: http://hm9000.SYSTEM-DOMAIN
-  logger_endpoint:
-    port: 4443
+    url: http://hm9000.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
+  logger_endpoint: null
   loggregator:
-    outgoing_dropsonde_port: 18081
-    doppler_port: 8081
     etcd:
-      machines: [10.0.16.4]
+      machines: [10.0.16.14]
     tls:
       ca: null
   loggregator_endpoint:
@@ -442,8 +622,8 @@ properties:
     enabled: true
     invitations_enabled: null
     links:
-      passwd: https://console.SYSTEM-DOMAIN/password_resets/new
-      signup: https://console.SYSTEM-DOMAIN/register
+      passwd: https://console.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/password_resets/new
+      signup: https://console.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/register
     logout: null
     messages: null
     notifications:
@@ -463,7 +643,6 @@ properties:
     uaa_base: null
     url: null
   metron_agent:
-    zone: z1
     deployment: cf-azure
     preferred_protocol: null
     tls_client:
@@ -472,27 +651,28 @@ properties:
   metron_endpoint:
     shared_secret: c1oudc0w
   nats:
-    machines: [10.0.16.4]
+    machines: [10.0.16.13]
     password: c1oudc0w
     port: 4222
     user: nats
   nfs_server:
-    address: 10.0.16.4
+    address: 10.0.16.15
     allow_from_entries:
     - 10.0.16.0/20
     - 10.0.32.0/20
+    - 10.0.48.0/20 
   ssl:
     skip_cert_verify: true
-  system_domain: SYSTEM-DOMAIN
+  system_domain: REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
   system_domain_organization: default_organization
   request_timeout_in_seconds: 900
   router:
-    port: 8888
     cipher_suites: null
     debug_addr: null
     enable_ssl: null
     extra_headers_to_log: null
     logrotate: null
+    port: null
     requested_route_registration_interval_in_seconds: null
     route_services_secret: c1oudc0w
     route_services_secret_decrypt_only: null
@@ -502,11 +682,11 @@ properties:
     ssl_key: null
     ssl_skip_validation: true
     status:
-      password: c1oudc0w 
-      port: 18888
-      user: gorouter
+      password: router
+      port: null
+      user: router
   uaadb:
-    address: 10.0.16.4
+    address: 10.0.16.11
     databases:
     - {name: uaadb, tag: uaa}
     db_scheme: postgresql
@@ -566,14 +746,14 @@ properties:
         authorities: oauth.login,scim.write,clients.read,notifications.write,critical_notifications.write,emails.write,scim.userids,password.write
         authorized-grant-types: authorization_code,client_credentials,refresh_token
         override: true
-        redirect-uri: http://login.SYSTEM-DOMAIN
+        redirect-uri: http://login.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
         scope: openid,oauth.approvals
         secret: c1oudc0w
       servicesmgmt:
         authorities: uaa.resource,oauth.service,clients.read,clients.write,clients.secret
         authorized-grant-types: authorization_code,client_credentials,password,implicit
         autoapprove: true
-        redirect-uri: http://servicesmgmt.SYSTEM-DOMAIN/auth/cloudfoundry/callback
+        redirect-uri: http://servicesmgmt.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/auth/cloudfoundry/callback
         scope: openid,cloud_controller.read,cloud_controller.write
         secret: c1oudc0w
       notifications:
@@ -612,6 +792,7 @@ properties:
         HH6Qlq/6UOV5wP8+GAcCQFgRCcB+hrje8hfEEefHcFpyKH+5g1Eu1k0mLrxK2zd+
         4SlotYRHgPCEubokb2S1zfZDWIXW3HmggnGgM949TlY=
         -----END RSA PRIVATE KEY-----
+
       verification_key: |
         -----BEGIN PUBLIC KEY-----
         MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDHFr+KICms+tuT1OXJwhCUmR2d
@@ -619,9 +800,10 @@ properties:
         qHxf+ZH9BL1gk9Y6kCnbM5R60gfwjyW1/dQPjOzn9N394zd2FJoFHwdq9Qs0wBug
         spULZVNRxq7veq/fzwIDAQAB
         -----END PUBLIC KEY-----
+
     no_ssl: true
-    url: http://uaa.SYSTEM-DOMAIN
-    issuer: https://uaa.SYSTEM-DOMAIN
+    url: http://uaa.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
+    issuer: https://uaa.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
     zones:
       internal:
         hostnames:

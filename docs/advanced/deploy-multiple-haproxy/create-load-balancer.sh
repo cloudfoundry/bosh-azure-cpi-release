@@ -3,7 +3,7 @@
 resourceGroupName="REPLACE-ME-WITH-YOUR-RESOURCE-GROUP-NAME" 
 location="REPLACE-ME-WITH-THE-LOCATION-OF-YOUR-RESOURCE-GROUP"
 virtualNetworkName="REPLACE-ME-WITH-VNET-NAME" # Default: boshvnet-crp
-publicIPName="REPLACE-ME-WITH-THE-PUBLIC-IP-NAME-OF-CLOUDFOUNDRY" # Default: ${resourceGroupName}-cf
+publicIPName="REPLACE-ME-WITH-THE-PUBLIC-IP-NAME-OF-CLOUDFOUNDRY" # Default: cloudfoundry
 loadBalancerName="haproxylb" # This will be used in your Cloud Foundry manifest
 frontendIPName="fip"
 backendPoolName="backendpool"

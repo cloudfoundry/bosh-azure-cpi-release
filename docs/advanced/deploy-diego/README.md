@@ -1,72 +1,73 @@
 # Deploy Diego on Azure
 
-## Before you begin ##
+This document described the steps to deploy Diego for Cloud Foundry on Azure.
 
-This document described the steps to deploy Diego for Cloud Foundry on Azure. It is assumed that you have already deployed your **BOSH director VM** on Azure by following this [guidance](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/blob/master/docs/guidance.md).
+## 1 Prerequisites
 
-## Create a new subnet for Diego ##
-1. Sign in to Azure portal.
-2. Find your resource group which was created for your cloud foundry.
-3. Find the virtual network **boshvnet-crp** in above resource group.
-4. Create a new subnet
-    - Name: **Diego**, CIDR: **10.0.32.0/20**
+* A deployment of BOSH
 
-## Deploy you cloud foundry on Azure ##
+  It is assumed that you have already deployed your **BOSH director VM** on Azure by following this [guidance](../../guidance.md).
 
-1. Log on to your dev-box.
+  1. Log on to your dev-box.
 
-2. Download [single-vm-cf-224-diego.yml](../../example_manifests/single-vm-cf-224-diego.yml)
+  2. Login to your BOSH director VM
 
-  ```
-  wget -O ~/single-vm-cf-224-diego.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/example_manifests/single-vm-cf-224-diego.yml
-  ```
+    ```
+    bosh target 10.0.0.4 # Username: admin, Password: admin.
+    ```
 
-3. Login to your BOSH director VM
+    >**NOTE:** If you have used `bosh logout`, you should use `bosh login admin admin` to log in.
 
-  ```
-  bosh target 10.0.0.4 # Username: admin, Password: admin.
-  ```
+* A new subnet for Diego
 
-  _**Note:** If you have used ‘bosh logout’, you should use ‘bosh login admin admin’ to log in._
+  1. Sign in to Azure portal.
+  2. Find your resource group which was created for your Cloud Foundry.
+  3. Find the virtual network in above resource group.
+  4. Create a new subnet
+      - Name: **Diego**, CIDR: **10.0.32.0/20**
 
-4. Upload releases
+
+## Manifests
+
+We provide the manifests for Cloud Foundry and Diego.
+
+* Single VM Version
+  * [single-vm-cf-224-diego.yml](./single-vm-cf-224-diego.yml)
+  * [single-vm-diego.yml](./single-vm-diego.yml)
+* Multiple VM Version
+  * [multiple-vm-cf-224-diego.yml](./multiple-vm-cf-224-diego.yml)
+  * [multiple-vm-diego.yml](./multiple-vm-diego.yml)
+
+You can deploy Cloud Foundry and Diego using the single-vm manifest or the multiple-vm manifest. In this document, we will use the single-vm manifest as an example.
+ 
+## 2 Deploy your Cloud Foundry on Azure
+
+1. Upload releases
 
   ```
   bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=224
   bosh upload stemcell https://bosh.io/d/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent?v=3169
   ```
 
-5. Update **BOSH-DIRECTOR-UUID** in **~/single-vm-cf-224-diego.yml**
+2. Download [single-vm-cf-224-diego.yml](./single-vm-cf-224-diego.yml)
 
   ```
-  sed -i -e "s/BOSH-DIRECTOR-UUID/$(bosh status --uuid)/" ~/single-vm-cf-224-diego.yml
+  wget -O ~/single-vm-cf-224-diego.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/advanced/deploy-diego/single-vm-cf-224-diego.yml
   ```
 
-6. Update **SYSTEM-DOMAIN** in **~/single-vm-cf-224-diego.yml**
-
-  Domains in Cloud Foundry provide a namespace from which to create routes. The presence of a domain in Cloud Foundry indicates to a developer that requests for any route created from the domain will be routed to Cloud Foundry. Cloud Foundry supports two domains, one is called **SYSTEM-DOMAIN** for system applications and one for general applications. To deploy Cloud Foundry, you need to specify the **SYSTEM-DOMAIN**, and it should be resolvable to an IP address.
-
-  * If you deploy BOSH via [the bosh-setup template](../../get-started/deploy-bosh-using-arm-templates.md), DNS is setup by default which can resolve the domain `cf.azurelovecf.com`. In such a case, you can use `cf.azurelovecf.com` as the system domain name.
-
-    ```
-    sed -i -e "s/SYSTEM-DOMAIN/cf.azurelovecf.com/" ~/single-vm-cf-224-diego.yml
-    ```
-
-  * If you deploy BOSH via [the manual steps](../../get-started/deploy-bosh-manually.md) or set `enableDNSOnDevbox` as false in [the bosh-setup template](../../get-started/deploy-bosh-using-arm-templates.md), you need to setup DNS to resolve your domain by yourself.
-
-    For quickly test, http://xip.io/ is an option to resolve your domain. For example:
-
-    ```
-    sed -i -e "s/SYSTEM-DOMAIN/$(cat ~/settings |grep cf-ip| sed 's/.*: "\(.*\)",/\1/').xip.io/" ~/single-vm-cf-224-diego.yml
-    ```
-
-7. Update CF **RESERVED-IP** in **~/single-vm-cf-224-diego.yml**
+3. Update **REPLACE_WITH_DIRECTOR_ID** in **~/single-vm-cf-224-diego.yml**
 
   ```
-  sed -i -e "s/RESERVED-IP/$(cat ~/settings |grep cf-ip| sed 's/.*: "\(.*\)",/\1/')/" ~/single-vm-cf-224-diego.yml
+  sed -i -e "s/REPLACE_WITH_DIRECTOR_ID/$(bosh status --uuid)/" ~/single-vm-cf-224-diego.yml
   ```
 
-8. Update **SSL-CERT-AND-KEY** in **~/single-vm-cf-224-diego.yml**
+4. Update **REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP** in **~/single-vm-cf-224-diego.yml**
+
+  ```
+  sed -i -e "s/REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP/$(cat ~/settings | grep cf-ip | sed 's/.*: "\(.*\)", /\1/')/" ~/single-vm-cf-224-diego.yml
+  ```
+
+5. Update **SSL-CERT-AND-KEY** in **~/single-vm-cf-224-diego.yml**
 
   You should use your certificate and key. If you do not want to use yours, please use below command to generate a new one and update SSL-CERT-AND-KEY in ~/single-vm-cf-224-diego.yml automatically.
 
@@ -78,29 +79,21 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
   mv -f tmp ~/single-vm-cf-224-diego.yml
   ```
 
-9. Set BOSH deployment
+6. Set BOSH deployment
 
   ```
   bosh deployment ~/single-vm-cf-224-diego.yml
   ```
 
-10. Deploy cloud foundry
+7. Deploy Cloud Foundry
 
   ```
   bosh -n deploy
   ```
 
-## Deploy Diego on Azure ##
+## 3 Deploy Diego on Azure
 
-1. Log on to your dev-box
-
-2. Download [single-vm-diego.yml](../../example_manifests/single-vm-diego.yml)
-
-  ```
-  wget -O ~/single-vm-diego.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/example_manifests/single-vm-diego.yml
-  ```
-
-3. Upload releases
+1. Upload releases
 
   ```
   bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/garden-linux-release?v=0.330.0
@@ -108,29 +101,48 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
   bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/diego-release?v=0.1444.0
   ```
 
-4. Update **BOSH-DIRECTOR-UUID** in **~/single-vm-diego.yml**
+2. Download [single-vm-diego.yml](./single-vm-diego.yml)
 
   ```
-  sed -i -e "s/BOSH-DIRECTOR-UUID/$(bosh status --uuid)/" ~/single-vm-diego.yml
+  wget -O ~/single-vm-diego.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/advanced/deploy-diego/single-vm-diego.yml
   ```
 
-5. Update **SYSTEM-DOMAIN** in **~/single-vm-diego.yml**
+3. Update **REPLACE_WITH_DIRECTOR_ID** in **~/single-vm-diego.yml**
 
-  **Please keep it the same as the system domain name in **~/single-vm-cf-224-diego.yml**.
+  ```
+  sed -i -e "s/REPLACE_WITH_DIRECTOR_ID/$(bosh status --uuid)/" ~/single-vm-diego.yml
+  ```
 
-6. Set BOSH deployment
+4. Update **REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP** in **~/single-vm-diego.yml**
+
+  ```
+  sed -i -e "s/REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP/$(cat ~/settings | grep cf-ip | sed 's/.*: "\(.*\)", /\1/')/" ~/single-vm-diego.yml
+  ```
+
+5. Set BOSH deployment
 
   ```
   bosh deployment ~/single-vm-diego.yml
   ```
 
-7. Deploy Diego
+6. Deploy Diego
 
   ```
   bosh -n deploy
   ```
 
-## Configure CF Environment ##
+  >**NOTE:** You may hit the issue "`diego_z1/0` is not running after update", please check [#85](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/85). Workaround:
+
+    ```
+    bosh ssh diego_z1
+    sudo su
+    monit quit etcd
+    monit quit bbs
+    killall -9 etcd
+    monit start all
+    ```
+
+## 4 Configure CF Environment
 
 1. Log on to your dev-box
 
@@ -144,8 +156,10 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
 
 3. Configure your space
 
+  Run `cat ~/settings | grep cf-ip` to get Cloud Foundry public IP.
+
   ```
-  cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation -u admin -p c1oudc0w
+  cf login -a https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io --skip-ssl-validation -u admin -p c1oudc0w
   cf enable-feature-flag diego_docker
   cf create-org diego
   cf target -o diego
@@ -153,7 +167,7 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
   cf target -s diego
   ```
 
-## Push your first application to Diego ##
+## 5 Push your first application to Diego
 
 1. Log on to your dev-box
 
@@ -173,5 +187,5 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure. It
   cf start game-2048
   ```
 
-  _**NOTE:**
-  If you have not login to CF, you should use "cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation -u admin -p c1oudc0w" to login and select diego as your orgazination. You can use 'cf ssh game-2048' to ssh into the running container for your application._
+  >**NOTE:**
+    You can use `cf ssh game-2048` to ssh into the running container for your application.

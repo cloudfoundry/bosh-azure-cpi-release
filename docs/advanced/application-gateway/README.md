@@ -30,7 +30,7 @@ Azure Application Gateway provides application-level routing and load balancing 
 
 # 3 Configuration Steps  
 
-1. Deploy your basic Cloud Foundry following this guidance: https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/blob/master/docs/guidance.md
+1. Deploy your basic Cloud Foundry following the [guidance](../../guidance.md).
 
   >**NOTE:** **DO NOT** remove HAProxy in your manifest, see [known issues](#known-issues) section for details.
 
@@ -41,7 +41,7 @@ Azure Application Gateway provides application-level routing and load balancing 
   ```
   Example:
   ```
-  azure network vnet subnet create -g "MyResourceGroup" -e "myvnet" -n "ApplicationGateway" -a 10.0.1.0/24
+  azure network vnet subnet create -g "MyResourceGroup" -e "boshvnet-crp" -n "ApplicationGateway" -a 10.0.1.0/24
   ```
 
 3. Open the PowerShell command window and Log in.
@@ -67,11 +67,11 @@ Azure Application Gateway provides application-level routing and load balancing 
     Input your resource group name: binxi1109ag
     Input your application gateway name: ApplicationGateway
     Will create the application gateway ApplicationGateway in your resrouce group binxi1109ag
-    Input your virtual network name [boshvnet-crp]: 
+    Input your virtual network name [boshvnet-crp]:
     Input your subnet name for the application gateway [ApplicationGateway]: 
     Input your public IP name[publicIP01]: 
     Input the list of router IP addresses (split by ";"): 10.0.16.12;10.0.16.22
-    Input your system domain[cf.azurelovecf.com]: 
+    Input your system domain[REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io]: 
     Input the path of the certificate: D:\domain1.pfx
     Input the password of the certificate: User@111
     Removing it if the application gateway exists
@@ -97,12 +97,12 @@ Azure Application Gateway provides application-level routing and load balancing 
     Input your resource group name: binxi1109ag
     Input your application gateway name: ApplicationGateway
     Will create the application gateway ApplicationGateway in your resrouce group binxi1109ag
-    Input your virtual network name [boshvnet-crp]: 
+    Input your virtual network name [boshvnet-crp]:
     Input your subnet name for the application gateway [ApplicationGateway]: 
     Input your public IP name[publicIP01]: 
     Input the list of router IP addresses (split by ";"): 10.0.16.12;10.0.16.22
-    Input your system domain[cf.azurelovecf.com]: 
-    Input the hostname, path and password of the certificates (Format: hostname1,path1,password1;hostname2,path2,password2;...): api.cf.azurelovecf.com,D:\domain1.pfx,Password1;game-2048.cf.azurelovecf.com,D:\A.pfx,Password1;demo.cf.azurelovecf.com,D:\B.pfx,Password2
+    Input your system domain[REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io]: 
+    Input the hostname, path and password of the certificates (Format: hostname1,path1,password1;hostname2,path2,password2;...): api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io,D:\domain1.pfx,Password1;game-2048.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io,D:\A.pfx,Password1;demo.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io,D:\B.pfx,Password2
     Removing it if the application gateway exists
     Adding the subnet for the application gateway
     Creating public IP address for front end configuration
@@ -135,9 +135,9 @@ Azure Application Gateway provides application-level routing and load balancing 
   <Original Public IP Address of the Cloud Foundry instance>  loggregator.<SYSTEM-DOMAIN>
   ```
 
-  You can find the IP addresses mentioned above on Azure Portal in your resource group. `<SYSTEM-DOMAIN>` is specified in your manifest for Cloud Foundry. For example, `cf.azurelovecf.com`.
+  You can find the IP addresses mentioned above on Azure Portal in your resource group. `<SYSTEM-DOMAIN>` is specified in your manifest for Cloud Foundry. For example, `REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io`.
 
-7. Login to your Cloud Foundry: `cf login -a https://api.cf.azurelovecf.com --skip-ssl-validation`.
+7. Login to your Cloud Foundry: `cf login -a https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io --skip-ssl-validation`.
 
   If you can login successfully, the Application Gateway is created successfully.
 

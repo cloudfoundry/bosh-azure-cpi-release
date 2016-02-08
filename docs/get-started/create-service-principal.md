@@ -2,6 +2,12 @@
 
 This topic shows you how to permit a service principal (such as an automated process, application, or service) to access other resources in your subscription.
 
+A service principal contains the following credentials which will be mentioned in this page. Please store them in a secure location because they are sensitive credentials.
+
+- **TENANT-ID**
+- **CLIENT-ID**
+- **CLIENT-SECRET** 
+
 # 1 Prepare Azure CLI
 
 ## 1.1 Install Azure CLI
@@ -79,8 +85,8 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
 
   You can get the following values from the output:
 
-  * **SUBSCRIPTION-ID** - the row `id`
-  * **TENANT-ID**       - the row `tenantId`
+  * **SUBSCRIPTION-ID** - the row `id`.
+  * **TENANT-ID**       - the row `tenantId`, please note it down for later use.
 
   >**NOTE:** If your **TENANT-ID** is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See [1.2 Configure Azure CLI](#configure_azure_cli) on how to fix this.
 
@@ -114,7 +120,7 @@ azure ad app create --name <name> --password <password> --home-page <home-page> 
 ```
 
 * name: The display name for the application
-* password: The value for the password credential associated with the application that will be valid for one year by default. This is your **CLIENT-SECRET**.
+* password: The value for the password credential associated with the application that will be valid for one year by default. This is your **CLIENT-SECRET**. Please note it down for later use.
 * home-page: The URL to the application homepage. You can use a faked URL here.
 * Identifier-uris: The comma-delimitied URIs that identify the application. You can use a faked URL here.
 
@@ -147,7 +153,7 @@ data:                             lang:
 info:    ad app create command OK
 ```
 
-* `Application Id` is your **CLIENT-ID** you need to create the service principal.
+* `Application Id` is your **CLIENT-ID** you need to create the service principal. Please note it down for later use.
 
 ## 2.3 Create a Service Principal
 
