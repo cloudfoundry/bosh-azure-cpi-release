@@ -7,6 +7,7 @@ module Bosh::AzureCloud
   class AzureUnauthorizedError < AzureError; end
   class AzureNoFoundError < AzureError; end
   class AzureConflictError < AzureError; end
+  class AzureInternalError < AzureError; end
 
   class AzureClient2
     include Helpers
@@ -26,7 +27,10 @@ module Bosh::AzureCloud
     HTTP_CODE_CONFLICT            = 409
     HTTP_CODE_LENGTHREQUIRED      = 411
     HTTP_CODE_PRECONDITIONFAILED  = 412
-    HTTP_CODE_INTERNALSERVERERROR = 500
+
+    # https://azure.microsoft.com/en-us/documentation/articles/best-practices-retry-service-specific/#more-information-6
+    AZURE_RETRY_ERROR_CODES       = [408, 500, 502, 503, 504]
+    AZURE_MAX_RETRY_COUNT         = 10
 
     REST_API_PROVIDER_COMPUTER           = 'Microsoft.Compute'
     REST_API_COMPUTER_VIRTUAL_MACHINES   = 'virtualMachines'
@@ -713,9 +717,8 @@ module Bosh::AzureCloud
       request['Content-Length'] = request_body.size
       @logger.debug("create_storage_account - request body:\n#{request.body}")
 
-      response = http_get_response(uri, request)
-      @logger.debug("create_storage_account - response code: #{response.code}")
-
+      retry_after = 10
+      response = http_get_response(uri, request, retry_after)
       if response.code.to_i == HTTP_CODE_OK
         return true
       elsif response.code.to_i != HTTP_CODE_ACCEPTED
@@ -723,7 +726,7 @@ module Bosh::AzureCloud
       end
 
       @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
-      retry_after = response.key?('Retry-After') ? response['Retry-After'].to_i : 10
+      retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
       uri = URI(response['Location'])
       params = {}
       params['api-version'] = API_VERSION
@@ -734,12 +737,11 @@ module Bosh::AzureCloud
         sleep(retry_after)
 
         @logger.debug("create_storage_account - trying to get the status of asynchronous operation: #{uri}")
-        response = http_get_response(uri, request)
+        response = http_get_response(uri, request, retry_after)
         status_code = response.code.to_i
-        @logger.debug("create_storage_account - #{status_code}\n#{response.body}")
         if status_code == HTTP_CODE_OK
           return true
-        elsif status_code != HTTP_CODE_ACCEPTED && status_code != HTTP_CODE_INTERNALSERVERERROR
+        elsif status_code != HTTP_CODE_ACCEPTED
           raise AzureError, "create_storage_account - http error: #{response.code}"
         end
       end
@@ -857,15 +859,25 @@ module Bosh::AzureCloud
       uri
     end
 
-    def http_get_response(uri, request)
+    def http_get_response(uri, request, retry_after = 10)
       response = nil
       refresh_token = false
+      retry_count = 0
+
       begin
         request['Content-Type']  = 'application/json'
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
         response = http(uri).request(request)
-        if response.code.to_i == HTTP_CODE_UNAUTHORIZED
+        status_code = response.code.to_i
+        @logger.debug("http_get_response - retry #{retry_count}: #{status_code}\n#{response.body}")
+        if status_code == HTTP_CODE_UNAUTHORIZED
           raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid."
+        end
+        refresh_token = false
+        if AZURE_RETRY_ERROR_CODES.include?(status_code)
+          error = "http_get_response - error: #{response.code}"
+          error += " message: #{response.body}" unless response.body.nil?
+          raise AzureInternalError, error
         end
       rescue AzureUnauthorizedError => e
         unless refresh_token
@@ -873,8 +885,15 @@ module Bosh::AzureCloud
           retry
         end
         raise e
+      rescue AzureInternalError => e
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          retry_count += 1
+          sleep(retry_after)
+          retry
+        end
+        raise e
       rescue => e
-        cloud_error("http_get_response - #{e.inspect}\n#{e.backtrace.join("\n")}")
+        cloud_error("http_get_response - retry #{retry_count}: #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
       response
     end
@@ -907,10 +926,9 @@ module Bosh::AzureCloud
         sleep(options[:retry_after])
 
         @logger.debug("check_completion - trying to get the status of asynchronous operation: #{uri}")
-        response = http_get_response(uri, request)
+        response = http_get_response(uri, request, options[:retry_after])
         status_code = response.code.to_i
-        @logger.debug("check_completion - #{status_code}\n#{response.body}")
-        if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED && status_code != HTTP_CODE_INTERNALSERVERERROR
+        if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
           raise AzureError, "check_completion - http error: #{response.code}"
         end
 
@@ -969,7 +987,7 @@ module Bosh::AzureCloud
         request['Content-Length'] = request_body.size
         @logger.debug("http_put - request body:\n#{request.body}")
       end
-      response = http_get_response(uri, request)
+      response = http_get_response(uri, request, retry_after)
       options = {
         :operation    => 'http_put',
         :return_code => [HTTP_CODE_OK],
@@ -991,7 +1009,7 @@ module Bosh::AzureCloud
         request['Content-Length'] = request_body.size
         @logger.debug("http_put - request body:\n#{request.body}")
       end
-      response = http_get_response(uri, request)
+      response = http_get_response(uri, request, retry_after)
       options = {
         :operation    => 'http_delete',
         :return_code => [HTTP_CODE_OK, HTTP_CODE_NOCONTENT],
@@ -1014,7 +1032,7 @@ module Bosh::AzureCloud
         request['Content-Length'] = request_body.size
         @logger.debug("http_put - request body:\n#{request.body}")
       end
-      response = http_get_response(uri, request)
+      response = http_get_response(uri, request, retry_after)
       options = {
         :operation    => 'http_post',
         :return_code => [HTTP_CODE_OK],
