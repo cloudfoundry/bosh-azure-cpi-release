@@ -339,7 +339,7 @@ The value of **IP Address** in the output is your **reserved IP for Cloud Foundr
 In the same resource group, you can create a virtual machine based on **Ubuntu Server 14.04 LTS** on Azure Portal. The VM will be a **dev-box** to deploy BOSH and Cloud Foundry.
 
 >**NOTE:**
-  * As a temporary limitation, **currently the dev-box should be on Azure and in the same virutal network with BOSH VMs and CF VMs**. And the dev-box should be in the subnet `BOSH`.
+  * As a temporary limitation, **currently the dev-box should be on Azure and in the same virtual network with BOSH VMs and CF VMs**. And the dev-box should be in the subnet `BOSH`.
   * Select **Resource Manager** as the deployment model.
   * **(RECOMMENDED)** Avoid using the private IP addresses **10.0.0.4** and **10.0.16.4** for your dev-box. On Azure Portal, you can manually change the private IP address to a default value **10.0.0.100** after the dev-box is created. Afthe the IP address is changed, the dev-box may reboot.
   * **(NOT RECOMMENDED)** If you would like to use **10.0.0.4** or **10.0.16.4** for your dev-box, you need to change the IP address in example YAML files to stay the same.
@@ -552,27 +552,12 @@ echo "Finish"
       -----BEGIN CERTIFICATE-----
       MIIDXTCCAkWgAwIBAgIJAJo9AXFrnu5CMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
       BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
-      aWRnaXRzIFB0eSBMdGQwHhcNMTUxMTAyMDY1ODMwWhcNMTYxMTAxMDY1ODMwWjBF
-      MQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50
-      ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
-      CgKCAQEAxYprxo690XyLTwMe2VXeu4tseLuKeksPvyBV0VAOGY5Y5fkhz1btJ1dG
-      tcAyzNrWfwGp7Vu8T5U6mFXGE72efqcXrNVaBlajKXF79p1qZfsylvxjGx0a62Kn
-      sC6cVc37B9210nNiwq6W6hi7kHjgYd7GILIidxcPVZpnAk/s+e7X35YhLhquFbdy
-      TQmOT36XZKreaLFcv1Fi2ZyvjovLHFz9GkD5sBfg2NkrdTeqFi/9GMzsaWTP8pou
-      NQ8hqlcWUA3XNZLNv8bo21Mc0qOHEXfkmyvFANlgWQPWWbE4Quo4lJvkMN6jYBmJ
-      lWEnc/R8Si6hmRdjgXQ1v2CoZ9tZ4QIDAQABo1AwTjAdBgNVHQ4EFgQUDY15m/TC
-      MCUs2wNTcabc7YiAX4owHwYDVR0jBBgwFoAUDY15m/TCMCUs2wNTcabc7YiAX4ow
-      DAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAm+VTaA00dMvpX5aMyJLM
-      RQoJonzpU0fZEKSQWiG2obzzi9NkwZR+aXQbIM3/9D+u3P8GPd0grr/UbrcP2wxH
-      qj09PrsNNa8ehOTxvAjDM6cj+ozheneGGiMtZveJZYjN59UF7pBDmoTgNB0JRXYU
-      Feqx2/uLUrsrz+GCc0i+huc7vmOiI+uSsj1LD1EkKRg783DO/XnQW7KWUhCuLNXi
+      ...
       8Wqhq8rUJkAyLDuEBu3TnCdCJynh3hXOl1JyHvPUMb6J5ts+e4bV1gfUjQy3at1r
       HOKDAJ8TzxpxhVEt+LxovCh/+vdziuaLsp1rPN/5FXTZQQDQXyfSvPc2Ygm/MwOG
       vA==
       -----END CERTIFICATE-----
     ```
-
-    >**NOTE:** **Never use the certificate in the example.**
 
 ## 2.2 Deploy
 
@@ -592,21 +577,4 @@ bosh-init deploy bosh.yml
 >**NOTE:**
   * Never use root to perform these steps.
   * More verbose logs are written to `~/run.log`.
-  * If you hit any issue, please see [**troubleshooting**](./troubleshooting.md), [**known issues**](./known-issues.md) and [**migration**](./migration.md). If it does not work, you can file an issue [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues).
-
-<a name="setup-dns"></a>
-# 3 Setup DNS
-
-This step is optional. If you have a pre-configured DNS server for the domain name, you can skip this step. Otherwise, you can download [setup_dns.py](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/setup_dns.py) and use the commands below to configure your dev-box as a DNS server for testing quickly.
-
-```
-sudo python setup_dns.py -d cf.azurelovecf.com -i 10.0.16.4 -e <reserved-ip-for-cloud-foundry> -n <public-ip-of-dev-box>
-```
-
-* reserved-ip-for-cloud-foundry:
-
-  The reserved public IP address **RESERVED-IP** for Cloud Foundry.
-
-* public-ip-of-dev-box:
-
-  The public IP address of your dev-box. If your dev-box reboots, its public IP address may change. You need to manually update it in **/etc/bind/cf.com.wan**.
+  * If you hit any issue, please see [**troubleshooting**](../../additional-information/troubleshooting.md), [**known issues**](../../additional-information/known-issues.md) and [**migration**](../../additional-information/migration.md). If it does not work, you can file an issue [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues).

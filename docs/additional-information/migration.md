@@ -6,9 +6,9 @@ If you are customers of [Cloud Foundry on Azure Preview 2](https://azure.microso
 
 1. Update bosh.yml.
 
-  Replace **BOSH-FOR-AZURE-URL**, **BOSH-FOR-AZURE-SHA1**, **BOSH-AZURE-CPI-URL**, **BOSH-AZURE-CPI-SHA1**, **STEMCELL-FOR-AZURE-URL** and **STEMCELL-FOR-AZURE-SHA1** with the values in the example file [**bosh.yml**](https://github.com/Azure/azure-quickstart-templates/blob/master/bosh-setup/bosh.yml).
+  Specify **BOSH-FOR-AZURE-URL**, **BOSH-FOR-AZURE-SHA1**, **BOSH-AZURE-CPI-URL**, **BOSH-AZURE-CPI-SHA1**, **STEMCELL-FOR-AZURE-URL** and **STEMCELL-FOR-AZURE-SHA1** in `bosh.yml`.
 
-  Click [**HERE**](./deploy-bosh-manually.md#configure_bosh_yml) to learn more.
+  Click [**HERE**](../get-started/manually/deploy-bosh-manually.md#configure_bosh_yml) to learn more.
 
 2. You need to upgrade Ruby version in your dev-box.
 

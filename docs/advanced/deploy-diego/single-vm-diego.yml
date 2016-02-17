@@ -1,27 +1,30 @@
 ---
 name: cf-diego
-director_uuid: BOSH-DIRECTOR-UUID
+director_uuid: REPLACE_WITH_DIRECTOR_ID
+
 releases:
 - name: diego
-  version: latest
+  version: 0.1444.0
 - name: garden-linux
-  version: latest
+  version: 0.330.0
 - name: etcd
-  version: latest
+  version: 20
 - name: cf
-  version: latest
+  version: 224
+
 networks:
 - name: diego
   type: manual
   subnets:
   - range: 10.0.32.0/20
     gateway: 10.0.32.1
-    dns: [10.0.0.100]
+    dns: [8.8.8.8]
     reserved: ["10.0.32.2 - 10.0.32.3"]
-    static: ["10.0.32.4 - 10.0.32.100"]
+    static: 10.0.32.4
     cloud_properties:
       virtual_network_name: boshvnet-crp
       subnet_name: Diego
+
 resource_pools:
 - name: resource_z1
   network: diego
@@ -30,107 +33,41 @@ resource_pools:
     version: latest
   cloud_properties:
     instance_type: Standard_D1
-  env:
-    bosh:
-      password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
+
 compilation:
-  workers: 6
+  workers: 1
   network: diego
   reuse_compilation_vms: true
   cloud_properties:
     instance_type: Standard_D1
+
+update:
+  canaries: 1
+  canary_watch_time: 5000-120000
+  max_in_flight: 1
+  serial: false
+  update_watch_time: 5000-120000
+
 jobs:
-- name: database_z1
+- name: diego_z1
   instances: 1
-  networks:
-  - name: diego
-  persistent_disk: 1024
-  properties:
-    consul:
-      agent:
-        services:
-          bbs: {}
-          etcd: {}
-    metron_agent:
-      zone: z1
+  persistent_disk: 102400
   resource_pool: resource_z1
   templates:
   - name: etcd
     release: etcd
   - name: bbs
     release: diego
-  - name: consul_agent
-    release: cf
-  - name: metron_agent
-    release: cf
-  update:
-    max_in_flight: 1
-    serial: true
-- name: brain_z1
-  instances: 1
-  networks:
-  - name: diego
-  properties:
-    consul:
-      agent:
-        services:
-          auctioneer: {}
-    metron_agent:
-      zone: z1
-  resource_pool: resource_z1
-  templates:
-  - name: consul_agent
-    release: cf
   - name: auctioneer
     release: diego
   - name: converger
     release: diego
-  - name: metron_agent
-    release: cf
-  update:
-    max_in_flight: 1
-    serial: true
-- name: cell_z1
-  instances: 1
-  networks:
-  - name: diego
-  properties:
-    diego:
-      rep:
-        zone: z1
-    metron_agent:
-      zone: z1
-  resource_pool: resource_z1
-  templates:
   - name: rep
     release: diego
-  - name: consul_agent
-    release: cf
   - name: garden
     release: garden-linux
   - name: rootfses
     release: diego
-  - name: metron_agent
-    release: cf
-  update:
-    max_in_flight: 1
-    serial: false
-- name: cc_bridge_z1
-  instances: 1
-  networks:
-  - name: diego
-  properties:
-    consul:
-      agent:
-        services:
-          cc_uploader: {}
-          nsync: {}
-          stager: {}
-          tps: {}
-    metron_agent:
-      zone: z1
-  resource_pool: resource_z1
-  templates:
   - name: stager
     release: diego
   - name: nsync
@@ -139,58 +76,41 @@ jobs:
     release: diego
   - name: cc_uploader
     release: diego
-  - name: consul_agent
-    release: cf
-  - name: metron_agent
-    release: cf
-  update:
-    max_in_flight: 1
-    serial: false
-- name: route_emitter_z1
-  instances: 1
-  networks:
-  - name: diego
-  properties:
-    metron_agent:
-      zone: z1
-  resource_pool: resource_z1
-  templates:
   - name: route_emitter
+    release: diego
+  - name: ssh_proxy
+    release: diego
+  - name: file_server
     release: diego
   - name: consul_agent
     release: cf
   - name: metron_agent
     release: cf
-  update:
-    max_in_flight: 1
-    serial: false
-- name: access_z1
-  instances: 1
   networks:
   - name: diego
     static_ips:
     - 10.0.32.4
+  update:
+    max_in_flight: 1
+    serial: true
   properties:
     consul:
       agent:
         services:
+          bbs: {}
+          etcd: {}
+          auctioneer: {}
+          cc_uploader: {}
+          nsync: {}
+          stager: {}
+          tps: {}
           file_server: {}
           ssh_proxy: {}
+    diego:
+      rep:
+        zone: z1
     metron_agent:
       zone: z1
-  resource_pool: resource_z1
-  templates:
-  - name: ssh_proxy
-    release: diego
-  - name: consul_agent
-    release: cf
-  - name: metron_agent
-    release: cf
-  - name: file_server
-    release: diego
-  update:
-    max_in_flight: 1
-    serial: false
 
 properties:
   consul:
@@ -199,7 +119,7 @@ properties:
       log_level: null
       servers:
         lan:
-        - 10.0.16.16
+        - 10.0.16.4
     agent_cert: |+
       -----BEGIN CERTIFICATE-----
       MIIEITCCAgugAwIBAgIQTDMCJHBiQrY8hlM78doHTzALBgkqhkiG9w0BAQswEzER
@@ -622,7 +542,7 @@ properties:
         -----END RSA PRIVATE KEY-----
     cc_uploader:
       cc:
-        base_url: https://api.cf.azurelovecf.com
+        base_url: https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
         basic_auth_password: c1oudc0w
         staging_upload_password: c1oudc0w
         staging_upload_user: staging_upload_user
@@ -832,7 +752,7 @@ properties:
         max_idle_conns_per_host: null
         require_ssl: true
       cc:
-        base_url: https://api.cf.azurelovecf.com
+        base_url: https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
         basic_auth_password: c1oudc0w
         staging_upload_password: c1oudc0w
         staging_upload_user: staging_upload_user
@@ -1025,7 +945,7 @@ properties:
       log_level: debug
       nats:
         machines:
-        - 10.0.16.13
+        - 10.0.16.4
         password: c1oudc0w
         port: 4222
         user: nats
@@ -1154,7 +1074,7 @@ properties:
       servers:
       - 10.0.32.4
       uaa_secret: c1oudc0w
-      uaa_token_url: https://uaa.cf.azurelovecf.com/oauth/token
+      uaa_token_url: https://uaa.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/oauth/token
     ssl:
       skip_cert_verify: true
     stager:
@@ -1248,7 +1168,7 @@ properties:
         max_idle_conns_per_host: null
         require_ssl: true
       cc:
-        base_url: https://api.cf.azurelovecf.com
+        base_url: https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
         basic_auth_password: c1oudc0w
         staging_upload_password: c1oudc0w
         staging_upload_user: staging_upload_user
@@ -1346,13 +1266,13 @@ properties:
         max_idle_conns_per_host: null
         require_ssl: true
       cc:
-        base_url: https://api.cf.azurelovecf.com
+        base_url: https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
         basic_auth_password: c1oudc0w
         staging_upload_password: c1oudc0w
         staging_upload_user: staging_upload_user
       dropsonde_port: null
       log_level: null
-      traffic_controller_url: wss://doppler.cf.azurelovecf.com:443
+      traffic_controller_url: wss://doppler.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io:443
   etcd:
     ca_cert: |+
       -----BEGIN CERTIFICATE-----
@@ -1616,7 +1536,7 @@ properties:
     dropsonde_incoming_port: null
     etcd:
       machines:
-      - 10.0.16.14
+      - 10.0.16.4
     tls:
       ca: null
   loggregator_endpoint:
@@ -1632,16 +1552,10 @@ properties:
     shared_secret: loggregator-secret
   nats:
     machines:
-    - 10.0.16.13
+    - 10.0.16.4
     password: c1oudc0w
     port: 4222
     user: nats
   syslog_daemon_config:
     address: null
     port: null
-update:
-  canaries: 1
-  canary_watch_time: 5000-120000
-  max_in_flight: 1
-  serial: false
-  update_watch_time: 5000-120000

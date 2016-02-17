@@ -26,13 +26,13 @@ $routerIPList = Read-Host -Prompt 'Input the list of router IP addresses (split 
 $routerIPs = $routerIPList -split ";"
 $routerNumber = $routerIPs.Length
 
-$systemDomain = Read-Host -Prompt "Input your system domain[cf.azurelovecf.com]"
-if ($systemDomain -eq "") {
-    $systemDomain="cf.azurelovecf.com"
-}
-
+$systemDomain = Read-Host -Prompt "Input your system domain"
 $certPath = Read-Host -Prompt "Input the path of the certificate"
 $passwd = Read-Host -Prompt "Input the password of the certificate"
+If ($systemDomain -eq "" -or $certPath -eq "" -or $passwd -eq "") {
+    Write-Host "system domain, the path and password of the certificate can't be empty. Will exit!"
+    Return
+}
 
 # Remove it if the application gateway (AG) exists
 Write-Host "Removing it if the application gateway exists"
@@ -58,7 +58,7 @@ Write-Host "Configuring the back end IP address pool"
 $pool = New-AzureRmApplicationGatewayBackendAddressPool -Name pool01 -BackendIPAddresses $routerIPs
 
 # Configure a probe which will detect whether backend servers are healthy.
-# It detects "login.cf.azurelovecf.com/login" every 60 seconds.
+# It detects "login.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/login" every 60 seconds.
 Write-Host "Configuring a probe"
 $hostName="login."+$systemDomain
 $probe=New-AzureRmApplicationGatewayProbeConfig -Name Probe01 -Protocol Http -HostName $hostName -Path "/login" -Interval 60 -Timeout 60 -UnhealthyThreshold 3

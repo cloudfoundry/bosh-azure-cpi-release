@@ -12,6 +12,8 @@ This page will show how to deploy Cloud Foundry MySQL Service on Azure via Bosh.
 
 [Security Groups](#security-groups)
 
+[Push an APP using MySQL Service](#push-app)
+
 [Deregistering the Service Broker](#deregistering-broker)
 
 <a name='components'></a>
@@ -69,11 +71,11 @@ You can use the stemcell that is already uploaded with your Cloud Foundry deploy
 Below are sample commands to upload a BOSH release for MySQL, using V25 as an example. You can check https://github.com/cloudfoundry/cf-mysql-release/releases to identify the latest stable build, note some configurations might change with new versions.
 
 ```
-$ git clone https://github.com/cloudfoundry/cf-mysql-release
-$ cd cf-mysql-release
-$ git checkout v25
-$ ./update
-$ bosh upload release releases/cf-mysql-25.yml
+git clone https://github.com/cloudfoundry/cf-mysql-release
+cd cf-mysql-release
+git checkout v25
+./update
+bosh upload release releases/cf-mysql-25.yml
 ```
 
 <a name="create_infrastructure"></a>
@@ -92,10 +94,10 @@ azure network vnet subnet create --resource-group <resource-group-name> --vnet-n
 For example:
 
 ```
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "vnet" --name "mysql1" --address-prefix "10.0.32.0/24"
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "vnet" --name "mysql2" --address-prefix "10.0.33.0/24"
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "vnet" --name "mysql3" --address-prefix "10.0.34.0/24"
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "vnet" --name "compilation" --address-prefix "10.0.35.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql1" --address-prefix "10.0.32.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql2" --address-prefix "10.0.33.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql3" --address-prefix "10.0.34.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "compilation" --address-prefix "10.0.35.0/24"
 ```
 
 <a name="deployment_components"></a>
@@ -153,7 +155,7 @@ The brokers each register a route with the router, which load balances requests 
   +------------------------------------------+---------------+---------+----------------------------------------------------+
   | Name                                     | OS            | Version | CID                                                |
   +------------------------------------------+---------------+---------+----------------------------------------------------+
-  | bosh-azure-hyperv-ubuntu-trusty-go_agent | ubuntu-trusty | 0000*   | bosh-stemcell-bd80bc85-994d-4271-b2c3-12e530a72a44 |
+  | bosh-azure-hyperv-ubuntu-trusty-go_agent | ubuntu-trusty | 3169*   | bosh-stemcell-bd80bc85-994d-4271-b2c3-12e530a72a44 |
   +------------------------------------------+---------------+---------+----------------------------------------------------+
   
   (*) Currently in-use
@@ -167,7 +169,7 @@ The brokers each register a route with the router, which load balances requests 
   ```
   stemcell: &stemcell
     name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-    version: '0000'
+    version: latest
   ```
 
 3. Create a stub file called `cf-mysql-azure-stub.yml` by copying and modifying the [sample_azure_stub.yml](./sample_azure_stub.yml).
@@ -256,17 +258,100 @@ Since [cf-release](https://github.com/cloudfoundry/cf-release) v175, application
     }
   ]
   ```
-- Create a security group from the rule file.
+
+2. Create a security group from the rule file.
+
   ```shell
   $ cf create-security-group p-mysql rule.json
   ```
 
-- Enable the rule for all apps
+3. Enable the rule for all apps
+
   ```
   $ cf bind-running-security-group p-mysql
   ```
 
 Security group changes are only applied to new application containers; existing apps must be restarted.
+
+<a name="push-app"></a>
+## Push an APP using MySQL Service
+
+1. Log on to your dev-box
+
+2. Install CF CLI and the plugin
+
+  ```
+  wget -O cf.deb http://go-cli.s3-website-us-east-1.amazonaws.com/releases/v6.14.1/cf-cli-installer_6.14.1_x86-64.deb
+  sudo dpkg -i cf.deb
+  ```
+
+3. Configure your space
+
+  Run `cat ~/settings | grep cf-ip` to get Cloud Foundry public IP.
+
+  ```
+  cf login -a https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io --skip-ssl-validation -u admin -p c1oudc0w
+  cf create-space azure
+  cf target -o default_organization -s azure
+  ```
+
+4. Sign up for a mysql instance
+
+  Run `cf marketplace` to get the service and plan name.
+
+  ```
+  Getting services from marketplace in org default_organization / space azure as admin...
+  OK
+  
+  service   plans        description
+  p-mysql   100mb, 1gb   MySQL databases on demand
+  ```
+
+  Create a service instance `mysql` with the service name `p-mysql` and the plan `100mb`.
+
+  ```
+  cf create-service p-mysql 100mb mysql
+  ```
+
+5. Download a sample app
+
+  ```
+  sudo apt-get -y git
+  git clone https://github.com/cloudfoundry-samples/pong_matcher_go
+  ```
+
+6. Push the app
+
+  ```
+  cd pong_matcher_go
+  cf push
+  ```
+
+7. Get the url of the app
+
+  ```
+  $ cf apps
+  Getting apps in org default_organization / space azure as admin...
+  OK
+
+  name     requested state   instances   memory   disk   urls
+  gopong   started           1/1         256M     1G     gopong.40.121.149.226.xip.io
+  ```
+
+8. Export the test host
+
+  ```
+  export HOST=http://gopong.40.121.149.226.xip.io
+  ```
+
+9. Verify whether the app works
+
+  ```
+  curl -v -H "Content-Type: application/json" -X PUT $HOST/match_requests/firstrequest -d '{"player": "andrew"}'
+  curl -v -X GET $HOST/match_requests/firstrequest
+  ```
+
+>**NOTE:** More information, please check https://github.com/cloudfoundry-samples/pong_matcher_go.
 
 <a name="deregistering-broker"></a>
 ## De-registering the Service Broker
