@@ -15,6 +15,8 @@ module Bosh::AzureCloud
     API_VERSION    = '2015-05-01-preview'
     API_VERSION_1  = '2015-01-01'
 
+    USER_AGENT     = 'BOSH-AZURE-CPI/v8'
+
     HTTP_CODE_OK                  = 200
     HTTP_CODE_CREATED             = 201
     HTTP_CODE_ACCEPTED            = 202
@@ -865,6 +867,7 @@ module Bosh::AzureCloud
       retry_count = 0
 
       begin
+        request['User-Agent']    = USER_AGENT
         request['Content-Type']  = 'application/json'
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
         response = http(uri).request(request)
