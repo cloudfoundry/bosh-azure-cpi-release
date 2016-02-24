@@ -9,7 +9,7 @@ check_param AZURE_CLIENT_ID
 check_param AZURE_CLIENT_SECRET
 check_param AZURE_TENANT_ID
 check_param AZURE_GROUP_NAME
-check_param PRIVATE_KEY_DATA
+check_param SSH_PRIVATE_KEY
 check_param BAT_VCAP_PASSWORD
 check_param BAT_SECOND_STATIC_IP
 check_param BAT_NETWORK_CIDR
@@ -34,7 +34,7 @@ chruby 2.1.2
 echo "DirectorIP =" $DIRECTOR
 
 mkdir -p $PWD/keys
-echo "$PRIVATE_KEY_DATA" > $PWD/keys/bats.pem
+echo "$SSH_PRIVATE_KEY" > $PWD/keys/bats.pem
 eval $(ssh-agent)
 chmod go-r $PWD/keys/bats.pem
 ssh-add $PWD/keys/bats.pem

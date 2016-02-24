@@ -21,6 +21,6 @@ params:
   AZURE_SUBSCRIPTION_ID:      replace-me
   AZURE_BOSH_SUBNET_NAME:     replace-me
   BAT_NETWORK_GATEWAY:        replace-me
-  PRIVATE_KEY_DATA:           replace-me
-  SSH_CERTIFICATE:            replace-me
+  SSH_PRIVATE_KEY:            replace-me
+  SSH_PUBLIC_KEY:             replace-me
   BOSH_INIT_LOG_LEVEL:        warn

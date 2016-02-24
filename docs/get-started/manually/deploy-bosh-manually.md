@@ -504,8 +504,8 @@ echo "Finish"
         client_secret: CLIENT-SECRET
           # <--- Replace CLIENT-SECRET with your client secret of the service principal
         ssh_user: vcap
-        ssh_certificate: SSH-CERTIFICATE
-          # <--- Replace SSH-CERTIFICATE with the content of your ssh certificate
+        ssh_public_key: SSH-PUBLIC-KEY
+          # <--- Replace SSH-PUBLIC-KEY with the content of your ssh public key
 
       agent: {mbus: "nats://nats:nats-password@10.0.0.4:4222"}
 
@@ -548,15 +548,7 @@ echo "Finish"
     Example:
 
     ```
-    ssh_certificate: |
-      -----BEGIN CERTIFICATE-----
-      MIIDXTCCAkWgAwIBAgIJAJo9AXFrnu5CMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
-      BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
-      ...
-      8Wqhq8rUJkAyLDuEBu3TnCdCJynh3hXOl1JyHvPUMb6J5ts+e4bV1gfUjQy3at1r
-      HOKDAJ8TzxpxhVEt+LxovCh/+vdziuaLsp1rPN/5FXTZQQDQXyfSvPc2Ygm/MwOG
-      vA==
-      -----END CERTIFICATE-----
+    ssh_public_key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCh7LrwWCYhdgpIcX+cBcwVuXMSKfcybMNrRfy2hsNXmKrqd4kJMKXS43njuv+ydrfGo1HO4ZcRqdyku+u5N78jhzilV9bOpgr57LnrFs7vIFExhWpkqJXC7abVScN8bZ8QlD3YAbgWEtS/2G1dmNbihkuE+2ICLpmPixNDPIGCQlNmHp0O7Z97jnX9zETMhrHRpksDslpeqNC4mzY6KIIixbwXOYrkMrtlupOKIi/qNqlbLc/nX6ltRk9ujlC0/XsmMXrnTFUM2s4p7sqbHvyDEOFlc42VAIsDH7DerPjVHMBgSAiXd1Z9B5uzPahW37ZKikYA9U2PC3D1TqgTUC7N
     ```
 
 ## 2.2 Deploy

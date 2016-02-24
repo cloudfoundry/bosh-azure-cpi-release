@@ -53,7 +53,7 @@ describe Bosh::AzureCloud::Cloud do
             'storage_account_name' => 'mock_storage_name',
             'storage_access_key' => "foo",
             'resource_group_name' => 'mock_resource_group',
-            'ssh_certificate' => "foo",
+            'ssh_public_key' => "foo",
           }
         }
       end

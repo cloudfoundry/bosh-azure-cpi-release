@@ -9,7 +9,7 @@ MOCK_RESOURCE_GROUP_NAME = '352ec9c1-6dd5-4a24-b11e-21bbe3d712ca'
 MOCK_AZURE_TENANT_ID = 'e441d583-68c5-46b3-bf43-ab49c5f07fed'
 MOCK_AZURE_CLIENT_ID = '62bd3eaa-e231-4e13-8baf-0e2cc8a898a1'
 MOCK_AZURE_CLIENT_SECRET = '0e67d8fc-150e-4cc0-bbf3-087e6c4b9e2a'
-MOCK_SSH_CERT = 'bar'
+MOCK_SSH_PUBLIC_KEY = 'bar'
 
 def mock_cloud_options
   {
@@ -24,7 +24,7 @@ def mock_cloud_options
         'client_id' => MOCK_AZURE_CLIENT_ID,
         'client_secret' => MOCK_AZURE_CLIENT_SECRET,
         'ssh_user' => 'vcap',
-        'ssh_certificate' => MOCK_SSH_CERT,
+        'ssh_public_key' => MOCK_SSH_PUBLIC_KEY,
         'parallel_upload_thread_num' => 16
       },
       'registry' => {
