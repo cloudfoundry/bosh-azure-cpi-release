@@ -34,17 +34,30 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 
 ## 1.1 Basic Configuration
 
-### 1.1.1 Generate your SSH Public Key
+### 1.1.1 Generate your Public/Private Key Pair
 
 The parameter `sshKeyData` should be a string which starts with `ssh-rsa`.
 
-Use ssh-keygen to create a 2048-bit RSA public and private key files, and unless you have a specific location or specific names for the files, accept the default location and name.
+* For Linux/Mac Users
 
-```
-ssh-keygen -t rsa -b 2048
-```
+  Use ssh-keygen to create a 2048-bit RSA public and private key files, and unless you have a specific location or specific names for the files, accept the default location and name.
 
-Then, you can find your public key in `~/.ssh/id_rsa.pub`. Copy and paste it as `sshKeyData`.
+  ```
+  ssh-keygen -t rsa -b 2048
+  ```
+
+  Then you can find your public key in `~/.ssh/id_rsa.pub`, and your private key in `~/.ssh/id_rsa`. Copy and paste the contents of `~/.ssh/id_rsa.pub` as `sshKeyData`.
+
+  Reference: [How to Use SSH with Linux and Mac on Azure](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-use-ssh-key/)
+
+* For Windows Users
+
+  1. Use `PuttyGen` to generate a public and private key pair.
+  2. Use the public key as `sshKeyData`.
+  3. Save the private key as a .ppk file.
+  4. When you login the dev-box, use the .ppk file as the private key file for authentication.
+
+  Reference: [How to Use SSH with Windows on Azure](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-use-ssh-key/)
 
 ### 1.1.2 Specify your Service Principal
 
@@ -81,9 +94,21 @@ If you want to customize your `bosh-setup` template, you can modify the followin
 
 After the deployment succeeded, you can find the resource group with the name you specified on Azure Portal. The VM in the resource group is your dev-box.
 
-You can find the output `SSHDEVBOX` in `Last deployment`. `SSHDEVBOX` is a string just like `ssh <adminUsername>@<vm-name-in-lower-case>.<location>.cloudapp.azure.com`.
+* For Linux/Mac Users
 
-![Deployment Result](./sample-deployment.PNG)
+  You can find the output `SSHDEVBOX` in `Last deployment`. `SSHDEVBOX` is a string just like `ssh <adminUsername>@<vm-name-in-lower-case>.<location>.cloudapp.azure.com`.
+  
+  ![Deployment Result](./sample-deployment.PNG)
+
+  The private key is `~/.ssh/id_rsa` if you accept the default location and name when you generate the ssh key. If so, please run `ssh <adminUsername>@<vm-name-in-lower-case>.<location>.cloudapp.azure.com` to login your dev-box.
+
+  If you specified the location and name of the private key, please run `ssh <adminUsername>@<vm-name-in-lower-case>.<location>.cloudapp.azure.com -i <path-to-your-private-key>`.
+
+* For Windows Users
+
+  1. Open **Putty**.
+  1. Fill in `Public IP address/DNS name label` of the dev-box.
+  2. Before selecting **Open**, click the `Connection > SSH > Auth` tab to choose your private key (.ppk).
 
 After you login, you can check `~/install.log` to determine the status of the deployment. When the deployment succeeds, you will find **Finish** at the end of the log file and no **ERROR** message in it.
 
