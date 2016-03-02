@@ -27,7 +27,7 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 | tenantID | **YES**  | | ID of the tenant |
 | clientID | **YES**  | | ID of the client |
 | clientSecret | **YES** | | secret of the client |
-| autoDeployBosh | NO | disabled | The flag allowing to deploy the Bosh director. |
+| autoDeployBosh | NO | enabled | The flag allowing to deploy the Bosh director. |
 
 >**NOTE:**
   * Currently BOSH can be only deployed from a Virtual Machine (dev-box) in the same virtual network on Azure.
@@ -65,7 +65,9 @@ The service principal includes `tenantID`, `clientID` and `clientSecret`. If you
 
 ### 1.1.3 Deploy Bosh Director Automatically
 
-The Bosh director will be deployed by the template if you set `autoDeployBosh` as `enabled`. As a result, the deployment time of `bosh-setup` template will be much longer (~1h).
+By default, `autoDeployBosh` is set to `enabled`. The Bosh director will be deployed by the template. As a result, the deployment time of `bosh-setup` template will be much longer (~1h).
+
+If you would like to deploy Bosh using a more customized `bosh.yml`, you can set `autoDeployBosh` to `disabled`. After the deployment succeeds, you can login the dev-box, update `~/bosh.yml`, and run `./deploy_bosh.sh`.
 
 ## 1.2 Advanced Configurations
 
