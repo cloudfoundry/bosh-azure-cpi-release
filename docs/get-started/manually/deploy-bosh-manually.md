@@ -535,15 +535,14 @@ echo "Finish"
 
   * Replace the following items with your pre-defined value just created above: **VNET-NAME**, **SUBNET-NAME**, **SUBSCRIPTION-ID**, **STORAGE-ACCOUNT-NAME**, **RESOURCE-GROUP-NAME**, **TENANT-ID**, **CLIENT-ID** and **CLIENT-SECRET** properties.
 
-  * You can use the following commands to generate the new private key `~/bosh` and certificate `~/bosh.pem` for testing.
+  * You can use the following commands to generate the SSH key pair for testing.
 
     ```
-    openssl genrsa -out ~/bosh 2048
-    openssl req -new -x509 -days 365 -key ~/bosh -out ~/bosh.pem
+    ssh-keygen -t rsa -f ~/bosh -P ""
     chmod 400 ~/bosh
     ```
 
-  * **SSH-CERTIFICATE** should be the contents of `~/bosh.pem`.
+  * **SSH-PUBLIC-KEY** should be the contents of `~/bosh.pub`.
 
     Example:
 
