@@ -13,6 +13,6 @@ params:
   AZURE_GROUP_NAME:               replace-me
   AZURE_STORAGE_ACCOUNT_NAME:     replace-me
   AZURE_SUBSCRIPTION_ID:          replace-me
-  SSH_CERTIFICATE:                replace-me
+  SSH_PUBLIC_KEY:                 replace-me
   AZURE_VNET_NAME_FOR_LIFECYCLE:  replace-me
   AZURE_BOSH_SUBNET_NAME:         replace-me

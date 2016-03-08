@@ -121,7 +121,7 @@ jobs:
       client_id: CLIENT-ID # <--- Replace with your client id of the service principle
       client_secret: CLIENT-SECRET # <--- Replace with your client secret of the service principle
       ssh_user: vcap
-      ssh_certificate: SSH-CERTIFICATE # <--- Replace with the content of your ssh certificate
+      ssh_public_key: SSH-PUBLIC-KEY # <--- Replace with the content of your ssh public key
 
     agent: {mbus: "nats://nats:nats-password@10.0.0.4:4222"}
 

@@ -83,7 +83,7 @@ module Bosh::AzureCloud
         :os_disk_name        => os_disk_name,
         :os_vhd_uri          => @disk_manager.get_disk_uri(os_disk_name),
         :caching             => caching,
-        :ssh_cert_data       => @azure_properties['ssh_certificate']
+        :ssh_cert_data       => @azure_properties['ssh_public_key']
       }
       instance_is_created = true
       @azure_client2.create_virtual_machine(vm_params, network_interface, availability_set)

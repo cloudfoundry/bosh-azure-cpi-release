@@ -333,7 +333,7 @@ module Bosh::AzureCloud
             "storage_account_name",
             "resource_group_name",
             "ssh_user",
-            "ssh_certificate",
+            "ssh_public_key",
             "tenant_id",
             "client_id",
             "client_secret"],

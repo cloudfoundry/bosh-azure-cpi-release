@@ -22,8 +22,8 @@ These options are passed to the Azure CPI when it is instantiated.
   The client secret for your service principal
 * `ssh_user` (required)
   The user to use when spinning up new vms
-* `ssh_certificate` (required)
-  The content of the default certificate to use when spinning up new vms
+* `ssh_public_key` (required)
+  The content of the SSH public key to use when spinning up new vms
 * `parallel_upload_thread_num` (optional)
   The number of threads to upload stemcells in parallel. The default value is 16.
 
@@ -246,7 +246,7 @@ Below is a sample of how Azure specific properties are used in a BOSH deployment
           client_secret: <your_client_secret>
           ssh_user: vcap
           parallel_upload_thread_num: 16
-          ssh_certificate: "-----BEGIN CERTIFICATE-----\n..."
+          ssh_public_key: "ssh-rsa ..."
 
         # Tells agents how to contact nats
         agent: {mbus: "nats://nats:nats-password@10.0.0.4:4222"}

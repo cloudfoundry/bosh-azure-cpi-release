@@ -13,11 +13,8 @@ describe Bosh::AzureCloud::Cloud do
     @client_id            = ENV['BOSH_AZURE_CLIENT_ID']            || raise("Missing BOSH_AZURE_CLIENT_ID")
     @client_secret        = ENV['BOSH_AZURE_CLIENT_SECRET']        || raise("Missing BOSH_AZURE_CLIENT_secret")
     @stemcell_id          = ENV['BOSH_AZURE_STEMCELL_ID']          || raise("Missing BOSH_AZURE_STEMCELL_ID")
-    @certificate_file     = ENV['BOSH_AZURE_CERTIFICATE_FILE']     || raise("Missing BOSH_AZURE_CERTIFICATE_FILE")
-    raise("#{@certificate_file} not exists") unless FileTest::exist?(@certificate_file)
+    @ssh_public_key       = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']       || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
   end
-
-  let(:ssh_certificate) { IO.read(@certificate_file) }
 
   subject(:cpi) do
     described_class.new(
@@ -30,7 +27,7 @@ describe Bosh::AzureCloud::Cloud do
         'client_id' => @client_id,
         'client_secret' => @client_secret,
         'ssh_user' => 'vcap',
-        'ssh_certificate' => ssh_certificate,
+        'ssh_public_key' => @ssh_public_key,
         'parallel_upload_thread_num' => 16
       },
       'registry' => {

@@ -28,8 +28,8 @@ properties:
   azure.ssh_user:
     description: Default ssh user to use when spinning up new vms
     default: vcap
-  azure.ssh_certificate:
-    description: The content of the default certificate to use when spinning up new vms
+  azure.ssh_public_key:
+    description: The content of the SSH public key to use when spinning up new vms
   azure.parallel_upload_thread_num:
     description: The number of threads to upload stemcells in parallel
     default: 16

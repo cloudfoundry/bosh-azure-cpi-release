@@ -10,7 +10,7 @@ check_param AZURE_TENANT_ID
 check_param AZURE_GROUP_NAME
 check_param AZURE_STORAGE_ACCOUNT_NAME
 check_param AZURE_SUBSCRIPTION_ID
-check_param SSH_CERTIFICATE
+check_param SSH_PUBLIC_KEY
 check_param AZURE_VNET_NAME_FOR_LIFECYCLE
 check_param AZURE_BOSH_SUBNET_NAME
 
@@ -22,6 +22,7 @@ export BOSH_AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
 export BOSH_AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
 export BOSH_AZURE_VNET_NAME=${AZURE_VNET_NAME_FOR_LIFECYCLE}
 export BOSH_AZURE_SUBNET_NAME=${AZURE_BOSH_SUBNET_NAME}
+export BOSH_AZURE_SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
 
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
@@ -45,12 +46,6 @@ if [ $? -eq 1 ]; then
   azure storage blob upload -q --blobtype PAGE /mnt/root.vhd stemcell ${BOSH_AZURE_STEMCELL_ID}.vhd
 fi
 set -e
-
-echo write cert to file
-echo "$SSH_CERTIFICATE" > /tmp/azurecert
-echo cert written to file
-tail -n1 /tmp/azurecert
-export BOSH_AZURE_CERTIFICATE_FILE="/tmp/azurecert"
 
 cd bosh-cpi-release/src/bosh_azure_cpi
 

@@ -13,8 +13,8 @@ check_param AZURE_STORAGE_ACCOUNT_NAME
 check_param AZURE_SUBSCRIPTION_ID
 check_param AZURE_BOSH_SUBNET_NAME
 check_param BASE_OS
-check_param PRIVATE_KEY_DATA
-check_param SSH_CERTIFICATE
+check_param SSH_PRIVATE_KEY
+check_param SSH_PUBLIC_KEY
 check_param BAT_NETWORK_GATEWAY
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
@@ -32,7 +32,7 @@ deployment_dir="${PWD}/deployment"
 manifest_filename="director-manifest.yml"
 
 mkdir -p $deployment_dir
-echo "$PRIVATE_KEY_DATA" > $deployment_dir/bats.pem
+echo "$SSH_PRIVATE_KEY" > $deployment_dir/bats.pem
 
 cat > "${deployment_dir}/${manifest_filename}"<<EOF
 ---
@@ -179,8 +179,7 @@ jobs:
       client_id: $AZURE_CLIENT_ID
       client_secret: $AZURE_CLIENT_SECRET
       ssh_user: vcap
-      ssh_certificate: |
-        $SSH_CERTIFICATE
+      ssh_public_key: $SSH_PUBLIC_KEY
 
     # Tells agents how to contact nats
     agent: {mbus: "nats://nats:nats-password@10.0.0.10:4222"}

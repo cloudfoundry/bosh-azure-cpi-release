@@ -12,8 +12,7 @@
           'client_id' => p('azure.client_id'),
           'client_secret' => p('azure.client_secret'),
           'ssh_user' => p('azure.ssh_user'),
-          'parallel_upload_thread_num' => p('azure.parallel_upload_thread_num'),
-          'ssh_certificate' => p('azure.ssh_certificate'),
+          'parallel_upload_thread_num' => p('azure.parallel_upload_thread_num')
         },
         'registry' => {
           'user' => p('registry.username'),
@@ -36,6 +35,12 @@
     params['cloud']['properties']['registry']['endpoint'] = endpoint
   end.else do
     params['cloud']['properties']['registry']['endpoint'] = "http://#{p('registry.username')}:#{p('registry.password')}@#{p('registry.host')}:#{p('registry.port')}"
+  end
+
+  if_p('azure.ssh_public_key') do |ssh_public_key|
+    params['cloud']['properties']['azure']['ssh_public_key'] = ssh_public_key
+  end.else do
+    raise 'ssh_certificate has been replaced by ssh_public_key. Please read https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/blob/master/src/bosh_azure_cpi/README.md.'
   end
 
   if_p('blobstore') do

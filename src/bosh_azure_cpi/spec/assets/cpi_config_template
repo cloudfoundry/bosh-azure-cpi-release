@@ -6,7 +6,7 @@ azure:
       tenant_id: <your_tenant_id>
       client_id: <your_client_id>
       client_secret: <your_client_secret>
-      ssh_certificate: <content_of_your_ssh_certificate>
+      ssh_public_key: <content_of_your_ssh_public_key>
 registry:
       endpoint: http://admin:admin@localhost:25888
       user: admin
