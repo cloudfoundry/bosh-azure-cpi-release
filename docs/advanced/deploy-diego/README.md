@@ -6,7 +6,7 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure.
 
 * A deployment of BOSH
 
-  It is assumed that you have already deployed your **BOSH director VM** on Azure by following this [guidance](../../guidance.md).
+  It is assumed that you have already deployed your **BOSH director VM** and **Cloud Foundry** on Azure by following the [guidance](../../guidance.md) via ARM templates and did not change any settings, for example, network CIDR.
 
   1. Log on to your dev-box.
 
@@ -29,66 +29,54 @@ This document described the steps to deploy Diego for Cloud Foundry on Azure.
 
 ## Manifests
 
-We provide the manifests for Cloud Foundry and Diego.
+We provide below manifests for you to deploy Diego for testing.
 
 * Single VM Version
-  * [single-vm-cf-224-diego.yml](./single-vm-cf-224-diego.yml)
   * [single-vm-diego.yml](./single-vm-diego.yml)
 * Multiple VM Version
-  * [multiple-vm-cf-224-diego.yml](./multiple-vm-cf-224-diego.yml)
   * [multiple-vm-diego.yml](./multiple-vm-diego.yml)
 
-You can deploy Cloud Foundry and Diego using the single-vm manifest or the multiple-vm manifest. In this document, we will use the single-vm manifest as an example.
- 
-## 2 Deploy your Cloud Foundry on Azure
+In this document, we will use the single-vm manifest as an example.
 
-1. Upload releases
+## 2 Update Cloud Foundry
 
-  ```
-  bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=224
-  bosh upload stemcell https://bosh.io/d/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent?v=3169
-  ```
-
-2. Download [single-vm-cf-224-diego.yml](./single-vm-cf-224-diego.yml)
+1. Update your cloud foundry manifest ~/single-vm-cf.yml or ~/multiple-vm-cf.yml.
 
   ```
-  wget -O ~/single-vm-cf-224-diego.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/advanced/deploy-diego/single-vm-cf-224-diego.yml
+    jobs:
+    - name: api_z1
+      properties:
+        nfs_server:
+          allow_from_entries: [10.0.16.0/20]
+    =>
+    jobs:
+    - name: api_z1
+      properties:
+        nfs_server:
+          allow_from_entries: [10.0.16.0/20, 10.0.32.0/20]
   ```
 
-3. Update **REPLACE_WITH_DIRECTOR_ID** in **~/single-vm-cf-224-diego.yml**
-
   ```
-  sed -i -e "s/REPLACE_WITH_DIRECTOR_ID/$(bosh status --uuid)/" ~/single-vm-cf-224-diego.yml
-  ```
-
-4. Update **REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP** in **~/single-vm-cf-224-diego.yml**
-
-  ```
-  sed -i -e "s/REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP/$(cat ~/settings | grep cf-ip | sed 's/.*: "\(.*\)", /\1/')/" ~/single-vm-cf-224-diego.yml
+    properties:
+      nfs_server:
+        allow_from_entries: [10.0.16.0/20]
+    =>
+    properties:
+      nfs_server:
+        allow_from_entries: [10.0.16.0/20, 10.0.32.0/20]
   ```
 
-5. Update **SSL-CERT-AND-KEY** in **~/single-vm-cf-224-diego.yml**
-
-  You should use your certificate and key. If you do not want to use yours, please use below command to generate a new one and update SSL-CERT-AND-KEY in ~/single-vm-cf-224-diego.yml automatically.
-
-  ```
-  openssl genrsa -out ~/haproxy.key 2048 &&
-  echo -e "\n\n\n\n\n\n\n" | openssl req -new -x509 -days 365 -key ~/haproxy.key -out ~/haproxy_cert.pem &&
-  cat ~/haproxy_cert.pem ~/haproxy.key > ~/haproxy.ssl &&
-  awk -vr="$(sed -e '2,$s/^/        /' ~/haproxy.ssl)" '(sub("SSL-CERT-AND-KEY",r))1' ~/single-vm-cf-224-diego.yml > tmp &&
-  mv -f tmp ~/single-vm-cf-224-diego.yml
-  ```
-
-6. Set BOSH deployment
-
-  ```
-  bosh deployment ~/single-vm-cf-224-diego.yml
-  ```
-
-7. Deploy Cloud Foundry
+2. Update your cloud foundry.
 
   ```
   bosh -n deploy
+  ```
+
+  >**NOTE:** When updating your cloud foundry, you may hit below error. You can ignore it.
+
+  ```
+      Failed updating job ha_proxy_z1 > ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd) (canary): `ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd)' is not running after update. Review logs for failed jobs: haproxy_config, haproxy (00:10:12)
+    Error 400007: `ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd)' is not running after update. Review logs for failed jobs: haproxy_config, haproxy
   ```
 
 ## 3 Deploy Diego on Azure
@@ -96,9 +84,9 @@ You can deploy Cloud Foundry and Diego using the single-vm manifest or the multi
 1. Upload releases
 
   ```
-  bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/garden-linux-release?v=0.330.0
-  bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/etcd-release?v=20
-  bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/diego-release?v=0.1444.0
+  bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/garden-linux-release?v=0.334.0
+  bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/etcd-release?v=36
+  bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/diego-release?v=0.1455.0
   ```
 
 2. Download [single-vm-diego.yml](./single-vm-diego.yml)
@@ -119,7 +107,7 @@ You can deploy Cloud Foundry and Diego using the single-vm manifest or the multi
   sed -i -e "s/REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP/$(cat ~/settings | grep cf-ip | sed 's/.*: "\(.*\)", /\1/')/" ~/single-vm-diego.yml
   ```
 
-5. Set BOSH deployment
+5. Set BOSH deployment to diego
 
   ```
   bosh deployment ~/single-vm-diego.yml
@@ -131,18 +119,9 @@ You can deploy Cloud Foundry and Diego using the single-vm manifest or the multi
   bosh -n deploy
   ```
 
-  >**NOTE:** You may hit the issue "`diego_z1/0` is not running after update", please check [#85](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/85). Workaround:
+  >**NOTE:** You may hit the issue "`diego_z1/0` is not running after update". You can run 'bosh -n deploy' again.
 
-    ```
-    bosh ssh diego_z1
-    sudo su
-    monit quit etcd
-    monit quit bbs
-    killall -9 etcd
-    monit start all
-    ```
-
-## 4 Configure CF Environment
+## 3 Configure CF Environment
 
 1. Log on to your dev-box
 
@@ -189,3 +168,22 @@ You can deploy Cloud Foundry and Diego using the single-vm manifest or the multi
 
   >**NOTE:**
     You can use `cf ssh game-2048` to ssh into the running container for your application.
+
+## 6 Known Issues
+
+1. When executing 'cf start game-2048', you may hit below errors. Just retry it.
+
+  Error:
+  ```
+  $ cf start game-2048
+  Starting app game-2048 in org diego / space diego as admin...
+  FAILED
+  Server error, status code: 500, error code: 10001, message: An unknown error occurred.
+  ```
+
+  ```
+  $ cf start game-2048
+  Starting app game-2048 in org diego / space diego as admin...
+  FAILED
+  Server error, status code: 500, error code: 170011, message: Stager error: getaddrinfo: No address associated with hostname
+  ```

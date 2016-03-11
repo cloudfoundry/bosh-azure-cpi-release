@@ -4,13 +4,13 @@ director_uuid: REPLACE_WITH_DIRECTOR_ID
 
 releases:
 - name: diego
-  version: 0.1444.0
+  version: latest
 - name: garden-linux
-  version: 0.330.0
+  version: latest
 - name: etcd
-  version: 20
+  version: latest
 - name: cf
-  version: 224
+  version: latest
 
 networks:
 - name: diego
@@ -94,18 +94,6 @@ jobs:
     max_in_flight: 1
     serial: true
   properties:
-    consul:
-      agent:
-        services:
-          bbs: {}
-          etcd: {}
-          auctioneer: {}
-          cc_uploader: {}
-          nsync: {}
-          stager: {}
-          tps: {}
-          file_server: {}
-          ssh_proxy: {}
     diego:
       rep:
         zone: z1
@@ -115,6 +103,16 @@ jobs:
 properties:
   consul:
     agent:
+      services:
+        bbs: {}
+        etcd: {}
+        auctioneer: {}
+        cc_uploader: {}
+        nsync: {}
+        stager: {}
+        tps: {}
+        file_server: {}
+        ssh_proxy: {}
       datacenter: null
       log_level: null
       servers:

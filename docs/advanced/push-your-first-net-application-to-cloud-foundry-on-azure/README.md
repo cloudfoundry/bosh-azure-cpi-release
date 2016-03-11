@@ -21,7 +21,60 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
     ![create-two-subnets](./create-two-subnets.png "create-two-subnets")
 
-## 2 Add Windows stack
+## 2 Update Cloud Foundry
+
+1. Update your cloud foundry manifest ~/single-vm-cf.yml or ~/multiple-vm-cf.yml.
+
+  ```
+    jobs:
+    - name: api_z1
+      properties:
+        nfs_server:
+          allow_from_entries: [10.0.16.0/20, 10.0.32.0/20]
+    =>
+    jobs:
+    - name: api_z1
+      properties:
+        nfs_server:
+          allow_from_entries: [10.0.16.0/20, 10.0.32.0/20, 10.0.48.0/20]
+  ```
+
+  ```
+    properties:
+      nfs_server:
+        allow_from_entries: [10.0.16.0/20, 10.0.32.0/20]
+    =>
+    properties:
+      nfs_server:
+        allow_from_entries: [10.0.16.0/20, 10.0.32.0/20, 10.0.48.0/20]
+  ```
+
+2. Set BOSH deployment to cloud foundry
+
+  ```
+  bosh deployment ~/single-vm-cf.yml
+  ```
+
+  or
+
+  ```
+  bosh deployment ~/multiple-vm-cf.yml
+  ```
+
+3. Update your cloud foundry.
+
+  ```
+  bosh -n deploy
+  ```
+
+  >**NOTE:** When updating your cloud foundry, you may hit below error. You can ignore it.
+
+  ```
+      Failed updating job ha_proxy_z1 > ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd) (canary): `ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd)' is not running after update. Review logs for failed jobs: haproxy_config, haproxy (00:10:12)
+    Error 400007: `ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd)' is not running after update. Review logs for failed jobs: haproxy_config, haproxy
+  ```
+
+## 3 Add Windows stack
 
 1. Sign in to the Azure portal.
 
@@ -75,22 +128,22 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
 16. Click **Yes** to verify the identity of the virtual machine.
 
-17. Enable file downloads in Internet Explorer
+17. Disable **IE Enhanced Security Configuration**
 
-  Microsoft disabled file downloads by default in some versions of Internet Explorer as part of its security policy. To allow file downloads in Internet Explorer, follow these steps.
+  Microsoft disabled file downloads by default in Windows Server as part of its security policy. To allow file downloads in Internet Explorer, follow these steps.
 
-  1. Open Internet Explorer.
-  2. From the **Tools** menu, select **Internet Options**.
-  3. In the Internet Options dialog box, click the **Security** tab.
-  4. Click **Custom Level**.
-  5. In the Security Settings dialog box, scroll to the **Downloads** section.
-  6. Under **File download**, select **Enable**, and then click **OK**.
-  7. In the confirmation dialog box, click **Yes**.
-  8. Click **OK > Apply > OK**.
+  1. By default, Server Manager is opened when you remote to the server.
+  2. Select **Local Server** and click IE Enhanced Security Configuration **on**.
+
+  ![windows-stack-disable-ie-enhanced-security-1.PNG](./windows-stack-disable-ie-enhanced-security-1.PNG.png "windows-stack-disable-ie-enhanced-security-1")
+
+  3. Select **Off** for both Administrators and Users. Click **OK**.
+
+  ![windows-stack-disable-ie-enhanced-security-2.PNG](./windows-stack-disable-ie-enhanced-security-2.PNG.png "windows-stack-disable-ie-enhanced-security-2")
 
 18. Download [all-in-one](http://cloudfoundry.blob.core.windows.net/windowsstack/all-in-one.zip) and extract it. 
 
-19. Run **all-in-one\setup.ps1**.
+19. Right click **all-in-one\setup.ps1** and click **Run with PowerShell**.
 
 20. In command line run **all-in-one\generate.exe** with the following argument template:
 
@@ -108,9 +161,9 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
   generate.exe -outputDir=.\diego -windowsUsername=AzureAdmin -windowsPassword="MyPass123" -boshUrl=https://admin:admin@10.0.0.4:25555 -machineIp=10.0.48.4
   ```
 
-21. Run the **install.bat** script in the output directory "**.\diego**". This will install both of the MSIs with all of the arguments they require.
+21. Run the **install.bat** script as Administrator in the output directory "**.\diego**". This will install both of the MSIs with all of the arguments they require.
 
-## 3 Configure CF Environment
+## 4 Configure CF Environment
 
 1. Log on to your dev-box
 
@@ -133,13 +186,14 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
   cf target -s diego
   ```
 
-## 4 Push your first .NET application
+## 5 Push your first .NET application
 
 1. Log on to your dev-box
 
 2. Download the .NET application DiegoMVC and extract it
 
   ```
+  sudo apt-get install -y unzip
   wget https://github.com/ruurdk/DiegoMVC/raw/master/DiegoMVC_Compiled.zip
   unzip DiegoMVC_Compiled.zip
   ```
@@ -153,36 +207,39 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
   cf start diegoMVC
   ```
 
-## 5 Verify your deployment completed successfully
+## 6 Verify your deployment completed successfully
 
-1. If you are using dev-box as your DNS server, you should configure hosts in your local machine.
-
-  - For Linux:
-
-    1. Execute `sudo vi /etc/hosts` and add below lines. Please replace cf-ip with the public IP address which you can find by the command "**cat ~/settings | grep cf-ip**" in your dev-box.
-
-    ```
-    cf-ip api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    cf-ip uaa.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    cf-ip login.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    cf-ip loggregator.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    cf-ip diegomvc.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    ```
-
-  - For Windows:
-
-    1. Run Notepad as Administrator
-
-    2. Open `C:\Windows\System32\drivers\Etc\hosts` in Notepad and add below lines. Please replace cf-ip with the public IP address which you can find by the command "**cat ~/settings | grep cf-ip**" in your dev-box.
-
-    ```
-    cf-ip api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    cf-ip uaa.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    cf-ip login.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    cf-ip loggregator.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    cf-ip diegomvc.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io
-    ```
-
-2. Open your web browser, type [http://diegomvc.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/](http://diegomvc.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/). Now you can see your .NET Page.
+1. Open your web browser, type http://diegomvc.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/. Now you can see your .NET Page.
 
   ![diegomvc](./diegomvc.png "diegomvc")
+
+
+## 7 Known Issues
+
+1. You may hit below error when executing 'cf enable-diego diegoMVC'. Just retry it.
+
+  ```
+  $ cf enable-diego diegoMVC
+  Setting diegoMVC Diego support to true
+  err 1 UnknownError - An unknown error occurred. [{
+     "error_code": "UnknownError",
+     "description": "An unknown error occurred.",
+     "code": 10001
+  }
+
+  ]
+  FAILED
+  Error:  UnknownError - An unknown error occurred.
+  {
+     "error_code": "UnknownError",
+     "description": "An unknown error occurred.",
+     "code": 10001
+  }
+  ```
+
+2. You may hit below error when executing 'cf start diegoMVC'. Just retry it.
+
+  ```
+  $ cf start diegoMVC
+  Could not fetch instance count: Server error, status code: 503, error code: 220002, message: Instances information unavailable: getaddrinfo: No address associated with hostname
+  ```
