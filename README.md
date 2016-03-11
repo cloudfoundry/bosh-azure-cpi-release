@@ -16,6 +16,10 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-03-14
+- CPI changes
+  - Assign public IP address to VMs directly
+
 # 2016-03-11
 - docs changes
   - Upgrade versions

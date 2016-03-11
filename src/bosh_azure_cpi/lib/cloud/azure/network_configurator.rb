@@ -74,41 +74,8 @@ module Bosh::AzureCloud
       @vip_network.public_ip unless @vip_network.nil?
     end
 
-    def tcp_endpoints
-      parse_endpoints(@vip_network.cloud_properties['tcp_endpoints'])
-    end
-
     def dns
       @network.spec['dns'] if @network.spec.has_key? "dns"
-    end
-
-    def udp_endpoints
-      parse_endpoints(@vip_network.cloud_properties['udp_endpoints'])
-    end
-
-    private
-
-    def parse_endpoints(endpoints)
-      return [] if (endpoints.nil?)
-      raise ArgumentError, "Invalid 'endpoints', Array expected, " \
-                           "#{spec.class} provided" unless endpoints.is_a?(Array)
-
-      endpoint_list = []
-      endpoints.each do |endpoint|
-        raise "Invalid endpoint '#{endpoint}' given. Format is 'X:Y' where 'X' " \
-              "is an internal-facing port between 1 and 65535 and 'Y' is an external-facing " \
-              'port in the same range' if !valid_endpoint?(endpoint)
-        endpoint_list << endpoint
-      end
-
-      return endpoint_list
-    end
-
-    def valid_endpoint?(endpoint)
-      return false if (endpoint !~ /^\d+:\d+$/)
-      endpoint.split(':').each do |port|
-        return false if (port.to_i < 0 || port.to_i > 65535)
-      end
     end
   end
 end

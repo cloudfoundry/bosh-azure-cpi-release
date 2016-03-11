@@ -48,18 +48,13 @@ describe Bosh::AzureCloud::VMManager do
 
     context "when caching is invalid" do
       let(:subnet) { double("subnet") }
-      let(:resource_pool) {
-        {
-          'caching' => 'InvalidCachingOption'
-        }
-      }
 
       it "should raise an error" do
         allow(client2).to receive(:get_network_subnet_by_name).
           and_return(subnet)
 
         expect {
-          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account_name, stemcell_uri, {'caching' => 'InvalidCachingOption'}, network_configurator)
         }.to raise_error /Unknown disk caching/
       end
     end
@@ -84,7 +79,6 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).not_to receive(:delete_availability_set)
           expect(client2).not_to receive(:delete_network_interface)
-          expect(client2).not_to receive(:delete_load_balancer)
           expect {
             vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
           }.to raise_error /Cannot find the public IP address/
@@ -116,7 +110,6 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).not_to receive(:delete_availability_set)
           expect(client2).not_to receive(:delete_network_interface)
-          expect(client2).not_to receive(:delete_load_balancer)
           expect {
             vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
           }.to raise_error /Cannot find the public IP address/
@@ -124,7 +117,7 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
-    context "when creating load balancer failed" do
+    context "when load balancer can not be found" do
       let(:subnet) { double("subnet") }
 
       before do
@@ -132,113 +125,28 @@ describe Bosh::AzureCloud::VMManager do
           and_return(subnet)
       end
 
-      context "vip network is not null" do
-        let(:public_ips) {
-          [
-            {
-              :ip_address => "public-ip"
-            }
-          ]
-        }
+      it "should raise an error" do
+        allow(network_configurator).to receive(:vip_network).
+          and_return(nil)
+        allow(client2).to receive(:get_load_balancer_by_name).
+          with(resource_pool['load_balancer']).
+          and_return(nil)
 
-        before do
-          allow(network_configurator).to receive(:vip_network).
-            and_return("fake-vip-network")
-          allow(client2).to receive(:list_public_ips).
-            and_return(public_ips)
-          allow(network_configurator).to receive(:public_ip).
-            and_return("public-ip")
-          allow(network_configurator).to receive(:tcp_endpoints).
-            and_return([])
-          allow(network_configurator).to receive(:udp_endpoints).
-            and_return([])
-        end
+        expect(client2).not_to receive(:delete_virtual_machine)
+        expect(client2).not_to receive(:delete_availability_set)
+        expect(client2).not_to receive(:delete_network_interface)
 
-        context "when public load balancer is not created" do
-          it "should raise an error" do
-            allow(client2).to receive(:create_load_balancer).
-              and_raise("load balancer is not created")
-
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_availability_set)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).not_to receive(:delete_load_balancer)
-
-            expect {
-              vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
-            }.to raise_error /load balancer is not created/
-          end
-        end
-
-        context "when binding two load balancers to one VM" do
-          let(:subnet) { double("subnet") }
-          let(:resource_pool) {
-            {
-              'load_balancer' => 'internal-lb-name'
-            }
-          }
-          let(:load_balancer) {
-            {
-              :name => "internal-lb-name"
-            }
-          }
-
-          it "should raise an error" do
-            allow(client2).to receive(:create_load_balancer)
-            allow(client2).to receive(:get_load_balancer_by_name).
-              and_return(load_balancer)
-
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_availability_set)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).to receive(:delete_load_balancer).
-              with(load_balancer[:name])
-
-            expect {
-              vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
-            }.to raise_error /Cannot bind two load balancers to one VM/
-          end
-        end
-      end
-
-      context "vip network is null" do
-        context "when internal load balancer can't be found" do
-          let(:resource_pool) {
-            {
-              'load_balancer' => 'internal-lb-name'
-            }
-          }
-
-          it "should raise an error" do
-            allow(network_configurator).to receive(:vip_network).
-              and_return(nil)
-            allow(client2).to receive(:get_load_balancer_by_name).
-              with(resource_pool['load_balancer']).
-              and_return(nil)
-
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_availability_set)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).not_to receive(:delete_load_balancer)
-
-            expect {
-              vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
-            }.to raise_error /Cannot find the load balancer/
-          end
-        end
+        expect {
+          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+        }.to raise_error /Cannot find the load balancer/
       end
     end
 
     context "when network interface is not created" do
       let(:subnet) { double("subnet") }
-      let(:resource_pool) {
-        {
-          'load_balancer' => 'internal-lb-name'
-        }
-      }
       let(:load_balancer) {
         {
-          :name => "internal-lb-name"
+          :name => "fake-lb-name"
         }
       }
       let(:storage_account) {
@@ -275,7 +183,6 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_virtual_machine)
         expect(client2).not_to receive(:delete_availability_set)
         expect(client2).not_to receive(:delete_network_interface)
-        expect(client2).not_to receive(:delete_load_balancer)
 
         expect {
           vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
@@ -285,15 +192,9 @@ describe Bosh::AzureCloud::VMManager do
 
     context "when availability set is not created" do
       let(:subnet) { double("subnet") }
-      let(:resource_pool) {
-        {
-          'load_balancer' => 'internal-lb-name',
-          'availability_set' => 'fake-avset'
-        }
-      }
       let(:load_balancer) {
         {
-          :name => "internal-lb-name"
+          :name => "fake-lb-name"
         }
       }
       let(:storage_account) {
@@ -341,7 +242,6 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_virtual_machine)
         expect(client2).not_to receive(:delete_availability_set)
         expect(client2).to receive(:delete_network_interface)
-        expect(client2).not_to receive(:delete_load_balancer)
 
         expect {
           vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
@@ -353,7 +253,7 @@ describe Bosh::AzureCloud::VMManager do
       let(:subnet) { double("subnet") }
       let(:load_balancer) {
         {
-          :name => "internal-lb-name"
+          :name => "lb-name"
         }
       }
       let(:storage_account) {
@@ -415,7 +315,6 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).to receive(:delete_virtual_machine)
           expect(client2).to receive(:delete_availability_set)
           expect(client2).to receive(:delete_network_interface)
-          expect(client2).not_to receive(:delete_load_balancer)
 
           expect {
             vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
@@ -430,7 +329,6 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).not_to receive(:delete_availability_set)
           expect(client2).not_to receive(:delete_network_interface)
-          expect(client2).not_to receive(:delete_load_balancer)
 
           vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
         end

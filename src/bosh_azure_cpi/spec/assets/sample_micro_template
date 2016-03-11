@@ -21,18 +21,6 @@ networks:
       subnet_name: SUBNET-NAME # <--- Replace with subnet name for BOSH VM
 - name: public
   type: vip
-  cloud_properties:
-    tcp_endpoints:
-    - "22:22"
-    - "53:53"
-    - "4222:4222"
-    - "6868:6868"
-    - "25250:25250"
-    - "25555:25555"
-    - "25777:25777"
-    udp_endpoints:
-    - "53:53"
-    - "68:68"
 
 resource_pools:
 - name: vms
