@@ -6,7 +6,7 @@ This guidance describes how to setup multiple HAProxy instances for Cloud Foundr
 
 The HAProxy instances will be setup behind the [Azure Load Balancer](https://azure.microsoft.com/en-us/documentation/articles/load-balancer-overview/), which is a Layer 4 (TCP, UDP) load balancer that distributes incoming traffic among healthy service instances. To provide redundancy, we also recommend that you group two or more HAproxy instances in an [Availability Set](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-manage-availability/).
 
-Please note that this guidance focuses on CF deployment. You need to follow the [guidance](../../guidance.md) to prepare the Azure environment and deploy BOSH first. After you complete the section `Deploy BOSH`, you can follow this guidance for the rest Cloud Foundry deployment.
+Please note that this guidance focuses on CF deployment. You need to follow the [guidance](../../guidance.md) to prepare the Azure environment and deploy BOSH first via ARM template. After you complete the section `Deploy BOSH`, you can follow this guidance for the rest Cloud Foundry deployment.
 
 Below is a sample deployment, which you can adjust based on your workload and performance requirements. It is a multiple-VM Cloud Foundry with 2 HAProxy instances.
 
@@ -33,7 +33,7 @@ Below is a sample deployment, which you can adjust based on your workload and pe
 
 ## Create Azure Load Balancer
 
-Create an Azure Load Balancer named `haproxylb` using the [script](./create-load-balancer.sh). If you change the LB name in the script, you also need to update it in the CF manifest `multiple-vm-cf-224-multiple-haproxy.yml`.
+Create an Azure Load Balancer named `haproxylb` using the [script](./create-load-balancer.sh).
 
 Please update the value which starts with `REPLACE-ME` and run it after you [login Azure CLI](../../get-started/create-service-principal.md#verify-your-service-principal).
 
@@ -41,13 +41,7 @@ Please update the value which starts with `REPLACE-ME` and run it after you [log
 
 1. Log on to your dev-box.
 
-2. Download [multiple-vm-cf-224-multiple-haproxy.yml](./multiple-vm-cf-224-multiple-haproxy.yml)
-
-  ```
-  wget -O ~/multiple-vm-cf-224-multiple-haproxy.yml https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/advanced/deploy-multiple-haproxy/multiple-vm-cf-224-multiple-haproxy.yml
-  ```
-
-3. Login to your BOSH director VM
+2. Login to your BOSH director VM
 
   ```
   bosh target 10.0.0.4 # Username: admin, Password: admin.
@@ -55,53 +49,65 @@ Please update the value which starts with `REPLACE-ME` and run it after you [log
 
   _**Note:** If you have used `bosh logout`, you should use `bosh login admin admin` to log in._
 
-4. Upload releases and stemcells
+3. Update the cloud foundry manifest `~/example_manifests/multiple-vm-cf.yml` to set the router instance number to 2 and add a new static private IP.
 
   ```
-  bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=224
-  bosh upload stemcell https://bosh.io/d/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent?v=3169
+  - name: router_z1
+  instances: 2
+  resource_pool: resource_z1
+  templates:
+  - {name: gorouter, release: cf}
+  - {name: metron_agent, release: cf}
+  networks:
+  - name: cf_private
+    static_ips: [10.0.16.12, 10.0.16.22]
+  properties:
+    ...
   ```
 
-5. Update **REPLACE_WITH_DIRECTOR_ID** in `~/multiple-vm-cf-224-multiple-haproxy.yml`
+4. Update the cloud foundry manifest `~/example_manifests/multiple-vm-cf.yml` to add a new resource pool for HAProxy. If you do not use `haproxylb`, you need use your Azure Load Balancer name.
 
   ```
-  sed -i -e "s/REPLACE_WITH_DIRECTOR_ID/$(bosh status --uuid)/" ~/multiple-vm-cf-224-multiple-haproxy.yml
+  resource_pools:
+  ...
+  - name: resource_haproxy
+    network: cf_private
+    stemcell:
+      name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+      version: latest
+    cloud_properties:
+      load_balancer: haproxylb
+      availability_set: haproxy
+      instance_type: Standard_D1
+    env:
+      bosh:
+        password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
   ```
 
-6. Update **SYSTEM-DOMAIN** in `~/multiple-vm-cf-224-multiple-haproxy.yml`
-
-  Domains in Cloud Foundry provide a namespace from which to create routes. The presence of a domain in Cloud Foundry indicates to a developer that requests for any route created from the domain will be routed to Cloud Foundry. Cloud Foundry supports two domains, one is called **SYSTEM-DOMAIN** for system applications and one for general applications. To deploy Cloud Foundry, you need to specify the **SYSTEM-DOMAIN**, and it should be resolvable to an IP address.
-
-  * For production environments, you need to setup DNS to resolve your **SYSTEM-DOMAIN**.
-
-  * For test environments, http://xip.io/ is an option to resolve your domain.
-
-    The following command is an example to use the default reserved IP for Cloud Foundry. You can use any other reserved IP if you don't want to use the default one.
-
-    ```
-    sed -i -e "s/SYSTEM-DOMAIN/$(cat ~/settings |grep cf-ip| sed 's/.*: "\(.*\)", /\1/').xip.io/" ~/multiple-vm-cf-224-multiple-haproxy.yml
-    ```
-
-7. Update **SSL-CERT-AND-KEY** in `~/multiple-vm-cf-224-multiple-haproxy.yml`
-
-  You can either use your existing SSL certificate and key or follow below commands to generate a new one and update **SSL-CERT-AND-KEY** in ~/multiple-vm-cf-224-multiple-haproxy.yml automatically.
+5. Update the cloud foundry manifest `~/example_manifests/multiple-vm-cf.yml` to set the HAProxy instance number to 2, add a new static private IP for the second HAProxy instance, remove the `cf_public` network and add the IP address of the second router.
 
   ```
-  openssl genrsa -out ~/haproxy.key 2048 &&
-  echo -e "\n\n\n\n\n\n\n" | openssl req -new -x509 -days 365 -key ~/haproxy.key -out ~/haproxy_cert.pem &&
-  cat ~/haproxy_cert.pem ~/haproxy.key > ~/haproxy.ssl &&
-  awk -vr="$(sed -e '2,$s/^/        /' ~/haproxy.ssl)" '(sub("SSL-CERT-AND-KEY",r))1' ~/multiple-vm-cf-224-multiple-haproxy.yml > tmp &&
-  mv -f tmp ~/multiple-vm-cf-224-multiple-haproxy.yml
+  - name: ha_proxy_z1
+  instances: 2
+  resource_pool: resource_haproxy
+  templates:
+  - {name: haproxy, release: cf}
+  - {name: metron_agent, release: cf}
+  - {name: consul_agent, release: cf}
+  networks:
+  - name: cf_private
+    default: [gateway, dns]
+    static_ips: [10.0.16.4, 10.0.16.5]
+  properties:
+    ...
+    router:
+      servers:
+        z1: [10.0.16.12, 10.0.16.22]
+    ...
   ```
 
-8. Set BOSH deployment
+6. Deploy cloud foundry
 
   ```
-  bosh deployment ~/multiple-vm-cf-224-multiple-haproxy.yml
-  ```
-
-9. Deploy cloud foundry
-
-  ```
-  bosh -n deploy
+  ./deploy_cloudfoundry.sh ~/example_manifests/multiple-vm-cf.yml
   ```

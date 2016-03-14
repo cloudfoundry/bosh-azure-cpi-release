@@ -17,6 +17,7 @@ Install and configure Azure CLI following the documentation [**HERE**](http://az
 >**NOTE:**
   * It is suggested to run Azure CLI using Ubuntu Server 14.04 LTS or Windows 10.
   * If you are using Windows, it is suggested that you use **command line** but not PowerShell to run Azure CLI.
+  * If you hit the error `/usr/bin/env: node: No such file or directory` when running `azure` commands, you need to run `sudo ln -s /usr/bin/nodejs /usr/bin/node`.
 
 <a name="configure_azure_cli"></a>
 ## 1.2 Configure Azure CLI

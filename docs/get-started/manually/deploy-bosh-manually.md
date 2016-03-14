@@ -385,170 +385,28 @@ echo "Finish"
 
 1. Create a Deployment Manifest
 
-  The deployment manifest is a YAML file that defines the components and properties of the Cloud Foundry deployment. You need to create a deployment manifest file named **bosh.yml** in your dev-box based on the template below.
-
-  ```
-  ---
-  name: bosh
-
-  releases:
-  - name: bosh
-    url: BOSH-FOR-AZURE-URL
-    sha1: BOSH-FOR-AZURE-SHA1
-  - name: bosh-azure-cpi
-    url: BOSH-AZURE-CPI-URL
-    sha1: BOSH-AZURE-CPI-SHA1
-
-  networks:
-  - name: private
-    type: manual
-    subnets:
-    - range: 10.0.0.0/24
-      gateway: 10.0.0.1
-      dns: [8.8.8.8]
-      cloud_properties:
-        virtual_network_name: VNET-NAME
-          # <--- Replace VNET-NAME with your virtual network name
-        subnet_name: SUBNET-NAME
-          # <--- Replace SUBNET-NAME with subnet name for your BOSH VM
-
-  resource_pools:
-  - name: vms
-    network: private
-    stemcell:
-      url: STEMCELL-FOR-AZURE-URL
-      sha1: STEMCELL-FOR-AZURE-SHA1
-    cloud_properties:
-      instance_type: Standard_D1
-
-  disk_pools:
-  - name: disks
-    disk_size: 25_000
-
-  jobs:
-  - name: bosh
-    templates:
-    - {name: nats, release: bosh}
-    - {name: redis, release: bosh}
-    - {name: postgres, release: bosh}
-    - {name: blobstore, release: bosh}
-    - {name: director, release: bosh}
-    - {name: health_monitor, release: bosh}
-    - {name: registry, release: bosh}
-    - {name: cpi, release: bosh-azure-cpi}
-
-    instances: 1
-    resource_pool: vms
-    persistent_disk_pool: disks
-
-    networks:
-    - {name: private, static_ips: [10.0.0.4], default: [dns, gateway]}
-
-    properties:
-      nats:
-        address: 127.0.0.1
-        user: nats
-        password: nats-password
-
-      redis:
-        listen_addresss: 127.0.0.1
-        address: 127.0.0.1
-        password: redis-password
-
-      postgres: &db
-        host: 127.0.0.1
-        user: postgres
-        password: postgres-password
-        database: bosh
-        adapter: postgres
-
-      registry:
-        address: 10.0.0.4
-        host: 10.0.0.4
-        db: *db
-        http: {user: admin, password: admin, port: 25777}
-        username: admin
-        password: admin
-        port: 25777
-
-      blobstore:
-        address: 10.0.0.4
-        port: 25250
-        provider: dav
-        director: {user: director, password: director-password}
-        agent: {user: agent, password: agent-password}
-
-      director:
-        address: 127.0.0.1
-        name: bosh
-        db: *db
-        cpi_job: cpi
-        enable_snapshots: true
-
-      hm:
-        http: {user: hm, password: hm-password}
-        director_account: {user: admin, password: admin}
-
-      azure: &azure
-        environment: AzureCloud
-        subscription_id: SUBSCRIPTION-ID
-          # <--- Replace SUBSCRIPTION-ID with your subscription id
-        storage_account_name: STORAGE-ACCOUNT-NAME
-          # <--- Replace STORAGE-ACCOUNT-NAME with your storage account name
-        resource_group_name: RESOURCE-GROUP-NAME
-          # <--- Replace RESOURCE-GROUP-NAME with your resource group name
-        tenant_id: TENANT-ID
-          # <--- Replace TENANT-ID with your tenant id of the service principal
-        client_id: CLIENT-ID
-          # <--- Replace CLIENT-ID with your client id of the service principal
-        client_secret: CLIENT-SECRET
-          # <--- Replace CLIENT-SECRET with your client secret of the service principal
-        ssh_user: vcap
-        ssh_public_key: SSH-PUBLIC-KEY
-          # <--- Replace SSH-PUBLIC-KEY with the content of your ssh public key
-
-      agent: {mbus: "nats://nats:nats-password@10.0.0.4:4222"}
-
-      ntp: &ntp [0.north-america.pool.ntp.org]
-
-  cloud_provider:
-    template: {name: cpi, release: bosh-azure-cpi}
-
-    ssh_tunnel:
-      host: 10.0.0.4
-      port: 22
-      user: vcap # The user must be as same as above ssh_user
-      private_key: ~/bosh # Path relative to this manifest file
-
-    mbus: https://mbus-user:mbus-password@10.0.0.4:6868
-
-    properties:
-      azure: *azure
-      agent: {mbus: "https://mbus-user:mbus-password@0.0.0.0:6868"}
-      blobstore: {provider: local, path: /var/vcap/micro_bosh/data/cache}
-      ntp: *ntp
-  ```
+  The deployment manifest is a YAML file that defines the components and properties of the BOSH deployment. You need to create a deployment manifest file named **bosh.yml** in your dev-box based on the [**template**](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/manifests/bosh.yml).
 
 2. Update **bosh.yml**
 
-  * Replace **BOSH-FOR-AZURE-URL**, **BOSH-FOR-AZURE-SHA1**, **BOSH-AZURE-CPI-URL**, **BOSH-AZURE-CPI-SHA1**, **STEMCELL-FOR-AZURE-URL** and **STEMCELL-FOR-AZURE-SHA1** with the values in the example file [**bosh.yml**](https://github.com/Azure/azure-quickstart-templates/blob/master/bosh-setup/bosh.yml).
-
-  * Replace the following items with your pre-defined value just created above: **VNET-NAME**, **SUBNET-NAME**, **SUBSCRIPTION-ID**, **STORAGE-ACCOUNT-NAME**, **RESOURCE-GROUP-NAME**, **TENANT-ID**, **CLIENT-ID** and **CLIENT-SECRET** properties.
+  * Replace the following items with your pre-defined value just created above: **REPLACE_WITH_SUBNET_ADDRESS_RANGE_FOR_BOSH**(e.g., 10.0.0.0/24), **REPLACE_WITH_GATEWAY_IP**(e.g., 10.0.0.1), **REPLACE_WITH_VNET_NAME**, **REPLACE_WITH_SUBNET_NAME_FOR_BOSH**, **REPLACE_WITH_BOSH_DIRECTOR_IP**, **REPLACE_WITH_SUBSCRIPTION_ID**, **REPLACE_WITH_DEFAULT_STORAGE_ACCOUNT_NAME**, **REPLACE_WITH_RESOURCE_GROUP_NAME**, **REPLACE_WITH_TENANT_ID**, **REPLACE_WITH_CLIENT_ID** and **REPLACE_WITH_CLIENT_SECRET** properties.
 
   * You can use the following commands to generate the SSH key pair for testing.
 
     ```
-    ssh-keygen -t rsa -f ~/bosh -P ""
+    ssh-keygen -t rsa -f ~/bosh -P "" -C ""
     chmod 400 ~/bosh
     ```
 
-  * **SSH-PUBLIC-KEY** should be the contents of `~/bosh.pub`.
+  * **REPLACE_WITH_SSH_PUBLIC_KEY** should be the contents of `~/bosh.pub`.
 
     Example:
 
     ```
     ssh_public_key: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCh7LrwWCYhdgpIcX+cBcwVuXMSKfcybMNrRfy2hsNXmKrqd4kJMKXS43njuv+ydrfGo1HO4ZcRqdyku+u5N78jhzilV9bOpgr57LnrFs7vIFExhWpkqJXC7abVScN8bZ8QlD3YAbgWEtS/2G1dmNbihkuE+2ICLpmPixNDPIGCQlNmHp0O7Z97jnX9zETMhrHRpksDslpeqNC4mzY6KIIixbwXOYrkMrtlupOKIi/qNqlbLc/nX6ltRk9ujlC0/XsmMXrnTFUM2s4p7sqbHvyDEOFlc42VAIsDH7DerPjVHMBgSAiXd1Z9B5uzPahW37ZKikYA9U2PC3D1TqgTUC7N
     ```
+
+  * **REPLACE_WITH_KEEP_UNREACHABLE_VMS** should be true if you want to debug after task fails. Otherwise set it to false.
 
 ## 2.2 Deploy
 
