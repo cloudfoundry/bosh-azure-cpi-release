@@ -13,15 +13,15 @@ A manifest is needed to deploy Cloud Foundry. In this section, we will show how 
 
 We provide two sample configurations. You can choose one of them based on your needs.
 
-* [**single-vm-cf.yml**](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/abelhu/bosh-setup/manifests/single-vm-cf.yml): Configuration to deploy Single-VM Cloud Foundry.
-* [**multiple-vm-cf.yml**](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/abelhu/bosh-setup/manifests/multiple-vm-cf.yml): Configuration to deploy Multi-VM Cloud Foundry.
+* [**single-vm-cf.yml**](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/manifests/single-vm-cf.yml): Configuration to deploy Single-VM Cloud Foundry.
+* [**multiple-vm-cf.yml**](https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/manifests/multiple-vm-cf.yml): Configuration to deploy Multi-VM Cloud Foundry.
 
 The following steps uses `single-vm-cf.yml` for an example.
 
 1. Download the manifest.
 
   ```
-  wget -O ~/single-vm-cf.yml https://raw.githubusercontent.com/Azure/azure-quickstart-templates/abelhu/bosh-setup/manifests/single-vm-cf.yml
+  wget -O ~/single-vm-cf.yml https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/manifests/single-vm-cf.yml
   ```
 
 2. Specify **REPLACE_WITH_DIRECTOR_ID**.
