@@ -67,3 +67,15 @@
   ```
 
   If you hits the similar issue, you can retry the same command manually. If it does not work, you can file a support ticket. Please refer to https://azure.microsoft.com/en-us/support/options/ and https://azure.microsoft.com/en-us/support/faq/.
+
+3. Connection dropped
+
+  By default, Azure load balancer has an `idle timeout` setting of 4 minutes but the default timeout of HAProxy is 900 as 15 minutes, this would cause the problem of connection dropped. [#99](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/99)
+
+  For the CPI realeases (<=v7), you can change the default timeout of HAProxy in the manifest as bellows.
+
+  ```
+  request_timeout_in_seconds: 180
+  ```
+
+  In the latest releases (>=v8), CPI will assign the public IP address to the VM directly if VIP is set. If you want to bind a load balancer to a VM, you can create the load balancer in Azure Portal or by Azure CLI, configure the idle timeout, then specify the load balancer name in the manifest.
