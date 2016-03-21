@@ -17,6 +17,11 @@ require 'vhd'
 require 'thread'
 require 'open3'
 require 'etc'
+# Use resolv-replace.rb to replace the libc resolver
+# Reference:
+#  https://makandracards.com/ninjaconcept/30815-fixing-socketerror-getaddrinfo-name-or-service-not-known-with-ruby-s-resolv-replace-rb
+#  http://www.subelsky.com/2014/05/fixing-socketerror-getaddrinfo-name-or.html
+require "resolv-replace.rb"
 
 require 'common/exec'
 require 'common/thread_pool'
