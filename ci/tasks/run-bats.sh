@@ -77,13 +77,6 @@ properties:
     gateway: $BAT_NETWORK_GATEWAY
   - name: static
     type: vip
-    cloud_properties:
-      tcp_endpoints:
-      - "22:22"
-      - "80:80"
-      - "443:443"
-      - "4222:4222"
-      - "4443:4443"
   key_name: bosh
 EOF
 cat > azure.yml.erb <<EOF
@@ -138,23 +131,6 @@ networks:
   cloud_properties:
     virtual_network_name: <%= network.cloud_properties.virtual_network_name %>
     subnet_name: <%= network.cloud_properties.subnet_name %>
-  <% else %>
-  cloud_properties:
-    <% if network.cloud_properties.tcp_endpoints %>
-    tcp_endpoints:
-      <% network.cloud_properties.tcp_endpoints.each do |endpoint| %>
-      - "<%= endpoint %>"
-      <% end %>
-    <% end %>
-    <% if network.cloud_properties.udp_endpoints %>
-    udp_endpoints:
-      <% network.cloud_properties.udp_endpoints.each do |endpoint| %>
-      - "<%= endpoint %>"
-      <% end %>
-    <% end %>
-    <% if !network.cloud_properties.tcp_endpoints && !network.cloud_properties.tcp_endpoints %>
-      {}
-    <% end %>
   <% end %>
 <% end %>
 

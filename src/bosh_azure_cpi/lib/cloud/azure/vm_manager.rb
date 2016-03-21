@@ -26,19 +26,14 @@ module Bosh::AzureCloud
 
       instance_id  = generate_instance_id(storage_account_name, uuid)
 
-      load_balancer = nil
-      is_internal_load_balancer = false
+      public_ip = nil
       unless network_configurator.vip_network.nil?
         public_ip = @azure_client2.list_public_ips().find { |ip| ip[:ip_address] == network_configurator.public_ip}
         cloud_error("Cannot find the public IP address #{network_configurator.public_ip}") if public_ip.nil?
-        @azure_client2.create_load_balancer(instance_id, public_ip, AZURE_TAGS,
-                                      network_configurator.tcp_endpoints,
-                                      network_configurator.udp_endpoints)
-        load_balancer = @azure_client2.get_load_balancer_by_name(instance_id)
       end
+
+      load_balancer = nil
       if resource_pool.has_key?('load_balancer')
-        cloud_error("Cannot bind two load balancers to one VM") unless load_balancer.nil?
-        is_internal_load_balancer = true
         load_balancer = @azure_client2.get_load_balancer_by_name(resource_pool['load_balancer'])
         cloud_error("Cannot find the load balancer #{resource_pool['load_balancer']}") if load_balancer.nil?
       end
@@ -48,6 +43,7 @@ module Bosh::AzureCloud
         :name                => instance_id,
         :location            => storage_account[:location],
         :private_ip          => network_configurator.private_ip,
+        :public_ip           => public_ip
       }
       network_tags = AZURE_TAGS
       if resource_pool.has_key?('availability_set')
@@ -93,7 +89,6 @@ module Bosh::AzureCloud
       @azure_client2.delete_virtual_machine(instance_id) if instance_is_created
       delete_availability_set(availability_set[:name]) unless availability_set.nil?
       @azure_client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
-      @azure_client2.delete_load_balancer(load_balancer[:name]) unless load_balancer.nil? || is_internal_load_balancer
       raise Bosh::Clouds::VMCreationFailed.new(false), "#{e.inspect}\n#{e.backtrace.join("\n")}"
     end
 

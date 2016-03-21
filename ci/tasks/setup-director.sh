@@ -47,17 +47,6 @@ releases:
 networks:
 - name: public
   type: vip
-  cloud_properties:
-    tcp_endpoints:
-    - "22:22"
-    - "4222:4222"
-    - "6868:6868"
-    - "25250:25250"
-    - "25555:25555"
-    - "25777:25777"
-    udp_endpoints:
-    - "68:68"
-    - "53:53"
 - name: private
   type: manual
   subnets:

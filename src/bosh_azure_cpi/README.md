@@ -103,10 +103,11 @@ Below is a sample of how Azure specific properties are used in a BOSH deployment
 
     releases:
     - name: bosh
-      url: https://bosh.io/d/github.com/cloudfoundry/bosh?v=158
-      sha1: a97811864b96bee096477961b5b4dadd449224b4
+      url: https://bosh.io/d/github.com/cloudfoundry/bosh?v=255.3
+      sha1: 1a3d61f968b9719d9afbd160a02930c464958bf4
     - name: bosh-azure-cpi
-      url: file://../dev_releases/bosh-azure-cpi/bosh-azure-cpi-0+dev.21.tgz
+      url: https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=7
+      sha1: 8df7b79458335188a1ecab83cf5ef9a82366baeb
 
     networks:
     - name: public
@@ -136,8 +137,8 @@ Below is a sample of how Azure specific properties are used in a BOSH deployment
     - name: vms
       network: private
       stemcell:
-        # bosh-azure-hyperv-ubuntu-trusty-go_agent
-        url: file://~/Downloads/stemcell.tgz
+        url: https://bosh.io/d/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent?v=3169
+        sha1: ff13c47ac7ce121dee6153c1564bd8965edf9f59
       cloud_properties:
         instance_type: Standard_D1
         caching: ReadWrite
