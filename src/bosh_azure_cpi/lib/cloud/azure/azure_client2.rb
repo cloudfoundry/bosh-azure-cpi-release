@@ -868,6 +868,7 @@ module Bosh::AzureCloud
       response = nil
       refresh_token = false
       retry_count = 0
+      retry_dns_count = 0
 
       begin
         request['User-Agent']    = USER_AGENT
@@ -875,7 +876,7 @@ module Bosh::AzureCloud
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
         response = http(uri).request(request)
         status_code = response.code.to_i
-        @logger.debug("http_get_response - retry #{retry_count}: #{status_code}\n#{response.body}")
+        @logger.debug("http_get_response - #{status_code}\n#{response.body}")
         if status_code == HTTP_CODE_UNAUTHORIZED
           raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid."
         end
@@ -893,13 +894,21 @@ module Bosh::AzureCloud
         raise e
       rescue AzureInternalError => e
         if retry_count < AZURE_MAX_RETRY_COUNT
+          @logger.warn("http_get_response - #{retry_count}: Fail for an AzureInternalError. Will retry after #{retry_after} seconds.")
           retry_count += 1
           sleep(retry_after)
           retry
         end
         raise e
       rescue => e
-        cloud_error("http_get_response - retry #{retry_count}: #{e.inspect}\n#{e.backtrace.join("\n")}")
+        # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
+        if e.inspect.include?('SocketError: Hostname not known') && retry_dns_count < AZURE_MAX_RETRY_COUNT
+          @logger.warn("http_get_response - #{retry_dns_count}: Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
+          retry_dns_count += 1
+          sleep(retry_after)
+          retry
+        end
+        cloud_error("http_get_response - #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
       response
     end

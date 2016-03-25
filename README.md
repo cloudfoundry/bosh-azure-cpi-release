@@ -16,6 +16,14 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-03-25
+- docs changes
+  - Add network security group
+  - Change default DNS from 8.8.8.8 to 168.63.129.16 (Azure default virtual DNS server)
+  - Change parameter format in command lines from <PARAM> to $PARAM
+- CPI changes
+  - Add retry when failing to resolve a DNS name.
+
 # 2015-03-14
 - CPI changes
   - Assign public IP address to VMs directly

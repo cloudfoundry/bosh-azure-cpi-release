@@ -16,7 +16,7 @@
 
       ```
       bosh deployments # Get the name of the Cloud Foundry deployment
-      bosh delete deployment <CLOUD-FOUNDRY-DEPLOYMENT-NAME>
+      bosh delete deployment CLOUD-FOUNDRY-DEPLOYMENT-NAME
       ```
 
     2. Delete your current BOSH deployment.

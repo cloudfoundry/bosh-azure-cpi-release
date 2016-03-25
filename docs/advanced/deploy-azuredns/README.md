@@ -54,7 +54,7 @@ You can also use Azure CLI to manage DNS zones and records manually.
 1. Create a DNS zone
 
   ```
-  azure network dns zone create --resource-group <resource-group> --name <name>
+  azure network dns zone create --resource-group $resource-group-name --name $name
   ```
 
   Example:
@@ -78,7 +78,7 @@ You can also use Azure CLI to manage DNS zones and records manually.
   1. Create a record set
 
     ```
-    azure network dns record-set create --resource-group <resource-group> --dns-zone-name <dns-zone-name> --name <name> --type <type> --ttl <ttl>
+    azure network dns record-set create --resource-group $resource-group-name --dns-zone-name $dns-zone-name --name $name --type $dns-type --ttl $dns-ttl
     ```
 
     Example:
@@ -98,7 +98,7 @@ You can also use Azure CLI to manage DNS zones and records manually.
   2. Add a record into the resord set
 
   ```
-  azure network dns record-set add-record --resource-group <resource-group> --dns-zone-name <dns-zone-name> --record-set-name <record-set-name> --type <type> --ipv4-address <ipv4-address>
+  azure network dns record-set add-record --resource-group $resource-group-name --dns-zone-name $dns-zone-name --record-set-name $record-set-name --type $dns-type --ipv4-address $ipv4-address
   ```
 
   Example:
@@ -129,7 +129,7 @@ After you create Azure DNS service via ARM tempaltes or manually, you need to re
 ### 2.1 Get your Name Server Domain Name
 
 ```
-azure network dns record-set show --resource-group <resource-group> --dns-zone-name <dns-zone-name> --name "@" --type NS
+azure network dns record-set show --resource-group $resource-group-name --dns-zone-name $dns-zone-name --name "@" --type NS
 ```
 
 Example:

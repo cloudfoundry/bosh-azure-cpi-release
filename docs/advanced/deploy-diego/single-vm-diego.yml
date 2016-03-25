@@ -18,7 +18,7 @@ networks:
   subnets:
   - range: 10.0.32.0/20
     gateway: 10.0.32.1
-    dns: [8.8.8.8]
+    dns: [168.63.129.16]
     reserved: ["10.0.32.2 - 10.0.32.3"]
     static: 10.0.32.4
     cloud_properties:

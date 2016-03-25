@@ -37,7 +37,7 @@ Azure Application Gateway provides application-level routing and load balancing 
 2. Create an additional subnet for Application Gateway in the virtual network.
 
   ```
-  azure network vnet subnet create -g <resource-group-name> -e <virtual-network-name> -n <subnet-name> -a <subnet-cidr>
+  azure network vnet subnet create -g $resource-group-name -e $virtual-network-name -n $subnet-name -a $subnet-cidr
   ```
   Example:
   ```
