@@ -31,7 +31,7 @@ Prior to deployment, you should define a new subnet `mongodb` where the Mongodb 
 You can create subnets using Azure Portal, Azure CLI or Azure Powershell. Here is the sample in Azure CLI.
 
 ```
-azure network vnet subnet create --resource-group <resource-group-name> --vnet-name <virtual-network-name> --name <subnet-name> --address-prefix <subnet-cidr>
+azure network vnet subnet create --resource-group $resource-group-name --vnet-name $virtual-network-name --name $subnet-name --address-prefix $subnet-cidr
 ```
 
 For example:
@@ -155,7 +155,7 @@ Finally, you need to authorize mongodb service gateway with your Cloud Foundry.
 3. Create a service
 
   ```
-  $ cf create-service-auth-token <label> core <token>
+  $ cf create-service-auth-token $label core $token
   ```
   
   - **label**: the name of the package
@@ -236,7 +236,7 @@ This section demonstrates how to generate an Azure manifest file for `cf-service
       subnets: # Update the subnet
       - range: 10.0.64.0/24
         gateway: 10.0.64.1
-        dns: [8.8.8.8]
+        dns: [168.63.129.16]
         reserved: ["10.0.64.2 - 10.0.64.3"]
         cloud_properties:
           virtual_network_name: REPLACE_WITH_VIRTUAL_NETWORK_NAME

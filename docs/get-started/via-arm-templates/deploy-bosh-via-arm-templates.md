@@ -8,7 +8,7 @@ Here we’ll create the following Azure resources that’s required for deployin
 * Three reserved public IPs
   * For dev-box
   * For Cloud Foundry
-  * For Bosh (Unused now)
+  * For Bosh
 * A Virtual Network
 * A Virtual Machine as your dev-box
 * A Bosh director if you need

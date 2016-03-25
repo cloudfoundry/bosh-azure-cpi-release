@@ -25,7 +25,7 @@ networks:
     subnets: # Update the subnet
     - range: 10.0.64.0/24
       gateway: 10.0.64.1
-      dns: [8.8.8.8]
+      dns: [168.63.129.16]
       reserved: ["10.0.64.2 - 10.0.64.3"]
       cloud_properties:
         virtual_network_name: REPLACE_WITH_VIRTUAL_NETWORK_NAME

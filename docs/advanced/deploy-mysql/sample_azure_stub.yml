@@ -20,7 +20,7 @@ networks:
       - 10.0.32.4 - 10.0.32.8
     gateway: 10.0.32.1
     dns:
-      - 8.8.8.8
+      - 168.63.129.16
     cloud_properties:
       virtual_network_name: (( properties.template_only.azure.virtual_network_name ))
       subnet_name: (( properties.template_only.azure.subnet_names.mysql1 ))
@@ -34,7 +34,7 @@ networks:
       - 10.0.33.4 - 10.0.33.8
     gateway: 10.0.33.1
     dns:
-      - 8.8.8.8
+      - 168.63.129.16
     cloud_properties:
       virtual_network_name: (( properties.template_only.azure.virtual_network_name ))
       subnet_name: (( properties.template_only.azure.subnet_names.mysql2 ))
@@ -48,7 +48,7 @@ networks:
       - 10.0.34.4 - 10.0.34.8
     gateway: 10.0.34.1
     dns:
-      - 8.8.8.8
+      - 168.63.129.16
     cloud_properties:
       virtual_network_name: (( properties.template_only.azure.virtual_network_name ))
       subnet_name: (( properties.template_only.azure.subnet_names.mysql3 ))
@@ -63,7 +63,7 @@ networks:
       - 10.0.35.4 - 10.0.35.8
     gateway: 10.0.35.1
     dns:
-      - 8.8.8.8
+      - 168.63.129.16
     cloud_properties:
       virtual_network_name: (( properties.template_only.azure.virtual_network_name ))
       subnet_name: (( properties.template_only.azure.subnet_names.compilation ))

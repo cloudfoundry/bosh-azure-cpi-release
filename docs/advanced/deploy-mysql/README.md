@@ -88,7 +88,7 @@ You can adjust the level of availability by modifying the subnet numbers, howeve
 You can create subnets using Azure Portal, Azure CLI or Azure Powershell. Here is the sample in Azure CLI.
 
 ```
-azure network vnet subnet create --resource-group <resource-group-name> --vnet-name <virtual-network-name> --name <subnet-name> --address-prefix <subnet-cidr>
+azure network vnet subnet create --resource-group $resource-group-name --vnet-name $virtual-network-name --name $subnet-name --address-prefix $subnet-cidr
 ```
 
 For example:
