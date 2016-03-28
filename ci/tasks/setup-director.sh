@@ -21,7 +21,6 @@ azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} 
 azure config mode arm
 
 DIRECTOR=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)
-AZURE_STORAGE_ACCESS_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} -g ${AZURE_GROUP_NAME} --json | jq '.storageAccountKeys.key1' -r)
 
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
@@ -52,7 +51,7 @@ networks:
   subnets:
   - range: 10.0.0.0/24
     gateway: 10.0.0.1
-    dns: [8.8.8.8]
+    dns: [168.63.129.16]
     cloud_properties:
       virtual_network_name: $AZURE_VNET_NAME_FOR_BATS
       subnet_name: $AZURE_BOSH_SUBNET_NAME
@@ -162,7 +161,6 @@ jobs:
       environment: AzureCloud
       subscription_id: $AZURE_SUBSCRIPTION_ID
       storage_account_name: $AZURE_STORAGE_ACCOUNT_NAME
-      storage_access_key: $AZURE_STORAGE_ACCESS_KEY
       resource_group_name: $AZURE_GROUP_NAME
       tenant_id: $AZURE_TENANT_ID
       client_id: $AZURE_CLIENT_ID
