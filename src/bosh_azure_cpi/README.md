@@ -106,29 +106,18 @@ Below is a sample of how Azure specific properties are used in a BOSH deployment
       url: https://bosh.io/d/github.com/cloudfoundry/bosh?v=255.3
       sha1: 1a3d61f968b9719d9afbd160a02930c464958bf4
     - name: bosh-azure-cpi
-      url: https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=7
-      sha1: 8df7b79458335188a1ecab83cf5ef9a82366baeb
+      url: https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=8
+      sha1: df37aaf44fd0dd6ccbdd0c83b3a7affa23f533fb
 
     networks:
     - name: public
       type: vip
-      cloud_properties:
-        tcp_endpoints:
-        - "22:22"
-        - "53:53"
-        - "4222:4222"
-        - "6868:6868"
-        - "25250:25250"
-        - "25555:25555"
-        - "25777:25777"
-        udp_endpoints:
-        - "68:68"
     - name: private
       type: manual
       subnets:
       - range: 10.0.0.0/24
         gateway: 10.0.0.1
-        dns: [8.8.8.8]
+        dns: [168.63.129.16]
         cloud_properties:
           virtual_network_name: boshvnet-crp
           subnet_name: bosh
@@ -178,11 +167,12 @@ Below is a sample of how Azure specific properties are used in a BOSH deployment
           password: nats-password
 
         redis:
-          listen_addresss: 127.0.0.1
+          listen_address: 127.0.0.1
           address: 127.0.0.1
           password: redis-password
 
         postgres: &db
+          listen_address: 127.0.0.1
           host: 127.0.0.1
           user: postgres
           password: postgres-password
