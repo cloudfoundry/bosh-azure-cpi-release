@@ -16,6 +16,7 @@ check_param BASE_OS
 check_param SSH_PRIVATE_KEY
 check_param SSH_PUBLIC_KEY
 check_param BAT_NETWORK_GATEWAY
+check_param AZURE_DEFAULT_SECURITY_GROUP
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
@@ -167,6 +168,7 @@ jobs:
       client_secret: $AZURE_CLIENT_SECRET
       ssh_user: vcap
       ssh_public_key: $SSH_PUBLIC_KEY
+      default_security_group: $AZURE_DEFAULT_SECURITY_GROUP
 
     # Tells agents how to contact nats
     agent: {mbus: "nats://nats:nats-password@10.0.0.10:4222"}

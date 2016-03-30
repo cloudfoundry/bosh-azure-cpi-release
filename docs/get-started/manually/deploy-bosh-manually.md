@@ -270,7 +270,7 @@ Example:
 azure network vnet create --resource-group bosh-res-group --name boshvnet-crp --location "East Asia" --address-prefixes 10.0.0.0/8
 ```
 
-### 1.4.2 Create two subnets in the Virtual Network
+### 1.4.2 Create subnets in the Virtual Network
 
 ```
 azure network vnet subnet create --resource-group $resource-group-name --vnet-name $virtual-network-name --name $bosh-subnet-name --address-prefix $bosh-subnet-cidr
@@ -282,10 +282,12 @@ Options:
 
 * bosh-subnet-name: The name of the subnet where VMs for BOSH will locate.
 * bosh-subnet-cidr: The subnet network mask in CIDR format for bosh subnet.
-* cloudfoundry-subnet-name: The name of bosh subnet where VMs for Cloud Foundry will locate.
+* cloudfoundry-subnet-name: The name of the subnet where VMs for Cloud Foundry will locate.
 * cloudfoundry-subnet-cidr: The subnet network mask in CIDR format for Cloud Foundry.
+* diego-subnet-name: The name of diego subnet where VMs for Diego will locate.
+* diego-subnet-cidr: The subnet network mask in CIDR format for Diego.
 
-You need to create two subnets:
+You need to create below subnets:
 
 * Name: BOSH, CIDR: 10.0.0.0/24. For BOSH VMs.
 * Name: CloudFoundry, CIDR: 10.0.16.0/20. For Cloud Foundry VMs.
@@ -340,83 +342,49 @@ info:    network vnet show command OK
 
 ### 1.4.4 Config Network Security Groups
 
-Network security group (NSG) contains a list of Access Control List (ACL) rules that allow or deny network traffic to your VM instances in a Virtual Network. NSGs can be associated with either subnets or individual VM instances within that subnet. When a NSG is associated with a subnet, the ACL rules apply to all the VM instances in that subnet. In addition, traffic to an individual VM can be restricted further by associating a NSG directly to that VM.
+ Network security group (NSG) contains a list of Access Control List (ACL) rules that allow or deny network traffic to your VM instances in a Virtual Network. NSGs can be associated with either subnets or individual VM instances within that subnet. When a NSG is associated with a subnet, the ACL rules apply to all the VM instances in that subnet. In addition, traffic to an individual VM can be restricted further by associating a NSG directly to that VM.
 You can learn more information [here](https://azure.microsoft.com/en-us/documentation/articles/virtual-networks-nsg/).
 
 1. Create Network Security Group
+  ```
+  azure network nsg create --resource-group $resource-group-name --location $location --name $nsg-name-for-bosh
+  azure network nsg create --resource-group $resource-group-name --location $location --name $nsg-name-for-cloudfoundry
+  ```
 
-```
-azure network nsg create --resource-group $resource-group-name --location $location --name $nsg-name-for-bosh
-azure network nsg create --resource-group $resource-group-name --location $location --name $nsg-name-for-cloudfoundry
-azure network nsg create --resource-group $resource-group-name --location $location --name $nsg-name-for-diego
-```
+  * nsg-name-for-bosh: The name of the network security group for BOSH subnet.
+  * nsg-name-for-cloudfoundry: The name of the network security group for CloudFoundry subnet.
 
-* nsg-name-for-bosh: The name of the network security group for BOSH subnet.
-* nsg-name-for-cloudfoundry: The name of the network security group for CloudFoundry subnet.
-* nsg-name-for-diego: The name of the network security group for Diego subnet.
+    Example:
+  ```
+  azure network nsg create --resource-group bosh-res-group --location "East Asia" --name nsg-bosh
+  azure network nsg create --resource-group bosh-res-group --location "East Asia" --name nsg-cf
+  ```
 
-Example:
+2. Create Network Security Rules for BOSH Subnet
+  ```
+  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'ssh' --destination-port-range 22
+  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-agent' --destination-port-range 6868
+  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-director' --destination-port-range 25555
+  ```
 
-```
-azure network nsg create --resource-group bosh-res-group --location "East Asia" --name nsg-bosh
-azure network nsg create --resource-group bosh-res-group --location "East Asia" --name nsg-cf
-azure network nsg create --resource-group bosh-res-group --location "East Asia" --name nsg-diego
-```
+    Example:
+  ```
+  azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'ssh' --destination-port-range 22
+  azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-agent' --destination-port-range 6868
+  azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-director' --destination-port-range 25555
+  ```
 
-2. Associate to Subnets
+3. Create Network Security Rules for CloudFoundry Subnet
+  ```
+  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-https' --destination-port-range 443
+  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-log' --destination-port-range 4443
+  ```
 
-```
-azure network vnet subnet set --resource-group $resource-group-name --vnet-name $virtual-network-name --name $bosh-subnet-name --network-security-group-name $nsg-name-for-bosh
-azure network vnet subnet set --resource-group $resource-group-name --vnet-name $virtual-network-name --name $cloudfoundry-subnet-name --network-security-group-name $nsg-name-for-cloudfoundry
-azure network vnet subnet set --resource-group $resource-group-name --vnet-name $virtual-network-name --name $diego-subnet-name --network-security-group-name $nsg-name-for-diego
-```
-
-Example:
-
-```
-azure network vnet subnet set --resource-group bosh-res-group --vnet-name boshvnet-crp --name BOSH --network-security-group-name nsg-bosh
-azure network vnet subnet set --resource-group bosh-res-group --vnet-name boshvnet-crp --name CloudFoundry --network-security-group-name nsg-cf
-azure network vnet subnet set --resource-group bosh-res-group --vnet-name boshvnet-crp --name Diego --network-security-group-name nsg-diego
-```
-
-3. Create Network Security Rules for BOSH Subnet
-
-```
-azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 100 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix $devbox-private-ip-cidr --name 'ssh-devbox' --destination-port-range 22
-azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix $bosh-private-ip-cidr --name 'ssh-bosh' --destination-port-range 22
-azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix $bosh-private-ip-cidr --name 'bosh-agent' --destination-port-range 6868
-azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix $bosh-private-ip-cidr --name 'bosh-director' --destination-port-range 25555
-```
-
-* devbox-private-ip-cidr: The CIDR of the private IP address for the devbox.
-* bosh-private-ip-cidr: The CIDR of the private IP address for BOSH.
-
-Example:
-
-```
-azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 100 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '10.0.0.100/32' --name 'ssh-devbox' --destination-port-range 22
-azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '10.0.0.4/32' --name 'ssh-bosh' --destination-port-range 22
-azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '10.0.0.4/32' --name 'bosh-agent' --destination-port-range 6868
-azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '10.0.0.4/32' --name 'bosh-director' --destination-port-range 25555
-```
-
-4. Create Network Security Rules for CloudFoundry Subnet
-
-```
-azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix $cf-private-ip-cidr --name 'cf-http' --destination-port-range 80
-azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix $cf-private-ip-cidr --name 'cf-https' --destination-port-range 443
-azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix $cf-private-ip-cidr --name 'cf-log' --destination-port-range 4443
-```
-
-* cf-private-ip-cidr: The CIDR of the static IP address for cloud foundry.
-
-Example:
-
-```
-azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '10.0.16.4/32' --name 'cf-http' --destination-port-range 80
-azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '10.0.16.4/32' --name 'cf-https' --destination-port-range 443
-azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '10.0.16.4/32' --name 'cf-log' --destination-port-range 4443
-```
+    Example:
+  ```
+  azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-https' --destination-port-range 443
+  azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-log' --destination-port-range 4443
+  ```
 
 ## 1.5 Setup a dev-box
 
@@ -475,7 +443,7 @@ echo "Finish"
 
 2. Update **bosh.yml**
 
-  * Replace the following items with your pre-defined value just created above: **REPLACE_WITH_SUBNET_ADDRESS_RANGE_FOR_BOSH**(e.g., 10.0.0.0/24), **REPLACE_WITH_GATEWAY_IP**(e.g., 10.0.0.1), **REPLACE_WITH_VNET_NAME**, **REPLACE_WITH_SUBNET_NAME_FOR_BOSH**, **REPLACE_WITH_BOSH_DIRECTOR_IP**, **REPLACE_WITH_SUBSCRIPTION_ID**, **REPLACE_WITH_DEFAULT_STORAGE_ACCOUNT_NAME**, **REPLACE_WITH_RESOURCE_GROUP_NAME**, **REPLACE_WITH_TENANT_ID**, **REPLACE_WITH_CLIENT_ID** and **REPLACE_WITH_CLIENT_SECRET** properties.
+  * Replace the following items with your pre-defined value just created above: **REPLACE_WITH_SUBNET_ADDRESS_RANGE_FOR_BOSH**(e.g., 10.0.0.0/24), **REPLACE_WITH_GATEWAY_IP**(e.g., 10.0.0.1), **REPLACE_WITH_VNET_NAME**, **REPLACE_WITH_SUBNET_NAME_FOR_BOSH**, **REPLACE_WITH_BOSH_DIRECTOR_IP**, **REPLACE_WITH_SUBSCRIPTION_ID**, **REPLACE_WITH_DEFAULT_STORAGE_ACCOUNT_NAME**, **REPLACE_WITH_RESOURCE_GROUP_NAME**, **REPLACE_WITH_NSG_NAME_FOR_BOSH**, **REPLACE_WITH_TENANT_ID**, **REPLACE_WITH_CLIENT_ID** and **REPLACE_WITH_CLIENT_SECRET** properties.
 
   * You can use the following commands to generate the SSH key pair for testing.
 

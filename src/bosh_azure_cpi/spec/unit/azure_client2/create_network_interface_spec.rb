@@ -36,7 +36,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           :location => "fake-location",
           :private_ip => "10.0.0.100",
           :public_ip => {:id => "fake-id"},
-          :dns_servers => ["8.8.8.8"]
+          :dns_servers => ["168.63.129.16"],
+          :security_group => {:id => "fake-id"}
         }
         subnet = {:id => "fake-id"}
         load_balancer = {

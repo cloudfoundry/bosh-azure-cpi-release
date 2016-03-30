@@ -25,6 +25,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
       @network = nil
       @vip_network = nil
+      @networks_spec = spec
 
       logger.debug ("networks: #{spec}")
       spec.each_pair do |name, network_spec|
@@ -76,6 +77,19 @@ module Bosh::AzureCloud
 
     def dns
       @network.spec['dns'] if @network.spec.has_key? "dns"
+    end
+
+    def security_group
+      security_groups = @networks_spec.values.
+                          select { |network_spec| network_spec.has_key? "cloud_properties" }.
+                          map { |network_spec| network_spec["cloud_properties"] }.
+                          select { |cloud_properties| cloud_properties.has_key? "security_group" }.
+                          map { |cloud_properties| cloud_properties["security_group"] }.
+                          flatten.
+                          sort.
+                          uniq
+      return nil if security_groups.size == 0
+      security_groups[0]
     end
   end
 end

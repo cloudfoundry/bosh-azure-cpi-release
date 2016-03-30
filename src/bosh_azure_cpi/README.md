@@ -24,6 +24,8 @@ These options are passed to the Azure CPI when it is instantiated.
   The user to use when spinning up new vms
 * `ssh_public_key` (required)
   The content of the SSH public key to use when spinning up new vms
+* `default_security_group` (required)
+  The name of the default security group that will be applied to all created VMs.
 * `parallel_upload_thread_num` (optional)
   The number of threads to upload stemcells in parallel. The default value is 16.
 
@@ -77,8 +79,10 @@ These options are specified under `cloud_properties` in the `resource_pools` sec
   Default value is 3.
 
 * `load_balancer` (optional)
-  which [load balancer](https://azure.microsoft.com/en-us/documentation/articles/load-balancer-overview/) the VMs should belong to. You need to create
-  the load balancer manually before configuring it.
+  which [load balancer](https://azure.microsoft.com/en-us/documentation/articles/load-balancer-overview/) the VMs should belong to. You need to create the load balancer manually before configuring it.
+
+* `security_group` (optional)
+  which [security group](https://azure.microsoft.com/en-us/documentation/articles/virtual-networks-nsg/) to apply for all VMs that are in this resource pool. Default to the security group specified by default_security_group in the global CPI settings unless a security group is specified on one of the VM networks. The security group can be specified either on a resource pool or on a network.
 
 ### Network options
 
@@ -87,6 +91,9 @@ These options are specified under `cloud_properties` in the `networks` section o
 * `type` (required)
   can be either `dynamic` for a DHCP assigned IP by Azure, or 'manual' to use an assigned IP by BOSH director,
   or `vip` to use a reserved public IP (which needs to be already allocated)
+
+* `security_group` (optional)
+  which [security group](https://azure.microsoft.com/en-us/documentation/articles/virtual-networks-nsg/) to apply to all VMs placed on this network. Default to the security group specified by default_security_group in the global CPI settings unless a security group is specified on a resource pool for a VM. The security group can be specified either on a resource pool or on a network.
 
 ### Disk options
 
@@ -236,6 +243,7 @@ Below is a sample of how Azure specific properties are used in a BOSH deployment
           client_id: <your_client_id>
           client_secret: <your_client_secret>
           ssh_user: vcap
+          default_security_group: <your_default_security_groups>
           parallel_upload_thread_num: 16
           ssh_public_key: "ssh-rsa ..."
 

@@ -16,6 +16,10 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-03-30
+- CPI changes
+  - Allow to bind network security group to VMs.
+
 # 2015-03-25
 - docs changes
   - Add network security group

@@ -26,6 +26,13 @@ describe Bosh::AzureCloud::VMManager do
       }
     }
     let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
+    let(:network_security) {
+      {
+        :name => "fake-default-nsg-name",
+        :id => "fake-nsg-id"
+      }
+    }
+    let(:subnet) { double("subnet") }
 
     before do
       allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
@@ -34,6 +41,11 @@ describe Bosh::AzureCloud::VMManager do
         and_return("fake-virtual-network-name")
       allow(network_configurator).to receive(:subnet_name).
         and_return("fake-subnet-name")
+      allow(network_configurator).to receive(:security_group).
+        and_return(nil)
+      allow(client2).to receive(:get_network_security_group_by_name).
+        with("fake-default-nsg-name").
+        and_return(network_security)
     end
 
     context "when subnet is not found" do
@@ -46,9 +58,21 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
-    context "when caching is invalid" do
-      let(:subnet) { double("subnet") }
+    context "when network security group is not found" do
+      before do
+        allow(client2).to receive(:get_network_subnet_by_name).
+          and_return(subnet)
+        allow(client2).to receive(:get_network_security_group_by_name).
+          and_return(nil)
+      end
+      it "should raise an error" do
+        expect {
+          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+        }.to raise_error /Cannot find the network security group/
+      end
+    end
 
+    context "when caching is invalid" do
       it "should raise an error" do
         allow(client2).to receive(:get_network_subnet_by_name).
           and_return(subnet)
@@ -60,8 +84,6 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context "when public ip is not found" do
-      let(:subnet) { double("subnet") }
-
       before do
         allow(client2).to receive(:get_network_subnet_by_name).
           and_return(subnet)
@@ -118,8 +140,6 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context "when load balancer can not be found" do
-      let(:subnet) { double("subnet") }
-
       before do
         allow(client2).to receive(:get_network_subnet_by_name).
           and_return(subnet)
@@ -143,7 +163,6 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context "when network interface is not created" do
-      let(:subnet) { double("subnet") }
       let(:load_balancer) {
         {
           :name => "fake-lb-name"
@@ -191,7 +210,6 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context "when availability set is not created" do
-      let(:subnet) { double("subnet") }
       let(:load_balancer) {
         {
           :name => "fake-lb-name"
@@ -250,7 +268,6 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context "when creating virtual machine" do
-      let(:subnet) { double("subnet") }
       let(:load_balancer) {
         {
           :name => "lb-name"
@@ -323,14 +340,73 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context "when VM is created" do
-        it "should not raise an error" do
-          allow(client2).to receive(:create_virtual_machine)
+        context "with the network security group provided in resource_pool" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'Standard_D1',
+              'storage_account_name' => 'dfe03ad623f34d42999e93ca',
+              'caching' => 'ReadWrite',
+              'availability_set' => 'fake-avset',
+              'platform_update_domain_count' => 5,
+              'platform_fault_domain_count' => 3,
+              'load_balancer' => 'fake-lb-name',
+              'security_group' => 'fake-nsg-name'
+            }
+          }
 
-          expect(client2).not_to receive(:delete_virtual_machine)
-          expect(client2).not_to receive(:delete_availability_set)
-          expect(client2).not_to receive(:delete_network_interface)
+          before do
+            allow(client2).to receive(:get_network_security_group_by_name).
+              with("fake-default-nsg-name").
+              and_return(nil)
+            allow(client2).to receive(:get_network_security_group_by_name).
+              with("fake-nsg-name").
+              and_return(network_security)
+          end
 
-          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          it "should succeed" do
+            allow(client2).to receive(:create_virtual_machine)
+
+            expect(client2).not_to receive(:delete_virtual_machine)
+            expect(client2).not_to receive(:delete_availability_set)
+            expect(client2).not_to receive(:delete_network_interface)
+
+            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          end
+        end
+
+        context "with the network security group provided in network spec" do
+          before do
+            allow(network_configurator).to receive(:security_group).
+              and_return("fake-network-nsg-name")
+            allow(client2).to receive(:get_network_security_group_by_name).
+              with("fake-default-nsg-name").
+              and_return(nil)
+            allow(client2).to receive(:get_network_security_group_by_name).
+              with("fake-network-nsg-name").
+              and_return(network_security)
+          end
+
+          it "should succeed" do
+            allow(client2).to receive(:create_virtual_machine)
+
+            expect(client2).not_to receive(:delete_virtual_machine)
+            expect(client2).not_to receive(:delete_availability_set)
+            expect(client2).not_to receive(:delete_network_interface)
+
+            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          end
+        end
+
+        context "with the default network security group" do
+          it "should succeed" do
+            allow(client2).to receive(:create_virtual_machine)
+
+            expect(client2).not_to receive(:delete_virtual_machine)
+            expect(client2).not_to receive(:delete_availability_set)
+            expect(client2).not_to receive(:delete_network_interface)
+
+            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          end
         end
       end
     end

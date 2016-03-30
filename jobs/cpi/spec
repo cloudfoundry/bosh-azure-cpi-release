@@ -33,6 +33,8 @@ properties:
   azure.parallel_upload_thread_num:
     description: The number of threads to upload stemcells in parallel
     default: 16
+  azure.default_security_group:
+    description: The name of the default security group that will be applied to all created VMs
 
   registry.username:
     description: User to access the Registry

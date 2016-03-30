@@ -65,7 +65,8 @@ module Bosh::AzureCloud
     #    "instance_type" => "Standard_D1",
     #    "availability_set" => "DEA_set",
     #    "platform_update_domain_count" => 5,
-    #    "platform_fault_domain_count" => 3
+    #    "platform_fault_domain_count" => 3,
+    #    "security_group" => "nsg-bosh"
     #  }
     #
     # @param [String] agent_id UUID for the agent that will be used later on by the director
@@ -336,7 +337,8 @@ module Bosh::AzureCloud
             "ssh_public_key",
             "tenant_id",
             "client_id",
-            "client_secret"],
+            "client_secret",
+            "default_security_group"],
           "registry" => ["endpoint", "user", "password"],
       }
 

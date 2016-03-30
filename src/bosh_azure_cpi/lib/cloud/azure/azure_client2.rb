@@ -43,6 +43,7 @@ module Bosh::AzureCloud
     REST_API_NETWORK_LOAD_BALANCERS      = 'loadBalancers'
     REST_API_NETWORK_INTERFACES          = 'networkInterfaces'
     REST_API_NETWORK_VNETS               = 'virtualNetworks'
+    REST_API_NETWORK_SECURITY_GROUPS     = 'networkSecurityGroups'
 
     REST_API_PROVIDER_STORAGE            = 'Microsoft.Storage'
     REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
@@ -592,6 +593,7 @@ module Bosh::AzureCloud
     # * +:private_ip     - String. Private IP address which the network interface will use.
     # * +:dns_servers    - Array. DNS servers. 
     # * +:public_ip      - Hash. The public IP which the network interface is binded to.
+    # * +:security_group - Hash. The network security group which the network interface is binded to.
     #
     def create_network_interface(nic_params, subnet, tags, load_balancer = nil)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, nic_params[:name])
@@ -600,6 +602,9 @@ module Bosh::AzureCloud
         'location'   => nic_params[:location],
         'tags'       => tags,
         'properties' => {
+          'networkSecurityGroup' => {
+            'id' => nic_params[:security_group][:id]
+          },
           'ipConfigurations' => [
             {
               'name'        => 'ipconfig1',
@@ -698,6 +703,28 @@ module Bosh::AzureCloud
       subnet
     end
 
+    # Network/Network Security Group
+    def get_network_security_group_by_name(name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_SECURITY_GROUPS, name)
+      get_network_security_group(url)
+    end
+
+    def get_network_security_group(url)
+      nsg = nil
+      result = get_resource_by_id(url)
+      unless result.nil?
+        nsg = {}
+        nsg[:id]   = result['id']
+        nsg[:name] = result['name']
+        nsg[:location] = result['location']
+        nsg[:tags] = result['tags']
+
+        properties = result['properties']
+        nsg[:provisioning_state] = properties['provisioningState']
+      end
+      nsg
+    end
+    
     # Storage/StorageAccounts
     # https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
     def create_storage_account(name, location, account_type, tags)

@@ -23,4 +23,5 @@ params:
   BAT_NETWORK_GATEWAY:          replace-me
   AZURE_VNET_NAME_FOR_BATS:     replace-me
   AZURE_CF_SUBNET_NAME:         replace-me
+  AZURE_DEFAULT_SECURITY_GROUP: replace-me
 

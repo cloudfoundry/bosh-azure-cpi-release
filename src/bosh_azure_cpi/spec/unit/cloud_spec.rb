@@ -63,7 +63,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'should raise an error' do
         expect { cloud }.to raise_error(
           ArgumentError,
-          'missing configuration parameters > azure:ssh_user, azure:tenant_id, azure:client_id, azure:client_secret, registry:endpoint, registry:user, registry:password'
+          'missing configuration parameters > azure:ssh_user, azure:tenant_id, azure:client_id, azure:client_secret, azure:default_security_group, registry:endpoint, registry:user, registry:password'
         )
       end
     end

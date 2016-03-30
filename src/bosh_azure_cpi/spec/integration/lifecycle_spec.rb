@@ -6,14 +6,15 @@ require 'cloud'
 
 describe Bosh::AzureCloud::Cloud do
   before(:all) do
-    @subscription_id      = ENV['BOSH_AZURE_SUBSCRIPTION_ID']      || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
-    @storage_account_name = ENV['BOSH_AZURE_STORAGE_ACCOUNT_NAME'] || raise("Missing BOSH_AZURE_STORAGE_ACCOUNT_NAME")
-    @resource_group_name  = ENV['BOSH_AZURE_RESOURCE_GROUP_NAME']  || raise("Missing BOSH_AZURE_RESOURCE_GROUP_NAME")
-    @tenant_id            = ENV['BOSH_AZURE_TENANT_ID']            || raise("Missing BOSH_AZURE_TENANT_ID")
-    @client_id            = ENV['BOSH_AZURE_CLIENT_ID']            || raise("Missing BOSH_AZURE_CLIENT_ID")
-    @client_secret        = ENV['BOSH_AZURE_CLIENT_SECRET']        || raise("Missing BOSH_AZURE_CLIENT_secret")
-    @stemcell_id          = ENV['BOSH_AZURE_STEMCELL_ID']          || raise("Missing BOSH_AZURE_STEMCELL_ID")
-    @ssh_public_key       = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']       || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
+    @subscription_id        = ENV['BOSH_AZURE_SUBSCRIPTION_ID']         || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
+    @storage_account_name   = ENV['BOSH_AZURE_STORAGE_ACCOUNT_NAME']    || raise("Missing BOSH_AZURE_STORAGE_ACCOUNT_NAME")
+    @resource_group_name    = ENV['BOSH_AZURE_RESOURCE_GROUP_NAME']     || raise("Missing BOSH_AZURE_RESOURCE_GROUP_NAME")
+    @tenant_id              = ENV['BOSH_AZURE_TENANT_ID']               || raise("Missing BOSH_AZURE_TENANT_ID")
+    @client_id              = ENV['BOSH_AZURE_CLIENT_ID']               || raise("Missing BOSH_AZURE_CLIENT_ID")
+    @client_secret          = ENV['BOSH_AZURE_CLIENT_SECRET']           || raise("Missing BOSH_AZURE_CLIENT_secret")
+    @stemcell_id            = ENV['BOSH_AZURE_STEMCELL_ID']             || raise("Missing BOSH_AZURE_STEMCELL_ID")
+    @ssh_public_key         = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']          || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
+    @default_security_group = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']  || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
   end
 
   subject(:cpi) do
@@ -28,6 +29,7 @@ describe Bosh::AzureCloud::Cloud do
         'client_secret' => @client_secret,
         'ssh_user' => 'vcap',
         'ssh_public_key' => @ssh_public_key,
+        'default_security_group' => @default_security_group,
         'parallel_upload_thread_num' => 16
       },
       'registry' => {

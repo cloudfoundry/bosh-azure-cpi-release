@@ -24,9 +24,8 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:invalid_access_token) { "invalid-access-token" }
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
-
   # Public IP
-  let(:public_ip_name) { "foo" }
+  let(:public_ip_name) { "fake-name" }
   let(:public_ip_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}" }
   let(:public_ip_uri) { "https://management.azure.com/#{public_ip_id}?api-version=#{api_version}" }
   let(:public_ip_response_body) {
@@ -58,7 +57,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   }
 
   # Load Balancer
-  let(:load_balancer_name) { "foo" }
+  let(:load_balancer_name) { "fake-name" }
   let(:load_balancer_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/loadBalancers/#{load_balancer_name}" }
   let(:load_balancer_uri) { "https://management.azure.com/#{load_balancer_id}?api-version=#{api_version}" }
   let(:load_balancer_response_body) {
@@ -121,7 +120,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   }
     
   # Network Interface
-  let(:nic_name) { "foo" }
+  let(:nic_name) { "fake-name" }
   let(:nic_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces/#{nic_name}" }
   let(:nic_uri) { "https://management.azure.com/#{nic_id}?api-version=#{api_version}" }
 
@@ -134,7 +133,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       "properties" => {
         "provisioningState" => "fake-state",
         "dnsSettings" => {
-          "dnsServers" => ["8.8.8.8"]
+          "dnsServers" => ["168.63.129.16"]
         },
         "ipConfigurations" => [
           {
@@ -161,7 +160,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       :location => "fake-location",
       :tags => "fake-tags",
       :provisioning_state => "fake-state",
-      :dns_settings => ["8.8.8.8"],
+      :dns_settings => ["168.63.129.16"],
       :ip_configuration_id => "fake-id",
       :private_ip => "10.0.0.100",
       :private_ip_allocation_method => "Dynamic",
@@ -171,7 +170,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   }
 
   # Subnet
-  let(:vnet_name) { "foo" }
+  let(:vnet_name) { "fake-name" }
   let(:subnet_name) { "bar" }
   let(:network_subnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}/subnets/#{subnet_name}?api-version=#{api_version}" }
   let(:network_subnet_response_body) {
@@ -193,6 +192,71 @@ describe Bosh::AzureCloud::AzureClient2 do
     }
   }
 
+  # Network Security Group
+  let(:nsg_name) { "fake-name" }
+  let(:nsg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkSecurityGroups/#{nsg_name}" }
+  let(:nsg_uri) { "https://management.azure.com/#{nsg_id}?api-version=#{api_version}" }
+
+  let(:nsg_response_body) {
+    {
+      "id" => "fake-id",
+      "name" => "fake-name",
+      "location" => "fake-location",
+      "tags" => "fake-tags",
+      "properties" => {
+        "provisioningState" => "fake-state",
+        "securityRules" => [
+          {
+            "name" => "fake-rule-name",
+            "id" => "fake-rule-id",
+            "etag" => "00000000-0000-0000-0000-000000000000",
+            "properties" => {
+               "provisioningState" => "Succeeded",
+               "description" => "description-of-this-rule",
+               "protocol" =>  "*",
+               "sourcePortRange" => "source-port-range",
+               "destinationPortRange" => "destination-port-range",
+               "sourceAddressPrefix" => "*",
+               "destinationAddressPrefix" => "*",
+               "access" => "Allow",
+               "priority" =>  200,
+               "direction" => "Inbound"
+            }
+          }
+        ],
+        "defaultSecurityRules" => [
+          {
+            "name" => "AllowVnetInBound",
+            "id" => "fake-default-rule-id",
+            "etag" => "00000000-0000-0000-0000-000000000000",
+            "properties" => {
+               "provisioningState" => "Succeeded",
+               "description" => "description-of-this-rule",
+               "protocol" =>  "*",
+               "sourcePortRange" => "*",
+               "destinationPortRange" => "*",
+               "sourceAddressPrefix" => "VirtualNetwork",
+               "destinationAddressPrefix" => "VirtualNetwork",
+               "access" => "Allow",
+               "priority" => 65000,
+               "direction" => "Inbound"
+            }
+          }
+        ],
+        "networkInterfaces" => [],
+        "subnets" => []
+      }
+    }.to_json
+  }
+  let(:fake_nsg) {
+    {
+      :id => "fake-id",
+      :name => "fake-name",
+      :location => "fake-location",
+      :tags => "fake-tags",
+      :provisioning_state => "fake-state"
+    }
+  }
 
   before do
     stub_request(:post, token_uri).to_return(
@@ -521,6 +585,30 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(
           azure_client2.get_virtual_machine_by_name(vm_name)
         ).to eq(fake_vm)
+      end
+    end
+  end
+
+  describe "#get_network_security_group_by_name" do
+    context "when token is valid, getting response succeeds" do
+      it "should return null if response body is null" do
+        stub_request(:get, nsg_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+        expect(
+          azure_client2.get_network_security_group_by_name(nsg_name)
+        ).to be_nil
+      end
+
+      it "should return the resource if response body is not null" do
+        stub_request(:get, nsg_uri).to_return(
+          :status => 200,
+          :body => nsg_response_body,
+          :headers => {})
+        expect(
+          azure_client2.get_network_security_group_by_name(nsg_name)
+        ).to eq(fake_nsg)
       end
     end
   end

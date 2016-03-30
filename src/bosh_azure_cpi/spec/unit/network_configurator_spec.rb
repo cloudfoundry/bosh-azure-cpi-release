@@ -18,7 +18,8 @@ describe Bosh::AzureCloud::NetworkConfigurator do
       "cloud_properties" =>
         {
           "subnet_name" => "bar",
-          "virtual_network_name" => "foo"
+          "virtual_network_name" => "foo",
+          "security_group" => "fake-nsg"
         }
     }
   }
@@ -212,6 +213,32 @@ describe Bosh::AzureCloud::NetworkConfigurator do
       expect {
         Bosh::AzureCloud::NetworkConfigurator.new(network_spec)
       }.to raise_error Bosh::Clouds::CloudError, "virtual_network_name required for manual network"
+    end
+  end
+
+  describe "#security_group" do
+    it "should return network security group when spec contains security_group" do
+      spec = {}
+      spec["network_a"] = manual
+      spec["network_b"] = vip
+
+      nc = Bosh::AzureCloud::NetworkConfigurator.new(spec)
+      expect(nc.security_group).to eq("fake-nsg")
+    end
+
+    it "should return nil when spec does not contain security_group" do
+      spec = {}
+      spec["network_a"] = {
+        "type" => "manual",
+        "cloud_properties" => {
+            "subnet_name" => "bar",
+            "virtual_network_name" => "foo"
+        }
+      }
+      spec["network_b"] = vip
+
+      nc = Bosh::AzureCloud::NetworkConfigurator.new(spec)
+      expect(nc.security_group).to be_nil
     end
   end
 end

@@ -59,6 +59,7 @@ The following steps uses `single-vm-cf.yml` for an example.
   * **REPLACE_WITH_CLOUD_FOUNDRY_INTERNAL_IP** - the static IP for Cloud Foundry VM, e.g., 10.0.16.4
   * **REPLACE_WITH_SYSTEM_DOMAIN** - You should use your domain name. If you do not want to use yours, you can use 'REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io'.
   * **REPLACE_WITH_SSL_CERT_AND_KEY** - You should use your certificate and key. If you do not want to use yours, please use below script to generate a new one and update `REPLACE_WITH_SSL_CERT_AND_KEY` in your manifest automatically.
+  * **REPLACE_WITH_NSG_NAME_FOR_CLOUD_FOUNDRY** - the network security group name for Cloud Foundry, e.g. nsg-cf
 
     ```
     openssl genrsa -out ~/haproxy.key 2048 &&

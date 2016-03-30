@@ -21,6 +21,7 @@ check_param BAT_STEMCELL_URL
 check_param BAT_STEMCELL_SHA
 check_param AZURE_VNET_NAME_FOR_BATS
 check_param AZURE_CF_SUBNET_NAME
+check_param AZURE_DEFAULT_SECURITY_GROUP
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
@@ -71,6 +72,7 @@ properties:
     cloud_properties:
       virtual_network_name: $AZURE_VNET_NAME_FOR_BATS
       subnet_name: $AZURE_CF_SUBNET_NAME
+      security_group: $AZURE_DEFAULT_SECURITY_GROUP
     cidr: $BAT_NETWORK_CIDR
     reserved: ['$BAT_NETWORK_RESERVED_RANGE']
     static: ['$BAT_NETWORK_STATIC_RANGE']
@@ -124,6 +126,9 @@ networks:
     cloud_properties:
       virtual_network_name: <%= network.cloud_properties.virtual_network_name %>
       subnet_name: <%= network.cloud_properties.subnet_name %>
+      <% if network.cloud_properties.security_group %>
+      security_group: <%= network.cloud_properties.security_group %>
+      <% end %>
   <% elsif network.type == 'dynamic' %>
   subnets:
   - range: <%= network.cidr %>
@@ -131,6 +136,9 @@ networks:
   cloud_properties:
     virtual_network_name: <%= network.cloud_properties.virtual_network_name %>
     subnet_name: <%= network.cloud_properties.subnet_name %>
+    <% if network.cloud_properties.security_group %>
+    security_group: <%= network.cloud_properties.security_group %>
+    <% end %>
   <% end %>
 <% end %>
 

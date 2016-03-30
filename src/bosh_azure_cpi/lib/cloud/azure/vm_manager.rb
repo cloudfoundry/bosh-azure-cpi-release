@@ -18,6 +18,15 @@ module Bosh::AzureCloud
       subnet = @azure_client2.get_network_subnet_by_name(network_configurator.virtual_network_name, network_configurator.subnet_name)
       raise "Cannot find the subnet #{network_configurator.virtual_network_name}/#{network_configurator.subnet_name}" if subnet.nil?
 
+      security_group_name = @azure_properties["default_security_group"]
+      if resource_pool.has_key?("security_group")
+        security_group_name = resource_pool["security_group"]
+      elsif !network_configurator.security_group.nil?
+        security_group_name = network_configurator.security_group
+      end
+      network_security_group = @azure_client2.get_network_security_group_by_name(security_group_name)
+      raise "Cannot find the network security group #{security_group_name}" if network_security_group.nil?
+
       caching = 'ReadWrite'
       if resource_pool.has_key?('caching')
         caching = resource_pool['caching']
@@ -43,7 +52,8 @@ module Bosh::AzureCloud
         :name                => instance_id,
         :location            => storage_account[:location],
         :private_ip          => network_configurator.private_ip,
-        :public_ip           => public_ip
+        :public_ip           => public_ip,
+        :security_group      => network_security_group
       }
       network_tags = AZURE_TAGS
       if resource_pool.has_key?('availability_set')
