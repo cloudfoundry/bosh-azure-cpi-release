@@ -143,6 +143,20 @@
               "priority": 202,
               "direction": "Inbound"
             }
+          },
+          {
+            "name": "dns",
+            "properties": {
+              "description": "Allow DNS",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "53",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 203,
+              "direction": "Inbound"
+            }
           }
         ]
       }
