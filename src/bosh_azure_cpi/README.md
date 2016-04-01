@@ -113,8 +113,8 @@ Below is a sample of how Azure specific properties are used in a BOSH deployment
       url: https://bosh.io/d/github.com/cloudfoundry/bosh?v=255.3
       sha1: 1a3d61f968b9719d9afbd160a02930c464958bf4
     - name: bosh-azure-cpi
-      url: https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=8
-      sha1: df37aaf44fd0dd6ccbdd0c83b3a7affa23f533fb
+      url: https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=9
+      sha1: e4bf4d26b45b2752975e4054f7e406c5f4661c69
 
     networks:
     - name: public
