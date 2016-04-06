@@ -25,3 +25,4 @@ params:
   SSH_PUBLIC_KEY:                replace-me
   BOSH_INIT_LOG_LEVEL:           warn
   AZURE_DEFAULT_SECURITY_GROUP:  replace-me
+  BAT_DIRECTOR_PASSWORD:         replace-me

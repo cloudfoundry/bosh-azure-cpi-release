@@ -17,6 +17,7 @@ check_param SSH_PRIVATE_KEY
 check_param SSH_PUBLIC_KEY
 check_param BAT_NETWORK_GATEWAY
 check_param AZURE_DEFAULT_SECURITY_GROUP
+check_param BAT_DIRECTOR_PASSWORD
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
@@ -133,9 +134,9 @@ jobs:
       address: 10.0.0.10
       host: 10.0.0.10
       db: *db
-      http: {user: admin, password: admin, port: 25777}
+      http: {user: admin, password: $BAT_DIRECTOR_PASSWORD, port: 25777}
       username: admin
-      password: admin
+      password: $BAT_DIRECTOR_PASSWORD
       port: 25777
 
     # Tells the Director/agents how to contact blobstore
@@ -156,7 +157,7 @@ jobs:
 
     hm:
       http: {user: hm, password: hm-password}
-      director_account: {user: admin, password: admin}
+      director_account: {user: admin, password: $BAT_DIRECTOR_PASSWORD}
 
     azure: &azure
       environment: AzureCloud

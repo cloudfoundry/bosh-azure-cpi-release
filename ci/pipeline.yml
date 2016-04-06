@@ -121,6 +121,7 @@ jobs:
         SSH_PRIVATE_KEY:                {{ssh_private_key}}
         SSH_PUBLIC_KEY:                 {{ssh_public_key}}
         AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
+        BAT_DIRECTOR_PASSWORD:          {{bat_director_password}}
 
   - task: run-bats
     file: bosh-cpi-release/ci/tasks/run-bats.yml
@@ -142,6 +143,7 @@ jobs:
         BAT_NETWORK_STATIC_RANGE:       {{bat_network_static_range}}
         AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
         AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
+        BAT_DIRECTOR_PASSWORD:          {{bat_director_password}}
 
   - task: teardown-director
     file: bosh-cpi-release/ci/tasks/teardown-director.yml

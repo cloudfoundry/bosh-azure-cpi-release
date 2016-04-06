@@ -22,6 +22,7 @@ check_param BAT_STEMCELL_SHA
 check_param AZURE_VNET_NAME_FOR_BATS
 check_param AZURE_CF_SUBNET_NAME
 check_param AZURE_DEFAULT_SECURITY_GROUP
+check_param BAT_DIRECTOR_PASSWORD
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
@@ -48,6 +49,7 @@ export BAT_VCAP_PASSWORD=$BAT_VCAP_PASSWORD
 export BAT_VCAP_PRIVATE_KEY=$PWD/keys/bats.pem
 export BAT_INFRASTRUCTURE=azure
 export BAT_NETWORKING=manual
+export BAT_DIRECTOR_PASSWORD=$BAT_DIRECTOR_PASSWORD
 
 bosh -n target $BAT_DIRECTOR
 echo Using This version of bosh:

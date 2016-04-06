@@ -20,6 +20,8 @@ See [development doc](docs/development.md).
 - docs changes
   - Update Diego manifest to fix the issue that HAPROXY always reloads every 10 seconds.
   - Correct manifest path in the dev-box which is created by ARM template.
+- CI changes
+  - Set password for director account in environment variables for BATs to enhance security.
 
 # 2015-03-30
 - CPI changes
