@@ -16,6 +16,11 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-04-06
+- docs changes
+  - Update Diego manifest to fix the issue that HAPROXY always reloads every 10 seconds.
+  - Correct manifest path in the dev-box which is created by ARM template.
+
 # 2015-03-30
 - CPI changes
   - Allow to bind network security group to VMs.

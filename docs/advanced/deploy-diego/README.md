@@ -40,7 +40,7 @@ In this document, we will use the single-vm manifest as an example.
 
 ## 2 Update Cloud Foundry
 
-1. Update your cloud foundry manifest ~/single-vm-cf.yml or ~/multiple-vm-cf.yml.
+1. Update your cloud foundry manifest ~/example_manifests/single-vm-cf.yml or ~/example_manifests/multiple-vm-cf.yml.
 
   ```
     jobs:

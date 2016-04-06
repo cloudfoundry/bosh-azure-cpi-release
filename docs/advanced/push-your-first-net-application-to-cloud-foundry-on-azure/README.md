@@ -23,7 +23,7 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
 ## 2 Update Cloud Foundry
 
-1. Update your cloud foundry manifest ~/single-vm-cf.yml or ~/multiple-vm-cf.yml.
+1. Update your cloud foundry manifest ~/example_manifests/single-vm-cf.yml or ~/example_manifests/multiple-vm-cf.yml.
 
   ```
     jobs:
@@ -52,13 +52,13 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 2. Set BOSH deployment to cloud foundry
 
   ```
-  bosh deployment ~/single-vm-cf.yml
+  bosh deployment ~/example_manifests/single-vm-cf.yml
   ```
 
   or
 
   ```
-  bosh deployment ~/multiple-vm-cf.yml
+  bosh deployment ~/example_manifests/multiple-vm-cf.yml
   ```
 
 3. Update your cloud foundry.
@@ -135,11 +135,11 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
   1. By default, Server Manager is opened when you remote to the server.
   2. Select **Local Server** and click IE Enhanced Security Configuration **on**.
 
-  ![windows-stack-disable-ie-enhanced-security-1.PNG](./windows-stack-disable-ie-enhanced-security-1.PNG.png "windows-stack-disable-ie-enhanced-security-1")
+  ![windows-stack-disable-ie-enhanced-security-1.PNG](./windows-stack-disable-ie-enhanced-security-1.PNG "windows-stack-disable-ie-enhanced-security-1")
 
   3. Select **Off** for both Administrators and Users. Click **OK**.
 
-  ![windows-stack-disable-ie-enhanced-security-2.PNG](./windows-stack-disable-ie-enhanced-security-2.PNG.png "windows-stack-disable-ie-enhanced-security-2")
+  ![windows-stack-disable-ie-enhanced-security-2.PNG](./windows-stack-disable-ie-enhanced-security-2.PNG "windows-stack-disable-ie-enhanced-security-2")
 
 18. Download [all-in-one](http://cloudfoundry.blob.core.windows.net/windowsstack/all-in-one.zip) and extract it. 
 

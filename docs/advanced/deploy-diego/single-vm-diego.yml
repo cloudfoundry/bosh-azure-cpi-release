@@ -104,15 +104,7 @@ properties:
   consul:
     agent:
       services:
-        bbs: {}
         etcd: {}
-        auctioneer: {}
-        cc_uploader: {}
-        nsync: {}
-        stager: {}
-        tps: {}
-        file_server: {}
-        ssh_proxy: {}
       datacenter: null
       log_level: null
       servers:
