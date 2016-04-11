@@ -96,7 +96,7 @@ describe Bosh::AzureCloud::Cloud do
     let(:stemcell_uri) {
       "https://#{storage_account_name}.blob.core.windows.net/fakecontainer/#{stemcell_id}.vhd"
     }
-    let(:resource_pool) { {} }
+    let(:resource_pool) { {'instance_type' => 'fake-vm-size'} }
     let(:networks_spec) { {} }
     let(:disk_locality) { double("disk locality") }
     let(:environment) { double("environment") }
@@ -134,7 +134,12 @@ describe Bosh::AzureCloud::Cloud do
 
       context "when do not use the default storage account" do
         let(:storage_account_name) { 'fake-storage-account-name' }
-        let(:resource_pool) { {'storage_account_name'=>'fake-storage-account-name'} }
+        let(:resource_pool) {
+          {
+            'instance_type' => 'fake-vm-size',
+            'storage_account_name'=>'fake-storage-account-name'
+          }
+        }
 
         before do
           allow(stemcell_manager).to receive(:has_stemcell?).
@@ -189,8 +194,28 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
+    context 'when instance_type is not provided' do
+      it 'should raise an error' do
+        expect {
+          cloud.create_vm(
+            agent_id,
+            stemcell_id,
+            {},
+            networks_spec,
+            disk_locality,
+            environment
+          )
+        }.to raise_error("missing required cloud property `instance_type'.")
+      end
+    end
+
     context "when the storage account name is invalid" do
-      let(:resource_pool) { {'storage_account_name'=>'fake-storage-account'} }
+      let(:resource_pool) {
+        {
+          'instance_type' => 'fake-vm-size',
+          'storage_account_name'=>'fake-storage-account-name'
+        }
+      }
 
       before do
         allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
