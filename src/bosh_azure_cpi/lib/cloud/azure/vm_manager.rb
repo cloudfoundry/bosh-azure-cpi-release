@@ -99,7 +99,10 @@ module Bosh::AzureCloud
       @azure_client2.delete_virtual_machine(instance_id) if instance_is_created
       delete_availability_set(availability_set[:name]) unless availability_set.nil?
       @azure_client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
-      raise Bosh::Clouds::VMCreationFailed.new(false), "#{e.inspect}\n#{e.backtrace.join("\n")}"
+      # Replace vmSize with instance_type because only instance_type exists in the manifest
+      error_message = e.inspect
+      error_message = error_message.gsub!('vmSize', 'instance_type') if error_message.include?('vmSize')
+      raise Bosh::Clouds::VMCreationFailed.new(false), "#{error_message}\n#{e.backtrace.join("\n")}"
     end
 
     def find(instance_id)

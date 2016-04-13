@@ -82,6 +82,10 @@ module Bosh::AzureCloud
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
+        unless resource_pool.has_key?('instance_type')
+          raise Bosh::Clouds::VMCreationFailed.new(false), "missing required cloud property `instance_type'."
+        end
+
         storage_account_name = @azure_properties['storage_account_name']
         if resource_pool.has_key?('storage_account_name')
           storage_account_name = resource_pool['storage_account_name']
