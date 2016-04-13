@@ -16,6 +16,14 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-04-13
+- CPI changes
+  - Reduce retry interval to improve performance.
+
+# 2015-04-12
+- CPI changes
+  - Raise an error if instance_type is not provided.
+
 # 2015-04-06
 - docs changes
   - Update Diego manifest to fix the issue that HAPROXY always reloads every 10 seconds.
