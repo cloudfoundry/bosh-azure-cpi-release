@@ -32,7 +32,7 @@ module Bosh::AzureCloud
 
     # https://azure.microsoft.com/en-us/documentation/articles/best-practices-retry-service-specific/#more-information-6
     AZURE_RETRY_ERROR_CODES       = [408, 500, 502, 503, 504]
-    AZURE_MAX_RETRY_COUNT         = 10
+    AZURE_MAX_RETRY_COUNT         = 20
 
     REST_API_PROVIDER_COMPUTER           = 'Microsoft.Compute'
     REST_API_COMPUTER_VIRTUAL_MACHINES   = 'virtualMachines'
@@ -191,7 +191,7 @@ module Bosh::AzureCloud
       params = {
         'validating' => 'true'
       }
-      http_put(url, vm, 30, params)
+      http_put(url, vm, 5, params)
     end
 
     def restart_virtual_machine(name)
@@ -321,7 +321,7 @@ module Bosh::AzureCloud
     def delete_virtual_machine(name)
       @logger.debug("delete_virtual_machine - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
-      http_delete(url, nil, 10)
+      http_delete(url)
     end
 
     # Compute/Availability Sets
@@ -387,7 +387,7 @@ module Bosh::AzureCloud
     def delete_availability_set(name)
       @logger.debug("delete_availability_set - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name)
-      http_delete(url, nil, 10)
+      http_delete(url)
     end
 
     # Network/Public IP
@@ -459,7 +459,7 @@ module Bosh::AzureCloud
     def delete_public_ip(name)
       @logger.debug("delete_public_ip - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name)
-      http_delete(url, nil, 10)
+      http_delete(url)
     end
 
     # Network/Load Balancer
@@ -572,7 +572,7 @@ module Bosh::AzureCloud
     def delete_load_balancer(name)
       @logger.debug("delete_load_balancer - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name)
-      http_delete(url, nil, 10)
+      http_delete(url)
     end
 
     # Network/Network Interface
@@ -679,7 +679,7 @@ module Bosh::AzureCloud
     def delete_network_interface(name)
       @logger.debug("delete_network_interface - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name)
-      http_delete(url, nil, 10)
+      http_delete(url)
     end
 
     # Network/Subnet
@@ -891,7 +891,7 @@ module Bosh::AzureCloud
       uri
     end
 
-    def http_get_response(uri, request, retry_after = 10)
+    def http_get_response(uri, request, retry_after = 5)
       response = nil
       refresh_token = false
       retry_count = 0
@@ -920,9 +920,9 @@ module Bosh::AzureCloud
         raise e
       rescue AzureInternalError => e
         if retry_count < AZURE_MAX_RETRY_COUNT
-          @logger.warn("http_get_response - Fail for an AzureInternalError. Will retry after #{retry_after} seconds.")
+          @logger.warn("http_get_response - Fail for an AzureInternalError. Will retry after 1 seconds.")
           retry_count += 1
-          sleep(retry_after)
+          sleep(1)
           retry
         end
         raise e
@@ -1025,7 +1025,7 @@ module Bosh::AzureCloud
       result = JSON(response.body) unless response.body.nil?
     end
 
-    def http_put(url, body = nil, retry_after = 30, params = {})
+    def http_put(url, body = nil, retry_after = 5, params = {})
       uri = http_url(url, params)
       @logger.info("http_put - trying to put #{uri}")
 
@@ -1047,7 +1047,7 @@ module Bosh::AzureCloud
       check_completion(response, options)
     end
 
-    def http_delete(url, body = nil, retry_after = 10, params = {})
+    def http_delete(url, body = nil, retry_after = 5, params = {})
       uri = http_url(url, params)
       @logger.info("http_delete - trying to delete #{uri}")
 
@@ -1069,7 +1069,7 @@ module Bosh::AzureCloud
       check_completion(response, options)
     end
 
-    def http_post(url, body = nil, retry_after = 30, params = {})
+    def http_post(url, body = nil, retry_after = 5, params = {})
       uri = http_url(url, params)
       @logger.info("http_post - trying to post #{uri}")
 
