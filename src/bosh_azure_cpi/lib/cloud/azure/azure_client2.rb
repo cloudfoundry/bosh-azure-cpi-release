@@ -29,10 +29,11 @@ module Bosh::AzureCloud
     HTTP_CODE_CONFLICT            = 409
     HTTP_CODE_LENGTHREQUIRED      = 411
     HTTP_CODE_PRECONDITIONFAILED  = 412
+    HTTP_CODE_INTERNALSERVERERROR = 500
 
     # https://azure.microsoft.com/en-us/documentation/articles/best-practices-retry-service-specific/#more-information-6
     AZURE_RETRY_ERROR_CODES       = [408, 500, 502, 503, 504]
-    AZURE_MAX_RETRY_COUNT         = 20
+    AZURE_MAX_RETRY_COUNT         = 10
 
     REST_API_PROVIDER_COMPUTER           = 'Microsoft.Compute'
     REST_API_COMPUTER_VIRTUAL_MACHINES   = 'virtualMachines'
@@ -352,7 +353,7 @@ module Bosh::AzureCloud
           'platformFaultDomainCount'  => avset_params[:platform_fault_domain_count]
         }
       }
-      http_put(url, availability_set, 10)
+      http_put(url, availability_set)
     end
 
     def get_availability_set_by_name(name)
@@ -400,7 +401,7 @@ module Bosh::AzureCloud
           'publicIPAllocationMethod' => is_static ? 'Static' : 'Dynamic'
         }
       }
-      http_put(url, public_ip, 10)
+      http_put(url, public_ip)
     end
 
     def get_public_ip_by_name(name)
@@ -520,7 +521,7 @@ module Bosh::AzureCloud
         load_balancer['properties']['inboundNatRules'].push(inbound_nat_rules)
       end
 
-      http_put(url, load_balancer, 10)
+      http_put(url, load_balancer)
     end
 
     def get_load_balancer_by_name(name)
@@ -634,7 +635,7 @@ module Bosh::AzureCloud
           load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
       end
 
-      http_put(url, interface, 10)
+      http_put(url, interface)
     end
 
     def get_network_interface_by_name(name)
@@ -751,11 +752,10 @@ module Bosh::AzureCloud
       if response.code.to_i == HTTP_CODE_OK
         return true
       elsif response.code.to_i != HTTP_CODE_ACCEPTED
-        raise AzureError, "create_storage_account - Cannot create the storage account \"#{name}\". Error code: #{response.code}."
+        raise AzureError, "create_storage_account - Cannot create the storage account \"#{name}\". http code: #{response.code}."
       end
 
       @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
-      retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
       uri = URI(response['Location'])
       params = {}
       params['api-version'] = API_VERSION
@@ -763,15 +763,21 @@ module Bosh::AzureCloud
       uri.query = URI.encode_www_form(params)
       request.add_field('x-ms-version', API_VERSION)
       while true
+        retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         sleep(retry_after)
 
         @logger.debug("create_storage_account - trying to get the status of asynchronous operation: #{uri}")
-        response = http_get_response(uri, request, retry_after)
+        response = http_get_response(uri, request, retry_after, true)
+
         status_code = response.code.to_i
         if status_code == HTTP_CODE_OK
           return true
+        elsif status_code == HTTP_CODE_INTERNALSERVERERROR
+          error = "create_storage_account - http code: #{response.code}"
+          error += " message: #{response.body}" unless response.body.nil?
+          @logger.warn(error)
         elsif status_code != HTTP_CODE_ACCEPTED
-          raise AzureError, "create_storage_account - http error: #{response.code}"
+          raise AzureError, "create_storage_account - http code: #{response.code}"
         end
       end
     end
@@ -877,7 +883,7 @@ module Bosh::AzureCloud
         elsif response.code.to_i == HTTP_CODE_UNAUTHORIZED
           raise AzureError, "get_token - Azure authentication failed: invalid tenant id, client id or client secret."
         else
-          raise AzureError, "get_token - http error: #{response.code}"
+          raise AzureError, "get_token - http code: #{response.code}"
         end
       end
 
@@ -891,7 +897,7 @@ module Bosh::AzureCloud
       uri
     end
 
-    def http_get_response(uri, request, retry_after = 5)
+    def http_get_response(uri, request, retry_after, is_async = false)
       response = nil
       refresh_token = false
       retry_count = 0
@@ -901,15 +907,25 @@ module Bosh::AzureCloud
         request['Content-Type']  = 'application/json'
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
         response = http(uri).request(request)
+
+        retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         status_code = response.code.to_i
         @logger.debug("http_get_response - #{retry_count}: #{status_code}\n#{response.body}")
         if status_code == HTTP_CODE_UNAUTHORIZED
           raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid."
         end
         refresh_token = false
-        if AZURE_RETRY_ERROR_CODES.include?(status_code)
-          error = "http_get_response - error: #{response.code}"
-          error += " message: #{response.body}" unless response.body.nil?
+        if status_code == HTTP_CODE_OK && is_async
+          # Need to check status in response body for asynchronous operation even if status_code is HTTP_CODE_OK.
+          result = JSON(response.body)
+          if result['status'] == 'Failed'
+            error = "http_get_response - http code: #{response.code}\n"
+            error += " message: #{response.body}"
+            raise AzureInternalError, error
+          end
+        elsif AZURE_RETRY_ERROR_CODES.include?(status_code)
+          error = "http_get_response - http code: #{response.code}\n"
+          error += " message: #{response.body}"
           raise AzureInternalError, error
         end
       rescue AzureUnauthorizedError => e
@@ -920,9 +936,9 @@ module Bosh::AzureCloud
         raise e
       rescue AzureInternalError => e
         if retry_count < AZURE_MAX_RETRY_COUNT
-          @logger.warn("http_get_response - Fail for an AzureInternalError. Will retry after 1 seconds.")
+          @logger.warn("http_get_response - Fail for an AzureInternalError. Will retry after #{retry_after} seconds.")
           retry_count += 1
-          sleep(1)
+          sleep(retry_after)
           retry
         end
         raise e
@@ -958,12 +974,13 @@ module Bosh::AzureCloud
           return result
         end
       elsif !options[:success_code].include?(response.code.to_i)
-        error = "#{options[:operation]} - error: #{response.code}"
+        error = "#{options[:operation]} - http code: #{response.code}"
         error += " message: #{response.body}" unless response.body.nil?
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
         raise AzureError, error
       end
 
+      retry_after = options[:retry_after]
       operation_status_link.gsub!(' ', '%20')
       uri = URI(operation_status_link)
       params = {}
@@ -972,13 +989,14 @@ module Bosh::AzureCloud
       uri.query = URI.encode_www_form(params)
       request.add_field('x-ms-version', options[:api_version])
       while true
-        sleep(options[:retry_after])
+        retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
+        sleep(retry_after)
 
         @logger.debug("check_completion - trying to get the status of asynchronous operation: #{uri}")
-        response = http_get_response(uri, request, options[:retry_after])
+        response = http_get_response(uri, request, retry_after, true)
         status_code = response.code.to_i
         if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
-          raise AzureError, "check_completion - http error: #{response.code}"
+          raise AzureError, "check_completion - http code: #{response.code}"
         end
 
         unless response.body.nil?
@@ -1002,20 +1020,20 @@ module Bosh::AzureCloud
       end
     end
 
-    def http_get(url, params = {})
+    def http_get(url, params = {}, retry_after = 5)
       uri = http_url(url, params)
       @logger.info("http_get - trying to get #{uri}")
 
       request = Net::HTTP::Get.new(uri.request_uri)
-      response = http_get_response(uri, request)
+      response = http_get_response(uri, request, retry_after)
       status_code = response.code.to_i
       if status_code != HTTP_CODE_OK
         if status_code == HTTP_CODE_NOCONTENT
-          raise AzureNoFoundError, "http_get - error: #{response.code}"
+          raise AzureNoFoundError, "http_get - http code: #{response.code}"
         elsif status_code == HTTP_CODE_NOTFOUND
-          raise AzureNoFoundError, "http_get - error: #{response.code}"
+          raise AzureNoFoundError, "http_get - http code: #{response.code}"
         else
-          error = "http_get - error: #{response.code}"
+          error = "http_get - http code: #{response.code}"
           error += " message: #{response.body}" unless response.body.nil?
           raise AzureError, error
         end
@@ -1042,7 +1060,7 @@ module Bosh::AzureCloud
         :return_code => [HTTP_CODE_OK],
         :success_code => [HTTP_CODE_CREATED],
         :api_version  => params['api-version'] || API_VERSION,
-        :retry_after  => response.key?('retry-after') ? response['retry-after'].to_i : retry_after
+        :retry_after  => retry_after
       }
       check_completion(response, options)
     end
@@ -1064,7 +1082,7 @@ module Bosh::AzureCloud
         :return_code => [HTTP_CODE_OK, HTTP_CODE_NOCONTENT],
         :success_code => [HTTP_CODE_ACCEPTED],
         :api_version  => params['api-version'] || API_VERSION,
-        :retry_after  => response.key?('retry-after') ? response['retry-after'].to_i : retry_after
+        :retry_after  => retry_after
       }
       check_completion(response, options)
     end
@@ -1087,7 +1105,7 @@ module Bosh::AzureCloud
         :return_code => [HTTP_CODE_OK],
         :success_code => [HTTP_CODE_ACCEPTED],
         :api_version  => params['api-version'] || API_VERSION,
-        :retry_after  => response.key?('retry-after') ? response['retry-after'].to_i : retry_after
+        :retry_after  => retry_after
       }
       check_completion(response, options)
     end

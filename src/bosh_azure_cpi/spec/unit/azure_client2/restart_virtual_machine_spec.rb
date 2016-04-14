@@ -67,7 +67,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.restart_virtual_machine(vm_name)
-        }.to raise_error /get_token - http error: 404/
+        }.to raise_error /get_token - http code: 404/
       end
 
       it "should raise an error if tenant id, client id or client secret is invalid" do
@@ -146,7 +146,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.restart_virtual_machine(vm_name)
-        }.to raise_error /check_completion - http error: 404/
+        }.to raise_error /check_completion - http code: 404/
       end
 
       it "should raise an error if restart operation failed" do
@@ -165,12 +165,12 @@ describe Bosh::AzureCloud::AzureClient2 do
           })
         stub_request(:get, operation_status_link).to_return(
           :status => 200,
-          :body => '{"status":"Failed"}',
+          :body => '{"status":"Cancelled"}',
           :headers => {})
 
         expect {
           azure_client2.restart_virtual_machine(vm_name)
-        }.to raise_error /status: Failed/
+        }.to raise_error /status: Cancelled/
       end
 
       # TODO

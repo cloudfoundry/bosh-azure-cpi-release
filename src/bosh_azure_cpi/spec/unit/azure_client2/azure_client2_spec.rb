@@ -180,7 +180,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.get_resource_by_id(url)
-        }.to raise_error /get_token - http error: 404/
+        }.to raise_error /get_token - http code: 404/
       end
 
       it "should raise an error if tenant id, client id or client secret is invalid" do
@@ -269,7 +269,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.get_resource_by_id(url)
-        }.to raise_error /http_get - error: 400 message: {"foo":"bar"}/
+        }.to raise_error /http_get - http code: 400 message: {"foo":"bar"}/
       end
     end
   end

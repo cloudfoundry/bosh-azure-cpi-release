@@ -16,6 +16,10 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-04-14
+- CPI changes
+  - Auto retry when an internal error occurs in asynchronous operation.
+
 # 2015-04-13
 - CPI changes
   - Reduce retry interval to improve performance.
