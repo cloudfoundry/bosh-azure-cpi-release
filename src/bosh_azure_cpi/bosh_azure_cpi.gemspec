@@ -19,7 +19,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'bosh_common'
   s.add_dependency 'bosh_cpi'
   s.add_dependency 'bosh-registry'
-  s.add_dependency 'azure',         '~>0.7.3'
+  s.add_dependency 'azure',         '~>0.7.0'
   s.add_dependency 'vhd',           '~>0.0.4'
   s.add_dependency 'httpclient',    '=2.4.0'
   s.add_dependency 'yajl-ruby',     '>=0.8.2'

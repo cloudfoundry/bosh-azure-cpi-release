@@ -2,7 +2,7 @@ PATH
   remote: .
   specs:
     bosh_azure_cpi (2.0.0)
-      azure (~> 0.7.3)
+      azure (~> 0.7.0)
       bosh-registry
       bosh_common
       bosh_cpi
@@ -21,7 +21,7 @@ GEM
       jmespath (~> 1.0)
     aws-sdk-resources (2.1.29)
       aws-sdk-core (= 2.1.29)
-    azure (0.7.3)
+    azure (0.7.1)
       addressable (~> 2.3)
       faraday (~> 0.9)
       faraday_middleware (~> 0.10)
@@ -230,3 +230,6 @@ DEPENDENCIES
   rake (~> 10.3.2)
   rspec (~> 3.0.0)
   webmock
+
+BUNDLED WITH
+   1.10.6
