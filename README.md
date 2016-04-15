@@ -16,10 +16,6 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
-# 2015-04-14
-- CPI changes
-  - Upgrade azure-sdk-for-ruby version to 0.7.3.
-
 # 2015-04-13
 - CPI changes
   - Reduce retry interval to improve performance.
