@@ -16,9 +16,10 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
-# 2015-04-14
+# 2015-04-15
 - CPI changes
   - Auto retry when an internal error occurs in asynchronous operation.
+  - Do not include development gems when building CPI release. 
 
 # 2015-04-13
 - CPI changes
