@@ -33,6 +33,16 @@ describe Bosh::AzureCloud::VMManager do
       }
     }
     let(:subnet) { double("subnet") }
+    let(:storage_account) {
+      {
+        :id => "foo",
+        :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+        :location => "bar",
+        :provisioning_state => "bar",
+        :account_type => "foo",
+        :primary_endpoints => "bar"
+      }
+    }
 
     before do
       allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
@@ -53,7 +63,7 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_network_subnet_by_name).
           and_return(nil)
         expect {
-          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
         }.to raise_error /Cannot find the subnet/
       end
     end
@@ -67,7 +77,7 @@ describe Bosh::AzureCloud::VMManager do
       end
       it "should raise an error" do
         expect {
-          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
         }.to raise_error /Cannot find the network security group/
       end
     end
@@ -78,7 +88,7 @@ describe Bosh::AzureCloud::VMManager do
           and_return(subnet)
 
         expect {
-          vm_manager.create(uuid, storage_account_name, stemcell_uri, {'caching' => 'InvalidCachingOption'}, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, {'caching' => 'InvalidCachingOption'}, network_configurator)
         }.to raise_error /Unknown disk caching/
       end
     end
@@ -102,7 +112,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_availability_set)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
-            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
           }.to raise_error /Cannot find the public IP address/
         end
       end
@@ -133,7 +143,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_availability_set)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
-            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
           }.to raise_error /Cannot find the public IP address/
         end
       end
@@ -157,7 +167,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
         }.to raise_error /Cannot find the load balancer/
       end
     end
@@ -166,16 +176,6 @@ describe Bosh::AzureCloud::VMManager do
       let(:load_balancer) {
         {
           :name => "fake-lb-name"
-        }
-      }
-      let(:storage_account) {
-        {
-          :id => "foo",
-          :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-          :location => "bar",
-          :provisioning_state => "bar",
-          :account_type => "foo",
-          :primary_endpoints => "bar"
         }
       }
 
@@ -188,9 +188,6 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_load_balancer_by_name).
           with(resource_pool['load_balancer']).
           and_return(load_balancer)
-        allow(client2).to receive(:get_storage_account_by_name).
-          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
-          and_return(storage_account)
         allow(network_configurator).to receive(:private_ip).
           and_return('10.0.0.100')
       end
@@ -204,7 +201,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
         }.to raise_error /network interface is not created/
       end
     end
@@ -213,16 +210,6 @@ describe Bosh::AzureCloud::VMManager do
       let(:load_balancer) {
         {
           :name => "fake-lb-name"
-        }
-      }
-      let(:storage_account) {
-        {
-          :id => "foo",
-          :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-          :location => "bar",
-          :provisioning_state => "bar",
-          :account_type => "foo",
-          :primary_endpoints => "bar"
         }
       }
       let(:network_interface) {
@@ -240,9 +227,6 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_load_balancer_by_name).
           with(resource_pool['load_balancer']).
           and_return(load_balancer)
-        allow(client2).to receive(:get_storage_account_by_name).
-          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
-          and_return(storage_account)
         allow(network_configurator).to receive(:private_ip).
           and_return('10.0.0.100')
         allow(client2).to receive(:create_network_interface)
@@ -262,7 +246,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
         }.to raise_error /availability set is not created/
       end
     end
@@ -271,16 +255,6 @@ describe Bosh::AzureCloud::VMManager do
       let(:load_balancer) {
         {
           :name => "lb-name"
-        }
-      }
-      let(:storage_account) {
-        {
-          :id => "foo",
-          :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-          :location => "bar",
-          :provisioning_state => "bar",
-          :account_type => "foo",
-          :primary_endpoints => "bar"
         }
       }
       let(:network_interface) {
@@ -295,27 +269,37 @@ describe Bosh::AzureCloud::VMManager do
           :virtual_machines => vms
         }
       }
+      let(:storage_account) {
+        {
+          :id => "foo",
+          :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+          :location => "bar",
+          :provisioning_state => "bar",
+          :account_type => "foo",
+          :storage_blob_host => "fake-blob-endpoint",
+          :storage_table_host => "fake-table-endpoint"
+        }
+      }
 
       before do
         allow(client2).to receive(:get_network_subnet_by_name).
           and_return(subnet)
-
-        allow(network_configurator).to receive(:vip_network).
-          and_return(nil)
         allow(client2).to receive(:get_load_balancer_by_name).
           with(resource_pool['load_balancer']).
           and_return(load_balancer)
-        allow(client2).to receive(:get_storage_account_by_name).
-          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
-          and_return(storage_account)
-        allow(network_configurator).to receive(:private_ip).
-          and_return('10.0.0.100')
         allow(client2).to receive(:create_network_interface)
         allow(client2).to receive(:get_network_interface_by_name).
           and_return(network_interface)
         allow(client2).to receive(:get_availability_set_by_name).
           with(resource_pool['availability_set']).
           and_return(availability_set)
+        allow(client2).to receive(:get_storage_account_by_name).
+          and_return(storage_account)
+
+        allow(network_configurator).to receive(:vip_network).
+          and_return(nil)
+        allow(network_configurator).to receive(:private_ip).
+          and_return('10.0.0.100')
         allow(disk_manager).to receive(:generate_os_disk_name).
           and_return("fake-os-disk-name")
         allow(network_configurator).to receive(:dns).
@@ -334,7 +318,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).to receive(:delete_network_interface)
 
           expect {
-            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
           }.to raise_error /virtual machine is not created/
         end
       end
@@ -370,7 +354,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_availability_set)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
           end
         end
 
@@ -393,7 +377,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_availability_set)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
           end
         end
 
@@ -405,7 +389,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_availability_set)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_manager.create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
           end
         end
       end

@@ -7,7 +7,7 @@ These options are passed to the Azure CPI when it is instantiated.
 ### Azure options
 
 * `environment` (required)
-  The environment for Azure Management Service: AzureCloud or AzureChinaCloud
+  The environment for Azure Management Service: AzureCloud, AzureChinaCloud or AzureStack
 * `subscription_id` (required)
   Azure Subscription Id
 * `storage_account_name` (required)
@@ -28,6 +28,10 @@ These options are passed to the Azure CPI when it is instantiated.
   The name of the default security group that will be applied to all created VMs.
 * `parallel_upload_thread_num` (optional)
   The number of threads to upload stemcells in parallel. The default value is 16.
+* `azure_stack_domain` (optional)
+  The domain for your AzureStack deployment.
+* `azure_stack_authentication` (optional)
+  The authentication type for your AzureStack deployment: AzureAD, AzureStackAD or AzureStack.
 
 ### Registry options
 

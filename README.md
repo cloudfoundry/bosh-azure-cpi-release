@@ -19,6 +19,8 @@ See [development doc](docs/development.md).
 # 2015-04-20
 - CPI changes
   - Upgrade azure-sdk-for-ruby version to 0.7.4.
+  - Add AzureChinaCloud support.
+  - Add AzureStack support.
 
 # 2015-04-15
 - CPI changes

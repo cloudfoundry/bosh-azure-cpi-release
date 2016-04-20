@@ -11,8 +11,7 @@ module Bosh::AzureCloud
       @default_storage_account_name = azure_properties['storage_account_name']
 
       keys = @azure_client2.get_storage_account_keys_by_name(@default_storage_account_name)
-      @azure_client = Azure.client(storage_account_name: @default_storage_account_name, storage_access_key: keys[0])
-      @azure_client.storage_table_host = AZURE_ENVIRONMENTS[@azure_properties['environment']]['managementEndpointUrl'].gsub('management', "#{@default_storage_account_name}.table")
+      @azure_client = initialize_azure_storage_client(@azure_client2, @default_storage_account_name, keys[0], 'table')
       @table_service_client = @azure_client.tables
     end
 

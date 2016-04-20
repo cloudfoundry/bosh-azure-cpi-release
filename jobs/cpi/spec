@@ -11,7 +11,7 @@ packages:
 
 properties:
   azure.environment:
-    description: The environment for Azure Management Service, AzureCloud or AzureChinaCloud
+    description: The environment for Azure Management Service, AzureCloud, AzureChinaCloud or AzureStack
     default: AzureCloud
   azure.subscription_id:
     description: Azure Subscription Id
@@ -35,6 +35,10 @@ properties:
     default: 16
   azure.default_security_group:
     description: The name of the default security group that will be applied to all created VMs
+  azure.azure_stack_domain:
+    description: The domain for your AzureStack deployment
+  azure.azure_stack_authentication:
+    description: The authentication type for your AzureStack deployment. AzureAD, AzureStackAD or AzureStack
 
   registry.username:
     description: User to access the Registry

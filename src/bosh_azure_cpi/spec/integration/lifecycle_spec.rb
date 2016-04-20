@@ -20,7 +20,7 @@ describe Bosh::AzureCloud::Cloud do
   subject(:cpi) do
     described_class.new(
       'azure' => {
-        'environment' => 'AzureCloud',
+        'environment' => ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud'),
         'subscription_id' => @subscription_id,
         'storage_account_name' => @storage_account_name,
         'resource_group_name' => @resource_group_name,
@@ -59,7 +59,6 @@ describe Bosh::AzureCloud::Cloud do
   let(:vm_metadata)   { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
 
   before {
-    Azure.config.storage_blob_host = "https://#{@storage_account_name}.blob.core.windows.net"
     Bosh::Clouds::Config.configure(double('delegate', task_checkpoint: nil))
   }
 

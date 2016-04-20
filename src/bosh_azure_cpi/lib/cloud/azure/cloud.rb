@@ -86,6 +86,7 @@ module Bosh::AzureCloud
           raise Bosh::Clouds::VMCreationFailed.new(false), "missing required cloud property `instance_type'."
         end
 
+        storage_account = nil
         storage_account_name = @azure_properties['storage_account_name']
         if resource_pool.has_key?('storage_account_name')
           storage_account_name = resource_pool['storage_account_name']
@@ -97,9 +98,10 @@ module Bosh::AzureCloud
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist"
         end
 
+        storage_account = @azure_client2.get_storage_account_by_name(storage_account_name) if storage_account.nil?
         instance_id = @vm_manager.create(
           agent_id,
-          storage_account_name,
+          storage_account,
           @stemcell_manager.get_stemcell_uri(storage_account_name, stemcell_id),
           resource_pool,
           NetworkConfigurator.new(networks))

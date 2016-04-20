@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
   let(:request_id) { "fake-request-id" }
 
-  let(:token_uri) { "https://login.windows.net/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
+  let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
   let(:valid_access_token) { "valid-access-token" }
@@ -433,62 +433,117 @@ describe Bosh::AzureCloud::AzureClient2 do
   describe "#get_storage_account_by_name" do
     let(:storage_account_name) { "foo" }
     let(:storage_account_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}?api-version=#{api_version}" }
-    let(:response_body) {
-      {
-        "id" => "fake-id",
-        "name" => "fake-name",
-        "location" => "fake-location",
-        "properties" => {
-          "provisioningState" => "fake-state",
-          "accountType" => "fake-type",
-          "primaryEndpoints" => "fake-endpoints"
-        }
-      }.to_json
-    }
-    let(:fake_storage_account) {
-      {
-        :id => "fake-id",
-        :name => "fake-name",
-        :location => "fake-location",
-        :provisioning_state => "fake-state",
-        :account_type => "fake-type",
-        :primary_endpoints => "fake-endpoints"
-      }
-    }
 
     context "when token is valid, getting response succeeds" do
-      it "should return null if response body is null" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, storage_account_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {})
-        expect(
-          azure_client2.get_storage_account_by_name(storage_account_name)
-        ).to be_nil
+      context "if response body is null" do
+        it "should return null" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, storage_account_uri).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {})
+          expect(
+            azure_client2.get_storage_account_by_name(storage_account_name)
+          ).to be_nil
+        end
       end
 
-      it "should return the resource if response body is not null" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, storage_account_uri).to_return(
-          :status => 200,
-          :body => response_body,
-          :headers => {})
-        expect(
-          azure_client2.get_storage_account_by_name(storage_account_name)
-        ).to eq(fake_storage_account)
+      context "if response body is not null" do
+        context "when response body includes all endpoints" do
+          let(:response_body) {
+            {
+              "id" => "fake-id",
+              "name" => "fake-name",
+              "location" => "fake-location",
+              "properties" => {
+                "provisioningState" => "fake-state",
+                "accountType" => "fake-type",
+                "primaryEndpoints" => {
+                  "blob" => "fake-blob-endpoint",
+                  "table" => "fake-table-endpoint",
+                }
+              }
+            }.to_json
+          }
+          let(:fake_storage_account) {
+            {
+              :id => "fake-id",
+              :name => "fake-name",
+              :location => "fake-location",
+              :provisioning_state => "fake-state",
+              :account_type => "fake-type",
+              :storage_blob_host => "fake-blob-endpoint",
+              :storage_table_host => "fake-table-endpoint"
+            }
+          }
+
+          it "should return resource including both blob endpoint and table endpoint" do
+            stub_request(:post, token_uri).to_return(
+              :status => 200,
+              :body => {
+                "access_token"=>valid_access_token,
+                "expires_on"=>expires_on
+              }.to_json,
+              :headers => {})
+            stub_request(:get, storage_account_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+            expect(
+              azure_client2.get_storage_account_by_name(storage_account_name)
+            ).to eq(fake_storage_account)
+          end
+        end
+
+        context "when response body only includes blob endpoint" do
+          let(:response_body) {
+            {
+              "id" => "fake-id",
+              "name" => "fake-name",
+              "location" => "fake-location",
+              "properties" => {
+                "provisioningState" => "fake-state",
+                "accountType" => "fake-type",
+                "primaryEndpoints" => {
+                  "blob" => "fake-blob-endpoint"
+                }
+              }
+            }.to_json
+          }
+          let(:fake_storage_account) {
+            {
+              :id => "fake-id",
+              :name => "fake-name",
+              :location => "fake-location",
+              :provisioning_state => "fake-state",
+              :account_type => "fake-type",
+              :storage_blob_host => "fake-blob-endpoint"
+            }
+          }
+
+          it "should return resource only including blob endpoint" do
+            stub_request(:post, token_uri).to_return(
+              :status => 200,
+              :body => {
+                "access_token"=>valid_access_token,
+                "expires_on"=>expires_on
+              }.to_json,
+              :headers => {})
+            stub_request(:get, storage_account_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+            expect(
+              azure_client2.get_storage_account_by_name(storage_account_name)
+            ).to eq(fake_storage_account)
+          end
+        end
       end
     end
   end

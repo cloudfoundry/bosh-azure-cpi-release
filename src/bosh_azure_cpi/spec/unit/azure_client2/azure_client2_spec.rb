@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
   let(:request_id) { "fake-request-id" }
 
-  let(:token_uri) { "https://login.windows.net/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
+  let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
   let(:vm_name) { "fake-vm-name" }
@@ -149,7 +149,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => '',
           :headers => {})
         expect(
-          azure_client2.get_resource_by_id(url)
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
         ).to be_nil
       end
 
@@ -166,7 +166,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => response_body,
           :headers => {})
         expect(
-          azure_client2.get_resource_by_id(url)
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
         ).not_to be_nil
       end
     end
@@ -179,7 +179,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.get_resource_by_id(url)
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
         }.to raise_error /get_token - http code: 404/
       end
 
@@ -190,7 +190,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.get_resource_by_id(url)
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
         }.to raise_error /get_token - Azure authentication failed: invalid tenant id, client id or client secret./
       end
 
@@ -208,7 +208,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.get_resource_by_id(url)
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
         }.to raise_error /Azure authentication failed: Token is invalid./
       end
 
@@ -232,7 +232,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       #    :headers => {})
 
       #  expect {
-      #    azure_client2.get_resource_by_id(url)
+      #    azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
       #  }.to raise_error /http_get - error: 204/
       #end
 
@@ -250,7 +250,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       #    :headers => {})
 
       #  expect {
-      #    azure_client2.get_resource_by_id(url)
+      #    azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
       #  }.to raise_error /http_get - error: 404/
       #end
 
@@ -268,7 +268,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.get_resource_by_id(url)
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
         }.to raise_error /http_get - http code: 400 message: {"foo":"bar"}/
       end
     end

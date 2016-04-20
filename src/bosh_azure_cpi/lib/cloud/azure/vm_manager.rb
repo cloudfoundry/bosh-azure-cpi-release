@@ -13,7 +13,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(uuid, storage_account_name, stemcell_uri, resource_pool, network_configurator)
+    def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
       instance_is_created = false
       subnet = @azure_client2.get_network_subnet_by_name(network_configurator.virtual_network_name, network_configurator.subnet_name)
       raise "Cannot find the subnet #{network_configurator.virtual_network_name}/#{network_configurator.subnet_name}" if subnet.nil?
@@ -33,7 +33,7 @@ module Bosh::AzureCloud
         validate_disk_caching(caching)
       end
 
-      instance_id  = generate_instance_id(storage_account_name, uuid)
+      instance_id  = generate_instance_id(storage_account[:name], uuid)
 
       public_ip = nil
       unless network_configurator.vip_network.nil?
@@ -47,7 +47,6 @@ module Bosh::AzureCloud
         cloud_error("Cannot find the load balancer #{resource_pool['load_balancer']}") if load_balancer.nil?
       end
 
-      storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
       nic_params = {
         :name                => instance_id,
         :location            => storage_account[:location],

@@ -101,6 +101,17 @@ describe Bosh::AzureCloud::Cloud do
     let(:disk_locality) { double("disk locality") }
     let(:environment) { double("environment") }
     let(:network_configurator) { double("network configurator") }
+    let(:storage_account) {
+      {
+        :id => "foo",
+        :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+        :location => "bar",
+        :provisioning_state => "bar",
+        :account_type => "foo",
+        :storage_blob_host => "fake-blob-endpoint",
+        :storage_table_host => "fake-table-endpoint"
+      }
+    }
 
     before do
       allow(stemcell_manager).to receive(:has_stemcell?).
@@ -114,6 +125,8 @@ describe Bosh::AzureCloud::Cloud do
           with(networks_spec).
           and_return(network_configurator)
       allow(registry).to receive(:update_settings)
+      allow(client2).to receive(:get_storage_account_by_name).
+        and_return(storage_account)
     end
 
     context 'when everything is fine' do

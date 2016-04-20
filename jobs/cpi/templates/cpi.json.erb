@@ -44,6 +44,11 @@
     raise 'ssh_certificate has been replaced by ssh_public_key. Please read https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/blob/master/src/bosh_azure_cpi/README.md.'
   end
 
+  if p('azure.environment') == 'AzureStack'
+    params['cloud']['properties']['azure']['azure_stack_domain'] = p('azure.azure_stack_domain')
+    params['cloud']['properties']['azure']['azure_stack_authentication'] = p('azure.azure_stack_authentication')
+  end
+
   if_p('blobstore') do
     blobstore_params = {
       'provider' => p('blobstore.provider')

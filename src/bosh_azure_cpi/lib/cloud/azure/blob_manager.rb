@@ -322,8 +322,7 @@ module Bosh::AzureCloud
           @storage_accounts_keys[storage_account_name] = keys[0]
         end
 
-        @azure_client = Azure.client(storage_account_name: storage_account_name, storage_access_key: @storage_accounts_keys[storage_account_name])
-        @azure_client.storage_blob_host = AZURE_ENVIRONMENTS[@azure_properties['environment']]['managementEndpointUrl'].gsub('management', "#{storage_account_name}.blob")
+        @azure_client = initialize_azure_storage_client(@azure_client2, storage_account_name, @storage_accounts_keys[storage_account_name], 'blob')
         @blob_service_client = @azure_client.blobs
         yield
       end

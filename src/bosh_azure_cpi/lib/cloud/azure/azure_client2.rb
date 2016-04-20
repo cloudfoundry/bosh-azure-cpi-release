@@ -12,9 +12,6 @@ module Bosh::AzureCloud
   class AzureClient2
     include Helpers
 
-    API_VERSION    = '2015-05-01-preview'
-    API_VERSION_1  = '2015-01-01'
-
     USER_AGENT     = 'BOSH-AZURE-CPI'
 
     HTTP_CODE_OK                  = 200
@@ -94,8 +91,7 @@ module Bosh::AzureCloud
 
       url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
       url += "/resourceGroups/#{URI.escape(@azure_properties['resource_group_name'])}"
-      params = { 'api-version' => API_VERSION_1}
-      result = get_resource_by_id(url, params)
+      result = get_resource_by_id(url)
 
       unless result.nil?
         resource_group = {}
@@ -192,7 +188,8 @@ module Bosh::AzureCloud
       params = {
         'validating' => 'true'
       }
-      http_put(url, vm, 5, params)
+
+      http_put(url, vm, params)
     end
 
     def restart_virtual_machine(name)
@@ -205,13 +202,13 @@ module Bosh::AzureCloud
     # @param [Hash] metadata metadata key/value pairs.
     def update_tags_of_virtual_machine(name, tags)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
-      result = get_resource_by_id(url)
-      if result.nil?
+      vm = get_resource_by_id(url)
+      if vm.nil?
         raise AzureNoFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
-      result['tags'] = tags
-      http_put(url, result)
+      vm['tags'] = tags
+      http_put(url, vm)
     end
 
     # Attach a specified disk to a VM
@@ -221,13 +218,13 @@ module Bosh::AzureCloud
     # @param [String] caching Caching option: None, ReadOnly or ReadWrite
     def attach_disk_to_virtual_machine(name, disk_name, disk_uri, caching)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
-      result = get_resource_by_id(url)
-      if result.nil?
+      vm = get_resource_by_id(url)
+      if vm.nil?
         raise AzureNoFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
       lun = 0
-      data_disks = result['properties']['storageProfile']['dataDisks']
+      data_disks = vm['properties']['storageProfile']['dataDisks']
       for i in 0..128
         disk = data_disks.find { |disk| disk['lun'] == i}
         if disk.nil?
@@ -243,9 +240,9 @@ module Bosh::AzureCloud
         'caching'      => caching,
         'vhd'          => { 'uri' => disk_uri }
       }
-      result['properties']['storageProfile']['dataDisks'].push(new_disk)
+      vm['properties']['storageProfile']['dataDisks'].push(new_disk)
       @logger.info("attach_disk_to_virtual_machine - attach disk #{disk_name} to #{lun}")
-      http_put(url, result)
+      http_put(url, vm)
       disk = {
         :name         => disk_name,
         :lun          => lun,
@@ -257,20 +254,20 @@ module Bosh::AzureCloud
 
     def detach_disk_from_virtual_machine(name, disk_name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
-      result = get_resource_by_id(url)
-      if result.nil?
+      vm = get_resource_by_id(url)
+      if vm.nil?
         raise AzureNoFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
-      @logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(result)}")
-      disk = result['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name}
+      @logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(vm)}")
+      disk = vm['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name}
       raise Bosh::Clouds::DiskNotAttached.new(true),
         "The disk #{disk_name} is not attached to the virtual machine #{name}" if disk.nil?
 
-      result['properties']['storageProfile']['dataDisks'].delete_if { |disk| disk['name'] == disk_name}
+      vm['properties']['storageProfile']['dataDisks'].delete_if { |disk| disk['name'] == disk_name}
 
       @logger.info("detach_disk_from_virtual_machine - detach disk #{disk_name} from lun #{disk['lun']}")
-      http_put(url, result)
+      http_put(url, vm)
     end
 
     def get_virtual_machine_by_name(name)
@@ -757,11 +754,13 @@ module Bosh::AzureCloud
 
       @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
       uri = URI(response['Location'])
-      params = {}
-      params['api-version'] = API_VERSION
-      request = Net::HTTP::Get.new(uri.request_uri)
+      api_version = get_api_version(@azure_properties, AZURE_RESOUCE_PROVIDER_STORAGE)
+      params = {
+        'api-version' => api_version
+      }
       uri.query = URI.encode_www_form(params)
-      request.add_field('x-ms-version', API_VERSION)
+      request = Net::HTTP::Get.new(uri.request_uri)
+      request.add_field('x-ms-version', api_version)
       while true
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         sleep(retry_after)
@@ -791,7 +790,7 @@ module Bosh::AzureCloud
         'type' => "#{REST_API_PROVIDER_STORAGE}/#{REST_API_STORAGE_ACCOUNTS}",
       }
 
-      result = http_post(url, storage_account, 10)
+      result = http_post(url, storage_account)
       raise AzureError, "Cannot check the availability of the storage account name \"#{name}\"." if result.nil?
       ret = {
         :available => result['nameAvailable'],
@@ -818,7 +817,10 @@ module Bosh::AzureCloud
         properties = result['properties']
         storage_account[:provisioning_state] = properties['provisioningState']
         storage_account[:account_type]       = properties['accountType']
-        storage_account[:primary_endpoints]  = properties['primaryEndpoints']
+        storage_account[:storage_blob_host]  = properties['primaryEndpoints']['blob']
+        if properties['primaryEndpoints'].has_key?('table')
+          storage_account[:storage_table_host] = properties['primaryEndpoints']['table']
+        end
       end
       storage_account
     end
@@ -856,19 +858,21 @@ module Bosh::AzureCloud
     def get_token(force_refresh = false)
       if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.now) <= 0 || force_refresh
         @logger.info("get_token - trying to get/refresh Azure authentication token")
+        endpoint, api_version = get_azure_authentication_endpoint_and_api_version(@azure_properties)
         params = {}
-        params['api-version'] = API_VERSION
+        params['api-version'] = api_version
 
-        uri = URI(AZURE_ENVIRONMENTS[@azure_properties['environment']]['activeDirectoryEndpointUrl'] + '/' + @azure_properties['tenant_id'] + '/oauth2/token')
+        uri = URI(endpoint)
         uri.query = URI.encode_www_form(params)
 
         params = {}
         params['grant_type']    = 'client_credentials'
         params['client_id']     = @azure_properties['client_id']
         params['client_secret'] = @azure_properties['client_secret']
-        params['resource']      = AZURE_ENVIRONMENTS[@azure_properties['environment']]['resourceManagerEndpointUrl']
+        params['resource']      = get_token_resource(@azure_properties)
         params['scope']         = 'user_impersonation'
 
+        @logger.debug("get_token - authentication_endpoint: #{uri}")
         request = Net::HTTP::Post.new(uri.request_uri)
         request['Content-Type'] = 'application/x-www-form-urlencoded'
         request.body = URI.encode_www_form(params)
@@ -891,8 +895,20 @@ module Bosh::AzureCloud
     end
 
     def http_url(url, params = {})
-      uri = URI(AZURE_ENVIRONMENTS[@azure_properties['environment']]['resourceManagerEndpointUrl'] + url)
-      params['api-version'] = API_VERSION if params['api-version'].nil?
+      unless params.has_key?('api-version')
+        resource_provider = nil
+        if url.include?(REST_API_PROVIDER_COMPUTER)
+          resource_provider = AZURE_RESOUCE_PROVIDER_COMPUTER
+        elsif url.include?(REST_API_PROVIDER_NETWORK)
+          resource_provider = AZURE_RESOUCE_PROVIDER_NETWORK
+        elsif url.include?(REST_API_PROVIDER_STORAGE)
+          resource_provider = AZURE_RESOUCE_PROVIDER_STORAGE
+        else
+          resource_provider = AZURE_RESOUCE_PROVIDER_GROUP
+        end
+        params['api-version'] = get_api_version(@azure_properties, resource_provider)
+      end
+      uri = URI(get_arm_endpoint(@azure_properties) + url)
       uri.query = URI.encode_www_form(params)
       uri
     end
@@ -1043,7 +1059,7 @@ module Bosh::AzureCloud
       result = JSON(response.body) unless response.body.nil?
     end
 
-    def http_put(url, body = nil, retry_after = 5, params = {})
+    def http_put(url, body = nil, params = {}, retry_after = 5)
       uri = http_url(url, params)
       @logger.info("http_put - trying to put #{uri}")
 
@@ -1059,35 +1075,29 @@ module Bosh::AzureCloud
         :operation    => 'http_put',
         :return_code => [HTTP_CODE_OK],
         :success_code => [HTTP_CODE_CREATED],
-        :api_version  => params['api-version'] || API_VERSION,
+        :api_version  => params['api-version'],
         :retry_after  => retry_after
       }
       check_completion(response, options)
     end
 
-    def http_delete(url, body = nil, retry_after = 5, params = {})
+    def http_delete(url, params = {}, retry_after = 5)
       uri = http_url(url, params)
       @logger.info("http_delete - trying to delete #{uri}")
 
       request = Net::HTTP::Delete.new(uri.request_uri)
-      unless body.nil?
-        request_body = body.to_json
-        request.body = request_body
-        request['Content-Length'] = request_body.size
-        @logger.debug("http_put - request body:\n#{request.body}")
-      end
       response = http_get_response(uri, request, retry_after)
       options = {
         :operation    => 'http_delete',
         :return_code => [HTTP_CODE_OK, HTTP_CODE_NOCONTENT],
         :success_code => [HTTP_CODE_ACCEPTED],
-        :api_version  => params['api-version'] || API_VERSION,
+        :api_version  => params['api-version'],
         :retry_after  => retry_after
       }
       check_completion(response, options)
     end
 
-    def http_post(url, body = nil, retry_after = 5, params = {})
+    def http_post(url, body = nil, params = {}, retry_after = 5)
       uri = http_url(url, params)
       @logger.info("http_post - trying to post #{uri}")
 
@@ -1104,7 +1114,7 @@ module Bosh::AzureCloud
         :operation    => 'http_post',
         :return_code => [HTTP_CODE_OK],
         :success_code => [HTTP_CODE_ACCEPTED],
-        :api_version  => params['api-version'] || API_VERSION,
+        :api_version  => params['api-version'],
         :retry_after  => retry_after
       }
       check_completion(response, options)

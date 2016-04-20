@@ -16,7 +16,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:api_version) { '2015-05-01-preview' }
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
 
-  let(:token_uri) { "https://login.windows.net/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
+  let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
 
   let(:public_ip_name) { "fake-public-ip-name" }
   let(:valid_access_token) { "valid-access-token" }

@@ -8,18 +8,28 @@ describe Bosh::AzureCloud::TableManager do
   let(:table_name) { "fake-table-name" }
   let(:keys) { ["fake-key-1", "fake-key-2"] }
 
+  let(:azure_client) { instance_double(Azure::Client) }
+  let(:table_service) { instance_double(Azure::Table::TableService) }
+  let(:storage_account) {
+    {
+      :id => "foo",
+      :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+      :location => "bar",
+      :provisioning_state => "bar",
+      :account_type => "foo",
+      :storage_blob_host => "fake-blob-endpoint",
+      :storage_table_host => "fake-table-endpoint"
+    }
+  }
+
   before do
     allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
       and_return(azure_client2)
     allow(azure_client2).to receive(:get_storage_account_keys_by_name).
       and_return(keys)
-  end
+    allow(azure_client2).to receive(:get_storage_account_by_name).
+      and_return(storage_account)
 
-  let(:azure_client) { instance_double(Azure::Client) }
-  let(:table_service) { instance_double(Azure::Table::TableService) }
-  let(:host) { "https://#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}.table.core.windows.net" }
-
-  before do
     allow(azure_client).to receive(:storage_table_host=)
     allow(azure_client).to receive(:tables).
       and_return(table_service)
