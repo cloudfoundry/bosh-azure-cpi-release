@@ -2,6 +2,10 @@
 
 set -ex
 
+if [ -z ${TMPDIR+x} ]; then
+  TMPDIR='/tmp'
+fi
+
 export BUNDLE_APP_CONFIG=$(mktemp -d $TMPDIR/bundler_config_XXXXXX)
 export BUNDLE_CACHE_PATH="vendor/cache"
 export BUNDLE_WITHOUT="development:test"
