@@ -127,7 +127,7 @@ jobs:
         basic_auth: replication:zxKDUBeCfKYXk
         user: replication
         password: powerdns
-      recursor: $DIRECTOR
+      recursor: 168.63.129.16
 
     # Tells the Director/agents how to contact registry
     registry:
@@ -154,10 +154,17 @@ jobs:
       cpi_job: cpi
       enable_snapshots: true
       timeout: "180s"
+      max_threads: 10
+      user_management:
+        provider: local
+        local:
+          users:
+          - {name: admin, password: $BAT_DIRECTOR_PASSWORD}
+          - {name: hm-user, password: $BAT_DIRECTOR_PASSWORD}
 
     hm:
-      http: {user: hm, password: hm-password}
-      director_account: {user: admin, password: $BAT_DIRECTOR_PASSWORD}
+      director_account: {user: hm-user, password: $BAT_DIRECTOR_PASSWORD}
+      resurrector_enabled: true
 
     azure: &azure
       environment: AzureCloud
