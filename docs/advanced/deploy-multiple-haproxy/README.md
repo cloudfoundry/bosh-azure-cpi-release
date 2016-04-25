@@ -37,6 +37,8 @@ Create an Azure Load Balancer named `haproxylb` using the [script](./create-load
 
 Please update the value which starts with `REPLACE-ME` and run it after you [login Azure CLI](../../get-started/create-service-principal.md#verify-your-service-principal).
 
+>**NOTE:** By default, Azure load balancer has an `idle timeout` setting of 4 minutes but the default timeout of HAProxy is 900 as 15 minutes, this would cause the problem of connection dropped. [#99](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/99). As a result, in the script the `idle timeout` is set to 15 minutes to match the default timeout in HAProxy.
+
 ## Deploy Cloud Foundry with multiple HAProxy instances
 
 1. Log on to your dev-box.

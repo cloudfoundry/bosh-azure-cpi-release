@@ -7,6 +7,7 @@ publicIPName="REPLACE-ME-WITH-THE-PUBLIC-IP-NAME-OF-CLOUDFOUNDRY" # Default: <YO
 loadBalancerName="haproxylb" # This will be used in your Cloud Foundry manifest
 frontendIPName="fip"
 backendPoolName="backendpool"
+idleTimeout=15 # Minutes. Match the default timeout in HAPROXY
 
 azure config mode arm
 
@@ -21,11 +22,12 @@ azure network lb probe create --resource-group $resourceGroupName --lb-name $loa
 tcpPorts="22 80 443 2222 4222 4443 6868 25250 25555 25777"
 for tcpPort in $tcpPorts
 do
-azure network lb rule create --resource-group $resourceGroupName --lb-name $loadBalancerName --name "lbruletcp$tcpPort" --protocol tcp --frontend-port $tcpPort --backend-port $tcpPort --frontend-ip-name $frontendIPName --backend-address-pool-name $backendPoolName
+azure network lb rule create --resource-group $resourceGroupName --lb-name $loadBalancerName --name "lbruletcp$tcpPort" --protocol tcp --frontend-port $tcpPort --backend-port $tcpPort --frontend-ip-name $frontendIPName --backend-address-pool-name $backendPoolName --idle-timeout $idleTimeout
 done
 
 udpPorts="53 68"
 for udpPort in $udpPorts
 do
-azure network lb rule create --resource-group $resourceGroupName --lb-name $loadBalancerName --name "lbruleudp$udpPort" --protocol udp --frontend-port $udpPort --backend-port $udpPort --frontend-ip-name $frontendIPName --backend-address-pool-name $backendPoolName
+azure network lb rule create --resource-group $resourceGroupName --lb-name $loadBalancerName --name "lbruleudp$udpPort" --protocol udp --frontend-port $udpPort --backend-port $udpPort --frontend-ip-name $frontendIPName --backend-address-pool-name $backendPoolName --idle-timeout $idleTimeout
+
 done
