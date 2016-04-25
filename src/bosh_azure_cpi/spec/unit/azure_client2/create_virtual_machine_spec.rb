@@ -38,7 +38,10 @@ describe Bosh::AzureCloud::AzureClient2 do
         :image_uri           => "f",
         :os_disk_name        => "g",
         :os_vhd_uri          => "h",
-        :ssh_cert_data       => "i"
+        :ssh_cert_data       => "i",
+        :ephemeral_disk_name => "j",
+        :ephemeral_disk_uri  => "k",
+        :ephemeral_disk_size => "l"
       }
     end
     let(:network_interface) { {:id => "a"} }
