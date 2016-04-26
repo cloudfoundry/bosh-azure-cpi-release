@@ -169,7 +169,7 @@ module Bosh::AzureCloud
       user_data = {registry: {endpoint: @registry_endpoint}}
       user_data[:server] = {name: vm_name}
       user_data[:dns] = {nameserver: dns} if dns
-      Base64.strict_encode64(Yajl::Encoder.encode(user_data))
+      Base64.strict_encode64(JSON.dump(user_data))
     end
 
     def create_availability_set(avset_params)

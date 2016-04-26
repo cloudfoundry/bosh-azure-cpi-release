@@ -16,11 +16,11 @@ Gem::Specification.new do |s|
   s.bindir        = 'bin'
   s.executables   = %w(azure_cpi bosh_azure_console)
 
-  s.add_dependency 'bosh_common'
-  s.add_dependency 'bosh_cpi'
-  s.add_dependency 'bosh-registry'
+  # NOTE: the version lock-down for BOSH gems should be removed once the
+  # Bosh::Cpi::RegistryClient change has propagated to "master".
+  s.add_dependency 'bosh_common',   '1.3215.3.0'
+  s.add_dependency 'bosh_cpi',      '1.3215.3.1'
   s.add_dependency 'azure',         '~>0.7.4'
   s.add_dependency 'vhd',           '~>0.0.4'
   s.add_dependency 'httpclient',    '=2.4.0'
-  s.add_dependency 'yajl-ruby',     '>=0.8.2'
 end

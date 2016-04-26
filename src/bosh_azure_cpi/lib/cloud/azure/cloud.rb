@@ -369,7 +369,7 @@ module Bosh::AzureCloud
 
       # Registry updates are not really atomic in relation to
       # Azure API calls, so they might get out of sync.
-      @registry = Bosh::Registry::Client.new(registry_endpoint,
+      @registry = Bosh::Cpi::RegistryClient.new(registry_endpoint,
                                              registry_user,
                                              registry_password)
     end
