@@ -4,6 +4,8 @@ BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 
 cp -a bosh_azure_cpi/* ${BOSH_INSTALL_TARGET}
 
+export BUNDLE_CACHE_PATH="vendor/package"
+export BUNDLE_WITHOUT="development:test"
 bundle_cmd="$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin/bundle"
 
 cd ${BOSH_INSTALL_TARGET}

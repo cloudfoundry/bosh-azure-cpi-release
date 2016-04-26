@@ -3,4 +3,8 @@ name: bosh_azure_cpi
 dependencies:
 - ruby_azure_cpi
 files:
-- bosh_azure_cpi/**/*
+- bosh_azure_cpi/Gemfile
+- bosh_azure_cpi/Gemfile.lock
+- bosh_azure_cpi/bin/**/*
+- bosh_azure_cpi/lib/**/*
+- bosh_azure_cpi/vendor/package/**/*

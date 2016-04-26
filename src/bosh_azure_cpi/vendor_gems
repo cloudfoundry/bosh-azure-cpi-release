@@ -7,7 +7,7 @@ if [ -z ${TMPDIR+x} ]; then
 fi
 
 export BUNDLE_APP_CONFIG=$(mktemp -d $TMPDIR/bundler_config_XXXXXX)
-export BUNDLE_CACHE_PATH="vendor/cache"
+export BUNDLE_CACHE_PATH="vendor/package"
 export BUNDLE_WITHOUT="development:test"
 
 bundle package
