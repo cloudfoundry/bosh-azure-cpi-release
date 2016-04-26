@@ -8,6 +8,7 @@ module Bosh::AzureCloud
   class AzureNoFoundError < AzureError; end
   class AzureConflictError < AzureError; end
   class AzureInternalError < AzureError; end
+  class AzureAsynInternalError < AzureError; end
 
   class AzureClient2
     include Helpers
@@ -937,7 +938,7 @@ module Bosh::AzureCloud
           if result['status'] == 'Failed'
             error = "http_get_response - http code: #{response.code}\n"
             error += " message: #{response.body}"
-            raise AzureInternalError, error
+            raise AzureAsynInternalError, error
           end
         elsif AZURE_RETRY_ERROR_CODES.include?(status_code)
           error = "http_get_response - http code: #{response.code}\n"
@@ -957,6 +958,10 @@ module Bosh::AzureCloud
           sleep(retry_after)
           retry
         end
+        raise e
+      rescue AzureAsynInternalError => e
+        @logger.warn("http_get_response - Fail for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
+        sleep(retry_after)
         raise e
       rescue Net::OpenTimeout => e
         if retry_count < AZURE_MAX_RETRY_COUNT
@@ -1061,63 +1066,94 @@ module Bosh::AzureCloud
 
     def http_put(url, body = nil, params = {}, retry_after = 5)
       uri = http_url(url, params)
-      @logger.info("http_put - trying to put #{uri}")
+      retry_count = 0
 
-      request = Net::HTTP::Put.new(uri.request_uri)
-      unless body.nil?
-        request_body = body.to_json
-        request.body = request_body
-        request['Content-Length'] = request_body.size
-        @logger.debug("http_put - request body:\n#{request.body}")
+      begin
+        @logger.info("http_put - #{retry_count}: trying to put #{uri}")
+
+        request = Net::HTTP::Put.new(uri.request_uri)
+        unless body.nil?
+          request_body = body.to_json
+          request.body = request_body
+          request['Content-Length'] = request_body.size
+          @logger.debug("http_put - request body:\n#{request.body}")
+        end
+
+        response = http_get_response(uri, request, retry_after)
+        options = {
+          :operation    => 'http_put',
+          :return_code => [HTTP_CODE_OK],
+          :success_code => [HTTP_CODE_CREATED],
+          :api_version  => params['api-version'],
+          :retry_after  => retry_after
+        }
+        check_completion(response, options)
+      rescue AzureAsynInternalError => e
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          retry_count += 1
+          retry
+        end
+        raise e
       end
-      response = http_get_response(uri, request, retry_after)
-      options = {
-        :operation    => 'http_put',
-        :return_code => [HTTP_CODE_OK],
-        :success_code => [HTTP_CODE_CREATED],
-        :api_version  => params['api-version'],
-        :retry_after  => retry_after
-      }
-      check_completion(response, options)
     end
 
     def http_delete(url, params = {}, retry_after = 5)
       uri = http_url(url, params)
-      @logger.info("http_delete - trying to delete #{uri}")
+      retry_count = 0
 
-      request = Net::HTTP::Delete.new(uri.request_uri)
-      response = http_get_response(uri, request, retry_after)
-      options = {
-        :operation    => 'http_delete',
-        :return_code => [HTTP_CODE_OK, HTTP_CODE_NOCONTENT],
-        :success_code => [HTTP_CODE_ACCEPTED],
-        :api_version  => params['api-version'],
-        :retry_after  => retry_after
-      }
-      check_completion(response, options)
+      begin
+        @logger.info("http_delete - #{retry_count}: trying to delete #{uri}")
+
+        request = Net::HTTP::Delete.new(uri.request_uri)
+        response = http_get_response(uri, request, retry_after)
+        options = {
+          :operation    => 'http_delete',
+          :return_code => [HTTP_CODE_OK, HTTP_CODE_NOCONTENT],
+          :success_code => [HTTP_CODE_ACCEPTED],
+          :api_version  => params['api-version'],
+          :retry_after  => retry_after
+        }
+        check_completion(response, options)
+      rescue AzureAsynInternalError => e
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          retry_count += 1
+          retry
+        end
+        raise e
+      end
     end
 
     def http_post(url, body = nil, params = {}, retry_after = 5)
       uri = http_url(url, params)
-      @logger.info("http_post - trying to post #{uri}")
+      retry_count = 0
 
-      request = Net::HTTP::Post.new(uri.request_uri)
-      request['Content-Length'] = 0
-      unless body.nil?
-        request_body = body.to_json
-        request.body = request_body
-        request['Content-Length'] = request_body.size
-        @logger.debug("http_put - request body:\n#{request.body}")
+      begin
+        @logger.info("http_post - #{retry_count}: trying to post #{uri}")
+
+        request = Net::HTTP::Post.new(uri.request_uri)
+        request['Content-Length'] = 0
+        unless body.nil?
+          request_body = body.to_json
+          request.body = request_body
+          request['Content-Length'] = request_body.size
+          @logger.debug("http_put - request body:\n#{request.body}")
+        end
+        response = http_get_response(uri, request, retry_after)
+        options = {
+          :operation    => 'http_post',
+          :return_code => [HTTP_CODE_OK],
+          :success_code => [HTTP_CODE_ACCEPTED],
+          :api_version  => params['api-version'],
+          :retry_after  => retry_after
+        }
+        check_completion(response, options)
+      rescue AzureAsynInternalError => e
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          retry_count += 1
+          retry
+        end
+        raise e
       end
-      response = http_get_response(uri, request, retry_after)
-      options = {
-        :operation    => 'http_post',
-        :return_code => [HTTP_CODE_OK],
-        :success_code => [HTTP_CODE_ACCEPTED],
-        :api_version  => params['api-version'],
-        :retry_after  => retry_after
-      }
-      check_completion(response, options)
     end
   end
 end
