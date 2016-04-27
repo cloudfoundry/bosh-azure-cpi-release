@@ -4,9 +4,9 @@ This topic shows you how to permit a service principal (such as an automated pro
 
 A service principal contains the following credentials which will be mentioned in this page. Please store them in a secure location because they are sensitive credentials.
 
-- **TENANT-ID**
-- **CLIENT-ID**
-- **CLIENT-SECRET** 
+- **TENANT_ID**
+- **CLIENT_ID**
+- **CLIENT_SECRET** 
 
 # 1 Prepare Azure CLI
 
@@ -32,12 +32,13 @@ azure config mode arm
 
 ```
 #Enter your Microsoft account credentials when prompted.
-azure login
+azure login --environment $ENVIRONMENT
 ```
 
 >**NOTE:**
-  * `azure login` requires a work or school account. Never login with your personal account.
-  * If you do not have a work or school account currently, you can easily create a work or school account with the [**guide**](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/).
+  * `azure login` requires a work or school account. Never login with your personal account. If you do not have a work or school account currently, you can easily create a work or school account with the [**guide**](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/).
+  * `$ENVIRONMENT` can be `AzureCloud`, `AzureChinaCloud` and so on.
+  * If you fail to login `AzureChinaCloud` with a `CERT_UNTRUSTED` error, please use the latest version of node (4.x) and mostly the issue should be resolved. [azure-xplat-cli/2725](https://github.com/Azure/azure-xplat-cli/issues/2725)
 
 # 2 Create a Service Principal
 
@@ -87,9 +88,9 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
   You can get the following values from the output:
 
   * **SUBSCRIPTION-ID** - the row `id`.
-  * **TENANT-ID**       - the row `tenantId`, please note it down for later use.
+  * **TENANT_ID**       - the row `tenantId`, please note it down for later use.
 
-  >**NOTE:** If your **TENANT-ID** is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See [1.2 Configure Azure CLI](#configure_azure_cli) on how to fix this.
+  >**NOTE:** If your **TENANT_ID** is not defined, one possibility is that you are using a personal account to log in to your Azure subscription. See [1.2 Configure Azure CLI](#configure_azure_cli) on how to fix this.
 
 2. Ensure your default subscription is set to the one you want to create your service principal.
 
@@ -121,7 +122,7 @@ azure ad app create --name <name> --password <password> --home-page <home-page> 
 ```
 
 * name: The display name for the application
-* password: The value for the password credential associated with the application that will be valid for one year by default. This is your **CLIENT-SECRET**. Please note it down for later use.
+* password: The value for the password credential associated with the application that will be valid for one year by default. This is your **CLIENT_SECRET**. Please note it down for later use.
 * home-page: The URL to the application homepage. You can use a faked URL here.
 * Identifier-uris: The comma-delimitied URIs that identify the application. You can use a faked URL here.
 
@@ -154,12 +155,12 @@ data:                             lang:
 info:    ad app create command OK
 ```
 
-* `Application Id` is your **CLIENT-ID** you need to create the service principal. Please note it down for later use.
+* `Application Id` is your **CLIENT_ID** you need to create the service principal. Please note it down for later use.
 
 ## 2.3 Create a Service Principal
 
 ```
-azure ad sp create <CLIENT-ID>
+azure ad sp create $CLIENT_ID
 ```
 
 Example:
@@ -226,24 +227,24 @@ data:        NotActions:   Microsoft.Authorization/*/Write,Microsoft.Authorizati
 
 Your service principal is created as follows:
 
-- **TENANT-ID**
-- **CLIENT-ID**
-- **CLIENT-SECRET** 
+- **TENANT_ID**
+- **CLIENT_ID**
+- **CLIENT_SECRET** 
 
 Please verify it with the following steps:
 
 1. Use Azure CLI to login with your service principal.
 
-  You can find the `TENANT-ID`, `CLIENT-ID`, and `CLIENT-SECRET` properties in the `~/bosh.yml` file. If you cannot login, then the service principal is invalid.
+  You can find the `TENANT_ID`, `CLIENT_ID`, and `CLIENT_SECRET` properties in the `~/bosh.yml` file. If you cannot login, then the service principal is invalid.
 
   ```
-  azure login --username <CLIENT-ID> --password <CLIENT-SECRET> --service-principal --tenant <TENANT-ID>
+  azure login --username $CLIENT_ID --password $CLIENT_SECRET --service-principal --tenant $TENANT_ID --environment $ENVIRONMENT
   ```
 
   Example:
 
   ```
-  azure login --username 246e4af7-75b5-494a-89b5-363addb9f0fa --password "password" --service-principal --tenant 22222222-1234-5678-1234-678912345678
+  azure login --username 246e4af7-75b5-494a-89b5-363addb9f0fa --password "password" --service-principal --tenant 22222222-1234-5678-1234-678912345678 --environment AzureCloud
   ```
 
 2. Verify that the subscription which the service principal belongs to is the same subscription that is used to create your resource group. (This may happen when you have multiple subscriptions.)

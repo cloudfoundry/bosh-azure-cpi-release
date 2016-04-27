@@ -1,10 +1,15 @@
 # Deploy Cloud Foundry on Azure
 
-This document describes how to deploy [BOSH](http://bosh.io/) and [Cloud Foundry](https://www.cloudfoundry.org/) on [Azure](https://azure.microsoft.com/en-us/).
+In Microsoft Azure, there are serveral different environments, such as AzureCloud for global Azure and AzureChinaCloud for Azure operated by 21Vianet in China.
+
+This document describes how to deploy [BOSH](http://bosh.io/) and [Cloud Foundry](https://www.cloudfoundry.org/) on [AzureCloud](https://azure.microsoft.com/en-us/) and [AzureChinaCloud](https://www.azure.cn/).
 
 # 1 Prerequisites
 
-* [Creating an Azure account](https://azure.microsoft.com/en-us/pricing/free-trial/)
+You can create an Azure account according to the environment where Cloud Foundry will be deployed.
+
+* [Creating an Azure account for AzureCloud](https://azure.microsoft.com/en-us/pricing/free-trial/)
+* [Creating an Azure account for AzureChinaCloud](https://www.azure.cn/pricing/pia/)
 
 <a name="get-started"/>
 # 2 Get Started
