@@ -367,4 +367,36 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
   end
+
+  describe "#validate_disk_size" do
+    context "disk size is not an integer" do
+      let(:disk_size) { "fake-size" }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_disk_size(disk_size)
+        }.to raise_error "disk size needs to be an integer"
+      end
+    end
+
+    context "disk size is smaller than 1 GiB" do
+      let(:disk_size) { 666 }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_disk_size(disk_size)
+        }.to raise_error "Azure CPI minimum disk size is 1 GiB"
+      end
+    end
+
+    context "disk size is larger than 1s TiB" do
+      let(:disk_size) { 6666 * 1024 }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_disk_size(disk_size)
+        }.to raise_error "Azure CPI maximum disk size is 1 TiB"
+      end
+    end
+  end
 end

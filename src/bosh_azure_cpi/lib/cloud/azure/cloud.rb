@@ -66,7 +66,11 @@ module Bosh::AzureCloud
     #    "availability_set" => "DEA_set",
     #    "platform_update_domain_count" => 5,
     #    "platform_fault_domain_count" => 3,
-    #    "security_group" => "nsg-bosh"
+    #    "security_group" => "nsg-bosh",
+    #    "ephemeral_disk" => {
+    #      "use_temporary_disk" => false,
+    #      "size" => 20480, # disk size in MB
+    #    }
     #  }
     #
     # @param [String] agent_id UUID for the agent that will be used later on by the director
@@ -107,13 +111,21 @@ module Bosh::AzureCloud
           NetworkConfigurator.new(networks))
         @logger.info("Created new vm '#{instance_id}'")
 
+        ephemeral_disk = "/dev/sdc"
+        if resource_pool.has_key?('ephemeral_disk')
+          if resource_pool['ephemeral_disk']['use_temporary_disk']
+            ephemeral_disk = "/dev/sdb"
+          end
+        end
+
         begin
           registry_settings = initial_agent_settings(
             agent_id,
             instance_id,
             networks,
             env,
-            "/dev/sda"
+            "/dev/sda",
+            ephemeral_disk
           )
           registry.update_settings(instance_id, registry_settings)
 
@@ -225,13 +237,6 @@ module Bosh::AzureCloud
       end
     end
 
-    def validate_disk_size(size)
-      raise ArgumentError, 'disk size needs to be an integer' unless size.kind_of?(Integer)
-
-      cloud_error('Azure CPI minimum disk size is 1 GiB') if size < 1024
-      cloud_error('Azure CPI maximum disk size is 1 TiB') if size > 1024 * 1000
-    end
-
     ##
     # Deletes a disk
     # Will raise an exception if the disk is attached to a VM
@@ -313,7 +318,7 @@ module Bosh::AzureCloud
         vm = @vm_manager.find(instance_id)
         raise Bosh::Clouds::VMNotFound, "VM '#{instance_id}' cannot be found" if vm.nil?
         vm[:data_disks].each do |disk|
-          disks << disk[:name]
+          disks << disk[:name] if disk[:name] != EPHEMERAL_DISK_NAME
         end
         disks
       end
@@ -387,16 +392,17 @@ module Bosh::AzureCloud
     # from AZURE registry (also a BOSH component) on a target instance. Disk
     # conventions for Azure are:
     # system disk: /dev/sda
-    # ephemeral disk: /dev/sdb
+    # ephemeral disk: /dev/sdb for CF VMs, /dev/sdc for BOSH VMs
     #
     # @param [String] agent_id Agent id (will be picked up by agent to
     #   assume its identity
     # @param [String] vm_name VM name
     # @param [Hash] network_spec Agent network spec
     # @param [Hash] environment
-    # @param [String] root_device_name root device, e.g. /dev/sda1
+    # @param [String] root_device_name root device, e.g. /dev/sda
+    # @param [String] ephemeral_device_name ephemeral device, e.g. /dev/sdb
     # @return [Hash]
-    def initial_agent_settings(agent_id, vm_name, network_spec, environment, root_device_name)
+    def initial_agent_settings(agent_id, vm_name, network_spec, environment, root_device_name, ephemeral_device_name)
       settings = {
           "vm" => {
               "name" => vm_name
@@ -405,7 +411,7 @@ module Bosh::AzureCloud
           "networks" => agent_network_spec(network_spec),
           "disks" => {
               "system" => root_device_name,
-              "ephemeral" => "/dev/sdb",
+              "ephemeral" => ephemeral_device_name,
               "persistent" => {}
           }
       }

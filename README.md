@@ -16,6 +16,10 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-04-25
+- CPI changes
+  - Support to use a data disk as the ephemeral disk.
+
 # 2015-04-20
 - CPI changes
   - Upgrade azure-sdk-for-ruby version to 0.7.4.

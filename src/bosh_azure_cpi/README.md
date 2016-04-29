@@ -88,6 +88,12 @@ These options are specified under `cloud_properties` in the `resource_pools` sec
 * `security_group` (optional)
   which [security group](https://azure.microsoft.com/en-us/documentation/articles/virtual-networks-nsg/) to apply for all VMs that are in this resource pool. Default to the security group specified by default_security_group in the global CPI settings unless a security group is specified on one of the VM networks. The security group can be specified either on a resource pool or on a network.
 
+* `ephemeral_disk/use_temporary_disk` (optional)
+  Whether to use Azure temporary  disk as the ephemeral disk to apply for all VMs that are in this resource pool. Default is false.
+
+* `ephemeral_disk/size` (optional)
+  The size of the ephemeral disk to apply for all VMs that are in this resource pool in megabytes. Default is 15_000 megabytes. This value is only valid when use_temporary_disk is set to false. The size of the ephemeral disk for the BOSH VM should be larger or equal than 15_000 megabytes.
+
 ### Network options
 
 These options are specified under `cloud_properties` in the `networks` section of a BOSH deployment manifest.

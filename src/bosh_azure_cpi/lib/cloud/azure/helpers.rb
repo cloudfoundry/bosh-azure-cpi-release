@@ -42,6 +42,8 @@ module Bosh::AzureCloud
       }
     }
 
+    EPHEMERAL_DISK_NAME = 'ephemeral-disk'
+
     ##
     # Raises CloudError exception
     #
@@ -155,6 +157,13 @@ module Bosh::AzureCloud
 
     def get_api_version(azure_properties, resource_provider)
       AZURE_ENVIRONMENTS[azure_properties['environment']]['apiVersion'][resource_provider]
+    end
+
+    def validate_disk_size(size)
+      raise ArgumentError, 'disk size needs to be an integer' unless size.kind_of?(Integer)
+
+      cloud_error('Azure CPI minimum disk size is 1 GiB') if size < 1024
+      cloud_error('Azure CPI maximum disk size is 1 TiB') if size > 1024 * 1000
     end
 
     private

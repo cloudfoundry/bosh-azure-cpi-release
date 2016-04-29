@@ -43,7 +43,7 @@ describe Bosh::AzureCloud::VMManager do
         :primary_endpoints => "bar"
       }
     }
-
+    let(:disk_id) { double("fake-disk-id") }
     before do
       allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
         and_return(client2)
@@ -56,6 +56,8 @@ describe Bosh::AzureCloud::VMManager do
       allow(client2).to receive(:get_network_security_group_by_name).
         with("fake-default-nsg-name").
         and_return(network_security)
+      allow(disk_manager).to receive(:delete_disk).
+        and_return(nil)
     end
 
     context "when subnet is not found" do
@@ -392,6 +394,89 @@ describe Bosh::AzureCloud::VMManager do
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
           end
         end
+
+        context "with using the temporary disk as the ephemeral disk" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'Standard_D1',
+              'storage_account_name' => 'dfe03ad623f34d42999e93ca',
+              'caching' => 'ReadWrite',
+              'availability_set' => 'fake-avset',
+              'platform_update_domain_count' => 5,
+              'platform_fault_domain_count' => 3,
+              'load_balancer' => 'fake-lb-name',
+              'ephemeral_disk' => {
+                'use_temporary_disk' => true
+              }
+            }
+          }
+
+          it "should succeed" do
+            allow(client2).to receive(:create_virtual_machine)
+
+            expect(client2).not_to receive(:delete_virtual_machine)
+            expect(client2).not_to receive(:delete_availability_set)
+            expect(client2).not_to receive(:delete_network_interface)
+
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          end
+        end
+
+        context "with using the data disk as the ephemeral disk" do
+          context "with setting the ephemeral disk size to 20 GiB" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'Standard_D1',
+                'storage_account_name' => 'dfe03ad623f34d42999e93ca',
+                'caching' => 'ReadWrite',
+                'availability_set' => 'fake-avset',
+                'platform_update_domain_count' => 5,
+                'platform_fault_domain_count' => 3,
+                'load_balancer' => 'fake-lb-name',
+                'ephemeral_disk' => {
+                  'size' => 20 * 1024
+                }
+              }
+            }
+
+            it "should succeed" do
+              allow(client2).to receive(:create_virtual_machine)
+
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_availability_set)
+              expect(client2).not_to receive(:delete_network_interface)
+
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            end
+          end
+
+          context "with setting use_temporary_disk to false" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'Standard_D1',
+                'storage_account_name' => 'dfe03ad623f34d42999e93ca',
+                'caching' => 'ReadWrite',
+                'availability_set' => 'fake-avset',
+                'platform_update_domain_count' => 5,
+                'platform_fault_domain_count' => 3,
+                'load_balancer' => 'fake-lb-name',
+                'ephemeral_disk' => {
+                  'use_temporary_disk' => false
+                }
+              }
+            }
+
+            it "should succeed" do
+              allow(client2).to receive(:create_virtual_machine)
+
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_availability_set)
+              expect(client2).not_to receive(:delete_network_interface)
+
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            end
+          end
+        end
       end
     end
   end  
@@ -411,6 +496,7 @@ describe Bosh::AzureCloud::VMManager do
         :tags => {}
       }
     }
+
     it "deletes the instance by id" do
       allow(client2).to receive(:get_virtual_machine_by_name).
         with(instance_id).and_return(vm)
@@ -426,11 +512,15 @@ describe Bosh::AzureCloud::VMManager do
 
       os_disk_name = "fake-os-disk-name"
       allow(disk_manager).to receive(:generate_os_disk_name).
+        with(instance_id).
         and_return(os_disk_name)
-      expect(disk_manager).to receive(:has_disk?).
-        with(os_disk_name).
-        and_return(true)
       expect(disk_manager).to receive(:delete_disk).with(os_disk_name)
+
+      ephemeral_disk_name = "fake-os-ephemeral-name"
+      allow(disk_manager).to receive(:generate_os_disk_name).
+        with("#{instance_id}-ephemeral").
+        and_return(ephemeral_disk_name)
+      expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name)
 
       expect(disk_manager).to receive(:delete_vm_status_files).
         with(storage_account_name, instance_id)
@@ -458,7 +548,7 @@ describe Bosh::AzureCloud::VMManager do
     let(:disk_name) { "fake-disk-name-None" }
     let(:disk_uri) { "fake-disk-uri" }
     let(:cache) { "None" }
-    let(:disk) { {:lun => 0} }
+    let(:disk) { {:lun => 1} }
     it "attaches the disk to an instance" do
       allow(disk_manager).to receive(:get_disk_uri).
         with(disk_name).and_return(disk_uri)
@@ -468,7 +558,7 @@ describe Bosh::AzureCloud::VMManager do
       expect(disk_manager).to receive(:get_data_disk_caching).
         with(disk_name).
         and_return(cache)
-      expect(vm_manager.attach_disk(instance_id, disk_name)).to eq("/dev/sdc")
+      expect(vm_manager.attach_disk(instance_id, disk_name)).to eq("/dev/sdd")
     end
   end  
 
