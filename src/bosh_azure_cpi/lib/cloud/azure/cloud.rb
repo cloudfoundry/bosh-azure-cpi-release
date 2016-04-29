@@ -386,6 +386,8 @@ module Bosh::AzureCloud
       @stemcell_manager = Bosh::AzureCloud::StemcellManager.new(azure_properties, @blob_manager, @table_manager)
       @disk_manager     = Bosh::AzureCloud::DiskManager.new(azure_properties, @blob_manager)
       @vm_manager       = Bosh::AzureCloud::VMManager.new(azure_properties, @registry.endpoint, @disk_manager, @azure_client2)
+    rescue Net::OpenTimeout => e
+      cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}")
     end
 
     # Generates initial agent settings. These settings will be read by agent
