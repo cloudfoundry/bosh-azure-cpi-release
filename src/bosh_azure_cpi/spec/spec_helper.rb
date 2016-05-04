@@ -1,3 +1,5 @@
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+
 require 'cloud/azure'
 require 'json'
 require 'net/http'
@@ -18,7 +20,7 @@ def mock_cloud_options
     'properties' => {
       'azure' => {
         'environment' => 'AzureCloud',
-        'subscription_id' => MOCK_AZURE_SUBSCRIPTION_ID, 
+        'subscription_id' => MOCK_AZURE_SUBSCRIPTION_ID,
         'storage_account_name' => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
         'resource_group_name' => MOCK_RESOURCE_GROUP_NAME,
         'tenant_id' => MOCK_AZURE_TENANT_ID,
@@ -60,7 +62,7 @@ def mock_registry
     :user     => mock_registry_properties['user'],
     :password => mock_registry_properties['password']
   )
-  allow(Bosh::Registry::Client).to receive(:new).and_return(registry)
+  allow(Bosh::Cpi::RegistryClient).to receive(:new).and_return(registry)
   registry
 end
 
@@ -74,4 +76,3 @@ RSpec.configure do |config|
     allow(Bosh::Clouds::Config).to receive(:logger).and_return(logger)
   end
 end
-

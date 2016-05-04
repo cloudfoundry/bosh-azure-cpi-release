@@ -1,14 +1,5 @@
 #!/usr/bin/env ruby
-
-# Copyright (c) 2009-2012 VMware, Inc.
-
-# Usage example:
-# irb(main):001:0> cpi.create_vm("test",
-#                                "b39f27a8b8c64d52b05eac6a62ebad85__Ubuntu-14_04-LTS-amd64-server-20140528-en-us-30GB",
-#                                {"instance_type" => "Standard_D1"},
-#                                {"default" => {"type" => "dynamic", "cloud_properties" => {"virtual_network_name"=>"abel-boshvnet", "subnet_name"=>"BOSH"}},
-#                                [],
-#                                {"foo" =>"bar"})
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
 require "bosh_azure_cpi"
 require "irb"

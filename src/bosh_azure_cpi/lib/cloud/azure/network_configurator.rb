@@ -1,9 +1,7 @@
-# Copyright (c) 2009-2012 VMware, Inc.
-
 module Bosh::AzureCloud
   ##
   # Represents Azure instance network config. Azure VM has single NIC
-  # with dynamic IP address and (optionally) Azure cloud service has a single 
+  # with dynamic IP address and (optionally) Azure cloud service has a single
   # public IP address which VM is not aware of (vip).
   #
   class NetworkConfigurator

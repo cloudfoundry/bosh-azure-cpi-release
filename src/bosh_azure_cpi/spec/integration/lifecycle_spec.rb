@@ -65,7 +65,7 @@ describe Bosh::AzureCloud::Cloud do
   before { allow(Bosh::Clouds::Config).to receive_messages(logger: logger) }
   let(:logger) { Logger.new(STDERR) }
 
-  before { allow(Bosh::Registry::Client).to receive_messages(new: double('registry').as_null_object) }
+  before { allow(Bosh::Cpi::RegistryClient).to receive_messages(new: double('registry').as_null_object) }
 
   before { @disk_id = nil }
   after  { cpi.delete_disk(@disk_id) if @disk_id }
@@ -313,7 +313,7 @@ describe Bosh::AzureCloud::Cloud do
 
   def vm_lifecycle(stemcell_id, network_spec, nums = 1)
     instance_id_pool = Array.new
-    for i in 1..nums 
+    for i in 1..nums
       logger.info("Creating VM with stemcell_id=#{stemcell_id}")
       instance_id = cpi.create_vm(
         SecureRandom.uuid,
@@ -330,7 +330,7 @@ describe Bosh::AzureCloud::Cloud do
       cpi.set_vm_metadata(instance_id, vm_metadata)
 
       cpi.reboot_vm(instance_id)
-      
+
       yield(instance_id) if block_given?
     end
   ensure

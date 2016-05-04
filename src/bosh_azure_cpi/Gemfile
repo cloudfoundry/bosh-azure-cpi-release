@@ -1,6 +1,10 @@
 source 'https://rubygems.org'
 
-gemspec
+gem 'bosh_common', '1.3215.3.0'
+gem 'bosh_cpi',    '1.3215.3.1'
+gem 'azure',       '~>0.7.4'
+gem 'vhd',         '~>0.0.4'
+gem 'httpclient',  '=2.4.0'
 
 group :development, :test do
   gem 'rspec', '~>3.0.0'

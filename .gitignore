@@ -1,4 +1,5 @@
 .blobs
+.bundle
 .dev_builds
 .final_builds/jobs/**/*.tgz
 .final_builds/packages/**/*.tgz
@@ -9,6 +10,7 @@ config/private.yml
 dev_releases
 releases/*.tgz
 releases/**/*.tgz
+src/bosh_azure_cpi/vendor/cache
 .DS_Store
 .vagrant
 *.swp
