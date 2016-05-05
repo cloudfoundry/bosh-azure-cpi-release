@@ -4,5 +4,5 @@ name: ruby_azure_cpi
 files:
 - ruby_azure_cpi/yaml-0.1.5.tar.gz
 - ruby_azure_cpi/ruby-2.2.4.tar.gz
-- ruby_azure_cpi/rubygems-2.3.0.tgz
+- ruby_azure_cpi/rubygems-2.6.2.tgz
 - ruby_azure_cpi/bundler-1.8.2.gem

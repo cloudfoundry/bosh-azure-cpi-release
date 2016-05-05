@@ -34,17 +34,12 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-tar zxvf ruby_azure_cpi/rubygems-2.3.0.tgz
+tar zxvf ruby_azure_cpi/rubygems-*.tgz
 (
   set -e
-  cd rubygems-2.3.0
+  cd rubygems-*
 
   ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb --no-ri --no-rdoc
-
-  if [[ $? != 0 ]] ; then
-    echo "Cannot install rubygems"
-    exit 1
-  fi
 )
 if [[ $? != 0 ]] ; then
   echo "Cannot install rubygems"

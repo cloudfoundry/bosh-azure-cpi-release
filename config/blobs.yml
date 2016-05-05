@@ -11,7 +11,7 @@ ruby_azure_cpi/ruby-2.2.4.tar.gz:
   object_id: 178348c4-8f8c-4da9-b64d-7748bfab3ba9
   sha: 818e5e157f76d4912ba3a7c7b4fc5156105e83c3
   size: 16638151
-ruby_azure_cpi/rubygems-2.3.0.tgz:
-  object_id: 052b4f0c-d672-44f8-b15e-e8250a917f31
-  sha: 6902fff7749fa264b8f9020f33daf92170375f75
-  size: 431240
+ruby_azure_cpi/rubygems-2.6.2.tgz:
+  object_id: 4532be2f-c22d-4e17-84b0-2a42dcfc8d76
+  sha: 5960628b1f90f4a05ed69c0ad59c59cb10b79e5f
+  size: 478660
