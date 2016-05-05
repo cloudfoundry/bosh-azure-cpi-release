@@ -28,6 +28,7 @@ describe Bosh::AzureCloud::TableManager do
     allow(azure_client2).to receive(:get_storage_account_keys_by_name).
       and_return(keys)
     allow(azure_client2).to receive(:get_storage_account_by_name).
+      with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
       and_return(storage_account)
 
     allow(azure_client).to receive(:storage_table_host=)

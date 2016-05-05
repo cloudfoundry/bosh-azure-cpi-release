@@ -30,6 +30,7 @@ describe Bosh::AzureCloud::BlobManager do
     allow(azure_client2).to receive(:get_storage_account_keys_by_name).
       and_return(keys)
     allow(azure_client2).to receive(:get_storage_account_by_name).
+      with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
       and_return(storage_account)
     allow(azure_client).to receive(:storage_blob_host=)
     allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
@@ -221,15 +222,28 @@ describe Bosh::AzureCloud::BlobManager do
   end
 
   describe "#copy_blob" do
-    storage_account_name = "another-storage-account-name"
-    source_blob_uri = "fake-source-blob-uri"
-
+    let(:another_storage_account_name) { "another-storage-account-name" }
+    let(:source_blob_uri) { "fake-source-blob-uri" }
+    let(:another_storage_account) {
+      {
+        :id => "foo",
+        :name => another_storage_account_name,
+        :location => "bar",
+        :provisioning_state => "bar",
+        :account_type => "foo",
+        :storage_blob_host => "fake-blob-endpoint",
+        :storage_table_host => "fake-table-endpoint"
+      }
+    }
     before do
       allow(Azure).to receive(:client).
-        with(storage_account_name: storage_account_name, storage_access_key: keys[0]).
+        with(storage_account_name: another_storage_account_name, storage_access_key: keys[0]).
         and_return(azure_client)
       allow(blob_service).to receive(:service_properties_headers).and_return({})
       allow(blob_service).to receive(:generate_uri).and_return("fake-uri")
+      allow(azure_client2).to receive(:get_storage_account_by_name).
+        with(another_storage_account_name).
+        and_return(another_storage_account)
     end
 
     class Response
@@ -249,7 +263,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       it "succeeds to copy the blob" do
         expect {
-          blob_manager.copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
+          blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
         }.not_to raise_error
       end
     end
@@ -267,7 +281,7 @@ describe Bosh::AzureCloud::BlobManager do
           with(container_name, blob_name)
 
         expect {
-          blob_manager.copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
+          blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
         }.to raise_error /Failed to copy the blob/
       end
     end
@@ -295,7 +309,7 @@ describe Bosh::AzureCloud::BlobManager do
           with(container_name, blob_name)
 
         expect {
-          blob_manager.copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
+          blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
         }.to raise_error /The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted/
       end
     end
