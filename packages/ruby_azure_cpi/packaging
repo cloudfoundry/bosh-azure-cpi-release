@@ -46,4 +46,4 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-1.8.2.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-1.11.2.gem --local --no-ri --no-rdoc

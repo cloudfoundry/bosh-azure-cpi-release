@@ -1,8 +1,8 @@
 ---
-ruby_azure_cpi/bundler-1.8.2.gem:
-  object_id: 002f0bf1-f744-43d7-87b9-e980eb103a6c
-  sha: e9b810268eea94ac5e825b5ae8a2d5fd19fb5905
-  size: 235008
+ruby_azure_cpi/bundler-1.11.2.gem:
+  object_id: 7a16cdda-1849-4888-91fc-73462845692d
+  sha: 8eb956dec72da753d3d2a2126c78508b17af434e
+  size: 263168
 ruby_azure_cpi/yaml-0.1.5.tar.gz:
   object_id: 0ce51818-5aeb-4840-a45c-5343d6b014e7
   sha: 8b78cb9f759c7d80db8a7328c0ebecfe34fde737
