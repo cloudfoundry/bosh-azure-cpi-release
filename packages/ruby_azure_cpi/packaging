@@ -24,7 +24,7 @@ fi
 tar xzf ruby_azure_cpi/ruby-*.tar.gz
 (
   set -e
-  cd ruby-2.1.4
+  cd ruby-*
   LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET} --without-gmp
   make -j
   make -j install
@@ -34,21 +34,16 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-tar zxvf ruby_azure_cpi/rubygems-2.3.0.tgz
+tar zxvf ruby_azure_cpi/rubygems-*.tgz
 (
   set -e
-  cd rubygems-2.3.0
+  cd rubygems-*
 
   ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb --no-ri --no-rdoc
-
-  if [[ $? != 0 ]] ; then
-    echo "Cannot install rubygems"
-    exit 1
-  fi
 )
 if [[ $? != 0 ]] ; then
   echo "Cannot install rubygems"
   exit 1
 fi
 
-${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-1.8.2.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-1.11.2.gem --local --no-ri --no-rdoc

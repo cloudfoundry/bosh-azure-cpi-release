@@ -1,17 +1,17 @@
 ---
-ruby_azure_cpi/bundler-1.8.2.gem:
-  object_id: 002f0bf1-f744-43d7-87b9-e980eb103a6c
-  sha: e9b810268eea94ac5e825b5ae8a2d5fd19fb5905
-  size: 235008
+ruby_azure_cpi/bundler-1.11.2.gem:
+  object_id: 7a16cdda-1849-4888-91fc-73462845692d
+  sha: 8eb956dec72da753d3d2a2126c78508b17af434e
+  size: 263168
 ruby_azure_cpi/yaml-0.1.5.tar.gz:
   object_id: 0ce51818-5aeb-4840-a45c-5343d6b014e7
   sha: 8b78cb9f759c7d80db8a7328c0ebecfe34fde737
   size: 504897
-ruby_azure_cpi/ruby-2.1.4.tar.gz:
-  object_id: 949218bf-b43a-4814-bfcc-443c9f840a70
-  sha: 29e9cfdd9e989b7621d7696ef3f970262a08dbc3
-  size: 15127418
-ruby_azure_cpi/rubygems-2.3.0.tgz:
-  object_id: 052b4f0c-d672-44f8-b15e-e8250a917f31
-  sha: 6902fff7749fa264b8f9020f33daf92170375f75
-  size: 431240
+ruby_azure_cpi/ruby-2.2.4.tar.gz:
+  object_id: 178348c4-8f8c-4da9-b64d-7748bfab3ba9
+  sha: 818e5e157f76d4912ba3a7c7b4fc5156105e83c3
+  size: 16638151
+ruby_azure_cpi/rubygems-2.6.2.tgz:
+  object_id: 4532be2f-c22d-4e17-84b0-2a42dcfc8d76
+  sha: 5960628b1f90f4a05ed69c0ad59c59cb10b79e5f
+  size: 478660
