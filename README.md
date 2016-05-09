@@ -16,6 +16,10 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-05-09
+- CPI changes
+  - Remove use_temporary_disk and always use a data disk as the ephemeral disk.
+
 # 2015-04-25
 - CPI changes
   - Support to use a data disk as the ephemeral disk.

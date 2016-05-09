@@ -68,7 +68,6 @@ module Bosh::AzureCloud
     #    "platform_fault_domain_count" => 3,
     #    "security_group" => "nsg-bosh",
     #    "ephemeral_disk" => {
-    #      "use_temporary_disk" => false,
     #      "size" => 20480, # disk size in MB
     #    }
     #  }
@@ -111,13 +110,6 @@ module Bosh::AzureCloud
           NetworkConfigurator.new(networks))
         @logger.info("Created new vm '#{instance_id}'")
 
-        ephemeral_disk = "/dev/sdc"
-        if resource_pool.has_key?('ephemeral_disk')
-          if resource_pool['ephemeral_disk']['use_temporary_disk']
-            ephemeral_disk = "/dev/sdb"
-          end
-        end
-
         begin
           registry_settings = initial_agent_settings(
             agent_id,
@@ -125,7 +117,7 @@ module Bosh::AzureCloud
             networks,
             env,
             "/dev/sda",
-            ephemeral_disk
+            "/dev/sdc"
           )
           registry.update_settings(instance_id, registry_settings)
 

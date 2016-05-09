@@ -395,7 +395,7 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
-        context "with using the temporary disk as the ephemeral disk" do
+        context "with setting the ephemeral disk size to 20 GiB" do
           let(:resource_pool) {
             {
               'instance_type' => 'Standard_D1',
@@ -406,7 +406,7 @@ describe Bosh::AzureCloud::VMManager do
               'platform_fault_domain_count' => 3,
               'load_balancer' => 'fake-lb-name',
               'ephemeral_disk' => {
-                'use_temporary_disk' => true
+                'size' => 20 * 1024
               }
             }
           }
@@ -419,62 +419,6 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
-          end
-        end
-
-        context "with using the data disk as the ephemeral disk" do
-          context "with setting the ephemeral disk size to 20 GiB" do
-            let(:resource_pool) {
-              {
-                'instance_type' => 'Standard_D1',
-                'storage_account_name' => 'dfe03ad623f34d42999e93ca',
-                'caching' => 'ReadWrite',
-                'availability_set' => 'fake-avset',
-                'platform_update_domain_count' => 5,
-                'platform_fault_domain_count' => 3,
-                'load_balancer' => 'fake-lb-name',
-                'ephemeral_disk' => {
-                  'size' => 20 * 1024
-                }
-              }
-            }
-
-            it "should succeed" do
-              allow(client2).to receive(:create_virtual_machine)
-
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_availability_set)
-              expect(client2).not_to receive(:delete_network_interface)
-
-              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
-            end
-          end
-
-          context "with setting use_temporary_disk to false" do
-            let(:resource_pool) {
-              {
-                'instance_type' => 'Standard_D1',
-                'storage_account_name' => 'dfe03ad623f34d42999e93ca',
-                'caching' => 'ReadWrite',
-                'availability_set' => 'fake-avset',
-                'platform_update_domain_count' => 5,
-                'platform_fault_domain_count' => 3,
-                'load_balancer' => 'fake-lb-name',
-                'ephemeral_disk' => {
-                  'use_temporary_disk' => false
-                }
-              }
-            }
-
-            it "should succeed" do
-              allow(client2).to receive(:create_virtual_machine)
-
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_availability_set)
-              expect(client2).not_to receive(:delete_network_interface)
-
-              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
-            end
           end
         end
       end
