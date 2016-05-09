@@ -293,6 +293,8 @@ describe Bosh::AzureCloud::Helpers do
     let(:storage_access_key) { "fake-storage-access-key" }
     let(:storage_account) {
       {
+        :name => storage_account_name,
+        :key => storage_access_key,
         :storage_blob_host => 'fake-blob-host/',
         :storage_table_host => 'fake-table-host/',
       }
@@ -301,9 +303,6 @@ describe Bosh::AzureCloud::Helpers do
     let(:table_host) { "fake-table-host" }
 
     before do
-      allow(azure_client2).to receive(:get_storage_account_by_name).
-        with(storage_account_name).
-        and_return(storage_account)
       allow(Azure).to receive(:new).
         with(storage_account_name, storage_access_key).
         and_return(azure_client)
@@ -315,10 +314,7 @@ describe Bosh::AzureCloud::Helpers do
 
     context "for blob" do
       it "should return an azure storage client with setting storage blob host" do
-        client = helpers_tester.initialize_azure_storage_client(azure_client2,
-          storage_account_name,
-          storage_access_key,
-          'blob')
+        client = helpers_tester.initialize_azure_storage_client(storage_account, 'blob')
         expect(
           client.storage_blob_host
         ).to eq(blob_host)
@@ -328,10 +324,7 @@ describe Bosh::AzureCloud::Helpers do
     context "for table" do
       context "when the storage account is standard" do
         it "should return an azure storage client with setting table blob host" do
-          client = helpers_tester.initialize_azure_storage_client(azure_client2,
-            storage_account_name,
-            storage_access_key,
-            'table')
+          client = helpers_tester.initialize_azure_storage_client(storage_account, 'table')
           expect(
             client.storage_table_host
           ).to eq(table_host)
@@ -341,16 +334,15 @@ describe Bosh::AzureCloud::Helpers do
       context "when the storage account is premium" do
         let(:storage_account) {
           {
-            :storage_blob_host => 'fake-blob-host/'
+            :name => storage_account_name,
+            :key => storage_access_key,
+            :storage_blob_host => 'fake-blob-host/',
           }
         }
 
         it "should raise an error" do
           expect {
-            helpers_tester.initialize_azure_storage_client(azure_client2,
-              storage_account_name,
-              storage_access_key,
-              'table')
+            helpers_tester.initialize_azure_storage_client(storage_account, 'table')
           }.to raise_error "The storage account `#{storage_account_name}' does not support table"
         end
       end
@@ -359,10 +351,7 @@ describe Bosh::AzureCloud::Helpers do
     context "for others" do
       it "should raise an error" do
         expect {
-          helpers_tester.initialize_azure_storage_client(azure_client2,
-            storage_account_name,
-            storage_access_key,
-            'others')
+          helpers_tester.initialize_azure_storage_client(storage_account, 'others')
         }.to raise_error "No support for the storage service: `others'"
       end
     end

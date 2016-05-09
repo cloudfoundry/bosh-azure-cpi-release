@@ -318,11 +318,13 @@ module Bosh::AzureCloud
     def initialize_blob_client(storage_account_name)
       @blob_client_mutex.synchronize do
         unless @storage_accounts_keys.has_key?(storage_account_name)
+          storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
           keys = @azure_client2.get_storage_account_keys_by_name(storage_account_name)
-          @storage_accounts_keys[storage_account_name] = keys[0]
+          storage_account[:key] = keys[0]
+          @storage_accounts_keys[storage_account_name] = storage_account
         end
 
-        @azure_client = initialize_azure_storage_client(@azure_client2, storage_account_name, @storage_accounts_keys[storage_account_name], 'blob')
+        @azure_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob')
         @blob_service_client = @azure_client.blobs
         yield
       end

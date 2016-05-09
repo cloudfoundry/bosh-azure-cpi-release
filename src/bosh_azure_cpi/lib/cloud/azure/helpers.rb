@@ -126,10 +126,8 @@ module Bosh::AzureCloud
       return url, api_version
     end
 
-    def initialize_azure_storage_client(azure_client2, storage_account_name, storage_access_key, service = 'blob')
-      storage_account = azure_client2.get_storage_account_by_name(storage_account_name)
-
-      azure_client = Azure.client(storage_account_name: storage_account_name, storage_access_key: storage_access_key)
+    def initialize_azure_storage_client(storage_account, service = 'blob')
+      azure_client = Azure.client(storage_account_name: storage_account[:name], storage_access_key: storage_account[:key])
 
       case service
         when 'blob'
@@ -140,7 +138,7 @@ module Bosh::AzureCloud
           end
         when 'table'
           if storage_account[:storage_table_host].nil?
-            cloud_error("The storage account `#{storage_account_name}\' does not support table")
+            cloud_error("The storage account `#{storage_account[:name]}' does not support table")
           end
 
           if storage_account[:storage_table_host].end_with?('/')
