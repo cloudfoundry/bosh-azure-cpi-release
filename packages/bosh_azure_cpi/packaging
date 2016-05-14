@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 set -e -x
 
 BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}

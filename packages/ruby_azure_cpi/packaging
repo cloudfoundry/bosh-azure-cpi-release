@@ -1,4 +1,6 @@
-set -e
+#!/usr/bin/env bash
+
+set -e -x
 
 openssl_version=`PATH=/usr/local/opt/openssl/bin:$PATH openssl version`
 openssl_major_version=`echo $openssl_version | cut -f2 -d\ | cut -f1 -d.`
@@ -8,42 +10,26 @@ if [ $openssl_major_version == 0 ]; then
   exit 1
 fi
 
-tar xzf ruby_azure_cpi/yaml-0.1.5.tar.gz
-(
-  set -e
-  cd yaml-0.1.5
+echo "Installing yaml"
+tar xzf ruby_azure_cpi/yaml-*.tar.gz
+pushd yaml-* > /dev/null
   CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-shared
   make -j
   make -j install
-)
-if [[ $? != 0 ]] ; then
-  echo "Cannot install yaml"
-  exit 1
-fi
+popd > /dev/null
 
+echo "Installing ruby"
 tar xzf ruby_azure_cpi/ruby-*.tar.gz
-(
-  set -e
-  cd ruby-*
+pushd ruby-* > /dev/null
   LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET} --without-gmp
   make -j
   make -j install
-)
-if [[ $? != 0 ]] ; then
-  echo "Cannot install ruby"
-  exit 1
-fi
+popd > /dev/null
 
+echo "Installing rubygems"
 tar zxvf ruby_azure_cpi/rubygems-*.tgz
-(
-  set -e
-  cd rubygems-*
-
+pushd rubygems-* > /dev/null
   ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb --no-ri --no-rdoc
-)
-if [[ $? != 0 ]] ; then
-  echo "Cannot install rubygems"
-  exit 1
-fi
+popd > /dev/null
 
-${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-1.11.2.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-*.gem --local --no-ri --no-rdoc
