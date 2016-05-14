@@ -6,9 +6,9 @@ if [ $openssl_major_version == 0 ]; then
   exit 1
 fi
 
-tar xzf ruby_azure_cpi/yaml-0.1.5.tar.gz
 (
   set -e
+  tar xzf ruby_azure_cpi/yaml-0.1.5.tar.gz
   cd yaml-0.1.5
   CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-shared
   make -j
@@ -19,9 +19,9 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-tar xzf ruby_azure_cpi/ruby-*.tar.gz
 (
   set -e
+  tar xzf ruby_azure_cpi/ruby-*.tar.gz
   cd ruby-*
   LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET} --without-gmp
   make -j
@@ -32,9 +32,9 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-tar zxvf ruby_azure_cpi/rubygems-*.tgz
 (
   set -e
+  tar zxvf ruby_azure_cpi/rubygems-*.tgz
   cd rubygems-*
 
   ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb --no-ri --no-rdoc
@@ -44,4 +44,5 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
+set -e
 ${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-1.11.2.gem --local --no-ri --no-rdoc
