@@ -8,8 +8,8 @@ fi
 
 (
   set -e
-  tar xzf ruby_azure_cpi/yaml-0.1.5.tar.gz
-  cd yaml-0.1.5
+  tar xzf ruby_azure_cpi/yaml-*.tar.gz
+  cd yaml-*
   CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-shared
   make -j
   make -j install
@@ -45,4 +45,4 @@ if [[ $? != 0 ]] ; then
 fi
 
 set -e
-${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-1.11.2.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install ruby_azure_cpi/bundler-*.gem --local --no-ri --no-rdoc
