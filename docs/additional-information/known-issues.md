@@ -53,22 +53,7 @@
 
     6. If the deployment failed, the unreachable VMs will be kept for further investigations.
 
-2. "NicInUse" error when deleting the network interfaces
-
-  ```
-  D, [2015-08-27 05:36:41#44885] [] DEBUG -- DirectorJobRunner: Worker thread raised exception: Unknown CPI error 'Bosh::AzureCloud::AzureError' with message 'http_delete - error: 400 message: 
-  {
-      "error": {
-          "code": "NicInUse",
-          "message": "Network Interface /subscriptions/87654321-1234-5678-1234-678912345678/resourceGroups/abel-beta/providers/Microsoft.Network/networkInterfaces/dc0d3a9a-0b00-40d8-830d-41e6f4ac9809 is used by existing VM /subscriptions/87654321-1234-5678-1234-678912345678/resourceGroups/abel-beta/providers/Microsoft.Compute/virtualMachines/dc0d3a9a-0b00-40d8-830d-41e6f4ac9809.",
-          "details": []
-      }
-  }
-  ```
-
-  If you hits the similar issue, you can retry the same command manually. If it does not work, you can file a support ticket. Please refer to https://azure.microsoft.com/en-us/support/options/ and https://azure.microsoft.com/en-us/support/faq/.
-
-3. Connection dropped
+2. Connection dropped
 
   By default, Azure load balancer has an `idle timeout` setting of 4 minutes but the default timeout of HAProxy is 900 as 15 minutes, this would cause the problem of connection dropped. [#99](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/99)
 
