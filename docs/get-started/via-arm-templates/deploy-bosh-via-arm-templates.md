@@ -24,6 +24,7 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 | vmName | **YES** | | Name of Virtual Machine |
 | adminUsername | **YES** | | Username for the Virtual Machines. **Never use root as the adminUsername**. |
 | sshKeyData | **YES** | | SSH **RSA** public key file as a string. |
+| environment | **YES**  | | Different environments in Azure. Choose AzureCloud for Global Azure, and choose AzureChinaCloud for Mooncake (Azure China Cloud). |
 | tenantID | **YES**  | | ID of the tenant |
 | clientID | **YES**  | | ID of the client |
 | clientSecret | **YES** | | secret of the client |
@@ -82,6 +83,11 @@ If you want to customize your `bosh-setup` template, you can modify the followin
 | subnetAddressRangeForBosh | 10.0.0.0/24 |
 | subnetNameForCloudFoundry | CloudFoundry |
 | subnetAddressRangeForCloudFoundry | 10.0.16.0/20 |
+| subnetNameForDiego | Diego |
+| subnetAddressRangeForDiego | 10.0.32.0/20 |
+| devboxNetworkSecurityGroup | nsg-devbox |
+| boshNetworkSecurityGroup | nsg-bosh |
+| cfNetworkSecurityGroup | nsg-cf |
 | vmSize | Standard_D1 |
 | devboxPrivateIPAddress | 10.0.0.100 |
 | ubuntuOSVersion | 14.04.3-LTS |

@@ -7,10 +7,10 @@
 You will need to determine the deployment location for your group, then create the group in that data center.
 
 ```
-azure group create --name $resource-group-name --location $location
+azure group create --name $resource_group_name --location $location
 ```
 
-* resource-group-name:
+* resource_group_name:
 
   * You will use this name for the following commands.
   * Resource group name must uniquely identify the resource group within the subscription.
@@ -21,7 +21,7 @@ azure group create --name $resource-group-name --location $location
 * location:
 
   * Specifies the supported Azure location for the resource group.
-  * For more information, see [List all of the available geo-locations](http://azure.microsoft.com/en-us/regions/).
+  * For more information, see [List all of the available geo-locations](http://azure.microsoft.com/en-us/regions/). For `AzureChinaCloud`, you should only use the regions in China.
 
 Example:
 
@@ -32,7 +32,7 @@ azure group create --name bosh-res-group --location "East Asia"
 You can check whether the resource group is ready for next steps with the following command. You should not proceed to next step until you see "**Provisioning State**" becomes "**Succeeded**" in your output.
 
 ```
-azure group show --name $resource-group-name
+azure group show --name $resource_group_name
 ```
 
 Example:
@@ -66,15 +66,15 @@ info:    group show command OK
 ### 1.2.1 Create a default Storage Account
 
 ```
-azure storage account create --location $location --type $account-type --resource-group $resource-group-name $storage-account-name
+azure storage account create --location $location --type $account_type --resource-group $resource_group_name $storage_account_name
 ```
 
-* storage-account-name:
+* storage_account_name:
 
   * The name for the storage account that is **unique within Azure**.
   * **Storage account names must be between 3 and 24 characters in length and use numbers and lower-case letters only**.
 
-* account-type:
+* account_type:
 
   Specifies whether the account supports locally-redundant storage, geo-redundant storage, zone-redundant storage, or read access geo-redundant storage.
 
@@ -97,7 +97,7 @@ azure storage account create --location "East Asia" --type GRS --resource-group 
 >**NOTE:** Even if you see error in the response of creating the storage account, you still can check whether the storage account is created successfully under your resource group with the following command.
 
 ```
-azure storage account show --resource-group $resource-group-name $storage-account-name
+azure storage account show --resource-group $resource_group_name $storage_account_name
 ```
 
 Example:
@@ -129,7 +129,7 @@ info:    storage account show command OK
 ### 1.2.2 List storage account keys
 
 ```
-azure storage account keys list --resource-group $resource-group-name $storage-account-name
+azure storage account keys list --resource-group $resource_group_name $storage_account_name
 ```
 
 Sample Output:
@@ -143,7 +143,7 @@ data:    Secondary: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 info:    storage account keys list command OK
 ```
 
-You can get the primary key as your `storage-account-key`.
+You can get the primary key as your `storage_account_key`.
 
 ### 1.2.3 Create Containers
 
@@ -156,14 +156,14 @@ You need to create the following containers in the storage account:
   * To support multiple storage accounts, you need to set the permission of the container `stemcell` as `Public read access for blobs only`
 
 ```
-azure storage container create --account-name $storage-account-name --account-key $storage-account-key --container bosh
-azure storage container create --account-name $storage-account-name --account-key $storage-account-key --permission Blob --container stemcell
+azure storage container create --account-name $storage_account_name --account-key $storage_account_key --container bosh
+azure storage container create --account-name $storage_account_name --account-key $storage_account_key --permission Blob --container stemcell
 ```
 
 You can list the containers with the following command:
 
 ```
-azure storage container list --account-name $storage-account-name --account-key $storage-account-key
+azure storage container list --account-name $storage_account_name --account-key $storage_account_key
 ```
 
 Sample Output:
@@ -186,13 +186,13 @@ To support multiple storage accounts, you need to create the following tables in
   * Stores the metadata of stemcells in multiple storage accounts
 
 ```
-azure storage table create --account-name $storage-account-name --account-key $storage-account-key --table stemcells
+azure storage table create --account-name $storage_account_name --account-key $storage_account_key --table stemcells
 ```
 
 You can list the tables with the following command:
 
 ```
-azure storage table list --account-name $storage-account-name --account-key $storage-account-key
+azure storage table list --account-name $storage_account_name --account-key $storage_account_key
 ```
 
 Sample Output:
@@ -211,7 +211,7 @@ info:    storage table list command OK
 ### 1.3.1 Create the Public IP
 
 ```
-azure network public-ip create --resource-group $resource-group-name --location $location --allocation-method Static --name $public-ip-name
+azure network public-ip create --resource-group $resource_group_name --location $location --allocation-method Static --name $public_ip_name
 ```
 
 Example:
@@ -224,7 +224,7 @@ azure network public-ip create --resource-group bosh-res-group --location "East 
 ### 1.3.2 Get the Public IP Address
 
 ```
-azure network public-ip show --resource-group $resource-group-name --name $public-ip-name
+azure network public-ip show --resource-group $resource_group_name --name $public_ip_name
 ```
 
 Example:
@@ -256,13 +256,13 @@ The value of **IP Address** in the output is your **reserved IP for Cloud Foundr
 ### 1.4.1 Create a Virtual Network
 
 ```
-azure network vnet create --resource-group $resource-group-name --name $virtual-network-name --location $location --address-prefixes $virtual-network-cidr
+azure network vnet create --resource-group $resource_group_name --name $virtual_network_name --location $location --address-prefixes $virtual_network_cidr
 ```
 
 Options:
 
-* virtual-network-name: Names must start with a letter or number, and must contain only letters, numbers, or dashes. Spaces are not allowed.
-* virtual-network-cidr: The address space network mask in CIDR format for the virtual network.
+* virtual_network_name: Names must start with a letter or number, and must contain only letters, numbers, or dashes. Spaces are not allowed.
+* virtual_network_cidr: The address space network mask in CIDR format for the virtual network.
 
 Example:
 
@@ -273,19 +273,19 @@ azure network vnet create --resource-group bosh-res-group --name boshvnet-crp --
 ### 1.4.2 Create subnets in the Virtual Network
 
 ```
-azure network vnet subnet create --resource-group $resource-group-name --vnet-name $virtual-network-name --name $bosh-subnet-name --address-prefix $bosh-subnet-cidr
-azure network vnet subnet create --resource-group $resource-group-name --vnet-name $virtual-network-name --name $cloudfoundry-subnet-name --address-prefix $cloudfoundry-subnet-cidr
-azure network vnet subnet create --resource-group $resource-group-name --vnet-name $virtual-network-name --name $diego-subnet-name --address-prefix $diego-subnet-cidr
+azure network vnet subnet create --resource-group $resource_group_name --vnet-name $virtual_network_name --name $bosh_subnet_name --address-prefix $bosh_subnet_cidr
+azure network vnet subnet create --resource-group $resource_group_name --vnet-name $virtual_network_name --name $cloudfoundry_subnet_name --address-prefix $cloudfoundry_subnet_cidr
+azure network vnet subnet create --resource-group $resource_group_name --vnet-name $virtual_network_name --name $diego_subnet_name --address-prefix $diego_subnet_cidr
 ```
 
 Options:
 
-* bosh-subnet-name: The name of the subnet where VMs for BOSH will locate.
-* bosh-subnet-cidr: The subnet network mask in CIDR format for bosh subnet.
-* cloudfoundry-subnet-name: The name of the subnet where VMs for Cloud Foundry will locate.
-* cloudfoundry-subnet-cidr: The subnet network mask in CIDR format for Cloud Foundry.
-* diego-subnet-name: The name of diego subnet where VMs for Diego will locate.
-* diego-subnet-cidr: The subnet network mask in CIDR format for Diego.
+* bosh_subnet_name: The name of the subnet where VMs for BOSH will locate.
+* bosh_subnet_cidr: The subnet network mask in CIDR format for bosh subnet.
+* cloudfoundry_subnet_name: The name of the subnet where VMs for Cloud Foundry will locate.
+* cloudfoundry_subnet_cidr: The subnet network mask in CIDR format for Cloud Foundry.
+* diego_subnet_name: The name of diego subnet where VMs for Diego will locate.
+* diego_subnet_cidr: The subnet network mask in CIDR format for Diego.
 
 You need to create below subnets:
 
@@ -306,7 +306,7 @@ azure network vnet subnet create --resource-group bosh-res-group --vnet-name bos
 You can check whether the virtual network is created successfully under your resource group with the following command.
 
 ```
-azure network vnet show --resource-group $resource-group-name --name $virtual-network-name
+azure network vnet show --resource-group $resource_group_name --name $virtual_network_name
 ```
 
 Example:
@@ -346,29 +346,33 @@ info:    network vnet show command OK
 You can learn more information [here](https://azure.microsoft.com/en-us/documentation/articles/virtual-networks-nsg/).
 
 1. Create Network Security Group
+
   ```
-  azure network nsg create --resource-group $resource-group-name --location $location --name $nsg-name-for-bosh
-  azure network nsg create --resource-group $resource-group-name --location $location --name $nsg-name-for-cloudfoundry
+  azure network nsg create --resource-group $resource_group_name --location $location --name $nsg_name_for_bosh
+  azure network nsg create --resource-group $resource_group_name --location $location --name $nsg_name_for_cloudfoundry
   ```
 
-  * nsg-name-for-bosh: The name of the network security group for BOSH subnet.
-  * nsg-name-for-cloudfoundry: The name of the network security group for CloudFoundry subnet.
+  * nsg_name_for_bosh: The name of the network security group for BOSH subnet.
+  * nsg_name_for_cloudfoundry: The name of the network security group for CloudFoundry subnet.
 
-    Example:
+  Example:
+
   ```
   azure network nsg create --resource-group bosh-res-group --location "East Asia" --name nsg-bosh
   azure network nsg create --resource-group bosh-res-group --location "East Asia" --name nsg-cf
   ```
 
 2. Create Network Security Rules for BOSH Subnet
+
   ```
-  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'ssh' --destination-port-range 22
-  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-agent' --destination-port-range 6868
-  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-director' --destination-port-range 25555
-  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-bosh --access Allow --protocol '*' --direction Inbound --priority 203 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'dns' --destination-port-range 53
+  azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_bosh --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'ssh' --destination-port-range 22
+  azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_bosh --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-agent' --destination-port-range 6868
+  azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_bosh --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-director' --destination-port-range 25555
+  azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_bosh --access Allow --protocol '*' --direction Inbound --priority 203 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'dns' --destination-port-range 53
   ```
 
-    Example:
+  Example:
+
   ```
   azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 200 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'ssh' --destination-port-range 22
   azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-bosh --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'bosh-agent' --destination-port-range 6868
@@ -377,12 +381,14 @@ You can learn more information [here](https://azure.microsoft.com/en-us/document
   ```
 
 3. Create Network Security Rules for CloudFoundry Subnet
+
   ```
-  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-https' --destination-port-range 443
-  azure network nsg rule create --resource-group $resource-group-name --nsg-name $nsg-name-for-cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-log' --destination-port-range 4443
+  azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-https' --destination-port-range 443
+  azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-log' --destination-port-range 4443
   ```
 
-    Example:
+  Example:
+
   ```
   azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-https' --destination-port-range 443
   azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-log' --destination-port-range 4443
@@ -392,17 +398,65 @@ You can learn more information [here](https://azure.microsoft.com/en-us/document
 
 ### 1.5.1 Create a virtual machine
 
-In the same resource group, you can create a virtual machine based on **Ubuntu Server 14.04 LTS** on Azure Portal. The VM will be a **dev-box** to deploy BOSH and Cloud Foundry.
+1. Create the network interface and public IP for the dev-box
+
+  ```
+  azure network nic create --resource-group $resource_group_name --location $location --name $nic_name --private-ip-address 10.0.0.100 --subnet-vnet-name $virtual_network_name --subnet-name $bosh_subnet_name
+  azure network public-ip create --resource-group $resource_group_name --location $location --allocation-method Dynamic --name $public_ip_devbox
+  azure network nic set --public-ip-name $public_ip_devbox --resource-group $resource_group_name --name $nic_name
+  ```
+
+2. You can use the following commands to generate the SSH key pair for testing
+
+  ```
+  ssh-keygen -t rsa -f ~/devbox -P "" -C ""
+  chmod 400 ~/devbox
+  ```
+
+3. Query the image URN
+
+  ```
+  azure vm image list --location $location --publisher canonical --offer UbuntuServer
+  ```
+
+  Sample output:
+
+  ```
+  data:    Publisher  Offer         Sku                OS     Version          Location  Urn                                     
+  data:    ---------  ------------  -----------------  -----  ---------------  --------  --------------------------------------------------------
+  data:    canonical  UbuntuServer  12.04.3-LTS        Linux  12.04.201401270  eastus    canonical:UbuntuServer:12.04.3-LTS:12.04.201401270
+  ```
+
+  Get the `Urn` which you like from the output as the parameter value for `--image-urn`. `canonical:UbuntuServer:14.04.3-LTS:latest` is recommended.
+
+4. Create the VM
+
+  ```
+  azure vm create --resource-group $resource_group_name --name $devbox_name --location $location --os-type linux --nic-name $nic_name --vnet-name $virtual_network_name --vnet-subnet-name $bosh_subnet_name --storage-account-name $storage_account_name --image-urn $urn --ssh-publickey-file ~/devbox.pub --admin-username $username
+  ```
+
+  Example:
+
+  ```
+  azure network nic create --resource-group bosh-res-group --location "East Asia" --name devbox-nic --private-ip-address 10.0.0.100 --subnet-vnet-name boshvnet-crp --subnet-name BOSH
+  azure network public-ip create --resource-group bosh-res-group --location "East Asia" --allocation-method Dynamic --name devbox-ip
+  azure network nic set --public-ip-name devbox-ip --resource-group bosh-res-group --name devbox-nic
+  azure vm create --resource-group bosh-res-group --name bosh-res-group-devbox --location "East Asia" --os-type linux --nic-name devbox-nic --vnet-name boshvnet-crp --vnet-subnet-name BOSH --storage-account-name yourstorageaccountname --image-urn canonical:UbuntuServer:14.04.3-LTS:latest --ssh-publickey-file ~/devbox.pub --admin-username azureuser
+  ```
 
 >**NOTE:**
   * As a temporary limitation, **currently the dev-box should be on Azure and in the same virtual network with BOSH VMs and CF VMs**. And the dev-box should be in the subnet `BOSH`.
-  * Select **Resource Manager** as the deployment model.
-  * **(RECOMMENDED)** Avoid using the private IP addresses **10.0.0.4** and **10.0.16.4** for your dev-box. On Azure Portal, you can manually change the private IP address to a default value **10.0.0.100** after the dev-box is created. Afthe the IP address is changed, the dev-box may reboot.
-  * **(NOT RECOMMENDED)** If you would like to use **10.0.0.4** or **10.0.16.4** for your dev-box, you need to change the IP address in example YAML files to stay the same.
+  * If Azure CLI failed to create a linux VM because of unsupported api-versions, please use Azure CLI v0.9.18. [Azure/azure-xplat-cli/#2824](https://github.com/Azure/azure-xplat-cli/issues/2824).
 
 ### 1.5.2 Login your dev-box
 
-You can find the public IP address of the dev-box on Azure Portal. Login your dev-box with the `username` and `password` which you specified.
+You can find the public IP address of the dev-box on Azure Portal or using the following command.
+
+```
+azure network public-ip show --resource-group $resource_group_name --name $public_ip_devbox
+```
+
+Login your dev-box with the `username` and the private key which you generated in the previous section.
 
 ### 1.5.3 Setup your dev-box
 
@@ -420,6 +474,19 @@ sudo ln -s /usr/bin/gem2.0 /usr/bin/gem
 sudo ln -s /usr/bin/irb2.0 /usr/bin/irb
 sudo ln -s /usr/bin/rdoc2.0 /usr/bin/rdoc
 sudo ln -s /usr/bin/erb2.0 /usr/bin/erb
+```
+
+If the environment is `AzureChinaCloud`, you need to update the ruby gems sources.
+
+```
+sudo gem sources --remove https://rubygems.org/
+sudo gem sources --add https://ruby.taobao.org/
+sudo gem sources --add https://gems.ruby-china.org
+```
+
+Then install `bosh_cli` and `bosh-init`.
+
+```
 sudo gem update --system
 sudo gem pristine --all
 
@@ -445,7 +512,27 @@ echo "Finish"
 
 2. Update **bosh.yml**
 
-  * Replace the following items with your pre-defined value just created above: **REPLACE_WITH_SUBNET_ADDRESS_RANGE_FOR_BOSH**(e.g., 10.0.0.0/24), **REPLACE_WITH_GATEWAY_IP**(e.g., 10.0.0.1), **REPLACE_WITH_VNET_NAME**, **REPLACE_WITH_SUBNET_NAME_FOR_BOSH**, **REPLACE_WITH_BOSH_DIRECTOR_IP**, **REPLACE_WITH_SUBSCRIPTION_ID**, **REPLACE_WITH_DEFAULT_STORAGE_ACCOUNT_NAME**, **REPLACE_WITH_RESOURCE_GROUP_NAME**, **REPLACE_WITH_NSG_NAME_FOR_BOSH**, **REPLACE_WITH_TENANT_ID**, **REPLACE_WITH_CLIENT_ID** and **REPLACE_WITH_CLIENT_SECRET** properties.
+  * Replace the releases and stemcells.
+
+    * **REPLACE_WITH_BOSH_RELEASE_URL** and **REPLACE_WITH_BOSH_RELEASE_SHA1**
+    * **REPLACE_WITH_BOSH_AZURE_CPI_RELEASE_URL** and **REPLACE_WITH_BOSH_AZURE_CPI_RELEASE_SHA1**
+    * **REPLACE_WITH_STEMCELL_URL** and **REPLACE_WITH_STEMCELL_SHA1**
+
+  * Replace the following items with your pre-defined value just created above:
+
+    * **REPLACE_WITH_SUBNET_ADDRESS_RANGE_FOR_BOSH**(e.g., 10.0.0.0/24)
+    * **REPLACE_WITH_GATEWAY_IP**(e.g., 10.0.0.1)
+    * **REPLACE_WITH_VNET_NAME**
+    * **REPLACE_WITH_SUBNET_NAME_FOR_BOSH**
+    * **REPLACE_WITH_BOSH_DIRECTOR_IP**
+    * **REPLACE_WITH_ENVIRONMENT**
+    * **REPLACE_WITH_SUBSCRIPTION_ID**
+    * **REPLACE_WITH_DEFAULT_STORAGE_ACCOUNT_NAME**
+    * **REPLACE_WITH_RESOURCE_GROUP_NAME**
+    * **REPLACE_WITH_TENANT_ID**
+    * **REPLACE_WITH_CLIENT_ID**
+    * **REPLACE_WITH_CLIENT_SECRET**
+    * **REPLACE_WITH_NSG_NAME_FOR_BOSH**
 
   * You can use the following commands to generate the SSH key pair for testing.
 
