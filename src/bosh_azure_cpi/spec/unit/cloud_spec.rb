@@ -494,11 +494,13 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   describe "#attach_disk" do
-    let(:volume_name) { '/dev/sdc' }
+    let(:volume_name) { '/dev/sdd' }
+    let(:lun) { '1' }
+    let(:host_device_id) { '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}' }
 
     before do
       allow(vm_manager).to receive(:attach_disk).with(instance_id, disk_id).
-        and_return(volume_name)
+        and_return(lun)
     end
 
     it 'attaches the disk to the vm' do
@@ -507,7 +509,11 @@ describe Bosh::AzureCloud::Cloud do
         'foo' => 'bar',
         'disks' => {
           'persistent' => {
-            disk_id => volume_name
+            disk_id => {
+              'lun' => lun,
+              'host_device_id' => host_device_id,
+              'path' => volume_name
+            }
           }
         }
       }
@@ -542,15 +548,23 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   describe "#detach_disk" do
-    let(:volume_name) { '/dev/sdf' }
+    let(:host_device_id) { 'fake-host-device-id' }
   
     it 'detaches the disk from the vm' do
       old_settings = {
         "foo" => "bar",
         "disks" => {
           "persistent" => {
-            "fake-disk-id" => "/dev/sdf",
-            "v-deadbeef" => "/dev/sdg"
+            "fake-disk-id" =>  {
+              'lun'      => '1',
+              'host_device_id' => host_device_id,
+              'path' => '/dev/sdd'
+            },
+            "v-deadbeef" =>  {
+              'lun'      => '2',
+              'host_device_id' => host_device_id,
+              'path' => '/dev/sde'
+            }
           }
         }
       }
@@ -559,7 +573,11 @@ describe Bosh::AzureCloud::Cloud do
         "foo" => "bar",
         "disks" => {
           "persistent" => {
-            "v-deadbeef" => "/dev/sdg"
+            "v-deadbeef" => {
+              'lun' => '2',
+              'host_device_id' => host_device_id,
+              'path' => '/dev/sde'
+            }
           }
         }
       }
@@ -580,11 +598,11 @@ describe Bosh::AzureCloud::Cloud do
     let(:data_disks) {
       [
         {
-          :name => "/dev/sdc",
+          :name => "fake-data-disk-1",
         }, {
-          :name => "/dev/sde",
+          :name => "fake-data-disk-2",
         }, {
-          :name => "/dev/sdf",
+          :name => "fake-data-disk-3",
         }
       ]
     }
@@ -605,7 +623,7 @@ describe Bosh::AzureCloud::Cloud do
           with(instance_id).
           and_return(instance)
 
-        expect(cloud.get_disks(instance_id)).to eq(["/dev/sdc", "/dev/sde", "/dev/sdf"])
+        expect(cloud.get_disks(instance_id)).to eq(["fake-data-disk-1", "fake-data-disk-2", "fake-data-disk-3"])
       end
     end
 

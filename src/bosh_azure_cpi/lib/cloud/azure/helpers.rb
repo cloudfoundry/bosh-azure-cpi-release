@@ -42,7 +42,8 @@ module Bosh::AzureCloud
       }
     }
 
-    EPHEMERAL_DISK_NAME = 'ephemeral-disk'
+    EPHEMERAL_DISK_NAME       = 'ephemeral-disk'
+    AZURE_SCSI_HOST_DEVICE_ID = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
 
     ##
     # Raises CloudError exception

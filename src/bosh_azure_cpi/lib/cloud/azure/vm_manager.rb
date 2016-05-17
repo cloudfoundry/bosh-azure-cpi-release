@@ -168,13 +168,13 @@ module Bosh::AzureCloud
     #
     # @param [String] instance_id Instance id
     # @param [String] disk_name disk name
-    # @return [String] volume name. "/dev/sd[c-r]"
+    # @return [String] lun
     def attach_disk(instance_id, disk_name)
       @logger.info("attach_disk(#{instance_id}, #{disk_name})")
       disk_uri = @disk_manager.get_disk_uri(disk_name)
       caching = @disk_manager.get_data_disk_caching(disk_name)
       disk = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_name, disk_uri, caching)
-      "/dev/sd#{('c'.ord + disk[:lun]).chr}"
+      "#{disk[:lun]}"
     end
 
     def detach_disk(instance_id, disk_name)

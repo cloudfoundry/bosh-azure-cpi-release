@@ -10,6 +10,7 @@ describe Bosh::AzureCloud::VMManager do
   let(:uuid) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
   let(:instance_id) { "#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}-#{uuid}" }
   let(:storage_account_name) { MOCK_DEFAULT_STORAGE_ACCOUNT_NAME }
+  let(:ephemeral_disk_name) { "fake-ephemeral-disk-name" }
 
   describe "#create" do
     # Parameters
@@ -44,6 +45,7 @@ describe Bosh::AzureCloud::VMManager do
       }
     }
     let(:disk_id) { double("fake-disk-id") }
+
     before do
       allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
         and_return(client2)
@@ -58,6 +60,8 @@ describe Bosh::AzureCloud::VMManager do
         and_return(network_security)
       allow(disk_manager).to receive(:delete_disk).
         and_return(nil)
+      allow(disk_manager).to receive(:generate_ephemeral_disk_name).
+        and_return(ephemeral_disk_name)
     end
 
     context "when subnet is not found" do
@@ -460,9 +464,8 @@ describe Bosh::AzureCloud::VMManager do
         and_return(os_disk_name)
       expect(disk_manager).to receive(:delete_disk).with(os_disk_name)
 
-      ephemeral_disk_name = "fake-os-ephemeral-name"
-      allow(disk_manager).to receive(:generate_os_disk_name).
-        with("#{instance_id}-ephemeral").
+      allow(disk_manager).to receive(:generate_ephemeral_disk_name).
+        with(instance_id).
         and_return(ephemeral_disk_name)
       expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name)
 
@@ -502,7 +505,7 @@ describe Bosh::AzureCloud::VMManager do
       expect(disk_manager).to receive(:get_data_disk_caching).
         with(disk_name).
         and_return(cache)
-      expect(vm_manager.attach_disk(instance_id, disk_name)).to eq("/dev/sdd")
+      expect(vm_manager.attach_disk(instance_id, disk_name)).to eq("1")
     end
   end  
 

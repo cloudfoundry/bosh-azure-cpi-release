@@ -111,13 +111,14 @@ module Bosh::AzureCloud
         @logger.info("Created new vm '#{instance_id}'")
 
         begin
+          # By default, Azure uses a data disk as the ephermeral disk and the lun is 0
           registry_settings = initial_agent_settings(
             agent_id,
             instance_id,
             networks,
             env,
             "/dev/sda",
-            "/dev/sdc"
+            '0'
           )
           registry.update_settings(instance_id, registry_settings)
 
@@ -247,15 +248,21 @@ module Bosh::AzureCloud
     # @return [void]
     def attach_disk(instance_id, disk_id)
       with_thread_name("attach_disk(#{instance_id},#{disk_id})") do
-        volume_name = @vm_manager.attach_disk(instance_id, disk_id)
+        lun = @vm_manager.attach_disk(instance_id, disk_id)
 
         update_agent_settings(instance_id) do |settings|
           settings["disks"] ||= {}
           settings["disks"]["persistent"] ||= {}
-          settings["disks"]["persistent"][disk_id] = volume_name
+          settings["disks"]["persistent"][disk_id] =  {
+            'lun'            => lun,
+            'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID,
+
+            # For compatiblity with old stemcells
+            'path'           => get_disk_path_name(lun.to_i)
+          }
         end
 
-        @logger.info("Attached `#{disk_id}' to `#{instance_id}'")
+        @logger.info("Attached `#{disk_id}' to `#{instance_id}', lun `#{lun}'")
       end
     end
 
@@ -386,7 +393,7 @@ module Bosh::AzureCloud
     # from AZURE registry (also a BOSH component) on a target instance. Disk
     # conventions for Azure are:
     # system disk: /dev/sda
-    # ephemeral disk: /dev/sdb for CF VMs, /dev/sdc for BOSH VMs
+    # ephemeral disk: data disk at lun 0
     #
     # @param [String] agent_id Agent id (will be picked up by agent to
     #   assume its identity
@@ -394,9 +401,9 @@ module Bosh::AzureCloud
     # @param [Hash] network_spec Agent network spec
     # @param [Hash] environment
     # @param [String] root_device_name root device, e.g. /dev/sda
-    # @param [String] ephemeral_device_name ephemeral device, e.g. /dev/sdb
+    # @param [String] ephemeral_device_lun ephemeral device, e.g. '0'
     # @return [Hash]
-    def initial_agent_settings(agent_id, vm_name, network_spec, environment, root_device_name, ephemeral_device_name)
+    def initial_agent_settings(agent_id, vm_name, network_spec, environment, root_device_name, ephemeral_device_lun)
       settings = {
           "vm" => {
               "name" => vm_name
@@ -405,7 +412,13 @@ module Bosh::AzureCloud
           "networks" => agent_network_spec(network_spec),
           "disks" => {
               "system" => root_device_name,
-              "ephemeral" => ephemeral_device_name,
+              "ephemeral" => {
+                'lun'            => ephemeral_device_lun,
+                'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID,
+
+                # For compatiblity with old stemcells
+                'path'           => get_disk_path_name(ephemeral_device_lun.to_i)
+              },
               "persistent" => {}
           }
       }
@@ -451,6 +464,14 @@ module Bosh::AzureCloud
           @logger.error(msg)
         end
         raise e
+      end
+    end
+
+    def get_disk_path_name(lun)
+      if((lun + 2) < 26)
+        "/dev/sd#{('c'.ord + lun).chr}"
+      else
+        "/dev/sd#{('a'.ord + (lun + 2 - 26) / 26).chr}#{('a'.ord + (lun + 2) % 26).chr}"
       end
     end
   end
