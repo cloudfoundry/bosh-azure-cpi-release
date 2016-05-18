@@ -172,7 +172,16 @@ module Bosh::AzureCloud
                 'uri' => vm_params[:os_vhd_uri]
               }
             },
-            'dataDisks' => []
+            'dataDisks' => [{
+                'name'         => vm_params[:ephemeral_disk_name],
+                'lun'          => 0,
+                'createOption' => 'Empty',
+                'diskSizeGB'   => vm_params[:ephemeral_disk_size],
+                'caching'      => 'ReadWrite',
+                'vhd'          => {
+                  'uri' => vm_params[:ephemeral_disk_uri]
+                }
+              }]
           },
           'networkProfile' => {
             'networkInterfaces' => [
@@ -188,19 +197,6 @@ module Bosh::AzureCloud
         vm['properties']['availabilitySet'] = {
           'id' => availability_set[:id]
         }
-      end
-
-      unless vm_params[:ephemeral_disk_size].nil?
-        vm['properties']['storageProfile']['dataDisks'].push({
-          'name'         => vm_params[:ephemeral_disk_name],
-          'lun'          => 0,
-          'createOption' => 'Empty',
-          'diskSizeGB'   => vm_params[:ephemeral_disk_size],
-          'caching'      => 'ReadWrite',
-          'vhd'          => {
-            'uri' => vm_params[:ephemeral_disk_uri]
-          }
-        })
       end
 
       params = {
@@ -238,17 +234,23 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
       vm = get_resource_by_id(url)
       if vm.nil?
-        raise AzureNoFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name \"#{name}\""
+        raise AzureNoFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{name}'"
       end
 
+      # 0 is always used by the ephemeral disk. Search an available lun from 1.
+      # Max data disks on Azure is 64.
       lun = 0
       data_disks = vm['properties']['storageProfile']['dataDisks']
-      for i in 0..128
+      for i in 1..63
         disk = data_disks.find { |disk| disk['lun'] == i}
         if disk.nil?
           lun = i
           break
         end
+      end
+
+      if lun == 0
+        raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine `#{name}' for the new disk `#{disk_name}'"
       end
 
       new_disk = {
@@ -259,7 +261,7 @@ module Bosh::AzureCloud
         'vhd'          => { 'uri' => disk_uri }
       }
       vm['properties']['storageProfile']['dataDisks'].push(new_disk)
-      @logger.info("attach_disk_to_virtual_machine - attach disk #{disk_name} to #{lun}")
+      @logger.info("attach_disk_to_virtual_machine - attach disk `#{disk_name}' to `#{lun}'")
       http_put(url, vm)
       disk = {
         :name         => disk_name,

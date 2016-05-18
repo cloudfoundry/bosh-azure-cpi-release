@@ -1,8 +1,9 @@
 module Bosh::AzureCloud
   class DiskManager
-    DISK_CONTAINER       = 'bosh'
-    OS_DISK_PREFIX       = 'bosh-os'
-    DATA_DISK_PREFIX     = 'bosh-data'
+    DISK_CONTAINER         = 'bosh'
+    OS_DISK_PREFIX         = 'bosh-os'
+    DATA_DISK_PREFIX       = 'bosh-data'
+    EPHEMERAL_DISK_POSTFIX = 'ephemeral'
 
     include Bosh::Exec
     include Helpers
@@ -96,6 +97,11 @@ module Bosh::AzureCloud
     # bosh-os-STORAGEACCOUNTNAME-AGENTID
     def generate_os_disk_name(instance_id)
       "#{OS_DISK_PREFIX}-#{instance_id}"
+    end
+
+    # bosh-os-STORAGEACCOUNTNAME-AGENTID-ephemeral
+    def generate_ephemeral_disk_name(instance_id)
+      "#{OS_DISK_PREFIX}-#{instance_id}-#{EPHEMERAL_DISK_POSTFIX}"
     end
 
     private

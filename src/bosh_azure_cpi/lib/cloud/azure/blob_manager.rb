@@ -157,7 +157,7 @@ module Bosh::AzureCloud
 
             elapse_time = Time.new - start_time
             copied_bytes, total_bytes = blob_props[:copy_progress].split('/').map { |v| v.to_i }
-            interval = copied_bytes == 0 ? 5 : (total_bytes - copied_bytes) / copied_bytes * elapse_time
+            interval = copied_bytes == 0 ? 5 : (total_bytes - copied_bytes).to_f / copied_bytes * elapse_time
             interval = 30 if interval > 30
             interval = 1 if interval < 1
             sleep(interval)

@@ -16,6 +16,16 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-05-17
+- CPI changes
+  - Fix an issue in calculating the sleep interval when copying blobs
+  - Use LUN and host device id as the disk identifier
+    - Compatible Stemcell Versions: v3181 or later
+
+# 2015-05-09
+- CPI changes
+  - Remove use_temporary_disk and always use a data disk as the ephemeral disk.
+
 # 2015-04-25
 - CPI changes
   - Support to use a data disk as the ephemeral disk.

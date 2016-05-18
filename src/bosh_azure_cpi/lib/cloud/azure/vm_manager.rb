@@ -4,8 +4,6 @@ module Bosh::AzureCloud
 
     AZURE_TAGS = {'user-agent' => 'bosh'}
 
-    EPHEMERAL_DISK_POSTFIX = 'ephemeral'
-
     def initialize(azure_properties, registry_endpoint, disk_manager, azure_client2)
       @azure_properties = azure_properties
       @registry_endpoint = registry_endpoint
@@ -17,16 +15,12 @@ module Bosh::AzureCloud
 
     def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
       instance_is_created = false
-      ephemeral_disk_id = nil
       ephemeral_disk_size = 15
       if resource_pool.has_key?('ephemeral_disk')
         if resource_pool['ephemeral_disk'].has_key?('size')
           size = resource_pool['ephemeral_disk']['size']
           validate_disk_size(size)
           ephemeral_disk_size = size/1024
-        end
-        if resource_pool['ephemeral_disk']['use_temporary_disk']
-          ephemeral_disk_size = nil
         end
       end
 
@@ -103,23 +97,21 @@ module Bosh::AzureCloud
         :os_disk_name        => os_disk_name,
         :os_vhd_uri          => @disk_manager.get_disk_uri(os_disk_name),
         :caching             => caching,
-        :ssh_cert_data       => @azure_properties['ssh_public_key']
+        :ssh_cert_data       => @azure_properties['ssh_public_key'],
+        :ephemeral_disk_name => EPHEMERAL_DISK_NAME,
+        :ephemeral_disk_uri  => @disk_manager.get_disk_uri(@disk_manager.generate_ephemeral_disk_name(instance_id)),
+        :ephemeral_disk_size => ephemeral_disk_size
       }
-      unless ephemeral_disk_size.nil?
-        ephemeral_disk_id = @disk_manager.generate_os_disk_name("#{instance_id}-#{EPHEMERAL_DISK_POSTFIX}")
-
-        vm_params[:ephemeral_disk_name] = EPHEMERAL_DISK_NAME
-        vm_params[:ephemeral_disk_uri]  = @disk_manager.get_disk_uri(ephemeral_disk_id)
-        vm_params[:ephemeral_disk_size] = ephemeral_disk_size
-      end
 
       instance_is_created = true
       @azure_client2.create_virtual_machine(vm_params, network_interface, availability_set)
 
       instance_id
     rescue => e
-      @azure_client2.delete_virtual_machine(instance_id) if instance_is_created
-      @disk_manager.delete_disk(ephemeral_disk_id) unless ephemeral_disk_id.nil?
+      if instance_is_created
+        @azure_client2.delete_virtual_machine(instance_id)
+        @disk_manager.delete_disk(@disk_manager.get_disk_uri(@disk_manager.generate_ephemeral_disk_name(instance_id)))
+      end
       delete_availability_set(availability_set[:name]) unless availability_set.nil?
       @azure_client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
       # Replace vmSize with instance_type because only instance_type exists in the manifest
@@ -153,7 +145,7 @@ module Bosh::AzureCloud
       os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
       @disk_manager.delete_disk(os_disk_name)
 
-      ephemeral_disk_name = @disk_manager.generate_os_disk_name("#{instance_id}-#{EPHEMERAL_DISK_POSTFIX}")
+      ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
       @disk_manager.delete_disk(ephemeral_disk_name)
 
       # Cleanup invalid VM status file
@@ -176,13 +168,13 @@ module Bosh::AzureCloud
     #
     # @param [String] instance_id Instance id
     # @param [String] disk_name disk name
-    # @return [String] volume name. "/dev/sd[c-r]"
+    # @return [String] lun
     def attach_disk(instance_id, disk_name)
       @logger.info("attach_disk(#{instance_id}, #{disk_name})")
       disk_uri = @disk_manager.get_disk_uri(disk_name)
       caching = @disk_manager.get_data_disk_caching(disk_name)
       disk = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_name, disk_uri, caching)
-      "/dev/sd#{('c'.ord + disk[:lun]).chr}"
+      "#{disk[:lun]}"
     end
 
     def detach_disk(instance_id, disk_name)

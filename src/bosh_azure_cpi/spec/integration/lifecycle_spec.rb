@@ -271,46 +271,6 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
-  context 'Creating one VM with using the temporary disk as the ephemeral disk' do
-    let(:resource_pool) {
-      {
-        'instance_type' => instance_type,
-        'ephemeral_disk' => {
-          'use_temporary_disk' => true
-        }
-      }
-    }
-
-    it 'should exercise the vm lifecycle' do
-      vm_lifecycle(@stemcell_id, dynamic_networks, 1) do |instance_id|
-        disk_id = cpi.create_disk(2048, {}, instance_id)
-        expect(disk_id).not_to be_nil
-
-        cpi.attach_disk(instance_id, disk_id)
-
-        snapshot_metadata = vm_metadata.merge(
-          bosh_data: 'bosh data',
-          instance_id: 'instance',
-          agent_id: 'agent',
-          director_name: 'Director',
-          director_uuid: SecureRandom.uuid
-        )
-
-        snapshot_id = cpi.snapshot_disk(disk_id, snapshot_metadata)
-        expect(snapshot_id).not_to be_nil
-
-        cpi.delete_snapshot(snapshot_id)
-
-        Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
-          cpi.detach_disk(instance_id, disk_id)
-          true
-        end
-
-        cpi.delete_disk(disk_id) if disk_id
-      end
-    end
-  end
-
   def vm_lifecycle(stemcell_id, network_spec, nums = 1)
     instance_id_pool = Array.new
     for i in 1..nums
