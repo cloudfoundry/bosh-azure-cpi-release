@@ -27,7 +27,7 @@ describe Bosh::AzureCloud::VMManager do
       }
     }
     let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
-    let(:network_security) {
+    let(:security_group) {
       {
         :name => "fake-default-nsg-name",
         :id => "fake-nsg-id"
@@ -49,53 +49,90 @@ describe Bosh::AzureCloud::VMManager do
     before do
       allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
         and_return(client2)
+      allow(client2).to receive(:get_network_subnet_by_name).
+        with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
+        and_return(subnet)
+      allow(client2).to receive(:get_network_security_group_by_name).
+        with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+        and_return(security_group)
+
+      allow(network_configurator).to receive(:resource_group_name).
+        and_return(nil)
       allow(network_configurator).to receive(:virtual_network_name).
         and_return("fake-virtual-network-name")
       allow(network_configurator).to receive(:subnet_name).
         and_return("fake-subnet-name")
       allow(network_configurator).to receive(:security_group).
         and_return(nil)
-      allow(client2).to receive(:get_network_security_group_by_name).
-        with("fake-default-nsg-name").
-        and_return(network_security)
       allow(disk_manager).to receive(:delete_disk).
         and_return(nil)
       allow(disk_manager).to receive(:generate_ephemeral_disk_name).
         and_return(ephemeral_disk_name)
     end
 
-    context "when subnet is not found" do
-      it "should raise an error" do
-        allow(client2).to receive(:get_network_subnet_by_name).
-          and_return(nil)
-        expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
-        }.to raise_error /Cannot find the subnet/
+    context "when the resource group name is not specified in the network spec" do
+      context "when subnet is not found in the default resource group" do
+        before do
+          allow(client2).to receive(:get_network_subnet_by_name).
+            with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
+            and_return(nil)
+        end
+        it "should raise an error" do
+          expect {
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          }.to raise_error /Cannot find the subnet `fake-virtual-network-name\/fake-subnet-name' in the resource group `#{MOCK_RESOURCE_GROUP_NAME}'/
+        end
+      end
+
+      context "when network security group is not found in the default resource group" do
+        before do
+          allow(client2).to receive(:get_network_security_group_by_name).
+            with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+            and_return(nil)
+        end
+        it "should raise an error" do
+          expect {
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          }.to raise_error /Cannot find the network security group `fake-default-nsg-name'/
+        end
       end
     end
 
-    context "when network security group is not found" do
+    context "when the resource group name is specified in the network spec" do
       before do
-        allow(client2).to receive(:get_network_subnet_by_name).
-          and_return(subnet)
-        allow(client2).to receive(:get_network_security_group_by_name).
-          and_return(nil)
+        allow(network_configurator).to receive(:resource_group_name).
+          and_return("fake-resource-group-name")
       end
-      it "should raise an error" do
-        expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
-        }.to raise_error /Cannot find the network security group/
+
+      context "when subnet is not found in the specified resource group" do
+        it "should raise an error" do
+          allow(client2).to receive(:get_network_subnet_by_name).
+            with("fake-resource-group-name", "fake-virtual-network-name", "fake-subnet-name").
+            and_return(nil)
+          expect {
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          }.to raise_error /Cannot find the subnet `fake-virtual-network-name\/fake-subnet-name' in the resource group `fake-resource-group-name'/
+        end
       end
-    end
 
-    context "when caching is invalid" do
-      it "should raise an error" do
-        allow(client2).to receive(:get_network_subnet_by_name).
-          and_return(subnet)
+      context "when network security group is not found in the specified resource group nor the default resource group" do
+        before do
+          allow(client2).to receive(:get_network_subnet_by_name).
+            with("fake-resource-group-name", "fake-virtual-network-name", "fake-subnet-name").
+            and_return(subnet)
+          allow(client2).to receive(:get_network_security_group_by_name).
+            with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+            and_return(nil)
+          allow(client2).to receive(:get_network_security_group_by_name).
+            with("fake-resource-group-name", "fake-default-nsg-name").
+            and_return(nil)
+        end
 
-        expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, {'caching' => 'InvalidCachingOption'}, network_configurator)
-        }.to raise_error /Unknown disk caching/
+        it "should raise an error" do
+          expect {
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          }.to raise_error /Cannot find the network security group `fake-default-nsg-name'/
+        end
       end
     end
 
@@ -346,11 +383,11 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(client2).to receive(:get_network_security_group_by_name).
-              with("fake-default-nsg-name").
+              with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
               and_return(nil)
             allow(client2).to receive(:get_network_security_group_by_name).
-              with("fake-nsg-name").
-              and_return(network_security)
+              with(MOCK_RESOURCE_GROUP_NAME, "fake-nsg-name").
+              and_return(security_group)
           end
 
           it "should succeed" do
@@ -369,11 +406,12 @@ describe Bosh::AzureCloud::VMManager do
             allow(network_configurator).to receive(:security_group).
               and_return("fake-network-nsg-name")
             allow(client2).to receive(:get_network_security_group_by_name).
+              with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
               with("fake-default-nsg-name").
               and_return(nil)
             allow(client2).to receive(:get_network_security_group_by_name).
-              with("fake-network-nsg-name").
-              and_return(network_security)
+              with(MOCK_RESOURCE_GROUP_NAME, "fake-network-nsg-name").
+              and_return(security_group)
           end
 
           it "should succeed" do
@@ -423,6 +461,79 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          end
+        end
+
+        context "with the resource group name not provided in the network spec" do
+          before do
+            allow(client2).to receive(:get_network_subnet_by_name).
+              with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
+              and_return(subnet)
+          end
+
+          context "when network security group is found in the default resource group" do
+            before do
+              allow(client2).to receive(:get_network_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                and_return(security_group)
+            end
+
+            it "should succeed" do
+              allow(client2).to receive(:create_virtual_machine)
+
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_availability_set)
+              expect(client2).not_to receive(:delete_network_interface)
+
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            end
+          end
+        end
+
+        context "with the resource group name provided in the network spec" do
+          before do
+            allow(client2).to receive(:get_network_subnet_by_name).
+              with("fake-resource-group-name", "fake-virtual-network-name", "fake-subnet-name").
+              and_return(subnet)
+          end
+
+          context "when network security group is not found in the specified resource group and found in the default resource group" do
+            before do
+              allow(client2).to receive(:get_network_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                and_return(security_group)
+              allow(client2).to receive(:get_network_security_group_by_name).
+                with("fake-resource-group-name", "fake-default-nsg-name").
+                and_return(nil)
+            end
+
+            it "should succeed" do
+              allow(client2).to receive(:create_virtual_machine)
+
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_availability_set)
+              expect(client2).not_to receive(:delete_network_interface)
+
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            end
+          end
+
+          context "when network security group is found in the specified resource group" do
+            before do
+              allow(client2).to receive(:get_network_security_group_by_name).
+                with("fake-resource-group-name", "fake-default-nsg-name").
+                and_return(security_group)
+            end
+
+            it "should succeed" do
+              allow(client2).to receive(:create_virtual_machine)
+
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_availability_set)
+              expect(client2).not_to receive(:delete_network_interface)
+
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            end
           end
         end
       end

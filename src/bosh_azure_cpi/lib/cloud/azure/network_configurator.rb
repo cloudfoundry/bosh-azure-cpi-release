@@ -17,7 +17,7 @@ module Bosh::AzureCloud
     def initialize(spec)
       unless spec.is_a?(Hash)
         raise ArgumentError, "Invalid spec, Hash expected, " \
-                             "#{spec.class} provided"
+                             "`#{spec.class}' provided"
       end
 
       @logger = Bosh::Clouds::Config.logger
@@ -25,7 +25,7 @@ module Bosh::AzureCloud
       @vip_network = nil
       @networks_spec = spec
 
-      logger.debug ("networks: #{spec}")
+      logger.debug ("networks: `#{spec}'")
       spec.each_pair do |name, network_spec|
         network_type = network_spec["type"] || "manual"
 
@@ -39,18 +39,31 @@ module Bosh::AzureCloud
             @network = ManualNetwork.new(name, network_spec)
 
           when "vip"
-            cloud_error("More than one vip network for '#{name}'") if @vip_network
+            cloud_error("More than one vip network for `#{name}'") if @vip_network
             @vip_network = VipNetwork.new(name, network_spec)
 
           else
-            cloud_error("Invalid network type '#{network_type}' for Azure, " \
-                        "can only handle 'dynamic', 'vip', or 'manual' network types")
+            cloud_error("Invalid network type `#{network_type}' for Azure, " \
+                        "can only handle `dynamic', `vip', or `manual' network types")
         end
       end
 
       unless @network
         cloud_error("Exactly one dynamic or manual network must be defined")
       end
+    end
+
+    def resource_group_name(network_type=nil)
+      resource_group_name = nil
+      case network_type
+        when "vip"
+          resource_group_name = @vip_network.resource_group_name
+
+        else
+          resource_group_name = @network.resource_group_name
+      end
+
+      resource_group_name
     end
 
     def virtual_network_name

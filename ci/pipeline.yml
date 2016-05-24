@@ -14,6 +14,7 @@ jobs:
   plan:
   - aggregate:
     - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false, get: stemcell, resource: azure-ubuntu-stemcell}
 
   - task: azure-provision
     file: bosh-cpi-release/ci/tasks/azure-provision.yml
@@ -22,14 +23,13 @@ jobs:
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
         AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_GROUP_NAME:               {{azure_group_name}}
+        AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms}}
+        AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network}}
         AZURE_REGION_NAME:              {{azure_region_name}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
         AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
         AZURE_REGION_SHORT_NAME:        {{azure_region_short_name}}
         AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
-        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
-        AZURE_TENANT_ID:                {{azure_tenant_id}}
         AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
         AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
 
@@ -46,7 +46,7 @@ jobs:
         AZURE_TENANT_ID:                {{azure_tenant_id}}
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-        AZURE_GROUP_NAME:               {{azure_group_name}}
+        AZURE_GROUP_NAME:               {{azure_group_name_for_vms}}
         AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
         AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
@@ -75,22 +75,22 @@ jobs:
   - aggregate:
     - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
     - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-cpi-release-in}
-    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
 
   - task: test
     file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
     config:
       params:
-        SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
         AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_GROUP_NAME:               {{azure_group_name}}
+        AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms}}
+        AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network}}
         AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
-        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
         AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
         AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
         AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
+        SSH_PUBLIC_KEY:                 {{ssh_public_key}}
 
 - name: bats-ubuntu
   serial: true
@@ -108,20 +108,21 @@ jobs:
     file: bosh-cpi-release/ci/tasks/setup-director.yml
     config:
       params:
-        BASE_OS:                    ubuntu
+        BASE_OS:                        ubuntu
+        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
         AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_GROUP_NAME:               {{azure_group_name}}
+        AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms}}
+        AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
         AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
-        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
         AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-        BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
-        SSH_PRIVATE_KEY:                {{ssh_private_key}}
-        SSH_PUBLIC_KEY:                 {{ssh_public_key}}
         AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
+        BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
         BAT_DIRECTOR_PASSWORD:          {{bat_director_password}}
+        SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+        SSH_PRIVATE_KEY:                {{ssh_private_key}}
 
   - task: run-bats
     file: bosh-cpi-release/ci/tasks/run-bats.yml
@@ -131,19 +132,19 @@ jobs:
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
         AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_GROUP_NAME:               {{azure_group_name}}
-        BAT_VCAP_PASSWORD:              {{bat_vcap_password}}
-        SSH_PRIVATE_KEY:                {{ssh_private_key}}
+        AZURE_GROUP_NAME:               {{azure_group_name_for_network}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
-        BAT_SECOND_STATIC_IP:           {{bat_second_static_ip}}
-        BAT_NETWORK_STATIC_IP:          {{bat_network_static_ip}}
+        AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
+        AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
         BAT_NETWORK_CIDR:               {{bat_network_cidr}}
         BAT_NETWORK_RESERVED_RANGE:     {{bat_network_reserved_range}}
         BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
         BAT_NETWORK_STATIC_RANGE:       {{bat_network_static_range}}
-        AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
-        AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
+        BAT_NETWORK_STATIC_IP:          {{bat_network_static_ip}}
+        BAT_SECOND_STATIC_IP:           {{bat_second_static_ip}}
         BAT_DIRECTOR_PASSWORD:          {{bat_director_password}}
+        BAT_VCAP_PASSWORD:              {{bat_vcap_password}}
+        SSH_PRIVATE_KEY:                {{ssh_private_key}}
 
   - task: teardown-director
     file: bosh-cpi-release/ci/tasks/teardown-director.yml

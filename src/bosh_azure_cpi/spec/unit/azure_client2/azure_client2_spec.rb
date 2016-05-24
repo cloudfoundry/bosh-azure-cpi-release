@@ -31,50 +31,61 @@ describe Bosh::AzureCloud::AzureClient2 do
       resource_type = "b"
       name = "c"
       others = "d"
+      resource_group_name = "e"
       expect(azure_client2.rest_api_url(
         resource_provider,
         resource_type,
-        name,
-        others)
-      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/a/b/c/d")
+        resource_group_name: resource_group_name,
+        name: name,
+        others: others)
+      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/c/d")
     end
 
-    it "returns the right url if name is nil" do
+    it "returns the right url if resource group name is not provided" do
       resource_provider = "a"
       resource_type = "b"
-      name = nil
+      name = "c"
       others = "d"
       expect(azure_client2.rest_api_url(
         resource_provider,
         resource_type,
-        name,
-        others)
-      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/a/b/d")
+        name: name,
+        others: others)
+      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/a/b/c/d")
     end
 
-    it "returns the right url if others is nil" do
+    it "returns the right url if name is not provided" do
+      resource_provider = "a"
+      resource_type = "b"
+      others = "d"
+      resource_group_name = "e"
+      expect(azure_client2.rest_api_url(
+        resource_provider,
+        resource_type,
+        resource_group_name: resource_group_name,
+        others: others)
+      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/d")
+    end
+
+    it "returns the right url if others is not provided" do
       resource_provider = "a"
       resource_type = "b"
       name = "c"
-      others = nil
+      resource_group_name = "e"
       expect(azure_client2.rest_api_url(
         resource_provider,
         resource_type,
-        name,
-        others)
-      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/a/b/c")
+        resource_group_name: resource_group_name,
+        name: name)
+      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/c")
     end
 
-    it "returns the right url if name and others are both nil" do
+    it "returns the right url if resource_group_name, name and others are all not provided" do
       resource_provider = "a"
       resource_type = "b"
-      name = nil
-      others = nil
       expect(azure_client2.rest_api_url(
         resource_provider,
-        resource_type,
-        name,
-        others)
+        resource_type)
       ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/a/b")
     end
   end

@@ -4,25 +4,26 @@ set -e
 
 source bosh-cpi-release/ci/tasks/utils.sh
 
+check_param BASE_OS
+check_param AZURE_SUBSCRIPTION_ID
 check_param AZURE_CLIENT_ID
 check_param AZURE_CLIENT_SECRET
 check_param AZURE_TENANT_ID
-check_param AZURE_GROUP_NAME
+check_param AZURE_GROUP_NAME_FOR_VMS
+check_param AZURE_GROUP_NAME_FOR_NETWORK
 check_param AZURE_VNET_NAME_FOR_BATS
 check_param AZURE_STORAGE_ACCOUNT_NAME
-check_param AZURE_SUBSCRIPTION_ID
 check_param AZURE_BOSH_SUBNET_NAME
-check_param BASE_OS
+check_param AZURE_DEFAULT_SECURITY_GROUP
 check_param SSH_PRIVATE_KEY
 check_param SSH_PUBLIC_KEY
 check_param BAT_NETWORK_GATEWAY
-check_param AZURE_DEFAULT_SECURITY_GROUP
 check_param BAT_DIRECTOR_PASSWORD
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
 
-DIRECTOR=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)
+DIRECTOR=$(azure network public-ip show ${AZURE_GROUP_NAME_FOR_NETWORK} AzureCPICI-bosh --json | jq '.ipAddress' -r)
 
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
@@ -48,6 +49,8 @@ releases:
 networks:
 - name: public
   type: vip
+  cloud_properties:
+    resource_group_name: $AZURE_GROUP_NAME_FOR_NETWORK
 - name: private
   type: manual
   subnets:
@@ -55,6 +58,7 @@ networks:
     gateway: 10.0.0.1
     dns: [168.63.129.16]
     cloud_properties:
+      resource_group_name: $AZURE_GROUP_NAME_FOR_NETWORK
       virtual_network_name: $AZURE_VNET_NAME_FOR_BATS
       subnet_name: $AZURE_BOSH_SUBNET_NAME
 
@@ -87,8 +91,11 @@ jobs:
   persistent_disk_pool: disks
 
   networks:
-  - {name: private, static_ips: [10.0.0.10], default: [dns, gateway]}
-  - {name: public, static_ips: [$DIRECTOR]}
+  - name: private
+    static_ips: [10.0.0.10]
+    default: [dns, gateway]
+  - name: public
+    static_ips: [$DIRECTOR]
 
   properties:
     nats:
@@ -164,7 +171,7 @@ jobs:
       environment: AzureCloud
       subscription_id: $AZURE_SUBSCRIPTION_ID
       storage_account_name: $AZURE_STORAGE_ACCOUNT_NAME
-      resource_group_name: $AZURE_GROUP_NAME
+      resource_group_name: $AZURE_GROUP_NAME_FOR_VMS
       tenant_id: $AZURE_TENANT_ID
       client_id: $AZURE_CLIENT_ID
       client_secret: $AZURE_CLIENT_SECRET

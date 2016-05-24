@@ -54,9 +54,10 @@ module Bosh::AzureCloud
     end
 
     # Common
-    def rest_api_url(resource_provider, resource_type, name = nil, others = nil)
+    def rest_api_url(resource_provider, resource_type, resource_group_name: nil, name: nil, others: nil)
       url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
-      url += "/resourceGroups/#{URI.escape(@azure_properties['resource_group_name'])}"
+      resource_group_name = @azure_properties['resource_group_name'] if resource_group_name.nil?
+      url += "/resourceGroups/#{URI.escape(resource_group_name)}"
       url += "/providers/#{resource_provider}"
       url += "/#{resource_type}"
       url += "/#{URI.escape(name)}" unless name.nil?
@@ -133,7 +134,7 @@ module Bosh::AzureCloud
     # * +:ssh_cert_data+        - String. The content of SSH certificate.
     #
     def create_virtual_machine(vm_params, network_interface, availability_set = nil)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, vm_params[:name])
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: vm_params[:name])
       vm = {
         'name'       => vm_params[:name],
         'location'   => vm_params[:location],
@@ -207,7 +208,7 @@ module Bosh::AzureCloud
     end
 
     def restart_virtual_machine(name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name, 'restart')
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name, others: 'restart')
       http_post(url)
     end
 
@@ -215,7 +216,7 @@ module Bosh::AzureCloud
     # @param [String] name Name of virtual machine.
     # @param [Hash] metadata metadata key/value pairs.
     def update_tags_of_virtual_machine(name, tags)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
         raise AzureNoFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name \"#{name}\""
@@ -231,7 +232,7 @@ module Bosh::AzureCloud
     # @param [String] disk_uri URI of disk
     # @param [String] caching Caching option: None, ReadOnly or ReadWrite
     def attach_disk_to_virtual_machine(name, disk_name, disk_uri, caching)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
         raise AzureNoFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{name}'"
@@ -273,7 +274,7 @@ module Bosh::AzureCloud
     end
 
     def detach_disk_from_virtual_machine(name, disk_name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
         raise AzureNoFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
@@ -291,7 +292,7 @@ module Bosh::AzureCloud
     end
 
     def get_virtual_machine_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       get_virtual_machine(url)
     end
 
@@ -338,7 +339,7 @@ module Bosh::AzureCloud
 
     def delete_virtual_machine(name)
       @logger.debug("delete_virtual_machine - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       http_delete(url)
     end
 
@@ -359,7 +360,7 @@ module Bosh::AzureCloud
     # * +:platform_fault_domain_count+  - Integer. Specifies the fault domain count of availability set.
     #
     def create_availability_set(avset_params)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, avset_params[:name])
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: avset_params[:name])
       availability_set = {
         'name'       => avset_params[:name],
         'type'       => "#{REST_API_PROVIDER_COMPUTER}/#{REST_API_COMPUTER_AVAILABILITY_SETS}",
@@ -374,7 +375,7 @@ module Bosh::AzureCloud
     end
 
     def get_availability_set_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: name)
       get_availability_set(url)
     end
 
@@ -404,13 +405,13 @@ module Bosh::AzureCloud
 
     def delete_availability_set(name)
       @logger.debug("delete_availability_set - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: name)
       http_delete(url)
     end
 
     # Network/Public IP
     def create_public_ip(name, location, is_static = true)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
       public_ip = {
         'name'       => name,
         'location'   => location,
@@ -422,7 +423,7 @@ module Bosh::AzureCloud
     end
 
     def get_public_ip_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
       get_public_ip(url)
     end
 
@@ -448,9 +449,9 @@ module Bosh::AzureCloud
       ip_address
     end
 
-    def list_public_ips()
+    def list_public_ips(resource_group_name)
       ip_addresses = []
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name)
       result = get_resource_by_id(url)
       unless result.nil?
         result['value'].each do |ret|
@@ -476,13 +477,13 @@ module Bosh::AzureCloud
 
     def delete_public_ip(name)
       @logger.debug("delete_public_ip - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
       http_delete(url)
     end
 
     # Network/Load Balancer
     def create_load_balancer(name,  public_ip, tags, tcp_endpoints = [], udp_endpoints = [])
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
       load_balancer = {
         'name'       => name,
         'location'   => public_ip[:location],
@@ -504,7 +505,7 @@ module Bosh::AzureCloud
         }
       }
 
-      frontend_ip_configuration_id = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name, 'frontendIPConfigurations/LBFE')
+      frontend_ip_configuration_id = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name, others: 'frontendIPConfigurations/LBFE')
       tcp_endpoints.each do |endpoint|
         ports = endpoint.split(':')
         inbound_nat_rules = {
@@ -542,7 +543,7 @@ module Bosh::AzureCloud
     end
 
     def get_load_balancer_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
       get_load_balancer(url)
     end
 
@@ -589,7 +590,7 @@ module Bosh::AzureCloud
 
     def delete_load_balancer(name)
       @logger.debug("delete_load_balancer - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
       http_delete(url)
     end
 
@@ -614,7 +615,7 @@ module Bosh::AzureCloud
     # * +:security_group - Hash. The network security group which the network interface is binded to.
     #
     def create_network_interface(nic_params, subnet, tags, load_balancer = nil)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, nic_params[:name])
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name: nic_params[:name])
       interface = {
         'name'       => nic_params[:name],
         'location'   => nic_params[:location],
@@ -656,7 +657,7 @@ module Bosh::AzureCloud
     end
 
     def get_network_interface_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name: name)
       get_network_interface(url)
     end
 
@@ -696,13 +697,13 @@ module Bosh::AzureCloud
 
     def delete_network_interface(name)
       @logger.debug("delete_network_interface - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name: name)
       http_delete(url)
     end
 
     # Network/Subnet
-    def get_network_subnet_by_name(vnet_name, subnet_name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_VNETS, vnet_name, "subnets/#{subnet_name}")
+    def get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_VNETS, resource_group_name: resource_group_name, name: vnet_name, others: "subnets/#{subnet_name}")
       get_network_subnet(url)
     end
 
@@ -722,8 +723,8 @@ module Bosh::AzureCloud
     end
 
     # Network/Network Security Group
-    def get_network_security_group_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_SECURITY_GROUPS, name)
+    def get_network_security_group_by_name(resource_group_name, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_SECURITY_GROUPS, resource_group_name: resource_group_name, name: name)
       get_network_security_group(url)
     end
 
@@ -746,7 +747,7 @@ module Bosh::AzureCloud
     # Storage/StorageAccounts
     # https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
     def create_storage_account(name, location, account_type, tags)
-      url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name)
+      url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
       storage_account = {
         'location'   => location,
         'tags'       => tags,
@@ -821,7 +822,7 @@ module Bosh::AzureCloud
     end
 
     def get_storage_account_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name)
+      url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
       get_storage_account(url)
     end
 
@@ -848,7 +849,7 @@ module Bosh::AzureCloud
     def get_storage_account_keys_by_name(name)
       result = nil
       begin
-        url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name, 'listKeys')
+        url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name, others: 'listKeys')
         result = http_post(url)
       rescue AzureNoFoundError => e
         result = nil
