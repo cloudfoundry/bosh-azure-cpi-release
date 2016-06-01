@@ -15,8 +15,6 @@ export NO_PROXY=<%= no_proxy %>
 export no_proxy=<%= no_proxy %>
 <% end %>
 
-read INPUT
-
 BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
 
@@ -27,7 +25,5 @@ export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/bosh_azure_cpi/Gemfile
 
 bundle_cmd="$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin/bundle"
 
-echo $INPUT | $bundle_cmd exec $BOSH_PACKAGES_DIR/bosh_azure_cpi/bin/azure_cpi \
+exec $bundle_cmd exec $BOSH_PACKAGES_DIR/bosh_azure_cpi/bin/azure_cpi \
   $BOSH_JOBS_DIR/cpi/config/cpi.json
-
-exit 0
