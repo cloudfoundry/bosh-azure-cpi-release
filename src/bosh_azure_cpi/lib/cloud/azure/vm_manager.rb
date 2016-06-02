@@ -110,7 +110,8 @@ module Bosh::AzureCloud
     rescue => e
       if instance_is_created
         @azure_client2.delete_virtual_machine(instance_id)
-        @disk_manager.delete_disk(@disk_manager.get_disk_uri(@disk_manager.generate_ephemeral_disk_name(instance_id)))
+        ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
+        @disk_manager.delete_disk(ephemeral_disk_name)
       end
       delete_availability_set(availability_set[:name]) unless availability_set.nil?
       @azure_client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
