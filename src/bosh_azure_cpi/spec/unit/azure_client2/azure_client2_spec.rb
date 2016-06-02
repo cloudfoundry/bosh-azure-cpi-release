@@ -191,7 +191,18 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
-        }.to raise_error /get_token - Azure authentication failed: invalid tenant id, client id or client secret./
+        }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
+      end
+
+      it "should raise an error if the request is invalid" do
+        stub_request(:post, token_uri).to_return(
+          :status => 400,
+          :body => '',
+          :headers => {})
+
+        expect {
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+        }.to raise_error /get_token - http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant id, client id or client secret./
       end
 
       it "should raise an error if authentication retry fails" do

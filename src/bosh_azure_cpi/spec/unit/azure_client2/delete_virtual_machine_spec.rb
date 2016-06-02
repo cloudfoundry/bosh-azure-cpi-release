@@ -153,7 +153,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.delete_virtual_machine(vm_name)
-        }.to raise_error /get_token - Azure authentication failed: invalid tenant id, client id or client secret./
+        }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
       end
 
       it "should raise an error if authentication retry fails" do

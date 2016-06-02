@@ -905,7 +905,9 @@ module Bosh::AzureCloud
           @token = JSON(response.body)
           @logger.debug("get_token - token is\n#{@token}")
         elsif response.code.to_i == HTTP_CODE_UNAUTHORIZED
-          raise AzureError, "get_token - Azure authentication failed: invalid tenant id, client id or client secret."
+          raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Invalid tenant id, client id or client secret."
+        elsif response.code.to_i == HTTP_CODE_BADREQUEST
+          raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Bad request. Please assure no typo in values of tenant id, client id or client secret."
         else
           raise AzureError, "get_token - http code: #{response.code}"
         end
