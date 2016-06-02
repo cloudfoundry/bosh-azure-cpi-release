@@ -86,6 +86,7 @@ describe Bosh::AzureCloud::BlobManager do
       before do
         allow(blob_service).to receive(:create_page_blob)
         allow(blob_service).to receive(:create_blob_pages)
+        allow(blob_service).to receive(:delete_blob)
       end
 
       it "raise no error" do

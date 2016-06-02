@@ -45,6 +45,8 @@ module Bosh::AzureCloud
     EPHEMERAL_DISK_NAME       = 'ephemeral-disk'
     AZURE_SCSI_HOST_DEVICE_ID = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
 
+    AZURE_MAX_RETRY_COUNT     = 10
+
     ##
     # Raises CloudError exception
     #

@@ -2,8 +2,8 @@ module Bosh::AzureCloud
   class BlobManager
     include Helpers
 
-    VHDBlock = Struct.new(:id, :file_start_range, :size, :blob_start_range, :content)
-    ThreadFlag = Struct.new(:finish, :fail, :message)
+    MAX_CHUNK_SIZE = 4 * 1024 * 1024  # 4 MB
+    HASH_OF_4MB_EMPTY_CONTENT = 'b5cfa9d6c8febd618f91ac2843d50a1c' # The hash value of 4MB empty content
 
     def initialize(azure_properties, azure_client2)
       @parallel_upload_thread_num = 16
@@ -45,9 +45,7 @@ module Bosh::AzureCloud
       @logger.info("create_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name})")
       initialize_blob_client(storage_account_name) do
         begin
-          blob_size = File.lstat(file_path).size
-          @logger.info("create_page_blob: blob_name: #{blob_name}, blob_size: #{blob_size}")
-          upload_page_blob(container_name, blob_name, blob_size, file_path, @parallel_upload_thread_num)
+          upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num)
         rescue => e
           cloud_error("Failed to upload page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
@@ -80,7 +78,7 @@ module Bosh::AzureCloud
           vhd_size = blob_size_in_gb * 1024 * 1024 * 1024
           blob_size = vhd_size + 512
           options = {
-            :timeout => 300 # seconds
+            :timeout => 120 # seconds
           }
           @logger.info("create_empty_vhd_blob: Create empty vhd blob #{blob_name} with size #{blob_size}")
           @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
@@ -208,111 +206,83 @@ module Bosh::AzureCloud
 
     private
 
-    def read_content_func(file_path, file_blocks, block_size, thread_num, finish_flag)
-      id = 0
-      open(file_path, 'rb') do |file|
-        while !finish_flag.fail do
-          if file_blocks.size > thread_num * 5
-            sleep(0.01)
-            next
-          end
+    def chunk_size(total_size, chunk_size, offset)
+      if offset + chunk_size > total_size
+        total_size - offset
+      else
+        chunk_size
+      end
+    end
 
-          chunk = nil
-          file_start_range = file.pos
-          chunk = file.read(block_size)
-          if chunk.nil?
-            finish_flag.finish = true
-            break
-          end
+    def compute_chunks(file_path)
+      offset = 0
+      id = 1
+      chunks = []
+      file_size = File.lstat(file_path).size
+      while offset < file_size
+        chunks << Chunk.new(id, file_path, offset, chunk_size(file_size, MAX_CHUNK_SIZE, offset))
+        id += 1
+        offset += MAX_CHUNK_SIZE
+      end
+      ChunkList.new(chunks)
+    end
 
-          block_is_not_empty = false
-          chunk.each_byte do |b|
-            if b != "\0"
-              block_is_not_empty = true
-              break
+    def upload_page_blob_in_threads(file_path, container_name, blob_name, thread_num)
+      chunks = compute_chunks(file_path)
+      threads = []
+      options = {
+        :timeout => 120 # seconds
+      }
+      thread_num.times do |id|
+        thread = Thread.new do
+          while chunk = chunks.shift
+            content = chunk.read
+            if Digest::MD5.hexdigest(content) == HASH_OF_4MB_EMPTY_CONTENT
+              @logger.debug("upload_page_blob_in_threads: Thread #{id}: Skip empty chunk: #{chunk}")
+              next
+            end
+
+            retry_count = 0
+
+            begin
+              @logger.debug("upload_page_blob_in_threads: Thread #{id}: Uploading chunk: #{chunk}, retry: #{retry_count}")
+              @blob_service_client.create_blob_pages(container_name, blob_name, chunk.start_range, chunk.end_range, content, options)
+            rescue => e
+              @logger.warn("upload_page_blob_in_threads: Thread #{id}: Failed to create_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+              retry_count += 1
+              if retry_count > AZURE_MAX_RETRY_COUNT
+                # keep other threads from uploading other parts
+                chunks.clear!
+                raise e
+              end
+              sleep(10)
+              retry
             end
           end
-
-          if block_is_not_empty
-            id += 1
-            @logger.debug("read_content_func: id: #{id}, start_range: #{file_start_range}, size: #{chunk.size}")
-            block = VHDBlock.new(id, file_start_range, chunk.size, file_start_range, chunk)
-            file_blocks.push(block)
-          end
         end
+        thread.abort_on_exception = true
+        threads << thread
       end
-
-      @logger.debug("read_content_func: Exit")
+      threads.each { |t| t.join }
     end
 
-    def upload_page_blob_func(id, container_name, blob_name, options, file_blocks, finish_flag, max_retry_count)
-      while !finish_flag.fail do
-        block = nil
-        begin
-          block = file_blocks.pop(true)
-        rescue
-          break if finish_flag.finish
-          sleep(0.01)
-          next
-        end
-
-        retry_count = 0
-        begin
-          @logger.debug("upload_page_blob_func: Thread #{id}: Uploading #{block.id}: #{block.blob_start_range}, length: #{block.size}, retry: #{retry_count}")
-          @blob_service_client.create_blob_pages(container_name, blob_name, block.blob_start_range,
-              block.blob_start_range + block.size - 1, block.content, options)
-        rescue => e
-          @logger.debug("upload_page_blob_func: Thread #{id}: Failed to create_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
-          retry_count += 1
-          if retry_count > max_retry_count
-            finish_flag.fail = true
-            finish_flag.message = e.message
-            break
-          end
-          retry
-        end
-      end
-      @logger.debug("upload_page_blob_func: Thread #{id}: Exit")
-    end
-
-    def upload_page_blob(container_name, blob_name, blob_size, file_path, thread_num)
-      blob_created = false
-
+    def upload_page_blob(container_name, blob_name, file_path, thread_num)
+      @logger.info("upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num})")
+      start_time = Time.new
+      blob_size = File.lstat(file_path).size
+      options = {
+        :timeout => 120 # seconds
+      }
+      @logger.debug("upload_page_blob: create_page_blob(blob_size: #{blob_size}, options: #{options})")
+      @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
       begin
-        options = {
-          :timeout => 300 # seconds
-        }
-        @logger.info("Create page blob #{blob_name} with size #{blob_size}")
-        @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
-        blob_created = true
-
-        @logger.info("Start to upload every block for page blob")
-        threads = []
-        finish_flag = ThreadFlag.new(false, false, nil)
-        file_blocks = Queue.new()
-
-        block_size = 2 * 1024 * 1024
-
-        start_time = Time.new
-        threads << Thread.new {
-          read_content_func(file_path, file_blocks, block_size, thread_num, finish_flag)
-        }
-        thread_num.times do |i|
-          threads << Thread.new {
-            upload_page_blob_func(i + 1, container_name, blob_name, options, file_blocks, finish_flag, 20)
-          }
-        end
-
-        threads.each { |t| t.join }
-
-        raise finish_flag.message if finish_flag.fail
-
-        duration = Time.new - start_time
-        @logger.info("Duration: #{duration.inspect}")
+        upload_page_blob_in_threads(file_path, container_name, blob_name, thread_num)
       rescue => e
-        @blob_service_client.delete_blob(container_name, blob_name) if blob_created
-        cloud_error("Failed to upload page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
+        @blob_service_client.delete_blob(container_name, blob_name)
+        raise e
       end
+      duration = Time.new - start_time
+      @logger.info("Duration: #{duration.inspect}")
     end
 
     def initialize_blob_client(storage_account_name)
@@ -333,6 +303,51 @@ module Bosh::AzureCloud
   end
 
   private
+
+  class ChunkList
+    def initialize(chunks = [])
+      @chunks = chunks
+      @mutex = Mutex.new
+    end
+
+    def shift
+      @mutex.synchronize { @chunks.shift }
+    end
+
+    def clear!
+      @mutex.synchronize { @chunks.clear }
+    end
+  end
+
+  class Chunk
+    def initialize(id, file_path, offset, chunk_size)
+      @id = id
+      @file_path = file_path
+      @offset = offset
+      @chunk_size = chunk_size
+    end
+
+    attr_reader :id
+
+    def start_range
+      @offset
+    end
+
+    def end_range
+      @offset + @chunk_size - 1
+    end
+
+    def read
+      File.open(@file_path, 'rb') do |file|
+        file.seek(@offset)
+        file.read(@chunk_size)
+      end
+    end
+
+    def to_s
+      "id: #{@id}, offset: #{@offset}, chunk_size: #{@chunk_size}"
+    end
+  end
 
   # https://github.com/Azure/azure-sdk-for-ruby/issues/285
   class ExtendBlobService

@@ -31,7 +31,6 @@ module Bosh::AzureCloud
 
     # https://azure.microsoft.com/en-us/documentation/articles/best-practices-retry-service-specific/#more-information-6
     AZURE_RETRY_ERROR_CODES       = [408, 500, 502, 503, 504]
-    AZURE_MAX_RETRY_COUNT         = 10
 
     REST_API_PROVIDER_COMPUTER           = 'Microsoft.Compute'
     REST_API_COMPUTER_VIRTUAL_MACHINES   = 'virtualMachines'
