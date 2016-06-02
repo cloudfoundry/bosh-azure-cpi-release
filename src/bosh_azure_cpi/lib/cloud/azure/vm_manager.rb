@@ -15,7 +15,7 @@ module Bosh::AzureCloud
 
     def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
       instance_is_created = false
-      ephemeral_disk_size = 15
+      ephemeral_disk_size = 30
       if resource_pool.has_key?('ephemeral_disk')
         if resource_pool['ephemeral_disk'].has_key?('size')
           size = resource_pool['ephemeral_disk']['size']
