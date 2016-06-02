@@ -15,7 +15,7 @@ module Bosh::AzureCloud
 
     def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
       instance_is_created = false
-      ephemeral_disk_size = 15
+      ephemeral_disk_size = 30
       if resource_pool.has_key?('ephemeral_disk')
         if resource_pool['ephemeral_disk'].has_key?('size')
           size = resource_pool['ephemeral_disk']['size']
@@ -110,7 +110,8 @@ module Bosh::AzureCloud
     rescue => e
       if instance_is_created
         @azure_client2.delete_virtual_machine(instance_id)
-        @disk_manager.delete_disk(@disk_manager.get_disk_uri(@disk_manager.generate_ephemeral_disk_name(instance_id)))
+        ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
+        @disk_manager.delete_disk(ephemeral_disk_name)
       end
       delete_availability_set(availability_set[:name]) unless availability_set.nil?
       @azure_client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
