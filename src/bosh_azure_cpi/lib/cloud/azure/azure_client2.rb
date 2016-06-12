@@ -13,7 +13,7 @@ module Bosh::AzureCloud
   class AzureClient2
     include Helpers
 
-    USER_AGENT     = 'BOSH-AZURE-CPI'
+    USER_AGENT                    = 'BOSH-AZURE-CPI'
 
     HTTP_CODE_OK                  = 200
     HTTP_CODE_CREATED             = 201
@@ -864,6 +864,13 @@ module Bosh::AzureCloud
 
     private
 
+    def filter_credential_in_logs(uri)
+      if uri.request_uri.include?('/listKeys')
+        return true
+      end
+      false
+    end
+
     def http(uri)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
@@ -895,10 +902,10 @@ module Bosh::AzureCloud
         @logger.debug("get_token - authentication_endpoint: #{uri}")
         request = Net::HTTP::Post.new(uri.request_uri)
         request['Content-Type'] = 'application/x-www-form-urlencoded'
+        request['User-Agent']   = USER_AGENT
         request.body = URI.encode_www_form(params)
         @logger.debug("get_token - request.header:")
         request.each_header { |k,v| @logger.debug("\t#{k} = #{v}") }
-        @logger.debug("get_token - request.body:\n#{request.body}")
 
         response = http(uri).request(request)
         if response.code.to_i == HTTP_CODE_OK
@@ -948,7 +955,22 @@ module Bosh::AzureCloud
 
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         status_code = response.code.to_i
-        @logger.debug("http_get_response - #{retry_count}: #{status_code}\n#{response.body}")
+        if filter_credential_in_logs(uri)
+          message = "http_get_response - #{retry_count}: #{status_code},"
+          message += " request id: #{response['x-ms-request-id']},"
+          message += " correlation id: #{response['x-ms-correlation-request-id']},"
+          message += " routing id: #{response['x-ms-routing-request-id']},"
+          message += " response.body cannot be logged because it may contain credentials."
+          @logger.debug(message)
+        else
+          message = "http_get_response - #{retry_count}: #{status_code},"
+          message += " request id: #{response['x-ms-request-id']},"
+          message += " correlation id: #{response['x-ms-correlation-request-id']},"
+          message += " routing id: #{response['x-ms-routing-request-id']},"
+          message += " responsey.body: #{response.body}"
+          @logger.debug(message)
+        end
+
         if status_code == HTTP_CODE_UNAUTHORIZED
           raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid."
         end
@@ -958,11 +980,17 @@ module Bosh::AzureCloud
           result = JSON(response.body)
           if result['status'] == 'Failed'
             error = "http_get_response - http code: #{response.code}\n"
+            error += "request id: #{response['x-ms-request-id']}\n"
+            error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
+            error += "routing id: #{response['x-ms-routing-request-id']}\n"
             error += " message: #{response.body}"
             raise AzureAsynInternalError, error
           end
         elsif AZURE_RETRY_ERROR_CODES.include?(status_code)
           error = "http_get_response - http code: #{response.code}\n"
+          error += "request id: #{response['x-ms-request-id']}\n"
+          error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
+          error += "routing id: #{response['x-ms-routing-request-id']}\n"
           error += " message: #{response.body}"
           raise AzureInternalError, error
         end
@@ -1006,9 +1034,8 @@ module Bosh::AzureCloud
     end
 
     def check_completion(response, options)
-      @logger.debug("check_completion - response code: #{response.code} azure-asyncoperation: #{response['azure-asyncoperation']} response.body: \n#{response.body}")
-
       operation_status_link = response['azure-asyncoperation']
+      @logger.debug("check_completion - azure-asyncoperation: #{operation_status_link}")
       if options[:return_code].include?(response.code.to_i)
         if operation_status_link.nil?
           result = true
@@ -1018,6 +1045,9 @@ module Bosh::AzureCloud
       elsif !options[:success_code].include?(response.code.to_i)
         error = "#{options[:operation]} - http code: #{response.code}"
         error += " message: #{response.body}" unless response.body.nil?
+        error += "request id: #{response['x-ms-request-id']}\n"
+        error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
+        error += "routing id: #{response['x-ms-routing-request-id']}\n"
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
         raise AzureError, error
       end
@@ -1048,11 +1078,13 @@ module Bosh::AzureCloud
               if ret['status'] == 'Succeeded'
                 return true
               else
-                error_msg = "status: #{ret['status']}\n"
-                error_msg += "http code: #{status_code}\n"
-                error_msg += "request id: #{response['x-ms-request-id']}\n"
-                error_msg += "error:\n#{ret['error']}"
-                raise AzureError, error_msg
+                error = "status: #{ret['status']}\n"
+                error += "http code: #{status_code}\n"
+                error += "request id: #{response['x-ms-request-id']}\n"
+                error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
+                error += "routing id: #{response['x-ms-routing-request-id']}\n"
+                error += "error:\n#{ret['error']}"
+                raise AzureError, error
               end
             else
               @logger.debug("check_completion - InProgress...")
