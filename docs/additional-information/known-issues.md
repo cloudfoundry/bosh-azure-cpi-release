@@ -29,11 +29,6 @@
 
       ```
       director:
-        address: 127.0.0.1
-        name: bosh
-        db: *db
-        cpi_job: cpi
-        enable_snapshots: true
         debug:
           keep_unreachable_vms: true
       ```
@@ -76,3 +71,46 @@
     ```
     request_timeout_in_seconds: 180
     ```
+
+3. Limits of Premium Storage blob snapshots
+
+  The BOSH snapshot operation may be throttled if you do all of the following:
+
+  * Use Premium Storage for the Cloud Foundry VMs.
+
+  * Enable snapshot in `bosh.yml`. For more information on BOSH Snapshots, please go to https://bosh.io/docs/snapshots.html.
+
+    ```
+    director:
+      enable_snapshots: true
+    ```
+
+  * The time between consecutive snapshots by BOSH is less than **10 minutes**. The limits are documented in [Snapshots and Copy Blob for Premium Storage](https://azure.microsoft.com/en-us/documentation/articles/storage-premium-storage/#snapshots-and-copy-blob). 
+
+  The workaround is:
+
+  * Disable snapshot temporarily.
+
+    ```
+    director:
+      enable_snapshots: false
+    ```
+
+  * Adjust the snapshot interval to more than 10 minutes.
+
+4. Version mismatch between CPI and Stemcell
+
+  For CPI v11 or later, the compatible stemcell version is v3181 or later. If the stemcell version is older than v3181, you may hit the following failure when deploying BOSH.
+
+  ```
+  Command 'deploy' failed:
+    Deploying:
+      Creating instance 'bosh/0':
+        Waiting until instance is ready:
+          Sending ping to the agent:
+            Performing request to agent endpoint 'https://mbus-user:mbus-password@10.0.0.4:6868/agent':
+              Performing POST request:
+                Post https://mbus-user:mbus-password@10.0.0.4:6868/agent: dial tcp 10.0.0.4:6868: getsockopt: connection refused
+  ```
+
+  It is recommended to use the latest version. For example, Stemcell v3232.5 or later, and CPI v12 or later. You may hit the issue [#135](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/135) if you still use an older stemcell than v3232.5.
