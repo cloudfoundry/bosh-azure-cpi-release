@@ -2,8 +2,8 @@ module Bosh::AzureCloud
   class BlobManager
     include Helpers
 
-    MAX_CHUNK_SIZE = 4 * 1024 * 1024  # 4 MB
-    HASH_OF_4MB_EMPTY_CONTENT = 'b5cfa9d6c8febd618f91ac2843d50a1c' # The hash value of 4MB empty content
+    MAX_CHUNK_SIZE = 2 * 1024 * 1024  # 2MB
+    HASH_OF_2MB_EMPTY_CONTENT = 'b2d1236c286a3c0704224fe4105eca49' # The hash value of 2MB empty content
 
     def initialize(azure_properties, azure_client2)
       @parallel_upload_thread_num = 16
@@ -206,57 +206,49 @@ module Bosh::AzureCloud
 
     private
 
-    def chunk_size(total_size, chunk_size, offset)
-      if offset + chunk_size > total_size
-        total_size - offset
-      else
-        chunk_size
-      end
-    end
-
-    def compute_chunks(file_path)
+    def compute_chunks(file_size, max_chunk_size)
+      chunks = ChunkList.new
       offset = 0
-      id = 1
-      chunks = []
-      file_size = File.lstat(file_path).size
       while offset < file_size
-        chunks << Chunk.new(id, file_path, offset, chunk_size(file_size, MAX_CHUNK_SIZE, offset))
-        id += 1
-        offset += MAX_CHUNK_SIZE
+        chunk_size = offset + max_chunk_size > file_size ? file_size - offset : max_chunk_size
+        chunks.push(Chunk.new(chunks.size + 1, offset, chunk_size))
+        offset += max_chunk_size
       end
-      ChunkList.new(chunks)
+      chunks
     end
 
-    def upload_page_blob_in_threads(file_path, container_name, blob_name, thread_num)
-      chunks = compute_chunks(file_path)
-      threads = []
+    def upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
+      chunks = compute_chunks(file_size, MAX_CHUNK_SIZE)
       options = {
         :timeout => 120 # seconds
       }
+      threads = []
       thread_num.times do |id|
         thread = Thread.new do
-          while chunk = chunks.shift
-            content = chunk.read
-            if Digest::MD5.hexdigest(content) == HASH_OF_4MB_EMPTY_CONTENT
-              @logger.debug("upload_page_blob_in_threads: Thread #{id}: Skip empty chunk: #{chunk}")
-              next
-            end
-
-            retry_count = 0
-
-            begin
-              @logger.debug("upload_page_blob_in_threads: Thread #{id}: Uploading chunk: #{chunk}, retry: #{retry_count}")
-              @blob_service_client.create_blob_pages(container_name, blob_name, chunk.start_range, chunk.end_range, content, options)
-            rescue => e
-              @logger.warn("upload_page_blob_in_threads: Thread #{id}: Failed to create_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
-              retry_count += 1
-              if retry_count > AZURE_MAX_RETRY_COUNT
-                # keep other threads from uploading other parts
-                chunks.clear!
-                raise e
+          File.open(file_path, 'rb') do |file|
+            while chunk = chunks.shift
+              content = chunk.read(file)
+              if Digest::MD5.hexdigest(content) == HASH_OF_2MB_EMPTY_CONTENT
+                @logger.debug("upload_page_blob_in_threads: Thread #{id}: Skip empty chunk: #{chunk}")
+                next
               end
-              sleep(10)
-              retry
+
+              retry_count = 0
+
+              begin
+                @logger.debug("upload_page_blob_in_threads: Thread #{id}: Uploading chunk: #{chunk}, retry: #{retry_count}, options: #{options}")
+                @blob_service_client.create_blob_pages(container_name, blob_name, chunk.start_range, chunk.end_range, content, options)
+              rescue => e
+                @logger.warn("upload_page_blob_in_threads: Thread #{id}: Failed to create_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+                retry_count += 1
+                if retry_count > AZURE_MAX_RETRY_COUNT
+                  # keep other threads from uploading other parts
+                  chunks.clear!
+                  raise e
+                end
+                sleep(10)
+                retry
+              end
             end
           end
         end
@@ -269,14 +261,14 @@ module Bosh::AzureCloud
     def upload_page_blob(container_name, blob_name, file_path, thread_num)
       @logger.info("upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num})")
       start_time = Time.new
-      blob_size = File.lstat(file_path).size
+      file_size = File.lstat(file_path).size
       options = {
         :timeout => 120 # seconds
       }
-      @logger.debug("upload_page_blob: create_page_blob(blob_size: #{blob_size}, options: #{options})")
-      @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
+      @logger.debug("upload_page_blob: create_page_blob(#{container_name}, #{blob_name}, #{file_size}, #{options})")
+      @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
       begin
-        upload_page_blob_in_threads(file_path, container_name, blob_name, thread_num)
+        upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
       rescue => e
         @blob_service_client.delete_blob(container_name, blob_name)
         raise e
@@ -310,6 +302,10 @@ module Bosh::AzureCloud
       @mutex = Mutex.new
     end
 
+    def push(chunk)
+      @mutex.synchronize { @chunks.push(chunk) }
+    end
+
     def shift
       @mutex.synchronize { @chunks.shift }
     end
@@ -317,14 +313,17 @@ module Bosh::AzureCloud
     def clear!
       @mutex.synchronize { @chunks.clear }
     end
+
+    def size
+      @mutex.synchronize { @chunks.size }
+    end
   end
 
   class Chunk
-    def initialize(id, file_path, offset, chunk_size)
+    def initialize(id, offset, size)
       @id = id
-      @file_path = file_path
       @offset = offset
-      @chunk_size = chunk_size
+      @size = size
     end
 
     attr_reader :id
@@ -334,18 +333,16 @@ module Bosh::AzureCloud
     end
 
     def end_range
-      @offset + @chunk_size - 1
+      @offset + @size - 1
     end
 
-    def read
-      File.open(@file_path, 'rb') do |file|
-        file.seek(@offset)
-        file.read(@chunk_size)
-      end
+    def read(file)
+      file.seek(@offset)
+      file.read(@size)
     end
 
     def to_s
-      "id: #{@id}, offset: #{@offset}, chunk_size: #{@chunk_size}"
+      "id: #{@id}, offset: #{@offset}, size: #{@size}"
     end
   end
 
