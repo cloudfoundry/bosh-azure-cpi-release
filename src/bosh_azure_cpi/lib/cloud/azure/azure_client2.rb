@@ -877,8 +877,7 @@ module Bosh::AzureCloud
       # The default value for read_timeout is 60 seconds.
       # The default value for open_timeout is nil before ruby 2.3.0 so set it to 60 seconds here.
       http.open_timeout = 60
-      # Uncomment below line for debug
-      #http.set_debug_output($stdout)
+      http.set_debug_output($stdout) if is_debug_mode(@azure_properties)
       http
     end
 
@@ -1043,11 +1042,11 @@ module Bosh::AzureCloud
           return result
         end
       elsif !options[:success_code].include?(response.code.to_i)
-        error = "#{options[:operation]} - http code: #{response.code}"
-        error += " message: #{response.body}" unless response.body.nil?
+        error = "#{options[:operation]} - http code: #{response.code}\n"
         error += "request id: #{response['x-ms-request-id']}\n"
         error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
         error += "routing id: #{response['x-ms-routing-request-id']}\n"
+        error += " message: #{response.body}" unless response.body.nil?
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
         raise AzureError, error
       end

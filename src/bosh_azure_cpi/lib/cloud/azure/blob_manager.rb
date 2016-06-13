@@ -43,7 +43,8 @@ module Bosh::AzureCloud
 
     def create_page_blob(storage_account_name, container_name, file_path, blob_name)
       @logger.info("create_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name})")
-      initialize_blob_client(storage_account_name) do
+      # Disable debug_mode because we never want to print the content of VHD in the logs
+      initialize_blob_client(storage_account_name, true) do
         begin
           upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num)
         rescue => e
@@ -277,7 +278,7 @@ module Bosh::AzureCloud
       @logger.info("Duration: #{duration.inspect}")
     end
 
-    def initialize_blob_client(storage_account_name)
+    def initialize_blob_client(storage_account_name, disable_debug_mode = false)
       @blob_client_mutex.synchronize do
         unless @storage_accounts_keys.has_key?(storage_account_name)
           storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
@@ -288,6 +289,7 @@ module Bosh::AzureCloud
 
         @azure_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob')
         @blob_service_client = @azure_client.blobs
+        @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties) && !disable_debug_mode
         yield
       end
     end

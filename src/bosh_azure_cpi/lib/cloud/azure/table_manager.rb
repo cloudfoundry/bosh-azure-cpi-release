@@ -15,6 +15,7 @@ module Bosh::AzureCloud
       storage_account[:key] = keys[0]
       @azure_client = initialize_azure_storage_client(storage_account, 'table')
       @table_service_client = @azure_client.tables
+      @table_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties)
     end
 
     def has_table?(table_name)

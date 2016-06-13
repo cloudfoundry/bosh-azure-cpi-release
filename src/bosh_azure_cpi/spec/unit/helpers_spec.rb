@@ -388,4 +388,36 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
   end
+
+  describe "#is_debug_mode" do
+    context "debug_mode is not set" do
+      let(:azure_properties) { {} }
+
+      it "should return false" do
+        expect(
+          helpers_tester.is_debug_mode(azure_properties)
+        ).to be false
+      end
+    end
+
+    context "debug_mode is set to false" do
+      let(:azure_properties) { { 'debug_mode' => false } }
+
+      it "should return false" do
+        expect(
+          helpers_tester.is_debug_mode(azure_properties)
+        ).to be false
+      end
+    end
+
+    context "debug_mode is set to true" do
+      let(:azure_properties) { { 'debug_mode' => true } }
+
+      it "should return true" do
+        expect(
+          helpers_tester.is_debug_mode(azure_properties)
+        ).to be true
+      end
+    end
+  end
 end

@@ -167,6 +167,12 @@ module Bosh::AzureCloud
       cloud_error('Azure CPI maximum disk size is 1 TiB') if size > 1024 * 1000
     end
 
+    def is_debug_mode(azure_properties)
+      debug_mode = false
+      debug_mode = azure_properties['debug_mode'] unless azure_properties['debug_mode'].nil?
+      debug_mode
+    end
+
     private
 
     def validate_azure_stack_options(azure_properties)
