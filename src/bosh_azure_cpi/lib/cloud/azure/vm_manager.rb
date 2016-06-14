@@ -24,66 +24,21 @@ module Bosh::AzureCloud
         end
       end
 
-      subnet = @azure_client2.get_network_subnet_by_name(network_configurator.virtual_network_name, network_configurator.subnet_name)
-      raise "Cannot find the subnet #{network_configurator.virtual_network_name}/#{network_configurator.subnet_name}" if subnet.nil?
-
-      security_group_name = @azure_properties["default_security_group"]
-      if resource_pool.has_key?("security_group")
-        security_group_name = resource_pool["security_group"]
-      elsif !network_configurator.security_group.nil?
-        security_group_name = network_configurator.security_group
-      end
-      network_security_group = @azure_client2.get_network_security_group_by_name(security_group_name)
-      raise "Cannot find the network security group #{security_group_name}" if network_security_group.nil?
-
       caching = 'ReadWrite'
       if resource_pool.has_key?('caching')
         caching = resource_pool['caching']
         validate_disk_caching(caching)
       end
 
+      subnet = get_network_subnet(network_configurator)
+      network_security_group = get_network_security_group(resource_pool, network_configurator)
+      public_ip = get_public_ip(network_configurator)
+      load_balancer = get_load_balancer(resource_pool)
+
       instance_id  = generate_instance_id(storage_account[:name], uuid)
 
-      public_ip = nil
-      unless network_configurator.vip_network.nil?
-        public_ip = @azure_client2.list_public_ips().find { |ip| ip[:ip_address] == network_configurator.public_ip}
-        cloud_error("Cannot find the public IP address #{network_configurator.public_ip}") if public_ip.nil?
-      end
-
-      load_balancer = nil
-      if resource_pool.has_key?('load_balancer')
-        load_balancer = @azure_client2.get_load_balancer_by_name(resource_pool['load_balancer'])
-        cloud_error("Cannot find the load balancer #{resource_pool['load_balancer']}") if load_balancer.nil?
-      end
-
-      nic_params = {
-        :name                => instance_id,
-        :location            => storage_account[:location],
-        :private_ip          => network_configurator.private_ip,
-        :public_ip           => public_ip,
-        :security_group      => network_security_group
-      }
-      network_tags = AZURE_TAGS
-      if resource_pool.has_key?('availability_set')
-        network_tags = network_tags.merge({'availability_set' => resource_pool['availability_set']})
-      end
-      @azure_client2.create_network_interface(nic_params, subnet, network_tags, load_balancer)
-      network_interface = @azure_client2.get_network_interface_by_name(instance_id)
-
-      availability_set = nil
-      if resource_pool.has_key?('availability_set')
-        availability_set = @azure_client2.get_availability_set_by_name(resource_pool['availability_set'])
-        if availability_set.nil?
-          avset_params = {
-            :name                         => resource_pool['availability_set'],
-            :location                     => storage_account[:location],
-            :tags                         => AZURE_TAGS,
-            :platform_update_domain_count => resource_pool['platform_update_domain_count'] || 5,
-            :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || 3
-          }
-          availability_set = create_availability_set(avset_params)
-        end
-      end
+      network_interface = create_network_interface(instance_id, storage_account, resource_pool, network_configurator, public_ip, network_security_group, subnet, load_balancer)
+      availability_set = create_availability_set(storage_account, resource_pool)
 
       os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
       vm_params = {
@@ -192,16 +147,99 @@ module Bosh::AzureCloud
       Base64.strict_encode64(JSON.dump(user_data))
     end
 
-    def create_availability_set(avset_params)
+    def get_network_subnet(network_configurator)
+      subnet = nil
+      resource_group_name = @azure_properties['resource_group_name']
+      resource_group_name = network_configurator.resource_group_name unless network_configurator.resource_group_name.nil?
+      virtual_network_name = network_configurator.virtual_network_name
+      subnet_name = network_configurator.subnet_name
+      subnet = @azure_client2.get_network_subnet_by_name(resource_group_name, virtual_network_name, subnet_name)
+      cloud_error("Cannot find the subnet `#{virtual_network_name}/#{subnet_name}' in the resource group `#{resource_group_name}'") if subnet.nil?
+      subnet
+    end
+
+    def get_network_security_group(resource_pool, network_configurator)
+      network_security_group = nil
+      resource_group_name = @azure_properties['resource_group_name']
+      resource_group_name = network_configurator.resource_group_name unless network_configurator.resource_group_name.nil?
+      security_group_name = @azure_properties["default_security_group"]
+      if resource_pool.has_key?("security_group")
+        security_group_name = resource_pool["security_group"]
+      elsif !network_configurator.security_group.nil?
+        security_group_name = network_configurator.security_group
+      end
+      network_security_group = @azure_client2.get_network_security_group_by_name(resource_group_name, security_group_name)
+      if network_security_group.nil?
+        default_resource_group_name = @azure_properties['resource_group_name']
+        if resource_group_name != default_resource_group_name
+          @logger.info("Cannot find the network security group `#{security_group_name}' in the resource group `#{resource_group_name}', trying to search it in the resource group `#{default_resource_group_name}'")
+          network_security_group = @azure_client2.get_network_security_group_by_name(default_resource_group_name, security_group_name)
+        end
+      end
+      cloud_error("Cannot find the network security group `#{security_group_name}'") if network_security_group.nil?
+      network_security_group
+    end
+
+    def get_public_ip(network_configurator)
+      public_ip = nil
+      unless network_configurator.vip_network.nil?
+        resource_group_name = @azure_properties['resource_group_name']
+        resource_group_name = network_configurator.resource_group_name('vip') unless network_configurator.resource_group_name('vip').nil?
+        public_ip = @azure_client2.list_public_ips(resource_group_name).find { |ip| ip[:ip_address] == network_configurator.public_ip }
+        cloud_error("Cannot find the public IP address `#{network_configurator.public_ip}' in the resource group `#{resource_group_name}'") if public_ip.nil?
+      end
+      public_ip
+    end
+
+    def get_load_balancer(resource_pool)
+      load_balancer = nil
+      if resource_pool.has_key?('load_balancer')
+        load_balancer_name = resource_pool['load_balancer']
+        load_balancer = @azure_client2.get_load_balancer_by_name(load_balancer_name)
+        cloud_error("Cannot find the load balancer `#{load_balancer_name}'") if load_balancer.nil?
+      end
+      load_balancer
+    end
+
+    def create_network_interface(instance_id, storage_account, resource_pool, network_configurator, public_ip, network_security_group, subnet, load_balancer)
+      network_interface = nil
+      nic_params = {
+        :name                => instance_id,
+        :location            => storage_account[:location],
+        :private_ip          => network_configurator.private_ip,
+        :public_ip           => public_ip,
+        :security_group      => network_security_group
+      }
+      network_tags = AZURE_TAGS
+      if resource_pool.has_key?('availability_set')
+        network_tags = network_tags.merge({'availability_set' => resource_pool['availability_set']})
+      end
+      @azure_client2.create_network_interface(nic_params, subnet, network_tags, load_balancer)
+      network_interface = @azure_client2.get_network_interface_by_name(instance_id)
+    end
+
+    def create_availability_set(storage_account, resource_pool)
       availability_set = nil
-      begin
-        @azure_client2.create_availability_set(avset_params)
-        availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
-      rescue AzureConflictError => e
-        @logger.debug("create_availability_set - Another process is creating the same availability set #{avset_params[:name]}")
-        loop do
-          availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
-          break unless availability_set.nil?
+      if resource_pool.has_key?('availability_set')
+        availability_set = @azure_client2.get_availability_set_by_name(resource_pool['availability_set'])
+        if availability_set.nil?
+          avset_params = {
+            :name                         => resource_pool['availability_set'],
+            :location                     => storage_account[:location],
+            :tags                         => AZURE_TAGS,
+            :platform_update_domain_count => resource_pool['platform_update_domain_count'] || 5,
+            :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || 3
+          }
+          begin
+            @azure_client2.create_availability_set(avset_params)
+            availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
+          rescue AzureConflictError => e
+            @logger.debug("create_availability_set - Another process is creating the same availability set `#{avset_params[:name]}'")
+            loop do
+              availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
+              break unless availability_set.nil?
+            end
+          end
         end
       end
       availability_set

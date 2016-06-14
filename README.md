@@ -16,6 +16,10 @@ See [development doc](docs/development.md).
 
 ## CHANGELOG
 ```
+# 2015-06-15
+- CPI changes
+  - Support specifying resource group name under network cloud properties
+
 # 2015-05-17
 - CPI changes
   - Fix an issue in calculating the sleep interval when copying blobs
