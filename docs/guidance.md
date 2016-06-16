@@ -40,12 +40,15 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
 
 # 3 Advanced Configurations and Deployments
 
-* [Deploy Cloud Foundry using multiple storage accounts and availability sets](./advanced/deploy-cloudfoundry-for-enterprise/)
-* [Deploy Diego](./advanced/deploy-diego/)
-* [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
+* CPI Settings
+  * [Deploy Cloud Foundry using multiple storage accounts and availability sets](./advanced/deploy-cloudfoundry-for-enterprise/)
+  * [Separate network in a different resource group](./advanced/separate-network-in-a-different-resource-group/)
+* Cloud Foundry Scenarios
+  * [Deploy Diego](./advanced/deploy-diego/)
+  * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
 * Service Brokers
+  * [Meta Azure Service Broker](https://github.com/Azure/meta-azure-service-broker)
   * [MySQL Service](./advanced/deploy-mysql/)
-  * [Mongodb Service](./advanced/deploy-mongodb/)
 * Integrate Azure Services with Cloud Foundry on Azure
   * [Azure DNS](./advanced/deploy-azuredns/)
   * [Deploy multiple HAProxy instances behind Azure Load Balancer](./advanced/deploy-multiple-haproxy/)
