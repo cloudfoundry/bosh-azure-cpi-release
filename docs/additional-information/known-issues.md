@@ -114,3 +114,21 @@
   ```
 
   It is recommended to use the latest version. For example, Stemcell v3232.5 or later, and CPI v12 or later. You may hit the issue [#135](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/135) if you still use an older stemcell than v3232.5.
+
+5. Invalid or expired service principal
+
+  ```
+  http_get_response - get_token - http error: 400
+  ```
+
+  Service principal is most likely invalid. Verify that client ID, client secret and tenant ID successfully work with the [steps](../get-started/create-service-principal.md#verify-your-service-principal).
+
+  If your service principal worked and you get the above error suddenly, it may be caused by that your service principal expired. You need to go to Azure Portal to update client secret. By default, the service principal will expire in one year.
+
+  1. Go to [Azure Portal](https://manage.windowsazure.com/), select `active directory` -- > ORGANIZATION-NAME -- > `Applications` -- > search your service principal name.
+
+  ![Service Principal on Azure Portal](./service-principal-on-portal.png)
+
+  2. Then choose your service principal, select `Configure` -- > `keys` -- > add a new key.
+
+  ![Add the Client Secret](./add-client-secret.png)
