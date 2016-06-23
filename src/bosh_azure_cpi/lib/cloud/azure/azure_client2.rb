@@ -907,9 +907,13 @@ module Bosh::AzureCloud
         request.each_header { |k,v| @logger.debug("\t#{k} = #{v}") }
 
         response = http(uri).request(request)
+        message = "request id: #{response['x-ms-request-id']}\n"
+        message += "correlation id: #{response['x-ms-correlation-request-id']}\n"
+        message += "routing id: #{response['x-ms-routing-request-id']}\n"
+        message += "body: #{response.body}"
+        @logger.debug("get_token - #{message}")
         if response.code.to_i == HTTP_CODE_OK
           @token = JSON(response.body)
-          @logger.debug("get_token - token is\n#{@token}")
         elsif response.code.to_i == HTTP_CODE_UNAUTHORIZED
           raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Invalid tenant id, client id or client secret."
         elsif response.code.to_i == HTTP_CODE_BADREQUEST
