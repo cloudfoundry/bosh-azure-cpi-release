@@ -81,6 +81,7 @@ Please update the value which starts with `REPLACE-ME` and run it after you [log
       load_balancer: haproxylb
       availability_set: haproxy
       instance_type: Standard_D1
+      security_group: nsg-cf
     env:
       bosh:
         password: $6$4gDD3aV0rdqlrKC$2axHCxGKIObs6tAmMTqYCspcdvQXh3JJcvWOY2WGb4SrdXtnCyNaWlrf3WEqvYR2MYizEGp3kMmbpwBC6jsHt0
