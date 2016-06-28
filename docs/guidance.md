@@ -45,7 +45,6 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
 * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
 * Service Brokers
   * [MySQL Service](./advanced/deploy-mysql/)
-  * [Mongodb Service](./advanced/deploy-mongodb/)
 * Integrate Azure Services with Cloud Foundry on Azure
   * [Azure DNS](./advanced/deploy-azuredns/)
   * [Deploy multiple HAProxy instances behind Azure Load Balancer](./advanced/deploy-multiple-haproxy/)
