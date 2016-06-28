@@ -94,10 +94,10 @@ azure network vnet subnet create --resource-group $resource-group-name --vnet-na
 For example:
 
 ```
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql1" --address-prefix "10.0.32.0/24"
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql2" --address-prefix "10.0.33.0/24"
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql3" --address-prefix "10.0.34.0/24"
-azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "compilation" --address-prefix "10.0.35.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql1" --address-prefix "10.0.50.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql2" --address-prefix "10.0.51.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "mysql3" --address-prefix "10.0.52.0/24"
+azure network vnet subnet create --resource-group "myResourceGroup" --vnet-name "boshvnet-crp" --name "compilation" --address-prefix "10.0.53.0/24"
 ```
 
 <a name="deployment_components"></a>
@@ -109,13 +109,13 @@ This section descripts the components that will be created/configured after the 
 +----------------------+---------+--------------------+-----------+
 | VM                   | State   | VM Type            | IPs       |
 +----------------------+---------+--------------------+-----------+
-| cf-mysql-broker_z1/0 | running | cf-mysql-broker_z1 | 10.0.32.9 |
-| cf-mysql-broker_z2/0 | running | cf-mysql-broker_z2 | 10.0.33.9 |
-| mysql_z1/0           | running | mysql_z1           | 10.0.32.4 |
-| mysql_z2/0           | running | mysql_z2           | 10.0.33.4 |
-| mysql_z3/0           | running | mysql_z3           | 10.0.34.4 |
-| proxy_z1/0           | running | proxy_z1           | 10.0.32.5 |
-| proxy_z2/0           | running | proxy_z2           | 10.0.33.5 |
+| cf-mysql-broker_z1/0 | running | cf-mysql-broker_z1 | 10.0.50.9 |
+| cf-mysql-broker_z2/0 | running | cf-mysql-broker_z2 | 10.0.51.9 |
+| mysql_z1/0           | running | mysql_z1           | 10.0.50.4 |
+| mysql_z2/0           | running | mysql_z2           | 10.0.51.4 |
+| mysql_z3/0           | running | mysql_z3           | 10.0.52.4 |
+| proxy_z1/0           | running | proxy_z1           | 10.0.50.5 |
+| proxy_z2/0           | running | proxy_z2           | 10.0.51.5 |
 +----------------------+---------+--------------------+-----------+
 ```
 
@@ -253,7 +253,7 @@ Since [cf-release](https://github.com/cloudfoundry/cf-release) v175, application
   ```
   [
     {
-      "destination": "10.0.32.5",
+      "destination": "10.0.50.5",
       "protocol": "all"
     }
   ]
