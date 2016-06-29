@@ -775,10 +775,6 @@ module Bosh::AzureCloud
       @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
       uri = URI(response['Location'])
       api_version = get_api_version(@azure_properties, AZURE_RESOUCE_PROVIDER_STORAGE)
-      params = {
-        'api-version' => api_version
-      }
-      uri.query = URI.encode_www_form(params)
       request = Net::HTTP::Get.new(uri.request_uri)
       request.add_field('x-ms-version', api_version)
       while true
