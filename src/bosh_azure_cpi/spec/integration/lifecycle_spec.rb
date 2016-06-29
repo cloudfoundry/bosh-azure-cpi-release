@@ -67,7 +67,7 @@ describe Bosh::AzureCloud::Cloud do
   }
 
   context 'manual networking' do
-    let(:network_spec)do
+    let(:network_spec) {
       {
         'network_a' => {
           'type' => 'manual',
@@ -78,7 +78,7 @@ describe Bosh::AzureCloud::Cloud do
           }
         }
       }
-    end
+    }
 
     context 'without existing disks' do
       it 'should exercise the vm lifecycle' do
@@ -166,7 +166,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   context 'dynamic networking' do
-    let(:network_spec)do
+    let(:network_spec) {
       {
         'network_a' => {
           'type' => 'dynamic',
@@ -176,7 +176,7 @@ describe Bosh::AzureCloud::Cloud do
           }
         }
       }
-    end
+    }
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle
@@ -184,7 +184,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   context 'vip networking' do
-    let(:network_spec)do
+    let(:network_spec) {
       {
         'network_a' => {
           'type' => 'dynamic',
@@ -198,13 +198,12 @@ describe Bosh::AzureCloud::Cloud do
           'ip' => @primary_public_ip
         }
       }
-    end
+    }
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle
     end
   end
-
 
   context 'Creating multiple VMs in availability sets' do
     let(:resource_pool) {
@@ -217,7 +216,7 @@ describe Bosh::AzureCloud::Cloud do
       }
     }
 
-    let(:network_spec)do
+    let(:network_spec) {
       {
         'network_a' => {
           'type' => 'dynamic',
@@ -227,7 +226,7 @@ describe Bosh::AzureCloud::Cloud do
           }
         }
       }
-    end
+    }
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle(2) do |instance_id|
@@ -260,7 +259,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   context 'When the resource group name is specified for the vnet & security groups' do
-    let(:network_spec)do
+    let(:network_spec) {
       {
         'network_a' => {
           'type' => 'dynamic',
@@ -271,7 +270,7 @@ describe Bosh::AzureCloud::Cloud do
           }
         }
       }
-    end
+    }
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle
@@ -279,7 +278,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   context 'When the resource group name is specified for the public IP' do
-    let(:network_spec)do
+    let(:network_spec) {
       {
         'network_a' => {
           'type' => 'dynamic',
@@ -296,7 +295,7 @@ describe Bosh::AzureCloud::Cloud do
           }
         }
       }
-    end
+    }
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle

@@ -89,23 +89,16 @@ module Bosh::AzureCloud
           raise Bosh::Clouds::VMCreationFailed.new(false), "missing required cloud property `instance_type'."
         end
 
-        storage_account = nil
-        storage_account_name = @azure_properties['storage_account_name']
-        if resource_pool.has_key?('storage_account_name')
-          storage_account_name = resource_pool['storage_account_name']
-          storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
-          create_storage_account(storage_account_name) if storage_account.nil?
-        end
+        storage_account = get_storage_account(resource_pool)
 
-        unless @stemcell_manager.has_stemcell?(storage_account_name, stemcell_id)
+        unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist"
         end
 
-        storage_account = @azure_client2.get_storage_account_by_name(storage_account_name) if storage_account.nil?
         instance_id = @vm_manager.create(
           agent_id,
           storage_account,
-          @stemcell_manager.get_stemcell_uri(storage_account_name, stemcell_id),
+          @stemcell_manager.get_stemcell_uri(storage_account[:name], stemcell_id),
           resource_pool,
           NetworkConfigurator.new(networks))
         @logger.info("Created new vm '#{instance_id}'")
@@ -444,15 +437,41 @@ module Bosh::AzureCloud
       end.flatten]
     end
 
-    def create_storage_account(storage_account_name)
+    def get_storage_account(resource_pool)
+      storage_account_name = @azure_properties['storage_account_name']
+      if resource_pool.has_key?('storage_account_name')
+        storage_account_name = resource_pool['storage_account_name']
+        storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+        if storage_account.nil?
+          create_storage_account(storage_account_name, resource_pool)
+        end
+      end
+
+      storage_account = @azure_client2.get_storage_account_by_name(storage_account_name) if storage_account.nil?
+      storage_account
+    end
+
+    def create_storage_account(storage_account_name, resource_pool)
       @logger.debug("create_storage_account(#{storage_account_name})")
+
+      unless resource_pool.has_key?('storage_account_type')
+        raise Bosh::Clouds::VMCreationFailed.new(false),
+          "missing required cloud property `storage_account_type' to create the storage account `#{storage_account_name}'."
+      end
+
       result = @azure_client2.check_storage_account_name_availability(storage_account_name)
       @logger.debug("create_storage_account - The result of check_storage_account_name_availability is #{result}")
       cloud_error("The storage account name is invalid. #{result[:reason]}: #{result[:message]}") unless result[:available]
 
-      begin
+      if resource_pool.has_key?('storage_account_location')
+        location = resource_pool['storage_account_location']
+      else
         resource_group = @azure_client2.get_resource_group()
-        created = @azure_client2.create_storage_account(storage_account_name, resource_group[:location], 'Standard_RAGRS', {})
+        location = resource_group[:location]
+      end
+
+      begin
+        created = @azure_client2.create_storage_account(storage_account_name, location, resource_pool['storage_account_type'], {})
         @stemcell_manager.prepare(storage_account_name)
         @disk_manager.prepare(storage_account_name)
         true

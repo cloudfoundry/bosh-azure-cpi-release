@@ -152,26 +152,28 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when everything is fine' do
       context "when using the default storage account" do
-          it 'should not raise any error' do
-            expect(
-              cloud.create_vm(
-                agent_id,
-                stemcell_id,
-                resource_pool,
-                networks_spec,
-                disk_locality,
-                environment
-              )
-            ).to eq(instance_id)
-          end
+        it 'should not raise any error' do
+          expect(
+            cloud.create_vm(
+              agent_id,
+              stemcell_id,
+              resource_pool,
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          ).to eq(instance_id)
+        end
       end
 
       context "when do not use the default storage account" do
         let(:storage_account_name) { 'fake-storage-account-name' }
+        let(:storage_account) { { :name => 'fake-storage-account-name' } }
         let(:resource_pool) {
           {
             'instance_type' => 'fake-vm-size',
-            'storage_account_name'=>'fake-storage-account-name'
+            'storage_account_name' => 'fake-storage-account-name',
+            'storage_account_type' => 'fake-storage-account-type'
           }
         }
 
@@ -185,30 +187,82 @@ describe Bosh::AzureCloud::Cloud do
         end
 
         context "when the storage account does not exist" do
+          let(:result) { { :available => true } }
+
           before do
-            allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
-            allow(cloud).to receive(:create_storage_account).and_return(true)
+            allow(client2).to receive(:get_storage_account_by_name)
+              .with(storage_account_name).and_return(nil, storage_account)
+            allow(client2).to receive(:check_storage_account_name_availability).and_return(result)
+            allow(client2).to receive(:create_storage_account).and_return(true)
+            allow(stemcell_manager).to receive(:prepare).and_return(nil)
+            allow(disk_manager).to receive(:prepare).and_return(nil)
           end
 
-          it 'should not raise any error' do
-            expect(
-              cloud.create_vm(
-                agent_id,
-                stemcell_id,
-                resource_pool,
-                networks_spec,
-                disk_locality,
-                environment
-              )
-            ).to eq(instance_id)
+          context "when storage_account_location is specified" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'fake-vm-size',
+                'storage_account_name' => 'fake-storage-account-name',
+                'storage_account_type' => 'fake-storage-account-type',
+                'storage_account_location' => 'fake-storage-account-location'
+              }
+            }
+
+            it 'should not raise any error' do
+              expect(client2).not_to receive(:get_resource_group)
+              expect(client2).to receive(:create_storage_account)
+              expect(
+                cloud.create_vm(
+                  agent_id,
+                  stemcell_id,
+                  resource_pool,
+                  networks_spec,
+                  disk_locality,
+                  environment
+                )
+              ).to eq(instance_id)
+            end
+          end
+
+          context "when storage_account_location is not specified" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'fake-vm-size',
+                'storage_account_name' => 'fake-storage-account-name',
+                'storage_account_type' => 'fake-storage-account-type'
+              }
+            }
+            let(:resource_group) {
+              {
+                'location' => 'fake-location'
+              }
+            }
+
+            before do
+              allow(client2).to receive(:get_resource_group).and_return(resource_group)
+            end
+
+            it 'should not raise any error' do
+              expect(client2).to receive(:get_resource_group)
+              expect(client2).to receive(:create_storage_account)
+              expect(
+                cloud.create_vm(
+                  agent_id,
+                  stemcell_id,
+                  resource_pool,
+                  networks_spec,
+                  disk_locality,
+                  environment
+                )
+              ).to eq(instance_id)
+            end
           end
         end
 
         context "when the storage account exists" do
-          let(:storage_account) { 'fake-storage-account' }
-
           before do
-            allow(client2).to receive(:get_storage_account_by_name).and_return(storage_account)
+            allow(client2).to receive(:get_storage_account_by_name)
+              .with(storage_account_name).and_return(storage_account)
           end
 
           it 'should not raise any error' do
@@ -228,32 +282,25 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
-    context 'when instance_type is not provided' do
-      it 'should raise an error' do
-        expect {
-          cloud.create_vm(
-            agent_id,
-            stemcell_id,
-            {},
-            networks_spec,
-            disk_locality,
-            environment
-          )
-        }.to raise_error("missing required cloud property `instance_type'.")
-      end
-    end
-
     context "when the storage account name is invalid" do
       let(:resource_pool) {
         {
           'instance_type' => 'fake-vm-size',
-          'storage_account_name'=>'fake-storage-account-name'
+          'storage_account_name' => 'invalid-storage-account-name',
+          'storage_account_type' => 'fake-storage-account-type'
+        }
+      }
+      let(:result) {
+        {
+          :available => false,
+          :reason => 'fake-reason',
+          :message => 'fake-message'
         }
       }
 
       before do
         allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
-        allow(cloud).to receive(:create_storage_account).and_raise("The storage account name is invalid")
+        allow(client2).to receive(:check_storage_account_name_availability).and_return(result)
       end
 
       it 'should raise an error' do
@@ -267,6 +314,47 @@ describe Bosh::AzureCloud::Cloud do
             environment
           )
         }.to raise_error(/The storage account name is invalid/)
+      end
+    end
+
+    context "when the storage account does not exist and missing storage_account_type" do
+      let(:resource_pool) {
+        {
+          'instance_type' => 'fake-vm-size',
+          'storage_account_name' => 'fake-storage-account-name'
+        }
+      }
+
+      before do
+        allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
+      end
+
+      it 'should raise an error' do
+        expect {
+          cloud.create_vm(
+            agent_id,
+            stemcell_id,
+            resource_pool,
+            networks_spec,
+            disk_locality,
+            environment
+          )
+        }.to raise_error(/missing required cloud property `storage_account_type'/)
+      end
+    end
+
+    context 'when instance_type is not provided' do
+      it 'should raise an error' do
+        expect {
+          cloud.create_vm(
+            agent_id,
+            stemcell_id,
+            {},
+            networks_spec,
+            disk_locality,
+            environment
+          )
+        }.to raise_error("missing required cloud property `instance_type'.")
       end
     end
 
@@ -637,4 +725,5 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
   end
+
 end
