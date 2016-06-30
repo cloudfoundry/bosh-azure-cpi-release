@@ -46,7 +46,8 @@ jobs:
         AZURE_TENANT_ID:                {{azure_tenant_id}}
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-        AZURE_GROUP_NAME:               {{azure_group_name_for_vms}}
+        AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms}}
+        AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network}}
         AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
         AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
