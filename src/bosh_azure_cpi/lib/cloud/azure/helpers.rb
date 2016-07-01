@@ -177,7 +177,11 @@ module Bosh::AzureCloud
     end
 
     def get_token_resource(azure_properties)
-      AZURE_ENVIRONMENTS[azure_properties['environment']]['resourceManagerEndpointUrl']
+      if azure_properties['environment'] == 'AzureStack'
+        azure_properties['azure_stack_resource']
+      else
+        AZURE_ENVIRONMENTS[azure_properties['environment']]['resourceManagerEndpointUrl']
+      end
     end
 
     def get_azure_authentication_endpoint_and_api_version(azure_properties)
