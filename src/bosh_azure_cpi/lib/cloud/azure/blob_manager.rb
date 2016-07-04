@@ -87,7 +87,7 @@ module Bosh::AzureCloud
 
           @logger.info("create_empty_vhd_blob: Start to upload vhd footer")
 
-          @blob_service_client.create_blob_pages(container_name, blob_name, vhd_size, blob_size - 1, vhd_footer, options)
+          @blob_service_client.put_blob_pages(container_name, blob_name, vhd_size, blob_size - 1, vhd_footer, options)
         rescue => e
           @blob_service_client.delete_blob(container_name, blob_name) if blob_created
           cloud_error("Failed to create empty vhd blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
@@ -138,8 +138,7 @@ module Bosh::AzureCloud
       initialize_blob_client(storage_account_name) do
         begin
           start_time = Time.new
-          extend_blob_service_client = ExtendBlobService.new(@blob_service_client)
-          copy_id, copy_status = extend_blob_service_client.copy_blob_from_uri(container_name, blob_name, source_blob_uri)
+          copy_id, copy_status = @blob_service_client.copy_blob_from_uri(container_name, blob_name, source_blob_uri)
           @logger.info("Copy id: #{copy_id}, copy status: #{copy_status}")
 
           copy_status_description = ""
@@ -150,10 +149,11 @@ module Bosh::AzureCloud
               cloud_error("The progress of copying the blob #{source_blob_uri} to #{container_name}/#{blob_name} was interrupted by other copy operations.")
             end
 
-            copy_status = blob_props[:copy_status]
             copy_status_description = blob_props[:copy_status_description]
-            @logger.debug("Copying progress: #{blob_props[:copy_progress]}")
+            copy_status = blob_props[:copy_status]
+            break if copy_status != "pending"
 
+            @logger.debug("Copying progress: #{blob_props[:copy_progress]}")
             elapse_time = Time.new - start_time
             copied_bytes, total_bytes = blob_props[:copy_progress].split('/').map { |v| v.to_i }
             interval = copied_bytes == 0 ? 5 : (total_bytes - copied_bytes).to_f / copied_bytes * elapse_time
@@ -196,7 +196,8 @@ module Bosh::AzureCloud
       @logger.info("has_container?(#{storage_account_name}, #{container_name})")
       initialize_blob_client(storage_account_name) do
         begin
-          @blob_service_client.get_container_properties(container_name)
+          container = @blob_service_client.get_container_properties(container_name)
+          @logger.debug("has_container?: properties is #{container.properties.inspect}")
           true
         rescue => e
           cloud_error("has_container?: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
@@ -238,9 +239,9 @@ module Bosh::AzureCloud
 
               begin
                 @logger.debug("upload_page_blob_in_threads: Thread #{id}: Uploading chunk: #{chunk}, retry: #{retry_count}, options: #{options}")
-                @blob_service_client.create_blob_pages(container_name, blob_name, chunk.start_range, chunk.end_range, content, options)
+                @blob_service_client.put_blob_pages(container_name, blob_name, chunk.start_range, chunk.end_range, content, options)
               rescue => e
-                @logger.warn("upload_page_blob_in_threads: Thread #{id}: Failed to create_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+                @logger.warn("upload_page_blob_in_threads: Thread #{id}: Failed to put_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
                 retry_count += 1
                 if retry_count > AZURE_MAX_RETRY_COUNT
                   # keep other threads from uploading other parts
@@ -288,7 +289,8 @@ module Bosh::AzureCloud
         end
 
         @azure_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob')
-        @blob_service_client = @azure_client.blobs
+        @blob_service_client = @azure_client.blobClient
+        @blob_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
         @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties) && !disable_debug_mode
         yield
       end
@@ -345,56 +347,6 @@ module Bosh::AzureCloud
 
     def to_s
       "id: #{@id}, offset: #{@offset}, size: #{@size}"
-    end
-  end
-
-  # https://github.com/Azure/azure-sdk-for-ruby/issues/285
-  class ExtendBlobService
-    def initialize(blob_service_client)
-      @blob_service_client = blob_service_client
-    end
-
-    def copy_blob_from_uri(destination_container, destination_blob, source_blob_uri, options={})
-      query = { }
-      query["timeout"] = options[:timeout].to_s if options[:timeout]
-
-      uri = blob_uri(destination_container, destination_blob, query)
-      headers = @blob_service_client.service_properties_headers
-      headers["x-ms-copy-source"] = source_blob_uri
-
-      response = @blob_service_client.call(:put, uri, nil, headers)
-      return response.headers["x-ms-copy-id"], response.headers["x-ms-copy-status"]
-    end
-
-    private
-
-    # Generate the URI for a specific Blob.
-    #
-    # ==== Attributes
-    #
-    # * +container_name+ - String representing the name of the container.
-    # * +blob_name+      - String representing the name of the blob.
-    # * +query+          - A Hash of key => value query parameters.
-    # * +host+           - The host of the API.
-    #
-    # Returns a URI.
-    def blob_uri(container_name, blob_name, query = {})
-      if container_name.nil? || container_name.empty?
-        path = blob_name
-      else
-        path = File.join(container_name, blob_name)
-      end
-
-      path = CGI.escape(path.encode('UTF-8'))
-
-      # Unencode the forward slashes to match what the server expects.
-      path = path.gsub(/%2F/, '/')
-      # Unencode the backward slashes to match what the server expects.
-      path = path.gsub(/%5C/, '/')
-      # Re-encode the spaces (encoded as space) to the % encoding.
-      path = path.gsub(/\+/, '%20')
-
-      @blob_service_client.generate_uri(path, query)
     end
   end
 end

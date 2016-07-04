@@ -2,21 +2,21 @@ GEM
   remote: https://rubygems.org/
   specs:
     addressable (2.3.8)
-    azure (0.7.4)
+    azure-core (0.1.2)
+      faraday (~> 0.9)
+      faraday_middleware (~> 0.10)
+      nokogiri (~> 1.6)
+    azure-storage (0.10.2.preview)
       addressable (~> 2.3)
       azure-core (~> 0.1)
       faraday (~> 0.9)
       faraday_middleware (~> 0.10)
       json (~> 1.8)
-      mime-types (>= 1, < 3.0)
+      mime-types (~> 2.0)
       nokogiri (~> 1.6)
       systemu (~> 2.6)
       thor (~> 0.19)
       uuid (~> 2.0)
-    azure-core (0.1.1)
-      faraday (~> 0.9)
-      faraday_middleware (~> 0.10)
-      nokogiri (~> 1.6)
     bit-struct (0.15.0)
     bosh_common (1.3215.3.0)
       logging (~> 1.8.2)
@@ -41,12 +41,14 @@ GEM
     macaddr (1.7.1)
       systemu (~> 2.6.2)
     membrane (1.1.0)
-    mime-types (2.99.1)
-    mini_portile2 (2.0.0)
+    mime-types (2.99.2)
+    mini_portile2 (2.1.0)
     multi_json (1.11.2)
     multipart-post (2.0.0)
-    nokogiri (1.6.7.2)
-      mini_portile2 (~> 2.0.0.rc2)
+    nokogiri (1.6.8)
+      mini_portile2 (~> 2.1.0)
+      pkg-config (~> 1.1.7)
+    pkg-config (1.1.7)
     rake (10.3.2)
     rspec (3.0.0)
       rspec-core (~> 3.0.0)
@@ -77,14 +79,14 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  azure (~> 0.7.4)
+  azure-storage (= 0.10.2.preview)
   bosh_common (= 1.3215.3.0)
   bosh_cpi (= 1.3215.3.1)
   httpclient (= 2.4.0)
   rake (~> 10.3.2)
   rspec (~> 3.0.0)
-  vhd (~> 0.0.4)
+  vhd (= 0.0.4)
   webmock
 
 BUNDLED WITH
-   1.11.2
+   1.12.5

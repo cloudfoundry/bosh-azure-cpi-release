@@ -46,7 +46,7 @@ require 'cloud/azure/disk_manager'
 require 'cloud/azure/stemcell_manager'
 require 'cloud/azure/table_manager'
 
-require 'azure'
+require 'azure/storage'
 require 'azure/core/http/debug_filter'
 
 module Bosh

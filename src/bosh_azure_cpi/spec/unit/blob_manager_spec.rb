@@ -9,8 +9,9 @@ describe Bosh::AzureCloud::BlobManager do
   let(:blob_name) { "fake-blob-name" }
   let(:keys) { ["fake-key-1", "fake-key-2"] }
 
-  let(:azure_client) { instance_double(Azure::Client) }
-  let(:blob_service) { instance_double(Azure::Blob::BlobService) }
+  let(:azure_client) { instance_double(Azure::Storage::Client) }
+  let(:blob_service) { instance_double(Azure::Storage::Blob::BlobService) }
+  let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
   let(:blob_host) { "fake-blob-endpoint" }
   let(:storage_account) {
     {
@@ -25,6 +26,8 @@ describe Bosh::AzureCloud::BlobManager do
   }
 
   before do
+    allow(Azure::Storage::Client).to receive(:create).
+      and_return(azure_client)
     allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
       and_return(azure_client2)
     allow(azure_client2).to receive(:get_storage_account_keys_by_name).
@@ -34,11 +37,11 @@ describe Bosh::AzureCloud::BlobManager do
       and_return(storage_account)
     allow(azure_client).to receive(:storage_blob_host=)
     allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
-    allow(azure_client).to receive(:blobs).
+    allow(azure_client).to receive(:blobClient).
       and_return(blob_service)
-    allow(Azure).to receive(:client).
-      with(storage_account_name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, storage_access_key: keys[0]).
-      and_return(azure_client)
+    allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).
+      and_return(exponential_retry)
+    allow(blob_service).to receive(:with_filter).with(exponential_retry)
   end
 
   describe "#delete_blob" do
@@ -85,7 +88,7 @@ describe Bosh::AzureCloud::BlobManager do
     context "when uploading page blob succeeds" do
       before do
         allow(blob_service).to receive(:create_page_blob)
-        allow(blob_service).to receive(:create_blob_pages)
+        allow(blob_service).to receive(:put_blob_pages)
         allow(blob_service).to receive(:delete_blob)
       end
 
@@ -113,7 +116,7 @@ describe Bosh::AzureCloud::BlobManager do
     context "when creating empty vhd blob succeeds" do
       before do
         allow(blob_service).to receive(:create_page_blob)
-        allow(blob_service).to receive(:create_blob_pages)
+        allow(blob_service).to receive(:put_blob_pages)
       end
 
       it "raise no error" do
@@ -141,7 +144,7 @@ describe Bosh::AzureCloud::BlobManager do
       context "blob is created" do
         before do
           allow(blob_service).to receive(:create_page_blob)
-          allow(blob_service).to receive(:create_blob_pages).and_raise(StandardError)
+          allow(blob_service).to receive(:put_blob_pages).and_raise(StandardError)
         end
 
         it "should raise an error and delete blob" do
@@ -236,82 +239,166 @@ describe Bosh::AzureCloud::BlobManager do
         :storage_table_host => "fake-table-endpoint"
       }
     }
+    let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
     before do
-      allow(Azure).to receive(:client).
-        with(storage_account_name: another_storage_account_name, storage_access_key: keys[0]).
-        and_return(azure_client)
-      allow(blob_service).to receive(:service_properties_headers).and_return({})
-      allow(blob_service).to receive(:generate_uri).and_return("fake-uri")
       allow(azure_client2).to receive(:get_storage_account_by_name).
         with(another_storage_account_name).
         and_return(another_storage_account)
+      allow(blob_service).to receive(:get_blob_properties).and_return(blob)
     end
 
-    class Response
-      attr_accessor :headers
-      def initialize
-        @headers = {}
+    context "when everything is fine" do
+      context "when copy status is success in the first response" do
+        before do
+          allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'success'])
+        end
+
+        it "succeeds to copy the blob" do
+          expect {
+            blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+          }.not_to raise_error
+        end
+      end
+
+      context "when copy status is success in the fourth response" do
+        let(:first_blob_properties) {
+          {
+            :copy_id => "fake-copy-id",
+            :copy_status => "pending",
+            :copy_status_description => "fake-status-description",
+            :copy_progress => "1234/5678"
+          }
+        }
+        let(:second_blob_properties) {
+          {
+            :copy_id => "fake-copy-id",
+            :copy_status => "pending",
+            :copy_status_description => "fake-status-description",
+            :copy_progress => "3456/5678"
+          }
+        }
+        let(:third_blob_properties) {
+          {
+            :copy_id => "fake-copy-id",
+            :copy_status => "pending",
+            :copy_status_description => "fake-status-description",
+            :copy_progress => "5666/5678"
+          }
+        }
+        let(:fourth_blob_properties) {
+          {
+            :copy_id => "fake-copy-id",
+            :copy_status => "success",
+            :copy_status_description => "fake-status-description",
+            :copy_progress => "5678/5678"
+          }
+        }
+        before do
+          allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
+          allow(blob).to receive(:properties).
+            and_return(first_blob_properties, second_blob_properties, third_blob_properties, fourth_blob_properties)
+        end
+
+        it "succeeds to copy the blob" do
+          expect {
+            blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+          }.not_to raise_error
+        end
       end
     end
 
-    context "when copy status is success" do
-      before do
-        response = Response.new
-        response.headers["x-ms-copy-id"] = "copy-id-1"
-        response.headers["x-ms-copy-status"] = "success"
-        allow(blob_service).to receive(:call).and_return(response)
+    context "when copy status is failed" do
+      context "when copy_blob_from_uri returns failed" do
+        before do
+          allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'failed'])
+        end
+
+        it "fails to copy the blob" do
+          expect(blob_service).to receive(:delete_blob).with(container_name, blob_name)
+
+          expect {
+            blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+          }.to raise_error /Failed to copy the blob/
+        end
       end
 
-      it "succeeds to copy the blob" do
-        expect {
-          blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-        }.not_to raise_error
-      end
-    end
+      context "when copy status is failed in the second response" do
+        let(:first_blob_properties) {
+          {
+            :copy_id => "fake-copy-id",
+            :copy_status => "pending",
+            :copy_status_description => "fake-status-description",
+            :copy_progress => "1234/5678"
+          }
+        }
+        let(:second_blob_properties) {
+          {
+            :copy_id => "fake-copy-id",
+            :copy_status => "failed",
+            :copy_status_description => "fake-status-description"
+          }
+        }
+        before do
+          allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
+          allow(blob).to receive(:properties).
+            and_return(first_blob_properties, second_blob_properties)
+        end
 
-    context "when copy status is not success or pending" do
-      before do
-        response = Response.new
-        response.headers["x-ms-copy-id"] = "copy-id-1"
-        response.headers["x-ms-copy-status"] = "failed"
-        allow(blob_service).to receive(:call).and_return(response)
-      end
+        it "fails to copy the blob" do
+          expect(blob_service).to receive(:delete_blob).with(container_name, blob_name)
 
-      it "fails to copy the blob" do
-        expect(blob_service).to receive(:delete_blob).
-          with(container_name, blob_name)
-
-        expect {
-          blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-        }.to raise_error /Failed to copy the blob/
+          expect {
+            blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+          }.to raise_error /Failed to copy the blob/
+        end
       end
     end
 
     context "when the progress of copying is interrupted" do
-      class MyBlob
-        attr_accessor :properties
-        def initialize
-          @properties = {}
+      context "when copy id is nil" do
+        let(:blob_properties) {
+          {
+            # copy_id is nil
+            :copy_status => "interrupted"
+          }
+        }
+        before do
+          allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
+          allow(blob).to receive(:properties).and_return(blob_properties)
+        end
+
+        it "should raise an error" do
+          expect(blob_service).to receive(:delete_blob).
+            with(container_name, blob_name)
+
+          expect {
+            blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+          }.to raise_error /The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted/
         end
       end
 
-      before do
-        response = Response.new
-        response.headers["x-ms-copy-id"] = "copy-id-1"
-        response.headers["x-ms-copy-status"] = "pending"
-        allow(blob_service).to receive(:call).and_return(response)
-        blob = MyBlob.new
-        blob.properties = { :copy_id => "copy-id-2" }
-        allow(blob_service).to receive(:get_blob_properties).and_return(blob)
-      end
+      context "when copy id does not match" do
+        let(:blob_properties) {
+          {
+            :copy_id => "another-copy-id",
+            :copy_status => "pending",
+            :copy_status_description => "fake-status-description",
+            :copy_progress => "1234/5678"
+          }
+        }
+        before do
+          allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
+          allow(blob).to receive(:properties).and_return(blob_properties)
+        end
 
-      it "should raise an error" do
-        expect(blob_service).to receive(:delete_blob).
-          with(container_name, blob_name)
+        it "should raise an error" do
+          expect(blob_service).to receive(:delete_blob).
+            with(container_name, blob_name)
 
-        expect {
-          blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-        }.to raise_error /The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted/
+          expect {
+            blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+          }.to raise_error /The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted/
+        end
       end
     end
   end
@@ -363,9 +450,13 @@ describe Bosh::AzureCloud::BlobManager do
 
   describe "#has_container?" do
     context "when the container exists" do
+      let(:container) { instance_double(Azure::Storage::Blob::Container::Container) }
+      let(:container_properties) { "fake-properties" }
+
       before do
         allow(blob_service).to receive(:get_container_properties).
-          with(container_name)
+          with(container_name).and_return(container)
+        allow(container).to receive(:properties).and_return(container_properties)
       end
 
       it "should return true" do

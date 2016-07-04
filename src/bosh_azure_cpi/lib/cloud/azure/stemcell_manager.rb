@@ -89,9 +89,6 @@ module Bosh::AzureCloud
         :filter => "PartitionKey eq '#{name}' and RowKey eq '#{storage_account_name}'"
       }
 
-      # Workaround because of the issue https://github.com/Azure/azure-sdk-for-ruby/issues/281
-      @table_manager.has_table?(STEMCELL_TABLE)
-
       entities = @table_manager.query_entities(STEMCELL_TABLE, options)
       if entities.size > 0
         entity = entities[0]

@@ -8,8 +8,9 @@ describe Bosh::AzureCloud::TableManager do
   let(:table_name) { "fake-table-name" }
   let(:keys) { ["fake-key-1", "fake-key-2"] }
 
-  let(:azure_client) { instance_double(Azure::Client) }
-  let(:table_service) { instance_double(Azure::Table::TableService) }
+  let(:azure_client) { instance_double(Azure::Storage::Client) }
+  let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
+  let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
   let(:storage_account) {
     {
       :id => "foo",
@@ -23,6 +24,8 @@ describe Bosh::AzureCloud::TableManager do
   }
 
   before do
+    allow(Azure::Storage::Client).to receive(:create).
+      and_return(azure_client)
     allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
       and_return(azure_client2)
     allow(azure_client2).to receive(:get_storage_account_keys_by_name).
@@ -32,11 +35,11 @@ describe Bosh::AzureCloud::TableManager do
       and_return(storage_account)
 
     allow(azure_client).to receive(:storage_table_host=)
-    allow(azure_client).to receive(:tables).
+    allow(azure_client).to receive(:tableClient).
       and_return(table_service)
-    allow(Azure).to receive(:client).
-      with(storage_account_name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, storage_access_key: keys[0]).
-      and_return(azure_client)
+    allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).
+      and_return(exponential_retry)
+    allow(table_service).to receive(:with_filter).with(exponential_retry)
   end
 
   class MyArray < Array

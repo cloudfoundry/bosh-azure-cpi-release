@@ -288,7 +288,7 @@ describe Bosh::AzureCloud::Helpers do
 
   describe "#initialize_azure_storage_client" do
     let(:azure_client2) { instance_double('Bosh::AzureCloud::AzureClient2') }
-    let(:azure_client) { instance_double(Azure::Client) }
+    let(:azure_client) { instance_double(Azure::Storage::Client) }
     let(:storage_account_name) { "fake-storage-account-name" }
     let(:storage_access_key) { "fake-storage-access-key" }
     let(:storage_account) {
@@ -303,8 +303,7 @@ describe Bosh::AzureCloud::Helpers do
     let(:table_host) { "fake-table-host" }
 
     before do
-      allow(Azure).to receive(:new).
-        with(storage_account_name, storage_access_key).
+      allow(Azure::Storage::Client).to receive(:create).
         and_return(azure_client)
       allow(azure_client).to receive(:storage_blob_host=)
       allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
