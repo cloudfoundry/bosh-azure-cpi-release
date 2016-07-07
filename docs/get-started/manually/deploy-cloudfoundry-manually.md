@@ -52,14 +52,16 @@ The following steps uses `single-vm-cf.yml` for an example.
   * **REPLACE_WITH_GATEWAY_IP** - the gateway for Cloud Foundry subnet, e.g., 10.0.16.1
   * **REPLACE_WITH_RESERVED_IP_FROM** - the reserved IP address for Cloud Foundry subnet, e.g., 10.0.16.2
   * **REPLACE_WITH_RESERVED_IP_TO** - the reserved IP address for Cloud Foundry subnet, e.g., 10.0.16.3
-  * **REPLACE_WITH_STATIC_IP** - the static IP for Cloud Foundry VM, e.g., 10.0.16.4
+  * **REPLACE_WITH_STATIC_IP_FROM** - the static IP for Cloud Foundry VM, e.g., 10.0.16.4
+  * **REPLACE_WITH_STATIC_IP_TO** - the static IP for Cloud Foundry VM, e.g., 10.0.16.100
   * **REPLACE_WITH_VNET_NAME** - the virtual network name, e.g., boshvnet-crp
   * **REPLACE_WITH_SUBNET_NAME_FOR_CLOUD_FOUNDRY** - the subnet name for Cloud Foundry, e.g., CloudFoundry
   * **REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP** - You can get the public IP for Cloud Foundry [**HERE**](./deploy-bosh-manually.md#get_public_ip). Another way is to find the IP from your resource group on Azure Portal.
   * **REPLACE_WITH_CLOUD_FOUNDRY_INTERNAL_IP** - the static IP for Cloud Foundry VM, e.g., 10.0.16.4
+  * **REPLACE_WITH_POSTGRES_IP** - the static IP for Cloud Foundry Postgres VM, e.g., 10.0.16.11. (An additional Postgres node is added to single-vm-cf for workaround of issue https://github.com/cloudfoundry/cf-release/issues/1001)
   * **REPLACE_WITH_SYSTEM_DOMAIN** - You should use your domain name. If you do not want to use yours, you can use 'REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io'.
-  * **REPLACE_WITH_SSL_CERT_AND_KEY** - You should use your certificate and key. If you do not want to use yours, please use below script to generate a new one and update `REPLACE_WITH_SSL_CERT_AND_KEY` in your manifest automatically.
   * **REPLACE_WITH_NSG_NAME_FOR_CLOUD_FOUNDRY** - the network security group name for Cloud Foundry, e.g. nsg-cf
+  * **REPLACE_WITH_SSL_CERT_AND_KEY** - You should use your certificate and key. If you do not want to use yours, please use below script to generate a new one and update `REPLACE_WITH_SSL_CERT_AND_KEY` in your manifest automatically.
 
     ```
     openssl genrsa -out ~/haproxy.key 2048 &&
@@ -73,7 +75,7 @@ The following steps uses `single-vm-cf.yml` for an example.
 
 1. Upload stemcell
 
-  Get the value of **resource_pools.name[vms].stemcell.url** in [**bosh.yml**](https://github.com/Azure/azure-quickstart-templates/blob/master/bosh-setup/bosh.yml), or get the value from [**Azure Hyper-V Stemcells based on Ubuntu**](http://bosh.io/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent). Then use it to replace **STEMCELL-FOR-AZURE-URL** in below command:
+  Get the value of **resource_pools.name[vms].stemcell.url** in [**bosh.yml**](https://github.com/Azure/azure-quickstart-templates/blob/master/bosh-setup/manifests/bosh.yml), or get the value from [**Azure Hyper-V Stemcells based on Ubuntu**](http://bosh.io/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent). Then use it to replace **STEMCELL-FOR-AZURE-URL** in below command:
 
   ```
   bosh upload stemcell STEMCELL-FOR-AZURE-URL
@@ -94,7 +96,7 @@ The following steps uses `single-vm-cf.yml` for an example.
 2. Upload Cloud Foundry release
 
   ```
-  bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=231
+  bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=238
   ```
 
   >**NOTE:** If you want to use the latest Cloud Foundry version, the Azure part in the manifest is same but other configurations may be different. You need to change them manually.

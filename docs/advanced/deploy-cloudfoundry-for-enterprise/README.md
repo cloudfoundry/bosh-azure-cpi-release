@@ -42,7 +42,7 @@ There are two types of Microsoft Azure platform events that can affect the avail
     - name: default
       static_ips: [10.0.16.12, 10.0.16.22]
     properties:
-      dropsonde: {enabled: true}
+      ...
   ```
 
 1. Deploy your Cloud Foundry.

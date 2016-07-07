@@ -105,7 +105,8 @@ Please update the value which starts with `REPLACE-ME` and run it after you [log
     ...
     router:
       servers:
-        z1: [10.0.16.12, 10.0.16.22]
+      - 10.0.16.12
+      - 10.0.16.22
     ...
   ```
 
