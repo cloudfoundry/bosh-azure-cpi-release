@@ -140,6 +140,18 @@ describe Bosh::AzureCloud::DiskManager do
       end
     end
 
+    context "when caching is nil" do
+      let(:cloud_properties) { {'caching' => nil} }
+
+      it "returns the disk name with default caching" do
+        allow(blob_manager).to receive(:create_empty_vhd_blob)
+
+        disk_name = disk_manager.create_disk(storage_account_name, size, cloud_properties)
+        expect(disk_name).to include(storage_account_name)
+        expect(disk_name).to include("None")
+      end
+    end
+
     context "when caching is specified" do
       let(:cloud_properties) { {'caching' => 'ReadOnly'} }
 

@@ -17,13 +17,13 @@ module Bosh::AzureCloud
 
       @resource_group_name = @cloud_properties["resource_group_name"]
 
-      if @cloud_properties.has_key?("virtual_network_name")
+      unless @cloud_properties["virtual_network_name"].nil?
         @virtual_network_name = @cloud_properties["virtual_network_name"]
       else
         cloud_error("virtual_network_name required for dynamic network")
       end
 
-      if @cloud_properties.has_key?("subnet_name")
+      unless @cloud_properties["subnet_name"].nil?
         @subnet_name = @cloud_properties["subnet_name"]
       else
         cloud_error("subnet_name required for dynamic network")

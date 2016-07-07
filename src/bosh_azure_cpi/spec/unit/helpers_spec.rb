@@ -202,32 +202,68 @@ describe Bosh::AzureCloud::Helpers do
 
     context "when environment is AzureStack" do
       context "when azure_stack_domain is not provided" do
-        let(:azure_properties) {
-          {
-            'environment'                => 'AzureStack',
-            'azure_stack_authentication' => 'fake-authentication'
+        context "when azure_stack_domain is missing" do
+          let(:azure_properties) {
+            {
+              'environment'                => 'AzureStack',
+              'azure_stack_authentication' => 'fake-authentication'
+            }
           }
-        }
 
-        it "should return an error" do
-          expect {
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-          }.to raise_error /missing configuration parameters for AzureStack/
+          it "should return an error" do
+            expect {
+              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+            }.to raise_error /missing configuration parameters for AzureStack/
+          end
+        end
+
+        context "when azure_stack_domain is nil" do
+          let(:azure_properties) {
+            {
+              'environment'                => 'AzureStack',
+              'azure_stack_authentication' => 'fake-authentication',
+              'azure_stack_domain'         => nil
+            }
+          }
+
+          it "should return an error" do
+            expect {
+              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+            }.to raise_error /missing configuration parameters for AzureStack/
+          end
         end
       end
 
       context "when azure_stack_authentication is not provided" do
-        let(:azure_properties) {
-          {
-            'environment'                => 'AzureStack',
-            'azure_stack_domain'         => 'fake-domain'
+        context "when azure_stack_authentication is missing" do
+          let(:azure_properties) {
+            {
+              'environment'                => 'AzureStack',
+              'azure_stack_domain'         => 'fake-domain'
+            }
           }
-        }
 
-        it "should return an error" do
-          expect {
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-          }.to raise_error /missing configuration parameters for AzureStack/
+          it "should return an error" do
+            expect {
+              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+            }.to raise_error /missing configuration parameters for AzureStack/
+          end
+        end
+
+        context "when azure_stack_authentication is nil" do
+          let(:azure_properties) {
+            {
+              'environment'                => 'AzureStack',
+              'azure_stack_domain'         => 'fake-domain',
+              'azure_stack_authentication' => nil
+            }
+          }
+
+          it "should return an error" do
+            expect {
+              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+            }.to raise_error /missing configuration parameters for AzureStack/
+          end
         end
       end
 

@@ -53,7 +53,8 @@ describe Bosh::AzureCloud::Cloud do
             'storage_account_name' => 'mock_storage_name',
             'storage_access_key' => "foo",
             'resource_group_name' => 'mock_resource_group',
-            'ssh_public_key' => "foo",
+            'ssh_public_key' => 'foo',
+            'ssh_user' => nil
           }
         }
       end
@@ -257,6 +258,41 @@ describe Bosh::AzureCloud::Cloud do
               ).to eq(instance_id)
             end
           end
+
+          context "when storage_account_location is nil" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'fake-vm-size',
+                'storage_account_name' => 'fake-storage-account-name',
+                'storage_account_type' => 'fake-storage-account-type',
+                'storage_account_location' => nil
+              }
+            }
+            let(:resource_group) {
+              {
+                'location' => 'fake-location'
+              }
+            }
+
+            before do
+              allow(client2).to receive(:get_resource_group).and_return(resource_group)
+            end
+
+            it 'should not raise any error' do
+              expect(client2).to receive(:get_resource_group)
+              expect(client2).to receive(:create_storage_account)
+              expect(
+                cloud.create_vm(
+                  agent_id,
+                  stemcell_id,
+                  resource_pool,
+                  networks_spec,
+                  disk_locality,
+                  environment
+                )
+              ).to eq(instance_id)
+            end
+          end
         end
 
         context "when the storage account exists" do
@@ -317,44 +353,90 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
-    context "when the storage account does not exist and missing storage_account_type" do
-      let(:resource_pool) {
-        {
-          'instance_type' => 'fake-vm-size',
-          'storage_account_name' => 'fake-storage-account-name'
+    context "when the storage account does not exist and storage_account_type is not provided" do
+      context "when the storage account does not exist and missing storage_account_type" do
+        let(:resource_pool) {
+          {
+            'instance_type' => 'fake-vm-size',
+            'storage_account_name' => 'fake-storage-account-name'
+          }
         }
-      }
 
-      before do
-        allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
+        before do
+          allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
+        end
+
+        it 'should raise an error' do
+          expect {
+            cloud.create_vm(
+              agent_id,
+              stemcell_id,
+              resource_pool,
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          }.to raise_error(/missing required cloud property `storage_account_type'/)
+        end
       end
 
-      it 'should raise an error' do
-        expect {
-          cloud.create_vm(
-            agent_id,
-            stemcell_id,
-            resource_pool,
-            networks_spec,
-            disk_locality,
-            environment
-          )
-        }.to raise_error(/missing required cloud property `storage_account_type'/)
+      context "when the storage account does not exist and storage_account_type is nil" do
+        let(:resource_pool) {
+          {
+            'instance_type' => 'fake-vm-size',
+            'storage_account_name' => 'fake-storage-account-name',
+            'storage_account_type' => nil
+          }
+        }
+
+        before do
+          allow(client2).to receive(:get_storage_account_by_name).and_return(nil)
+        end
+
+        it 'should raise an error' do
+          expect {
+            cloud.create_vm(
+              agent_id,
+              stemcell_id,
+              resource_pool,
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          }.to raise_error(/missing required cloud property `storage_account_type'/)
+        end
       end
     end
 
     context 'when instance_type is not provided' do
-      it 'should raise an error' do
-        expect {
-          cloud.create_vm(
-            agent_id,
-            stemcell_id,
-            {},
-            networks_spec,
-            disk_locality,
-            environment
-          )
-        }.to raise_error("missing required cloud property `instance_type'.")
+      context 'when instance_type is missing' do
+        it 'should raise an error' do
+          expect {
+            cloud.create_vm(
+              agent_id,
+              stemcell_id,
+              {},
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          }.to raise_error("missing required cloud property `instance_type'.")
+        end
+      end
+
+      context 'when instance_type is nil' do
+        it 'should raise an error' do
+          expect {
+            cloud.create_vm(
+              agent_id,
+              stemcell_id,
+              {'instance_type'=>nil},
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          }.to raise_error("missing required cloud property `instance_type'.")
+        end
       end
     end
 

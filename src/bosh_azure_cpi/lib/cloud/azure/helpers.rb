@@ -177,8 +177,8 @@ module Bosh::AzureCloud
 
     def validate_azure_stack_options(azure_properties)
       missing_keys = []
-      missing_keys << "azure_stack_domain" unless azure_properties.has_key?('azure_stack_domain')
-      missing_keys << "azure_stack_authentication" unless azure_properties.has_key?('azure_stack_authentication')
+      missing_keys << "azure_stack_domain" if azure_properties['azure_stack_domain'].nil?
+      missing_keys << "azure_stack_authentication" if azure_properties['azure_stack_authentication'].nil?
       raise ArgumentError, "missing configuration parameters for AzureStack > #{missing_keys.join(', ')}" unless missing_keys.empty?
     end
   end

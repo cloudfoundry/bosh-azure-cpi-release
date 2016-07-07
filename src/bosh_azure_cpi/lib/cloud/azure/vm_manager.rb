@@ -16,8 +16,8 @@ module Bosh::AzureCloud
     def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
       instance_is_created = false
       ephemeral_disk_size = 30
-      if resource_pool.has_key?('ephemeral_disk')
-        if resource_pool['ephemeral_disk'].has_key?('size')
+      unless resource_pool['ephemeral_disk'].nil?
+        unless resource_pool['ephemeral_disk']['size'].nil?
           size = resource_pool['ephemeral_disk']['size']
           validate_disk_size(size)
           ephemeral_disk_size = size/1024
@@ -25,7 +25,7 @@ module Bosh::AzureCloud
       end
 
       caching = 'ReadWrite'
-      if resource_pool.has_key?('caching')
+      unless resource_pool['caching'].nil?
         caching = resource_pool['caching']
         validate_disk_caching(caching)
       end
@@ -91,7 +91,7 @@ module Bosh::AzureCloud
 
       network_interface = @azure_client2.get_network_interface_by_name(instance_id)
       unless network_interface.nil?
-        if network_interface[:tags].has_key?('availability_set')
+        unless network_interface[:tags]['availability_set'].nil?
           delete_availability_set(network_interface[:tags]['availability_set'])
         end
 
@@ -163,7 +163,7 @@ module Bosh::AzureCloud
       resource_group_name = @azure_properties['resource_group_name']
       resource_group_name = network_configurator.resource_group_name unless network_configurator.resource_group_name.nil?
       security_group_name = @azure_properties["default_security_group"]
-      if resource_pool.has_key?("security_group")
+      if !resource_pool["security_group"].nil?
         security_group_name = resource_pool["security_group"]
       elsif !network_configurator.security_group.nil?
         security_group_name = network_configurator.security_group
@@ -193,7 +193,7 @@ module Bosh::AzureCloud
 
     def get_load_balancer(resource_pool)
       load_balancer = nil
-      if resource_pool.has_key?('load_balancer')
+      unless resource_pool['load_balancer'].nil?
         load_balancer_name = resource_pool['load_balancer']
         load_balancer = @azure_client2.get_load_balancer_by_name(load_balancer_name)
         cloud_error("Cannot find the load balancer `#{load_balancer_name}'") if load_balancer.nil?
@@ -211,7 +211,7 @@ module Bosh::AzureCloud
         :security_group      => network_security_group
       }
       network_tags = AZURE_TAGS
-      if resource_pool.has_key?('availability_set')
+      unless resource_pool['availability_set'].nil?
         network_tags = network_tags.merge({'availability_set' => resource_pool['availability_set']})
       end
       @azure_client2.create_network_interface(nic_params, subnet, network_tags, load_balancer)
@@ -220,7 +220,7 @@ module Bosh::AzureCloud
 
     def create_availability_set(storage_account, resource_pool)
       availability_set = nil
-      if resource_pool.has_key?('availability_set')
+      unless resource_pool['availability_set'].nil?
         availability_set = @azure_client2.get_availability_set_by_name(resource_pool['availability_set'])
         if availability_set.nil?
           avset_params = {

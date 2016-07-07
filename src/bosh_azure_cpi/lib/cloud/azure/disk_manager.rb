@@ -65,7 +65,7 @@ module Bosh::AzureCloud
     def create_disk(storage_account_name, size, cloud_properties)
       @logger.info("create_disk(#{storage_account_name}, #{size}, #{cloud_properties})")
       caching = 'None'
-      if !cloud_properties.nil? && cloud_properties.has_key?('caching')
+      if !cloud_properties.nil? && !cloud_properties['caching'].nil?
         caching = cloud_properties['caching']
         validate_disk_caching(caching)
       end

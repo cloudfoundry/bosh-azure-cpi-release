@@ -85,7 +85,7 @@ module Bosh::AzureCloud
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        unless resource_pool.has_key?('instance_type')
+        if resource_pool['instance_type'].nil?
           raise Bosh::Clouds::VMCreationFailed.new(false), "missing required cloud property `instance_type'."
         end
 
@@ -349,7 +349,7 @@ module Bosh::AzureCloud
 
       required_keys.each_pair do |key, values|
         values.each do |value|
-          if !options.has_key?(key) || !options[key].has_key?(value)
+          if options[key].nil? || options[key][value].nil?
             missing_keys << "#{key}:#{value}"
           end
         end
@@ -439,7 +439,7 @@ module Bosh::AzureCloud
 
     def get_storage_account(resource_pool)
       storage_account_name = @azure_properties['storage_account_name']
-      if resource_pool.has_key?('storage_account_name')
+      unless resource_pool['storage_account_name'].nil?
         storage_account_name = resource_pool['storage_account_name']
         storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
         if storage_account.nil?
@@ -454,7 +454,7 @@ module Bosh::AzureCloud
     def create_storage_account(storage_account_name, resource_pool)
       @logger.debug("create_storage_account(#{storage_account_name})")
 
-      unless resource_pool.has_key?('storage_account_type')
+      if resource_pool['storage_account_type'].nil?
         raise Bosh::Clouds::VMCreationFailed.new(false),
           "missing required cloud property `storage_account_type' to create the storage account `#{storage_account_name}'."
       end
@@ -463,7 +463,7 @@ module Bosh::AzureCloud
       @logger.debug("create_storage_account - The result of check_storage_account_name_availability is #{result}")
       cloud_error("The storage account name is invalid. #{result[:reason]}: #{result[:message]}") unless result[:available]
 
-      if resource_pool.has_key?('storage_account_location')
+      unless resource_pool['storage_account_location'].nil?
         location = resource_pool['storage_account_location']
       else
         resource_group = @azure_client2.get_resource_group()
