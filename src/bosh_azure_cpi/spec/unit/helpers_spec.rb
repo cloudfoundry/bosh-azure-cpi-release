@@ -403,23 +403,23 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
 
-    context "disk size is smaller than 1 GiB" do
+    context "disk size is smaller than 1 GB" do
       let(:disk_size) { 666 }
 
       it "should raise an error" do
         expect {
           helpers_tester.validate_disk_size(disk_size)
-        }.to raise_error "Azure CPI minimum disk size is 1 GiB"
+        }.to raise_error "Azure CPI minimum disk size is 1 GB"
       end
     end
 
-    context "disk size is larger than 1s TiB" do
-      let(:disk_size) { 6666 * 1024 }
+    context "disk size is larger than 1023 GB" do
+      let(:disk_size) { 1024 * 1024 }
 
       it "should raise an error" do
         expect {
           helpers_tester.validate_disk_size(disk_size)
-        }.to raise_error "Azure CPI maximum disk size is 1 TiB"
+        }.to raise_error "Azure CPI maximum disk size is 1023 GB"
       end
     end
   end

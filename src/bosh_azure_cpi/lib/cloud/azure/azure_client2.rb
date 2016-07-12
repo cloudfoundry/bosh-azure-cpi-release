@@ -238,10 +238,10 @@ module Bosh::AzureCloud
       end
 
       # 0 is always used by the ephemeral disk. Search an available lun from 1.
-      # Max data disks on Azure is 64.
+      disk_info = DiskInfo.for(vm['properties']['hardwareProfile']['vmSize'])
       lun = 0
       data_disks = vm['properties']['storageProfile']['dataDisks']
-      for i in 1..63
+      for i in 1..(disk_info.count - 1)
         disk = data_disks.find { |disk| disk['lun'] == i}
         if disk.nil?
           lun = i
@@ -308,7 +308,7 @@ module Bosh::AzureCloud
 
         properties = result['properties']
         vm[:provisioning_state] = properties['provisioningState']
-        vm[:size]               = properties['hardwareProfile']['vmSize']
+        vm[:vm_size]            = properties['hardwareProfile']['vmSize']
 
         unless properties['availabilitySet'].nil?
           vm[:availability_set] = get_availability_set(properties['availabilitySet']['id'])

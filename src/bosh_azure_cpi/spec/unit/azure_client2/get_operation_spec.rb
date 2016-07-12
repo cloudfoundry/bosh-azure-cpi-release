@@ -594,7 +594,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         :location    => "fake-location",
         :tags        => {},
         :provisioning_state  => "foo",
-        :size => "bar",
+        :vm_size => "bar",
         :os_disk  => {
            :name => "foo",
            :uri => "foo",

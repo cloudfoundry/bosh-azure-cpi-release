@@ -163,14 +163,131 @@ module Bosh::AzureCloud
     def validate_disk_size(size)
       raise ArgumentError, 'disk size needs to be an integer' unless size.kind_of?(Integer)
 
-      cloud_error('Azure CPI minimum disk size is 1 GiB') if size < 1024
-      cloud_error('Azure CPI maximum disk size is 1 TiB') if size > 1024 * 1000
+      cloud_error('Azure CPI minimum disk size is 1 GB') if size < 1024
+      cloud_error('Azure CPI maximum disk size is 1023 GB') if size > 1023 * 1024
     end
 
     def is_debug_mode(azure_properties)
       debug_mode = false
       debug_mode = azure_properties['debug_mode'] unless azure_properties['debug_mode'].nil?
       debug_mode
+    end
+
+    # https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/
+    # size: The default ephemeral disk size for the instance type
+    #   Reference Azure temporary disk size as the ephemeral disk size
+    #   If the size is less than 30 GB, CPI uses 30 GB because the space may not be enough. You can find the temporary disk size in the comment if it is less than 30 GB
+    #   If the size is larger than 1,023 GB, CPI uses 1,023 GB because max data disk size is 1,023 GB on Azure. You can find the temporary disk size in the comment if it is larger than 1,023 GB
+    # count: The maximum number of data disks for the instance type
+    #   The maximum number of data disks on Azure for now is 64. Set it to 64 if instance_type cannot be found in case a new instance type is supported in future
+    class DiskInfo
+      INSTANCE_TYPE_DISK_MAPPING = {
+        # A-series
+        'STANDARD_A0'  => [30, 1], # 20 GB
+        'STANDARD_A1'  => [70, 2],
+        'STANDARD_A2'  => [135, 4],
+        'STANDARD_A3'  => [285, 8],
+        'STANDARD_A4'  => [605, 16],
+        'STANDARD_A5'  => [135, 4],
+        'STANDARD_A6'  => [285, 8],
+        'STANDARD_A7'  => [605, 16],
+        'STANDARD_A8'  => [382, 16],
+        'STANDARD_A9'  => [382, 16],
+        'STANDARD_A10' => [382, 16],
+        'STANDARD_A11' => [382, 16],
+
+        # D-series
+        'STANDARD_D1'  => [50, 2],
+        'STANDARD_D2'  => [100, 4],
+        'STANDARD_D3'  => [200, 8],
+        'STANDARD_D4'  => [400, 16],
+        'STANDARD_D11' => [100, 4],
+        'STANDARD_D12' => [200, 8],
+        'STANDARD_D13' => [400, 16],
+        'STANDARD_D14' => [800, 32],
+
+        # Dv2-series
+        'STANDARD_D1_V2'  => [50, 2],
+        'STANDARD_D2_V2'  => [100, 4],
+        'STANDARD_D3_V2'  => [200, 8],
+        'STANDARD_D4_V2'  => [400, 16],
+        'STANDARD_D5_V2'  => [800, 32],
+        'STANDARD_D11_V2' => [100, 4],
+        'STANDARD_D12_V2' => [200, 8],
+        'STANDARD_D13_V2' => [400, 16],
+        'STANDARD_D14_V2' => [800, 32],
+        'STANDARD_D15_V2' => [1023, 40], # 1024 GB
+
+        # DS-series
+        'STANDARD_DS1'  => [30, 2], # 7 GB
+        'STANDARD_DS2'  => [30, 4], # 14 GB
+        'STANDARD_DS3'  => [30, 8], # 28 GB
+        'STANDARD_DS4'  => [56, 16],
+        'STANDARD_DS11' => [28, 4],
+        'STANDARD_DS12' => [56, 8],
+        'STANDARD_DS13' => [112, 16],
+        'STANDARD_DS14' => [224, 32],
+
+        # DSv2-series
+        'STANDARD_DS1_V2'  => [30, 2], # 7 GB
+        'STANDARD_DS2_V2'  => [30, 4], # 14 GB
+        'STANDARD_DS3_V2'  => [30, 8], # 28 GB
+        'STANDARD_DS4_V2'  => [56, 16],
+        'STANDARD_DS5_V2'  => [112, 32],
+        'STANDARD_DS11_V2' => [28, 4],
+        'STANDARD_DS12_V2' => [56, 8],
+        'STANDARD_DS13_V2' => [112, 16],
+        'STANDARD_DS14_V2' => [224, 32],
+        'STANDARD_DS15_V2' => [280, 40],
+
+        # F-series
+        'STANDARD_F1'  => [30, 2], # 16 GB
+        'STANDARD_F2'  => [32, 4],
+        'STANDARD_F4'  => [64, 8],
+        'STANDARD_F8'  => [128, 16],
+        'STANDARD_F16' => [256, 32],
+
+        # Fs-series
+        'STANDARD_F1S'  => [30, 2], # 4 GB
+        'STANDARD_F2S'  => [30, 4], # 8 GB
+        'STANDARD_F4S'  => [30, 8], # 16 GB
+        'STANDARD_F8S'  => [32, 16],
+        'STANDARD_F16S' => [64, 32],
+
+        # G-series
+        'STANDARD_G1'  => [384, 4],
+        'STANDARD_G2'  => [768, 8],
+        'STANDARD_G3'  => [1023, 16], # 1,536 GB
+        'STANDARD_G4'  => [1023, 32], # 3,072 GB
+        'STANDARD_G5'  => [1023, 64], # 6,144 GB
+
+        # Gs-series
+        'STANDARD_GS1'  => [56, 4],
+        'STANDARD_GS2'  => [112, 8],
+        'STANDARD_GS3'  => [224, 16],
+        'STANDARD_GS4'  => [448, 32],
+        'STANDARD_GS5'  => [896, 64]
+      }
+
+      attr_reader :size, :count
+
+      def self.default
+        self.new(30, 64)
+      end
+
+      def self.for(instance_type)
+        values = INSTANCE_TYPE_DISK_MAPPING[instance_type.upcase]
+        DiskInfo.new(*values) if values
+      end
+
+      def initialize(size, count)
+        @size = size
+        @count = count
+      end
+
+      def size_in_mb
+        @size * 1024
+      end
     end
 
     private

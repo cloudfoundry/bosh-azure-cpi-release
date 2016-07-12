@@ -28,37 +28,42 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
   describe "#attach_disk_to_virtual_machine" do
-    disk_name = "fake-disk-name"
-    disk_uri = "fake-disk-uri"
-    caching = "ReadWrite"
+    let(:disk_name) { "fake-disk-name" }
+    let(:disk_uri) { "fake-disk-uri" }
+    let(:caching) { "ReadWrite" }
     let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version}" }
-    let(:response_body) {
+    let(:disk) {
       {
-        "id" => "fake-id",
-        "name" => "fake-name",
-        "location" => "fake-location",
-        "tags" => "fake-tags",
-        "properties" => {
-          "provisioningState" => "fake-state",
-          "storageProfile" => {
-            "dataDisks" => [
-              { "lun" => 0 },
-              { "lun" => 1 }
-            ]
-          }
-        }
-      }.to_json
-    }
-
-    disk = {
-      :name         => disk_name,
-      :lun          => 2,
-      :createOption => 'Attach',
-      :caching      => 'ReadWrite',
-      :vhd          => { :uri => disk_uri }
+        :name         => disk_name,
+        :lun          => 2,
+        :createOption => 'Attach',
+        :caching      => 'ReadWrite',
+        :vhd          => { :uri => disk_uri }
+      }
     }
 
     context "when token is valid, create operation is accepted and completed" do
+      let(:response_body) {
+        {
+          "id" => "fake-id",
+          "name" => "fake-name",
+          "location" => "fake-location",
+          "tags" => "fake-tags",
+          "properties" => {
+            "provisioningState" => "fake-state",
+            "storageProfile" => {
+              "dataDisks" => [
+                { "lun" => 0 },
+                { "lun" => 1 }
+              ]
+            },
+            "hardwareProfile" => {
+              "vmSize" => "Standard_A5"
+            }
+          }
+        }.to_json
+      }
+
       it "should raise no error" do
         stub_request(:post, token_uri).to_return(
           :status => 200,
@@ -101,20 +106,51 @@ describe Bosh::AzureCloud::AzureClient2 do
           :status => 200,
           :body => '',
           :headers => {})
-        stub_request(:put, vm_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
-        stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
 
         expect {
           azure_client2.attach_disk_to_virtual_machine(vm_name, disk_name, disk_uri, caching)
         }.to raise_error /attach_disk_to_virtual_machine - cannot find the virtual machine by name/
+      end
+    end
+
+    context "when no avaiable lun can be found" do
+      let(:response_body) {
+        {
+          "id" => "fake-id",
+          "name" => "fake-name",
+          "location" => "fake-location",
+          "tags" => "fake-tags",
+          "properties" => {
+            "provisioningState" => "fake-state",
+            "storageProfile" => {
+              "dataDisks" => [
+                { "lun" => 0 },
+                { "lun" => 1 }
+              ]
+            },
+            "hardwareProfile" => {
+              "vmSize" => "Standard_A1"
+            }
+          }
+        }.to_json
+      }
+
+      it "should raise an error" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, vm_uri).to_return(
+          :status => 200,
+          :body => response_body,
+          :headers => {})
+
+        expect {
+          azure_client2.attach_disk_to_virtual_machine(vm_name, disk_name, disk_uri, caching)
+        }.to raise_error /attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine/
       end
     end
   end
