@@ -14,7 +14,6 @@ jobs:
   plan:
   - aggregate:
     - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-release-in}
-    - {trigger: false, get: stemcell, resource: azure-ubuntu-stemcell}
 
   - task: azure-provision
     file: bosh-cpi-release/ci/tasks/azure-provision.yml
@@ -46,7 +45,8 @@ jobs:
         AZURE_TENANT_ID:                {{azure_tenant_id}}
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-        AZURE_GROUP_NAME:               {{azure_group_name_for_vms}}
+        AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms}}
+        AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network}}
         AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
         AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
@@ -75,6 +75,7 @@ jobs:
   - aggregate:
     - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
     - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-cpi-release-in}
+    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
 
   - task: test
     file: bosh-cpi-release/ci/tasks/run-lifecycle.yml

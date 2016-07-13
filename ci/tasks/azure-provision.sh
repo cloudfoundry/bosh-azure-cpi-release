@@ -77,13 +77,3 @@ azure storage account create --location ${AZURE_REGION_SHORT_NAME} --type "LRS" 
 storage_account_key=$(azure storage account keys list ${storage_account_name} --resource-group ${resource_group_name} --json | jq '.storageAccountKeys.key1' -r)
 azure storage container create --account-name ${storage_account_name} --account-key ${storage_account_key} --container bosh
 azure storage container create --account-name ${storage_account_name} --account-key ${storage_account_key} --permission blob --container stemcell
-
-export AZURE_STORAGE_ACCOUNT=${storage_account_name}
-export AZURE_STORAGE_ACCESS_KEY=${storage_account_key}
-
-# Upload a stemcell for lifecycle test if it does not exist.
-# Lifycycle is used to test CPI but not stemcell so you can use any valid stemcell.
-stemcell_id="bosh-stemcell-00000000-0000-0000-0000-0AZURECPICI0"
-tar -xf ${PWD}/stemcell/*.tgz -C /mnt/
-tar -xf /mnt/image -C /mnt/
-azure storage blob upload --quiet --blobtype PAGE /mnt/root.vhd stemcell ${stemcell_id}.vhd

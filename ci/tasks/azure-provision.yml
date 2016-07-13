@@ -3,7 +3,6 @@ platform: linux
 image: docker:///boshcpi/azure-cpi-release
 inputs:
 - name: bosh-cpi-release
-- name: stemcell
 run:
   path: bosh-cpi-release/ci/tasks/azure-provision.sh
 params:
