@@ -153,13 +153,13 @@ info:    ad app create command OK
 ## 2.3 Create a Service Principal
 
 ```
-azure ad sp create $CLIENT_ID
+azure ad sp create --applicationId $CLIENT_ID
 ```
 
 Example:
 
 ```
-azure ad sp create 246e4af7-75b5-494a-89b5-363addb9f0fa
+azure ad sp create --applicationId 246e4af7-75b5-494a-89b5-363addb9f0fa
 ```
 
 Sample Output:
