@@ -3,7 +3,7 @@
 set -e
 
 source /etc/profile.d/chruby.sh
-chruby 2.1.2
+chruby ${RUBY_VERSION}
 
 initver=$(cat setup-director/bosh-init/version)
 initexe="${PWD}/setup-director/bosh-init/bosh-init-${initver}-linux-amd64"

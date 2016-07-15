@@ -3,7 +3,7 @@
 set -e
 
 source /etc/profile.d/chruby.sh
-chruby 2.1.2
+chruby ${RUBY_VERSION}
 
 semver=`cat version-semver/number`
 
