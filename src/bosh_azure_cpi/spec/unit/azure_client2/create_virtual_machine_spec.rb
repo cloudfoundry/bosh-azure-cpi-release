@@ -122,8 +122,8 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
     end
 
-    context "when create operation is not accepted" do
-      it "should raise an error" do
+    context "when another process is operating the same VM" do
+      it "should raise AzureConflictError" do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
@@ -132,13 +132,13 @@ describe Bosh::AzureCloud::AzureClient2 do
           }.to_json,
           :headers => {})
         stub_request(:put, vm_uri).to_return(
-          :status => 404,
-          :body => 'create operation does not return 200 or 201',
+          :status => 409,
+          :body => 'Another process is operating the same VM',
           :headers => {})
 
         expect {
           azure_client2.create_virtual_machine(vm_params, network_interface)
-        }.to raise_error /create operation does not return 200 or 201/
+        }.to raise_error Bosh::AzureCloud::AzureConflictError
       end
     end
 

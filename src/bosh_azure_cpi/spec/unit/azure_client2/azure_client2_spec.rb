@@ -240,41 +240,41 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
 
     context "when getting response fails" do
-      #it "should raise an error if NoContent returns" do
-      #  stub_request(:post, token_uri).to_return(
-      #    :status => 200,
-      #    :body => {
-      #      "access_token"=>valid_access_token,
-      #      "expires_on"=>expires_on
-      #    }.to_json,
-      #    :headers => {})
-      #  stub_request(:get, resource_uri).to_return(
-      #    :status => 204,
-      #    :body => '',
-      #    :headers => {})
+      it "should return nil if Azure returns 204" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, resource_uri).to_return(
+          :status => 204,
+          :body => '',
+          :headers => {})
 
-      #  expect {
-      #    azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
-      #  }.to raise_error /http_get - error: 204/
-      #end
+        expect(
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+        ).to be_nil
+      end
 
-      #it "should raise an error if NotFound returns" do
-      #  stub_request(:post, token_uri).to_return(
-      #    :status => 200,
-      #    :body => {
-      #      "access_token"=>valid_access_token,
-      #      "expires_on"=>expires_on
-      #    }.to_json,
-      #    :headers => {})
-      #  stub_request(:get, resource_uri).to_return(
-      #    :status => 404,
-      #    :body => '',
-      #    :headers => {})
+      it "should return nil if Azure returns 404" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, resource_uri).to_return(
+          :status => 404,
+          :body => '',
+          :headers => {})
 
-      #  expect {
-      #    azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
-      #  }.to raise_error /http_get - error: 404/
-      #end
+        expect(
+          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+        ).to be_nil
+      end
 
       it "should raise an error if other status code returns" do
         stub_request(:post, token_uri).to_return(

@@ -39,7 +39,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
       end
 
-      it "should raise an error if delete opration returns 404" do
+      it "should raise AzureNotFoundError if delete opration returns 404" do
         stub_request(:delete, vm_uri).to_return(
           :status => 404,
           :body => '',
@@ -48,7 +48,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.delete_virtual_machine(vm_name)
-        }.to raise_error /http_delete - http code: 404/
+        }.to raise_error Bosh::AzureCloud::AzureNotFoundError
       end
 
       it "should raise no error if delete opration returns 200" do

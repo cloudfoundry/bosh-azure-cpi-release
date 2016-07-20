@@ -152,7 +152,6 @@ describe Bosh::AzureCloud::VMManager do
             and_return("public-ip")
 
           expect(client2).not_to receive(:delete_virtual_machine)
-          expect(client2).not_to receive(:delete_availability_set)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -183,7 +182,6 @@ describe Bosh::AzureCloud::VMManager do
             and_return("not-exist-public-ip")
 
           expect(client2).not_to receive(:delete_virtual_machine)
-          expect(client2).not_to receive(:delete_availability_set)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -206,7 +204,6 @@ describe Bosh::AzureCloud::VMManager do
           and_return(nil)
 
         expect(client2).not_to receive(:delete_virtual_machine)
-        expect(client2).not_to receive(:delete_availability_set)
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
@@ -240,7 +237,6 @@ describe Bosh::AzureCloud::VMManager do
           and_raise("network interface is not created")
 
         expect(client2).not_to receive(:delete_virtual_machine)
-        expect(client2).not_to receive(:delete_availability_set)
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
@@ -278,14 +274,12 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_availability_set_by_name).
           with(resource_pool['availability_set']).
           and_return(nil)
+        allow(client2).to receive(:create_availability_set).
+          and_raise("availability set is not created")
       end
 
       it "should raise an error" do
-        allow(client2).to receive(:create_availability_set).
-          and_raise("availability set is not created")
-
         expect(client2).not_to receive(:delete_virtual_machine)
-        expect(client2).not_to receive(:delete_availability_set)
         expect(client2).to receive(:delete_network_interface)
 
         expect {
@@ -305,11 +299,10 @@ describe Bosh::AzureCloud::VMManager do
           :name => "foo"
         }
       }
-      let(:vms) { double("vms", :size => 0) }
       let(:availability_set) {
         {
           :name => "fake-avset",
-          :virtual_machines => vms
+          :virtual_machines => []
         }
       }
       let(:storage_account) {
@@ -352,12 +345,14 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context "when VM is not created" do
-        it "should raise an error" do
+        before do
           allow(client2).to receive(:create_virtual_machine).
             and_raise("virtual machine is not created")
+        end
+
+        it "should raise an error" do
 
           expect(client2).to receive(:delete_virtual_machine)
-          expect(client2).to receive(:delete_availability_set)
           expect(client2).to receive(:delete_network_interface)
 
           expect {
@@ -367,6 +362,10 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context "when VM is created" do
+        before do
+          allow(client2).to receive(:create_virtual_machine)
+        end
+
         context "with the network security group provided in resource_pool" do
           let(:resource_pool) {
             {
@@ -391,10 +390,7 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it "should succeed" do
-            allow(client2).to receive(:create_virtual_machine)
-
             expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_availability_set)
             expect(client2).not_to receive(:delete_network_interface)
 
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -415,10 +411,7 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it "should succeed" do
-            allow(client2).to receive(:create_virtual_machine)
-
             expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_availability_set)
             expect(client2).not_to receive(:delete_network_interface)
 
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -427,10 +420,7 @@ describe Bosh::AzureCloud::VMManager do
 
         context "with the default network security group" do
           it "should succeed" do
-            allow(client2).to receive(:create_virtual_machine)
-
             expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_availability_set)
             expect(client2).not_to receive(:delete_network_interface)
 
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -454,10 +444,7 @@ describe Bosh::AzureCloud::VMManager do
           }
 
           it "should succeed" do
-            allow(client2).to receive(:create_virtual_machine)
-
             expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_availability_set)
             expect(client2).not_to receive(:delete_network_interface)
 
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -479,10 +466,7 @@ describe Bosh::AzureCloud::VMManager do
             end
 
             it "should succeed" do
-              allow(client2).to receive(:create_virtual_machine)
-
               expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_availability_set)
               expect(client2).not_to receive(:delete_network_interface)
 
               vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -508,10 +492,7 @@ describe Bosh::AzureCloud::VMManager do
             end
 
             it "should succeed" do
-              allow(client2).to receive(:create_virtual_machine)
-
               expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_availability_set)
               expect(client2).not_to receive(:delete_network_interface)
 
               vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -526,10 +507,7 @@ describe Bosh::AzureCloud::VMManager do
             end
 
             it "should succeed" do
-              allow(client2).to receive(:create_virtual_machine)
-
               expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_availability_set)
               expect(client2).not_to receive(:delete_network_interface)
 
               vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
@@ -555,31 +533,31 @@ describe Bosh::AzureCloud::VMManager do
         :tags => {}
       }
     }
+    let(:os_disk_name) { "fake-os-disk-name" }
+    let(:availability_set_name) { "fake-availability-set-name" }
 
-    it "deletes the instance by id" do
+    before do
       allow(client2).to receive(:get_virtual_machine_by_name).
         with(instance_id).and_return(vm)
-      expect(client2).to receive(:delete_virtual_machine).with(instance_id)
-
       allow(client2).to receive(:get_load_balancer_by_name).
         with(instance_id).and_return(load_balancer)
-      expect(client2).to receive(:delete_load_balancer).with(instance_id)
-
       allow(client2).to receive(:get_network_interface_by_name).
         with(instance_id).and_return(network_interface)
-      expect(client2).to receive(:delete_network_interface).with(instance_id)
-
-      os_disk_name = "fake-os-disk-name"
       allow(disk_manager).to receive(:generate_os_disk_name).
         with(instance_id).
         and_return(os_disk_name)
-      expect(disk_manager).to receive(:delete_disk).with(os_disk_name)
-
       allow(disk_manager).to receive(:generate_ephemeral_disk_name).
         with(instance_id).
         and_return(ephemeral_disk_name)
-      expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name)
+    end
 
+    it "should delete the instance by id" do
+      expect(client2).to receive(:delete_virtual_machine).with(instance_id)
+      expect(client2).to receive(:delete_load_balancer).with(instance_id)
+      expect(client2).to receive(:delete_network_interface).with(instance_id)
+
+      expect(disk_manager).to receive(:delete_disk).with(os_disk_name)
+      expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name)
       expect(disk_manager).to receive(:delete_vm_status_files).
         with(storage_account_name, instance_id)
 

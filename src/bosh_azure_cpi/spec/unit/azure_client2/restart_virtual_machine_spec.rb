@@ -104,8 +104,8 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
     end
 
-    context "when token is valid, restart operation is not accepted" do
-      it "should raise an error" do
+    context "when token is valid but the VM cannot be found" do
+      it "should raise AzureNotFoundError" do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
@@ -115,12 +115,12 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
         stub_request(:post, vm_restart_uri).to_return(
           :status => 404,
-          :body => 'restart is not accepted',
+          :body => '',
           :headers => {})
 
         expect {
           azure_client2.restart_virtual_machine(vm_name)
-        }.to raise_error /message: restart is not accepted/
+        }.to raise_error Bosh::AzureCloud::AzureNotFoundError
       end
     end
 

@@ -38,7 +38,7 @@ module Bosh::AzureCloud
 
       instance_id  = generate_instance_id(storage_account[:name], uuid)
 
-      network_interface = create_network_interface(instance_id, storage_account, resource_pool, network_configurator, public_ip, network_security_group, subnet, load_balancer)
+      network_interface = create_network_interface(instance_id, storage_account, network_configurator, public_ip, network_security_group, subnet, load_balancer)
       availability_set = create_availability_set(storage_account, resource_pool)
 
       os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
@@ -69,7 +69,6 @@ module Bosh::AzureCloud
         ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
         @disk_manager.delete_disk(ephemeral_disk_name)
       end
-      delete_availability_set(availability_set[:name]) unless availability_set.nil?
       @azure_client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
       # Replace vmSize with instance_type because only instance_type exists in the manifest
       error_message = e.inspect
@@ -91,13 +90,7 @@ module Bosh::AzureCloud
       @azure_client2.delete_load_balancer(instance_id) unless load_balancer.nil?
 
       network_interface = @azure_client2.get_network_interface_by_name(instance_id)
-      unless network_interface.nil?
-        unless network_interface[:tags]['availability_set'].nil?
-          delete_availability_set(network_interface[:tags]['availability_set'])
-        end
-
-        @azure_client2.delete_network_interface(instance_id)
-      end
+      @azure_client2.delete_network_interface(instance_id) unless network_interface.nil?
 
       os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
       @disk_manager.delete_disk(os_disk_name)
@@ -202,7 +195,7 @@ module Bosh::AzureCloud
       load_balancer
     end
 
-    def create_network_interface(instance_id, storage_account, resource_pool, network_configurator, public_ip, network_security_group, subnet, load_balancer)
+    def create_network_interface(instance_id, storage_account, network_configurator, public_ip, network_security_group, subnet, load_balancer)
       network_interface = nil
       nic_params = {
         :name                => instance_id,
@@ -211,11 +204,8 @@ module Bosh::AzureCloud
         :public_ip           => public_ip,
         :security_group      => network_security_group
       }
-      network_tags = AZURE_TAGS
-      unless resource_pool['availability_set'].nil?
-        network_tags = network_tags.merge({'availability_set' => resource_pool['availability_set']})
-      end
-      @azure_client2.create_network_interface(nic_params, subnet, network_tags, load_balancer)
+
+      @azure_client2.create_network_interface(nic_params, subnet, AZURE_TAGS, load_balancer)
       network_interface = @azure_client2.get_network_interface_by_name(instance_id)
     end
 
@@ -244,13 +234,6 @@ module Bosh::AzureCloud
         end
       end
       availability_set
-    end
-
-    def delete_availability_set(name)
-      availability_set = @azure_client2.get_availability_set_by_name(name)
-      if !availability_set.nil? && availability_set[:virtual_machines].size == 0
-        @azure_client2.delete_availability_set(name)
-      end
     end
   end
 end
