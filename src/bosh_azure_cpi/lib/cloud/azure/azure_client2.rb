@@ -5,7 +5,7 @@
 module Bosh::AzureCloud
   class AzureError < Bosh::Clouds::CloudError; end
   class AzureUnauthorizedError < AzureError; end
-  class AzureNoFoundError < AzureError; end
+  class AzureNotFoundError < AzureError; end
   class AzureConflictError < AzureError; end
   class AzureInternalError < AzureError; end
   class AzureAsynInternalError < AzureError; end
@@ -80,7 +80,7 @@ module Bosh::AzureCloud
       result = nil
       begin
         result = http_get(url, params)
-      rescue AzureNoFoundError => e
+      rescue AzureNotFoundError => e
         result = nil
       end
       result
@@ -218,7 +218,7 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
-        raise AzureNoFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name \"#{name}\""
+        raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
       vm['tags'] = tags
@@ -234,7 +234,7 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
-        raise AzureNoFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{name}'"
+        raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{name}'"
       end
 
       # 0 is always used by the ephemeral disk. Search an available lun from 1.
@@ -276,7 +276,7 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
-        raise AzureNoFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
+        raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
       @logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(vm)}")
@@ -846,7 +846,7 @@ module Bosh::AzureCloud
       begin
         url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name, others: 'listKeys')
         result = http_post(url)
-      rescue AzureNoFoundError => e
+      rescue AzureNotFoundError => e
         result = nil
       end
 
@@ -1048,6 +1048,7 @@ module Bosh::AzureCloud
         error += "routing id: #{response['x-ms-routing-request-id']}\n"
         error += " message: #{response.body}" unless response.body.nil?
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
+        raise AzureNotFoundError, error if response.code.to_i == HTTP_CODE_NOTFOUND
         raise AzureError, error
       end
 
@@ -1102,9 +1103,9 @@ module Bosh::AzureCloud
       status_code = response.code.to_i
       if status_code != HTTP_CODE_OK
         if status_code == HTTP_CODE_NOCONTENT
-          raise AzureNoFoundError, "http_get - http code: #{response.code}"
+          raise AzureNotFoundError, "http_get - http code: #{response.code}"
         elsif status_code == HTTP_CODE_NOTFOUND
-          raise AzureNoFoundError, "http_get - http code: #{response.code}"
+          raise AzureNotFoundError, "http_get - http code: #{response.code}"
         else
           error = "http_get - http code: #{response.code}"
           error += " message: #{response.body}" unless response.body.nil?
