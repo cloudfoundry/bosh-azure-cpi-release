@@ -1,6 +1,10 @@
 require "spec_helper"
 
 describe Bosh::AzureCloud::Helpers do
+  let(:api_version) { AZURE_API_VERSION }
+  let(:azure_stack_api_version) { AZURE_STACK_API_VERSION }
+  let(:azure_china_api_version) { AZURE_CHINA_API_VERSION }
+
   class HelpersTester
     include Bosh::AzureCloud::Helpers
   end
@@ -181,7 +185,7 @@ describe Bosh::AzureCloud::Helpers do
       it "should return Azure authentication endpoint and api version" do
         expect(
           helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-        ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", "2015-05-01-preview"])
+        ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", api_version])
       end
     end
 
@@ -196,7 +200,7 @@ describe Bosh::AzureCloud::Helpers do
       it "should return AzureChinaCloud authentication endpoint and api version" do
         expect(
           helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-        ).to eq(["https://login.chinacloudapi.cn/fake-tenant-id/oauth2/token", "2015-06-15"])
+        ).to eq(["https://login.chinacloudapi.cn/fake-tenant-id/oauth2/token", azure_china_api_version])
       end
     end
 
@@ -281,7 +285,7 @@ describe Bosh::AzureCloud::Helpers do
           it "should return AzureStack authentication endpoint and api version" do
             expect(
               helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            ).to eq(["https://fake-domain/oauth2/token", "2015-05-01-preview"])
+            ).to eq(["https://fake-domain/oauth2/token", azure_stack_api_version])
           end
         end
 
@@ -298,7 +302,7 @@ describe Bosh::AzureCloud::Helpers do
           it "should return AzureStack authentication endpoint and api version" do
             expect(
               helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            ).to eq(["https://fake-domain/fake-tenant-id/oauth2/token", "2015-05-01-preview"])
+            ).to eq(["https://fake-domain/fake-tenant-id/oauth2/token", azure_stack_api_version])
           end
         end
 
@@ -315,7 +319,7 @@ describe Bosh::AzureCloud::Helpers do
           it "should return Azure authentication endpoint and api version" do
             expect(
               helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", "2015-05-01-preview"])
+            ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", api_version])
           end
         end
       end

@@ -13,7 +13,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   }
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
-  let(:api_version) { '2015-05-01-preview' }
+  let(:api_version) { AZURE_API_VERSION }
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
   let(:request_id) { "fake-request-id" }
 
@@ -298,7 +298,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   describe "#get_resource_group" do
     let(:url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}" }
-    let(:api_version_1) { "2015-01-01" }
+    let(:api_version_1) { AZURE_RESOUCE_PROVIDER_GROUP }
     let(:resource_uri) { "https://management.azure.com/#{url}?api-version=#{api_version_1}" }
     let(:response_body) {
       {

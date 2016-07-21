@@ -10,7 +10,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
-  let(:api_version) { '2015-05-01-preview' }
+  let(:api_version) { AZURE_API_VERSION }
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
   let(:request_id) { "fake-request-id" }
 

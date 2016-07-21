@@ -12,11 +12,11 @@ module Bosh::AzureCloud
         'resourceManagerEndpointUrl' => 'https://management.azure.com/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
         'apiVersion' => {
-          AZURE_RESOUCE_PROVIDER_COMPUTER         => '2015-05-01-preview',
-          AZURE_RESOUCE_PROVIDER_NETWORK          => '2015-05-01-preview',
-          AZURE_RESOUCE_PROVIDER_STORAGE          => '2015-05-01-preview',
-          AZURE_RESOUCE_PROVIDER_GROUP            => '2015-01-01',
-          AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY  => '2015-05-01-preview'
+          AZURE_RESOUCE_PROVIDER_COMPUTER         => '2015-06-15',
+          AZURE_RESOUCE_PROVIDER_NETWORK          => '2015-06-15',
+          AZURE_RESOUCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOUCE_PROVIDER_GROUP            => '2016-06-01',
+          AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       },
       'AzureChinaCloud' => {

@@ -14,6 +14,12 @@ MOCK_AZURE_CLIENT_SECRET = '0e67d8fc-150e-4cc0-bbf3-087e6c4b9e2a'
 MOCK_SSH_PUBLIC_KEY = 'bar'
 MOCK_DEFAULT_SECURITY_GROUP = 'fake-default-nsg-name'
 
+# Let us keep the least API versions here for unit tests.
+AZURE_API_VERSION = '2015-06-15'
+AZURE_RESOUCE_PROVIDER_GROUP = '2016-06-01'
+AZURE_STACK_API_VERSION = '2015-05-01-preview'
+AZURE_CHINA_API_VERSION = '2015-06-15'
+
 def mock_cloud_options
   {
     'plugin' => 'azure',

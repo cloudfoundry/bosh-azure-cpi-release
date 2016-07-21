@@ -48,7 +48,6 @@ describe Bosh::AzureCloud::Cloud do
         {
           'azure' => {
             'environment' => 'AzureCloud',
-            'api_version' => '2015-05-01-preview',
             'subscription_id' => "foo",
             'storage_account_name' => 'mock_storage_name',
             'storage_access_key' => "foo",
