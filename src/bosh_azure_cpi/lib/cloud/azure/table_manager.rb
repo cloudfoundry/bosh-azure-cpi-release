@@ -11,7 +11,7 @@ module Bosh::AzureCloud
 
       storage_account = @storage_account_manager.default_storage_account
       storage_account[:key] = @azure_client2.get_storage_account_keys_by_name(storage_account[:name])[0]
-      azure_storage_client = initialize_azure_storage_client(storage_account, 'table')
+      azure_storage_client = initialize_azure_storage_client(storage_account, 'table', @azure_properties['environment'])
       @table_service_client = azure_storage_client.table_client
       @table_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
       @table_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties)

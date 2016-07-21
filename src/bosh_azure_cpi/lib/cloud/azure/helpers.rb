@@ -206,7 +206,7 @@ module Bosh::AzureCloud
       return url, api_version
     end
 
-    def initialize_azure_storage_client(storage_account, service = 'blob')
+    def initialize_azure_storage_client(storage_account, service = 'blob', environment = 'AzureCloud')
       azure_client = Azure::Storage::Client.create(storage_account_name: storage_account[:name], storage_access_key: storage_account[:key], user_agent_prefix: USER_AGENT_FOR_REST)
 
       case service
@@ -216,6 +216,12 @@ module Bosh::AzureCloud
           else
             azure_client.storage_blob_host  = storage_account[:storage_blob_host]
           end
+
+          if environment == 'AzureStack'
+            azure_client.storage_blob_host.gsub!('https', 'http')
+            azure_client.storage_blob_host.gsub!(':443', '')
+          end
+          @logger.debug("initialize_azure_storage_client - storage_blob_host: #{azure_client.storage_blob_host}")
         when 'table'
           if storage_account[:storage_table_host].nil?
             cloud_error("The storage account `#{storage_account[:name]}' does not support table")
@@ -226,6 +232,12 @@ module Bosh::AzureCloud
           else
             azure_client.storage_table_host = storage_account[:storage_table_host]
           end
+
+          if environment == 'AzureStack'
+            azure_client.storage_table_host.gsub!('https', 'http')
+            azure_client.storage_table_host.gsub!(':443', '')
+          end
+          @logger.debug("initialize_azure_storage_client - storage_table_host: #{azure_client.storage_table_host}")
         else
           cloud_error("No support for the storage service: `#{service}'")
       end
