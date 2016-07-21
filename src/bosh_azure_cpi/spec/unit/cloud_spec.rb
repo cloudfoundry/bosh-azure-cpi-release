@@ -633,23 +633,23 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
-    context 'when disk size is smaller than 1 GB' do
+    context 'when disk size is smaller than 1 GiB' do
       let(:disk_size) { 100 }
 
       it 'should raise an error' do
         expect {
           cloud.create_disk(disk_size, cloud_properties, instance_id)
-        }.to raise_error /Azure CPI minimum disk size is 1 GB/
+        }.to raise_error /Azure CPI minimum disk size is 1 GiB/
       end
     end
 
-    context 'when disk size is larger than 1023 GB' do
+    context 'when disk size is larger than 1023 GiB' do
       let(:disk_size) { 1024 * 1024 }
 
       it 'should raise an error' do
         expect {
           cloud.create_disk(disk_size, cloud_properties, instance_id)
-        }.to raise_error /Azure CPI maximum disk size is 1023 GB/
+        }.to raise_error /Azure CPI maximum disk size is 1023 GiB/
       end
     end
   end

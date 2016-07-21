@@ -126,6 +126,7 @@ module Bosh::AzureCloud
     # * +:image_uri+            - String. The URI of the image.
     # * +:os_disk_name+         - String. The name of the OS disk for the virtual machine instance.
     # * +:os_vhd_uri+           - String. The URI of the OS disk for the virtual machine instance.
+    # * +:os_disk_size+         - Integer. The size of the OS disk for the virtual machine instance.
     # * +:ephemeral_disk_name+  - String. The name of the ephemeral disk for the virtual machine instance.
     # * +:ephemeral_disk_uri+   - String. The URI of the ephemeral disk for the virtual machine instance.
     # * +:ephemeral_disk_size+  - Integer. The size in GiB of the ephemeral disk for the virtual machine instance.
@@ -197,6 +198,10 @@ module Bosh::AzureCloud
         vm['properties']['availabilitySet'] = {
           'id' => availability_set[:id]
         }
+      end
+
+      unless vm_params[:os_disk_size].nil?
+        vm['properties']['storageProfile']['osDisk']['diskSizeGB'] = vm_params[:os_disk_size]
       end
 
       params = {

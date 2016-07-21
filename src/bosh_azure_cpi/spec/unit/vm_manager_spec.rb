@@ -288,6 +288,32 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
+    context "with setting the os disk size to 2 GiB" do
+      let(:resource_pool) {
+        {
+          'instance_type' => 'Standard_D1',
+          'storage_account_name' => 'dfe03ad623f34d42999e93ca',
+          'caching' => 'ReadWrite',
+          'availability_set' => 'fake-avset',
+          'platform_update_domain_count' => 5,
+          'platform_fault_domain_count' => 3,
+          'load_balancer' => 'fake-lb-name',
+          'root_disk' => {
+            'size' => 2 * 1024
+          }
+        }
+      }
+
+      it "should raise an error" do
+        expect(client2).not_to receive(:delete_virtual_machine)
+        expect(client2).not_to receive(:delete_network_interface)
+
+        expect {
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+        }.to raise_error /OS disk size must not be smaller than 3 GiB/
+      end
+    end
+
     context "when creating virtual machine" do
       let(:load_balancer) {
         {
@@ -438,6 +464,30 @@ describe Bosh::AzureCloud::VMManager do
               'platform_fault_domain_count' => 3,
               'load_balancer' => 'fake-lb-name',
               'ephemeral_disk' => {
+                'size' => 20 * 1024
+              }
+            }
+          }
+
+          it "should succeed" do
+            expect(client2).not_to receive(:delete_virtual_machine)
+            expect(client2).not_to receive(:delete_network_interface)
+
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          end
+        end
+
+        context "with setting the os disk size to 20 GiB" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'Standard_D1',
+              'storage_account_name' => 'dfe03ad623f34d42999e93ca',
+              'caching' => 'ReadWrite',
+              'availability_set' => 'fake-avset',
+              'platform_update_domain_count' => 5,
+              'platform_fault_domain_count' => 3,
+              'load_balancer' => 'fake-lb-name',
+              'root_disk' => {
                 'size' => 20 * 1024
               }
             }

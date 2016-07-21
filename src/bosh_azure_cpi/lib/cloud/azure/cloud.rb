@@ -67,8 +67,11 @@ module Bosh::AzureCloud
     #    "platform_update_domain_count" => 5,
     #    "platform_fault_domain_count" => 3,
     #    "security_group" => "nsg-bosh",
+    #    "root_disk" => {
+    #      "size" => 50120, # disk size in MiB
+    #    }
     #    "ephemeral_disk" => {
-    #      "size" => 20480, # disk size in MB
+    #      "size" => 30720, # disk size in MiB
     #    }
     #  }
     #
@@ -203,7 +206,7 @@ module Bosh::AzureCloud
     # VM locality is specified the disk will be placed near the VM so it won't have to move
     # when it's attached later.
     #
-    # @param [Integer] size disk size in MB
+    # @param [Integer] size disk size in MiB
     # @param [Hash] cloud_properties properties required for creating this disk
     #               specific to a CPI
     # @param [optional, String] instance_id vm id if known of the VM that this disk will

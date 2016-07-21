@@ -58,7 +58,7 @@ module Bosh::AzureCloud
     #
     # @param [String] container_name container name
     # @param [String] blob_name vhd name
-    # @param [Integer] blob_size_in_gb blob size in GB
+    # @param [Integer] blob_size_in_gb blob size in GiB
     # @param [Boolean] storage_account_name Is premium or not.
     # @return [void]
     def create_empty_vhd_blob(storage_account_name, container_name, blob_name, blob_size_in_gb)

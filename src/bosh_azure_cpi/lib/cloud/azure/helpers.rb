@@ -163,8 +163,8 @@ module Bosh::AzureCloud
     def validate_disk_size(size)
       raise ArgumentError, 'disk size needs to be an integer' unless size.kind_of?(Integer)
 
-      cloud_error('Azure CPI minimum disk size is 1 GB') if size < 1024
-      cloud_error('Azure CPI maximum disk size is 1023 GB') if size > 1023 * 1024
+      cloud_error('Azure CPI minimum disk size is 1 GiB') if size < 1024
+      cloud_error('Azure CPI maximum disk size is 1023 GiB') if size > 1023 * 1024
     end
 
     def is_debug_mode(azure_properties)
@@ -176,14 +176,14 @@ module Bosh::AzureCloud
     # https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/
     # size: The default ephemeral disk size for the instance type
     #   Reference Azure temporary disk size as the ephemeral disk size
-    #   If the size is less than 30 GB, CPI uses 30 GB because the space may not be enough. You can find the temporary disk size in the comment if it is less than 30 GB
-    #   If the size is larger than 1,023 GB, CPI uses 1,023 GB because max data disk size is 1,023 GB on Azure. You can find the temporary disk size in the comment if it is larger than 1,023 GB
+    #   If the size is less than 30 GiB, CPI uses 30 GiB because the space may not be enough. You can find the temporary disk size in the comment if it is less than 30 GiB
+    #   If the size is larger than 1,023 GiB, CPI uses 1,023 GiB because max data disk size is 1,023 GiB on Azure. You can find the temporary disk size in the comment if it is larger than 1,023 GiB
     # count: The maximum number of data disks for the instance type
     #   The maximum number of data disks on Azure for now is 64. Set it to 64 if instance_type cannot be found in case a new instance type is supported in future
     class DiskInfo
       INSTANCE_TYPE_DISK_MAPPING = {
         # A-series
-        'STANDARD_A0'  => [30, 1], # 20 GB
+        'STANDARD_A0'  => [30, 1], # 20 GiB
         'STANDARD_A1'  => [70, 2],
         'STANDARD_A2'  => [135, 4],
         'STANDARD_A3'  => [285, 8],
@@ -216,12 +216,12 @@ module Bosh::AzureCloud
         'STANDARD_D12_V2' => [200, 8],
         'STANDARD_D13_V2' => [400, 16],
         'STANDARD_D14_V2' => [800, 32],
-        'STANDARD_D15_V2' => [1023, 40], # 1024 GB
+        'STANDARD_D15_V2' => [1023, 40], # 1024 GiB
 
         # DS-series
-        'STANDARD_DS1'  => [30, 2], # 7 GB
-        'STANDARD_DS2'  => [30, 4], # 14 GB
-        'STANDARD_DS3'  => [30, 8], # 28 GB
+        'STANDARD_DS1'  => [30, 2], # 7 GiB
+        'STANDARD_DS2'  => [30, 4], # 14 GiB
+        'STANDARD_DS3'  => [30, 8], # 28 GiB
         'STANDARD_DS4'  => [56, 16],
         'STANDARD_DS11' => [28, 4],
         'STANDARD_DS12' => [56, 8],
@@ -229,9 +229,9 @@ module Bosh::AzureCloud
         'STANDARD_DS14' => [224, 32],
 
         # DSv2-series
-        'STANDARD_DS1_V2'  => [30, 2], # 7 GB
-        'STANDARD_DS2_V2'  => [30, 4], # 14 GB
-        'STANDARD_DS3_V2'  => [30, 8], # 28 GB
+        'STANDARD_DS1_V2'  => [30, 2], # 7 GiB
+        'STANDARD_DS2_V2'  => [30, 4], # 14 GiB
+        'STANDARD_DS3_V2'  => [30, 8], # 28 GiB
         'STANDARD_DS4_V2'  => [56, 16],
         'STANDARD_DS5_V2'  => [112, 32],
         'STANDARD_DS11_V2' => [28, 4],
@@ -241,25 +241,25 @@ module Bosh::AzureCloud
         'STANDARD_DS15_V2' => [280, 40],
 
         # F-series
-        'STANDARD_F1'  => [30, 2], # 16 GB
+        'STANDARD_F1'  => [30, 2], # 16 GiB
         'STANDARD_F2'  => [32, 4],
         'STANDARD_F4'  => [64, 8],
         'STANDARD_F8'  => [128, 16],
         'STANDARD_F16' => [256, 32],
 
         # Fs-series
-        'STANDARD_F1S'  => [30, 2], # 4 GB
-        'STANDARD_F2S'  => [30, 4], # 8 GB
-        'STANDARD_F4S'  => [30, 8], # 16 GB
+        'STANDARD_F1S'  => [30, 2], # 4 GiB
+        'STANDARD_F2S'  => [30, 4], # 8 GiB
+        'STANDARD_F4S'  => [30, 8], # 16 GiB
         'STANDARD_F8S'  => [32, 16],
         'STANDARD_F16S' => [64, 32],
 
         # G-series
         'STANDARD_G1'  => [384, 4],
         'STANDARD_G2'  => [768, 8],
-        'STANDARD_G3'  => [1023, 16], # 1,536 GB
-        'STANDARD_G4'  => [1023, 32], # 3,072 GB
-        'STANDARD_G5'  => [1023, 64], # 6,144 GB
+        'STANDARD_G3'  => [1023, 16], # 1,536 GiB
+        'STANDARD_G4'  => [1023, 32], # 3,072 GiB
+        'STANDARD_G5'  => [1023, 64], # 6,144 GiB
 
         # Gs-series
         'STANDARD_GS1'  => [56, 4],

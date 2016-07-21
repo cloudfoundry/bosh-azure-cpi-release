@@ -25,6 +25,16 @@ module Bosh::AzureCloud
         end
       end
 
+      os_disk_size = nil
+      unless resource_pool['root_disk'].nil?
+        unless resource_pool['root_disk']['size'].nil?
+          size = resource_pool['root_disk']['size']
+          validate_disk_size(size)
+          os_disk_size = size/1024
+          cloud_error('OS disk size must not be smaller than 3 GiB') if os_disk_size < 3
+        end
+      end
+
       caching = 'ReadWrite'
       unless resource_pool['caching'].nil?
         caching = resource_pool['caching']
@@ -52,6 +62,7 @@ module Bosh::AzureCloud
         :image_uri           => stemcell_uri,
         :os_disk_name        => os_disk_name,
         :os_vhd_uri          => @disk_manager.get_disk_uri(os_disk_name),
+        :os_disk_size        => os_disk_size,
         :caching             => caching,
         :ssh_cert_data       => @azure_properties['ssh_public_key'],
         :ephemeral_disk_name => EPHEMERAL_DISK_NAME,

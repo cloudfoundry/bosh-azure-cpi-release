@@ -59,7 +59,7 @@ module Bosh::AzureCloud
     # Creates a disk (possibly lazily) that will be attached later to a VM.
     #
     # @param [string] storage_account_name the storage account where the disk is created
-    # @param [Integer] size disk size in GB
+    # @param [Integer] size disk size in GiB
     # @param [Hash] cloud_properties cloud properties to create the disk
     # @return [String] disk name
     def create_disk(storage_account_name, size, cloud_properties)
