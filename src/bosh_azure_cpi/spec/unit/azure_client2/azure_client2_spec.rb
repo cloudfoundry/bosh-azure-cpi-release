@@ -291,7 +291,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
-        }.to raise_error /http_get - http code: 400 message: {"foo":"bar"}/
+        }.to raise_error /http_get - http code: 400. Error message: {"foo":"bar"}/
       end
     end
   end

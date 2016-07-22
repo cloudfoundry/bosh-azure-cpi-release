@@ -774,7 +774,7 @@ module Bosh::AzureCloud
       if response.code.to_i == HTTP_CODE_OK
         return true
       elsif response.code.to_i != HTTP_CODE_ACCEPTED
-        raise AzureError, "create_storage_account - Cannot create the storage account \"#{name}\". http code: #{response.code}."
+        raise AzureError, "create_storage_account - Cannot create the storage account \"#{name}\". http code: #{response.code}. Error message: #{response.body}"
       end
 
       @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
@@ -793,11 +793,10 @@ module Bosh::AzureCloud
         if status_code == HTTP_CODE_OK
           return true
         elsif status_code == HTTP_CODE_INTERNALSERVERERROR
-          error = "create_storage_account - http code: #{response.code}"
-          error += " message: #{response.body}" unless response.body.nil?
+          error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
           @logger.warn(error)
         elsif status_code != HTTP_CODE_ACCEPTED
-          raise AzureError, "create_storage_account - http code: #{response.code}"
+          raise AzureError, "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
         end
       end
     end
@@ -916,11 +915,11 @@ module Bosh::AzureCloud
         if response.code.to_i == HTTP_CODE_OK
           @token = JSON(response.body)
         elsif response.code.to_i == HTTP_CODE_UNAUTHORIZED
-          raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Invalid tenant id, client id or client secret."
+          raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Invalid tenant id, client id or client secret. Error message: #{response.body}"
         elsif response.code.to_i == HTTP_CODE_BADREQUEST
-          raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Bad request. Please assure no typo in values of tenant id, client id or client secret."
+          raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Bad request. Please assure no typo in values of tenant id, client id or client secret. Error message: #{response.body}"
         else
-          raise AzureError, "get_token - http code: #{response.code}"
+          raise AzureError, "get_token - http code: #{response.code}. Error message: #{response.body}"
         end
       end
 
@@ -955,6 +954,7 @@ module Bosh::AzureCloud
         request['User-Agent']    = USER_AGENT
         request['Content-Type']  = 'application/json'
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
+        @logger.debug("http_get_response - #{retry_count}: #{request.inspect}, URI: #{uri}")
         response = http(uri).request(request)
 
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
@@ -976,7 +976,7 @@ module Bosh::AzureCloud
         end
 
         if status_code == HTTP_CODE_UNAUTHORIZED
-          raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid."
+          raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid. Error message: #{response.body}"
         end
         refresh_token = false
         if status_code == HTTP_CODE_OK && is_async
@@ -987,7 +987,7 @@ module Bosh::AzureCloud
             error += "request id: #{response['x-ms-request-id']}\n"
             error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
             error += "routing id: #{response['x-ms-routing-request-id']}\n"
-            error += " message: #{response.body}"
+            error += "Error message: #{response.body}"
             raise AzureAsynInternalError, error
           end
         elsif AZURE_RETRY_ERROR_CODES.include?(status_code)
@@ -995,7 +995,7 @@ module Bosh::AzureCloud
           error += "request id: #{response['x-ms-request-id']}\n"
           error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
           error += "routing id: #{response['x-ms-routing-request-id']}\n"
-          error += " message: #{response.body}"
+          error += "Error message: #{response.body}"
           raise AzureInternalError, error
         end
       rescue AzureUnauthorizedError => e
@@ -1051,7 +1051,7 @@ module Bosh::AzureCloud
         error += "request id: #{response['x-ms-request-id']}\n"
         error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
         error += "routing id: #{response['x-ms-routing-request-id']}\n"
-        error += " message: #{response.body}" unless response.body.nil?
+        error += "Error message: #{response.body}"
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
         raise AzureNotFoundError, error if response.code.to_i == HTTP_CODE_NOTFOUND
         raise AzureError, error
@@ -1073,7 +1073,7 @@ module Bosh::AzureCloud
         response = http_get_response(uri, request, retry_after, true)
         status_code = response.code.to_i
         if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
-          raise AzureError, "check_completion - http code: #{response.code}"
+          raise AzureError, "check_completion - http code: #{response.code}. Error message: #{response.body}"
         end
 
         unless response.body.nil?
@@ -1107,13 +1107,10 @@ module Bosh::AzureCloud
       response = http_get_response(uri, request, retry_after)
       status_code = response.code.to_i
       if status_code != HTTP_CODE_OK
-        if status_code == HTTP_CODE_NOCONTENT
-          raise AzureNotFoundError, "http_get - http code: #{response.code}"
-        elsif status_code == HTTP_CODE_NOTFOUND
-          raise AzureNotFoundError, "http_get - http code: #{response.code}"
+        error = "http_get - http code: #{response.code}. Error message: #{response.body}"
+        if status_code == HTTP_CODE_NOCONTENT || status_code == HTTP_CODE_NOTFOUND
+          raise AzureNotFoundError, error
         else
-          error = "http_get - http code: #{response.code}"
-          error += " message: #{response.body}" unless response.body.nil?
           raise AzureError, error
         end
       end
