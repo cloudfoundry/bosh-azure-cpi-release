@@ -462,30 +462,47 @@ module Bosh::AzureCloud
           "missing required cloud property `storage_account_type' to create the storage account `#{storage_account_name}'."
       end
 
+      created = false
       result = @azure_client2.check_storage_account_name_availability(storage_account_name)
       @logger.debug("create_storage_account - The result of check_storage_account_name_availability is #{result}")
-      cloud_error("The storage account name is invalid. #{result[:reason]}: #{result[:message]}") unless result[:available]
-
-      unless resource_pool['storage_account_location'].nil?
-        location = resource_pool['storage_account_location']
-      else
-        resource_group = @azure_client2.get_resource_group()
-        location = resource_group[:location]
+      unless result[:available]
+        if result[:reason] == 'AccountNameInvalid'
+          cloud_error("The storage account name `#{storage_account_name}' is invalid. Storage account names must be between 3 and 24 characters in length and use numbers and lower-case letters only. #{result[:message]}")
+        else
+          # AlreadyExists
+          storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+          if storage_account.nil?
+            cloud_error("The storage account with the name `#{storage_account_name}' does not belong to the resource group `#{@azure_properties['resource_group_name']}'. #{result[:message]}")
+          end
+          # If the storage account has been created by other process, skip create.
+          # If the storage account is being created by other process, continue to create.
+          #    Azure can handle the scenario when multiple processes are creating a same storage account in parallel
+          created = storage_account[:provisioning_state] == 'Succeeded'
+        end
       end
 
       begin
-        created = @azure_client2.create_storage_account(storage_account_name, location, resource_pool['storage_account_type'], {})
+        unless created
+          unless resource_pool['storage_account_location'].nil?
+            location = resource_pool['storage_account_location']
+          else
+            resource_group = @azure_client2.get_resource_group()
+            location = resource_group[:location]
+          end
+          created = @azure_client2.create_storage_account(storage_account_name, location, resource_pool['storage_account_type'], {})
+        end
         @stemcell_manager.prepare(storage_account_name)
         @disk_manager.prepare(storage_account_name)
         true
       rescue => e
+        error_msg = "create_storage_account - "
         if created
-          msg = "create_storage_account - The storage account is created successfully.\n"
-          msg += "But it failed to create the containers bosh and stemcell.\n"
-          msg += "You need to manually create them.\n"
-          @logger.error(msg)
+          error_msg += "The storage account `#{storage_account_name}' is created successfully.\n"
+          error_msg += "But it failed to create the containers bosh and stemcell.\n"
+          error_msg += "You need to manually create them.\n"
         end
-        raise e
+        error_msg += "Error: #{e.inspect}\n#{e.backtrace.join("\n")}"
+        cloud_error(error_msg)
       end
     end
 
