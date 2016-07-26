@@ -122,16 +122,19 @@ module Bosh::AzureCloud
     # * +:tags+                 - Hash. Tags of virtual machine.
     # * +:vm_size+              - String. Specifies the size of the virtual machine instance.
     # * +:username+             - String. User name for the virtual machine instance.
+    # * +:ssh_cert_data+        - String. The content of SSH certificate.
     # * +:custom_data+          - String. Specifies a base-64 encoded string of custom data. 
     # * +:image_uri+            - String. The URI of the image.
-    # * +:os_disk_name+         - String. The name of the OS disk for the virtual machine instance.
-    # * +:os_vhd_uri+           - String. The URI of the OS disk for the virtual machine instance.
-    # * +:os_disk_size+         - Integer. The size of the OS disk for the virtual machine instance.
-    # * +:ephemeral_disk_name+  - String. The name of the ephemeral disk for the virtual machine instance.
-    # * +:ephemeral_disk_uri+   - String. The URI of the ephemeral disk for the virtual machine instance.
-    # * +:ephemeral_disk_size+  - Integer. The size in GiB of the ephemeral disk for the virtual machine instance.
-    # * #:caching+              - String. The caching option of the OS disk. Caching option: None, ReadOnly or ReadWrite
-    # * +:ssh_cert_data+        - String. The content of SSH certificate.
+    # * +:os_disk+              - Hash. OS Disk for the virtual machine instance.
+    # *   +:disk_name+          - String. The name of the OS disk.
+    # *   +:disk_uri+           - String. The URI of the OS disk.
+    # *   +:disk_caching+       - String. The caching option of the OS disk. Caching option: None, ReadOnly or ReadWrite.
+    # *   +:disk_size+          - Integer. The size in GiB of the OS disk. It could be nil.
+    # * +:ephemeral_disk+       - Hash. Ephemeral Disk for the virtual machine instance. It could be nil.
+    # *   +:disk_name+          - String. The name of the ephemeral disk.
+    # *   +:disk_uri+           - String. The URI of the ephemeral disk.
+    # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Caching option: None, ReadOnly or ReadWrite.
+    # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
     #
     def create_virtual_machine(vm_params, network_interface, availability_set = nil)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: vm_params[:name])
@@ -162,27 +165,17 @@ module Bosh::AzureCloud
           },
           'storageProfile' => {
             'osDisk' => {
-              'name'         => vm_params[:os_disk_name],
+              'name'         => vm_params[:os_disk][:disk_name],
               'osType'       => 'Linux',
               'createOption' => 'FromImage',
-              'caching'      => vm_params[:caching],
+              'caching'      => vm_params[:os_disk][:disk_caching],
               'image'        => {
                 'uri' => vm_params[:image_uri]
               },
               'vhd'          => {
-                'uri' => vm_params[:os_vhd_uri]
+                'uri' => vm_params[:os_disk][:disk_uri]
               }
-            },
-            'dataDisks' => [{
-                'name'         => vm_params[:ephemeral_disk_name],
-                'lun'          => 0,
-                'createOption' => 'Empty',
-                'diskSizeGB'   => vm_params[:ephemeral_disk_size],
-                'caching'      => 'ReadWrite',
-                'vhd'          => {
-                  'uri' => vm_params[:ephemeral_disk_uri]
-                }
-              }]
+            }
           },
           'networkProfile' => {
             'networkInterfaces' => [
@@ -200,8 +193,21 @@ module Bosh::AzureCloud
         }
       end
 
-      unless vm_params[:os_disk_size].nil?
-        vm['properties']['storageProfile']['osDisk']['diskSizeGB'] = vm_params[:os_disk_size]
+      unless vm_params[:os_disk][:disk_size].nil?
+        vm['properties']['storageProfile']['osDisk']['diskSizeGB'] = vm_params[:os_disk][:disk_size]
+      end
+
+      unless vm_params[:ephemeral_disk].nil?
+        vm['properties']['storageProfile']['dataDisks'] = [{
+          'name'         => vm_params[:ephemeral_disk][:disk_name],
+          'lun'          => 0,
+          'createOption' => 'Empty',
+          'diskSizeGB'   => vm_params[:ephemeral_disk][:disk_size],
+          'caching'      => vm_params[:ephemeral_disk][:disk_caching],
+          'vhd'          => {
+            'uri' => vm_params[:ephemeral_disk][:disk_uri]
+          }
+        }]
       end
 
       params = {
@@ -242,11 +248,10 @@ module Bosh::AzureCloud
         raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{name}'"
       end
 
-      # 0 is always used by the ephemeral disk. Search an available lun from 1.
       disk_info = DiskInfo.for(vm['properties']['hardwareProfile']['vmSize'])
-      lun = 0
+      lun = nil
       data_disks = vm['properties']['storageProfile']['dataDisks']
-      for i in 1..(disk_info.count - 1)
+      for i in 0..(disk_info.count - 1)
         disk = data_disks.find { |disk| disk['lun'] == i}
         if disk.nil?
           lun = i
@@ -254,7 +259,7 @@ module Bosh::AzureCloud
         end
       end
 
-      if lun == 0
+      if lun.nil?
         raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine `#{name}' for the new disk `#{disk_name}'"
       end
 

@@ -8,6 +8,8 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
+    attr_writer :resource_pool
+
     def initialize(azure_properties, blob_manager)
       @azure_properties = azure_properties
       @blob_manager = blob_manager
@@ -102,6 +104,51 @@ module Bosh::AzureCloud
     # bosh-os-STORAGEACCOUNTNAME-AGENTID-ephemeral
     def generate_ephemeral_disk_name(instance_id)
       "#{OS_DISK_PREFIX}-#{instance_id}-#{EPHEMERAL_DISK_POSTFIX}"
+    end
+
+    def os_disk(instance_id)
+      disk_name = generate_os_disk_name(instance_id)
+      disk_uri = get_disk_uri(disk_name)
+
+      disk_size = nil
+      root_disk = @resource_pool.fetch('root_disk', {})
+      size = root_disk.fetch('size', nil)
+      unless size.nil?
+        validate_disk_size(size)
+        disk_size = size/1024
+        cloud_error('root_disk.size must not be smaller than 3 GiB') if disk_size < 3
+      end
+
+      disk_caching = @resource_pool.fetch('caching', 'ReadWrite')
+      validate_disk_caching(disk_caching)
+
+      return {
+        :disk_name    => disk_name,
+        :disk_uri     => disk_uri,
+        :disk_size    => disk_size,
+        :disk_caching => disk_caching
+      }
+    end
+
+    def ephemeral_disk(instance_id)
+      ephemeral_disk = @resource_pool.fetch('ephemeral_disk', {})
+      use_root_disk = ephemeral_disk.fetch('use_root_disk', false)
+      return nil if use_root_disk
+
+      disk_info = DiskInfo.for(@resource_pool['instance_type'])
+      disk_size = disk_info.size
+      size = ephemeral_disk.fetch('size', nil)
+      unless size.nil?
+        validate_disk_size(size)
+        disk_size = size/1024
+      end
+
+      return {
+        :disk_name    => EPHEMERAL_DISK_NAME,
+        :disk_uri     => get_disk_uri(generate_ephemeral_disk_name(instance_id)),
+        :disk_size    => disk_size,
+        :disk_caching => 'ReadWrite'
+      }
     end
 
     private

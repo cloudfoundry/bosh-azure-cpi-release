@@ -14,71 +14,47 @@ module Bosh::AzureCloud
     end
 
     def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
-      instance_is_created = false
-      disk_info = DiskInfo.for(resource_pool['instance_type'])
-      ephemeral_disk_size = disk_info.size
-      unless resource_pool['ephemeral_disk'].nil?
-        unless resource_pool['ephemeral_disk']['size'].nil?
-          size = resource_pool['ephemeral_disk']['size']
-          validate_disk_size(size)
-          ephemeral_disk_size = size/1024
-        end
-      end
+      vm_size = resource_pool.fetch('instance_type', nil)
+      cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?
 
-      os_disk_size = nil
-      unless resource_pool['root_disk'].nil?
-        unless resource_pool['root_disk']['size'].nil?
-          size = resource_pool['root_disk']['size']
-          validate_disk_size(size)
-          os_disk_size = size/1024
-          cloud_error('OS disk size must not be smaller than 3 GiB') if os_disk_size < 3
-        end
-      end
+      @disk_manager.resource_pool = resource_pool
 
-      caching = 'ReadWrite'
-      unless resource_pool['caching'].nil?
-        caching = resource_pool['caching']
-        validate_disk_caching(caching)
-      end
+      instance_id = generate_instance_id(storage_account[:name], uuid)
+      # Raise errors if the properties are not valid before doing others.
+      os_disk = @disk_manager.os_disk(instance_id)
+      ephemeral_disk = @disk_manager.ephemeral_disk(instance_id)
 
       subnet = get_network_subnet(network_configurator)
       network_security_group = get_network_security_group(resource_pool, network_configurator)
       public_ip = get_public_ip(network_configurator)
       load_balancer = get_load_balancer(resource_pool)
 
-      instance_id  = generate_instance_id(storage_account[:name], uuid)
-
       network_interface = create_network_interface(instance_id, storage_account, network_configurator, public_ip, network_security_group, subnet, load_balancer)
       availability_set = create_availability_set(storage_account, resource_pool, env)
 
-      os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
       vm_params = {
         :name                => instance_id,
         :location            => storage_account[:location],
         :tags                => AZURE_TAGS,
-        :vm_size             => resource_pool['instance_type'],
+        :vm_size             => vm_size,
         :username            => @azure_properties['ssh_user'],
+        :ssh_cert_data       => @azure_properties['ssh_public_key'],
         :custom_data         => get_user_data(instance_id, network_configurator.dns),
         :image_uri           => stemcell_uri,
-        :os_disk_name        => os_disk_name,
-        :os_vhd_uri          => @disk_manager.get_disk_uri(os_disk_name),
-        :os_disk_size        => os_disk_size,
-        :caching             => caching,
-        :ssh_cert_data       => @azure_properties['ssh_public_key'],
-        :ephemeral_disk_name => EPHEMERAL_DISK_NAME,
-        :ephemeral_disk_uri  => @disk_manager.get_disk_uri(@disk_manager.generate_ephemeral_disk_name(instance_id)),
-        :ephemeral_disk_size => ephemeral_disk_size
+        :os_disk             => os_disk,
+        :ephemeral_disk      => ephemeral_disk
       }
 
-      instance_is_created = true
       @azure_client2.create_virtual_machine(vm_params, network_interface, availability_set)
 
-      instance_id
+      vm_params
     rescue => e
-      if instance_is_created
+      if vm_params
         @azure_client2.delete_virtual_machine(instance_id)
-        ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
-        @disk_manager.delete_disk(ephemeral_disk_name)
+        unless vm_params[:ephemeral_disk].nil?
+          ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
+          @disk_manager.delete_disk(ephemeral_disk_name)
+        end
       end
       @azure_client2.delete_network_interface(network_interface[:name]) unless network_interface.nil?
       # Replace vmSize with instance_type because only instance_type exists in the manifest

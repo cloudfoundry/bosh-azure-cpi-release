@@ -71,6 +71,7 @@ module Bosh::AzureCloud
     #      "size" => 50120, # disk size in MiB
     #    }
     #    "ephemeral_disk" => {
+    #      "use_root_disk" => false, # Whether to use OS disk to store the ephemeral data
     #      "size" => 30720, # disk size in MiB
     #    }
     #  }
@@ -95,41 +96,35 @@ module Bosh::AzureCloud
     #                  {#detach_disk}, and {#delete_vm}
     def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        if resource_pool['instance_type'].nil?
-          raise Bosh::Clouds::VMCreationFailed.new(false), "missing required cloud property `instance_type'."
-        end
-
         storage_account = get_storage_account(resource_pool)
 
         unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist"
         end
 
-        instance_id = @vm_manager.create(
+        vm_params = @vm_manager.create(
           agent_id,
           storage_account,
           @stemcell_manager.get_stemcell_uri(storage_account[:name], stemcell_id),
           resource_pool,
           NetworkConfigurator.new(networks),
           env)
+        instance_id = vm_params[:name]
         @logger.info("Created new vm '#{instance_id}'")
 
         begin
-          # By default, Azure uses a data disk as the ephermeral disk and the lun is 0
           registry_settings = initial_agent_settings(
             agent_id,
-            instance_id,
             networks,
             env,
-            "/dev/sda",
-            '0'
+            vm_params
           )
           registry.update_settings(instance_id, registry_settings)
 
           instance_id
         rescue => e
           @logger.error(%Q[Failed to update registry after new vm was created: #{e.inspect}\n#{e.backtrace.join("\n")}])
-          @vm_manager.delete(instance_id) if instance_id
+          @vm_manager.delete(instance_id)
           raise e
         end
       end
@@ -397,35 +392,37 @@ module Bosh::AzureCloud
     # from AZURE registry (also a BOSH component) on a target instance. Disk
     # conventions for Azure are:
     # system disk: /dev/sda
-    # ephemeral disk: data disk at lun 0
+    # ephemeral disk: data disk at lun 0 or nil if use OS disk to store the ephemeral data
     #
     # @param [String] agent_id Agent id (will be picked up by agent to
     #   assume its identity
-    # @param [String] vm_name VM name
     # @param [Hash] network_spec Agent network spec
     # @param [Hash] environment
-    # @param [String] root_device_name root device, e.g. /dev/sda
-    # @param [String] ephemeral_device_lun ephemeral device, e.g. '0'
+    # @param [Hash] vm_params
     # @return [Hash]
-    def initial_agent_settings(agent_id, vm_name, network_spec, environment, root_device_name, ephemeral_device_lun)
+    def initial_agent_settings(agent_id, network_spec, environment, vm_params)
       settings = {
-          "vm" => {
-              "name" => vm_name
-          },
-          "agent_id" => agent_id,
-          "networks" => agent_network_spec(network_spec),
-          "disks" => {
-              "system" => root_device_name,
-              "ephemeral" => {
-                'lun'            => ephemeral_device_lun,
-                'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID,
-
-                # For compatiblity with old stemcells
-                'path'           => get_disk_path_name(ephemeral_device_lun.to_i)
-              },
-              "persistent" => {}
-          }
+        "vm" => {
+          "name" => vm_params[:name]
+        },
+        "agent_id" => agent_id,
+        "networks" => agent_network_spec(network_spec),
+        "disks" => {
+          "system" => '/dev/sda',
+          "persistent" => {}
+        }
       }
+
+      unless vm_params[:ephemeral_disk].nil?
+        # Azure uses a data disk as the ephermeral disk and the lun is 0
+        settings["disks"]["ephemeral"] = {
+          'lun'            => '0',
+          'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID,
+
+          # For compatiblity with old stemcells
+          'path'           => get_disk_path_name(0)
+        }
+      end
 
       settings["env"] = environment if environment
       settings.merge(agent_properties)

@@ -459,4 +459,44 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
   end
+
+  describe "DiskInfo" do
+    context "when instance_type is STANDARD_A0" do
+      context "when instance_type is lowercase" do
+        it "should return correct values" do
+          disk_info = Bosh::AzureCloud::Helpers::DiskInfo.for('STANDARD_A0')
+
+          expect(disk_info.size).to eq(30)
+          expect(disk_info.count).to eq(1)
+        end
+      end
+
+      context "when instance_type is uppercase" do
+        it "should return correct values" do
+          disk_info = Bosh::AzureCloud::Helpers::DiskInfo.for('standard_a0')
+
+          expect(disk_info.size).to eq(30)
+          expect(disk_info.count).to eq(1)
+        end
+      end
+    end
+
+    context "when instance_type is STANDARD_D15_V2" do
+      it "should return correct values" do
+        disk_info = Bosh::AzureCloud::Helpers::DiskInfo.for('STANDARD_D15_V2')
+
+        expect(disk_info.size).to eq(1023)
+        expect(disk_info.count).to eq(40)
+      end
+    end
+
+    context "when instance_type is unknown" do
+      it "should return correct values" do
+        disk_info = Bosh::AzureCloud::Helpers::DiskInfo.for('unknown')
+
+        expect(disk_info.size).to eq(30)
+        expect(disk_info.count).to eq(64)
+      end
+    end
+  end
 end

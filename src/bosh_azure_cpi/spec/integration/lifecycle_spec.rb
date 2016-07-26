@@ -302,6 +302,36 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
+  context 'When using OS disk to store the ephemeral data' do
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'manual',
+          'ip' => "10.0.0.#{Random.rand(10..99)}",
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        }
+      }
+    }
+    let(:resource_pool) {
+      {
+        'instance_type' => instance_type,
+        'root_disk' => {
+          'size' => 51200
+        },
+        'ephemeral_disk' => {
+          'use_root_disk' => true
+        }
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      vm_lifecycle
+    end
+  end
+
   def vm_lifecycle(nums = 1)
     instance_id_pool = Array.new
     for i in 1..nums

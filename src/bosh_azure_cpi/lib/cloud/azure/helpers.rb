@@ -271,22 +271,18 @@ module Bosh::AzureCloud
 
       attr_reader :size, :count
 
-      def self.default
-        self.new(30, 64)
-      end
-
       def self.for(instance_type)
         values = INSTANCE_TYPE_DISK_MAPPING[instance_type.upcase]
-        DiskInfo.new(*values) if values
+        if values
+          DiskInfo.new(*values)
+        else
+          DiskInfo.new(30, 64)
+        end
       end
 
       def initialize(size, count)
         @size = size
         @count = count
-      end
-
-      def size_in_mb
-        @size * 1024
       end
     end
 

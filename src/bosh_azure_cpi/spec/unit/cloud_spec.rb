@@ -133,6 +133,11 @@ describe Bosh::AzureCloud::Cloud do
         :storage_table_host => "fake-table-endpoint"
       }
     }
+    let(:vm_params) {
+      {
+        :name => instance_id
+      }
+    }
 
     before do
       allow(stemcell_manager).to receive(:has_stemcell?).
@@ -141,7 +146,7 @@ describe Bosh::AzureCloud::Cloud do
       allow(stemcell_manager).to receive(:get_stemcell_uri).
         with(storage_account_name, stemcell_id).
         and_return(stemcell_uri)
-      allow(vm_manager).to receive(:create).and_return(instance_id)
+      allow(vm_manager).to receive(:create).and_return(vm_params)
       allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
           with(networks_spec).
           and_return(network_configurator)
@@ -401,6 +406,7 @@ describe Bosh::AzureCloud::Cloud do
             it 'should not raise any error' do
               expect(client2).to receive(:get_resource_group)
               expect(client2).to receive(:create_storage_account)
+
               expect(
                 cloud.create_vm(
                   agent_id,
@@ -629,7 +635,6 @@ describe Bosh::AzureCloud::Cloud do
             end
           end
 
-
           context 'when the container bosh cannot be created' do
             before do
               allow(stemcell_manager).to receive(:prepare).and_return(nil)
@@ -650,38 +655,6 @@ describe Bosh::AzureCloud::Cloud do
               }.to raise_error(/create_storage_account - The storage account `fake-storage-account-name' is created successfully.\nBut it failed to create the containers bosh and stemcell.\nYou need to manually create them.\nError/)
             end
           end
-        end
-      end
-    end
-
-    context 'when instance_type is not provided' do
-      context 'when instance_type is missing' do
-        it 'should raise an error' do
-          expect {
-            cloud.create_vm(
-              agent_id,
-              stemcell_id,
-              {},
-              networks_spec,
-              disk_locality,
-              environment
-            )
-          }.to raise_error("missing required cloud property `instance_type'.")
-        end
-      end
-
-      context 'when instance_type is nil' do
-        it 'should raise an error' do
-          expect {
-            cloud.create_vm(
-              agent_id,
-              stemcell_id,
-              {'instance_type'=>nil},
-              networks_spec,
-              disk_locality,
-              environment
-            )
-          }.to raise_error("missing required cloud property `instance_type'.")
         end
       end
     end

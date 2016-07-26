@@ -173,9 +173,65 @@ describe Bosh::AzureCloud::AzureClient2 do
           azure_client2.delete_virtual_machine(vm_name)
         }.to raise_error /Azure authentication failed: Token is invalid./
       end
+    end
 
-      # TODO
-      it "should not raise an error if authentication retry succeeds" do
+    context "when token expired" do
+      context "when authentication retry succeeds" do
+        before do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:delete, vm_uri).to_return({
+              :status => 401,
+              :body => 'The token expired'
+            }, {
+              :status => 200,
+              :body => '',
+              :headers => {
+                "azure-asyncoperation" => operation_status_link
+              }
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+        end
+
+        it "should not raise an error" do
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.not_to raise_error
+        end
+      end
+
+      context "when authentication retry fails" do
+        before do
+          stub_request(:post, token_uri).to_return({
+              :status => 200,
+              :body => {
+                "access_token"=>valid_access_token,
+                "expires_on"=>expires_on
+              }.to_json,
+              :headers => {}
+            }, {
+              :status => 401,
+              :body => ''
+            })
+          stub_request(:delete, vm_uri).to_return(
+              :status => 401,
+              :body => 'The token expired'
+            )
+        end
+
+        it "should raise an error" do
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
+        end
       end
     end
   end

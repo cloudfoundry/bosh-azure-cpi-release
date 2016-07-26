@@ -194,4 +194,321 @@ describe Bosh::AzureCloud::DiskManager do
       expect(disk_manager.get_data_disk_caching(disk_name)).to eq("None")
     end
   end
+
+  describe "#os_disk" do
+    let(:disk_name) { 'fake-disk-name' }
+    let(:disk_uri) { 'fake-disk-uri' }
+    let(:instance_id) { 'fake-instance-id' }
+
+    before do
+      allow(disk_manager).to receive(:generate_os_disk_name).
+        and_return(disk_name)
+      allow(disk_manager).to receive(:get_disk_uri).
+        and_return(disk_uri)
+    end
+
+    context "without root_disk nor caching" do
+      let(:resource_pool) { {} }
+
+      it "should return correct values" do
+        disk_manager.resource_pool = resource_pool
+
+        expect(
+          disk_manager.os_disk(instance_id)
+        ).to eq(
+          {
+            :disk_name    => disk_name,
+            :disk_uri     => disk_uri,
+            :disk_size    => nil,
+            :disk_caching => 'ReadWrite'
+          }
+        )
+      end
+    end
+
+    context "with caching" do
+      context "when caching is valid" do
+        let(:disk_caching) { 'ReadOnly' }
+        let(:resource_pool) { { 'caching' => disk_caching } }
+
+        it "should return correct values" do
+          disk_manager.resource_pool = resource_pool
+
+          expect(
+            disk_manager.os_disk(instance_id)
+          ).to eq(
+            {
+              :disk_name    => disk_name,
+              :disk_uri     => disk_uri,
+              :disk_size    => nil,
+              :disk_caching => disk_caching
+            }
+          )
+        end
+      end
+
+      context "when caching is invalid" do
+        let(:resource_pool) { { 'caching' => 'invalid' } }
+
+        it "should raise an error" do
+          disk_manager.resource_pool = resource_pool
+
+          expect {
+            disk_manager.os_disk(instance_id)
+          }.to raise_error /Unknown disk caching/
+        end
+      end
+    end
+
+    context "with root_disk" do
+      context "without size" do
+        let(:resource_pool) { { 'root_disk' => {} } }
+
+        it "should return correct values" do
+          disk_manager.resource_pool = resource_pool
+
+          expect(
+            disk_manager.os_disk(instance_id)
+          ).to eq(
+            {
+              :disk_name    => disk_name,
+              :disk_uri     => disk_uri,
+              :disk_size    => nil,
+              :disk_caching => 'ReadWrite'
+            }
+          )
+        end
+      end
+
+      context "with a valid size" do
+        let(:resource_pool) {
+          {
+            'root_disk' => {
+              'size' => 3 * 1024
+            }
+          }
+        }
+
+        it "should return correct values" do
+          disk_manager.resource_pool = resource_pool
+
+          expect(
+            disk_manager.os_disk(instance_id)
+          ).to eq(
+            {
+              :disk_name    => disk_name,
+              :disk_uri     => disk_uri,
+              :disk_size    => 3,
+              :disk_caching => 'ReadWrite'
+            }
+          )
+        end
+      end
+
+      context "with an invalid size" do
+        context "When the size is smaller than 3 GiB" do
+          let(:resource_pool) {
+            {
+              'root_disk' => {
+                'size' => 2 * 1024
+              }
+            }
+          }
+
+          it "should raise an error" do
+            disk_manager.resource_pool = resource_pool
+
+            expect {
+              disk_manager.os_disk(instance_id)
+            }.to raise_error /root_disk.size must not be smaller than 3 GiB/
+          end
+        end
+
+        context "When the size is not an integer" do
+          let(:resource_pool) {
+            {
+              'root_disk' => {
+                'size' => 'invalid-size'
+              }
+            }
+          }
+
+          it "should raise an error" do
+            disk_manager.resource_pool = resource_pool
+
+            expect {
+              disk_manager.os_disk(instance_id)
+            }.to raise_error
+          end
+        end
+      end
+    end
+  end
+
+  describe "#ephemeral_disk" do
+    let(:disk_name) { 'ephemeral-disk' }
+    let(:disk_uri) { 'fake-disk-uri' }
+    let(:instance_id) { 'fake-instance-id' }
+
+    before do
+      allow(disk_manager).to receive(:get_disk_uri).
+        and_return(disk_uri)
+    end
+
+    context "without ephemeral_disk" do
+      context "with a valid instance_type" do
+        let(:resource_pool) {
+          {
+            'instance_type' => 'STANDARD_A1'
+          }
+        }
+
+        it "should return correct values" do
+          disk_manager.resource_pool = resource_pool
+
+          expect(
+            disk_manager.ephemeral_disk(instance_id)
+          ).to eq(
+            {
+              :disk_name    => disk_name,
+              :disk_uri     => disk_uri,
+              :disk_size    => 70,
+              :disk_caching => 'ReadWrite'
+            }
+          )
+        end
+      end
+
+      context "with an invalid instance_type" do
+        let(:resource_pool) {
+          {
+            'instance_type' => 'invalid-instance-type'
+          }
+        }
+
+        it "should return correct values" do
+          disk_manager.resource_pool = resource_pool
+
+          expect(
+            disk_manager.ephemeral_disk(instance_id)
+          ).to eq(
+            {
+              :disk_name    => disk_name,
+              :disk_uri     => disk_uri,
+              :disk_size    => 30,
+              :disk_caching => 'ReadWrite'
+            }
+          )
+        end
+      end
+    end
+
+    context "with ephemeral_disk" do
+      context "with use_root_disk" do
+        context "when use_root_disk is false" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'STANDARD_A1',
+              'ephemeral_disk' => {
+                'use_root_disk' => false
+              }
+            }
+          }
+
+          it "should return correct values" do
+            disk_manager.resource_pool = resource_pool
+
+            expect(
+              disk_manager.ephemeral_disk(instance_id)
+            ).to eq(
+              {
+                :disk_name    => disk_name,
+                :disk_uri     => disk_uri,
+                :disk_size    => 70,
+                :disk_caching => 'ReadWrite'
+              }
+            )
+          end
+        end
+
+        context "when use_root_disk is true" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'STANDARD_A1',
+              'ephemeral_disk' => {
+                'use_root_disk' => true
+              }
+            }
+          }
+
+          it "should return correct values" do
+            disk_manager.resource_pool = resource_pool
+
+            expect(
+              disk_manager.ephemeral_disk(instance_id)
+            ).to be_nil
+          end
+        end
+      end
+
+      context "without use_root_disk" do
+        context "without size" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'STANDARD_A1',
+              'ephemeral_disk' => {}
+            }
+          }
+
+          it "should return correct values" do
+            disk_manager.resource_pool = resource_pool
+
+            expect(
+              disk_manager.ephemeral_disk(instance_id)
+            ).to eq(
+              {
+                :disk_name    => disk_name,
+                :disk_uri     => disk_uri,
+                :disk_size    => 70,
+                :disk_caching => 'ReadWrite'
+              }
+            )
+          end
+        end
+
+        context "with size" do
+          context "when the size is valid" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'STANDARD_A1',
+                'ephemeral_disk' => {
+                  'size' => 30 * 1024
+                }
+              }
+            }
+            
+          end
+
+          context "when the size is not an integer" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'STANDARD_A1',
+                'ephemeral_disk' => {
+                  'size' => 'invalid-size'
+                }
+              }
+            }
+
+            it "should raise an error" do
+              disk_manager.resource_pool = resource_pool
+
+              expect {
+                disk_manager.ephemeral_disk(instance_id)
+              }.to raise_error
+            end
+          end
+        end
+      end
+    end
+  end
 end
