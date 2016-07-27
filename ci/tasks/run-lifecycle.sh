@@ -36,7 +36,7 @@ export BOSH_AZURE_PRIMARY_PUBLIC_IP=$(azure network public-ip show ${AZURE_GROUP
 export BOSH_AZURE_SECONDARY_PUBLIC_IP=$(azure network public-ip show ${AZURE_GROUP_NAME_FOR_NETWORK} AzureCPICI-cf-lifecycle --json | jq '.ipAddress' -r)
 
 export AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT_NAME}
-export AZURE_STORAGE_ACCESS_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} -g ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.storageAccountKeys.key1' -r)
+export AZURE_STORAGE_ACCESS_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} -g ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.[0].value' -r)
 
 # Always upload the latest stemcell for lifecycle test
 tar -xf ${PWD}/stemcell/*.tgz -C /mnt/
@@ -44,7 +44,7 @@ tar -xf /mnt/image -C /mnt/
 azure storage blob upload --quiet --blobtype PAGE /mnt/root.vhd stemcell ${BOSH_AZURE_STEMCELL_ID}.vhd
 
 source /etc/profile.d/chruby.sh
-chruby 2.1.2
+chruby ${RUBY_VERSION}
 
 pushd bosh-cpi-release/src/bosh_azure_cpi
   bundle install

@@ -73,7 +73,7 @@ done
 # Setup the storage account
 resource_group_name="${AZURE_GROUP_NAME_FOR_VMS}"
 storage_account_name="${AZURE_STORAGE_ACCOUNT_NAME}"
-azure storage account create --location ${AZURE_REGION_SHORT_NAME} --type "LRS" --resource-group ${resource_group_name} ${storage_account_name}
-storage_account_key=$(azure storage account keys list ${storage_account_name} --resource-group ${resource_group_name} --json | jq '.storageAccountKeys.key1' -r)
+azure storage account create --location ${AZURE_REGION_SHORT_NAME} --sku-name LRS --kind Storage --resource-group ${resource_group_name} ${storage_account_name}
+storage_account_key=$(azure storage account keys list ${storage_account_name} --resource-group ${resource_group_name} --json | jq '.[0].value' -r)
 azure storage container create --account-name ${storage_account_name} --account-key ${storage_account_key} --container bosh
 azure storage container create --account-name ${storage_account_name} --account-key ${storage_account_key} --permission blob --container stemcell

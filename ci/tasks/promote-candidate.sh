@@ -12,7 +12,7 @@ echo $integer_version > integer_version
 cd bosh-cpi-release
 
 source /etc/profile.d/chruby.sh
-chruby 2.1.2
+chruby ${RUBY_VERSION}
 
 set +x
 echo creating config/private.yml with blobstore secrets

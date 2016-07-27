@@ -91,7 +91,7 @@ fi
 
 set -e
 
-AZURE_ACCOUNT_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.storageAccountKeys.key1' -r)
+AZURE_ACCOUNT_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.[0].value' -r)
 containers="bosh stemcell"
 for container in $containers
 do

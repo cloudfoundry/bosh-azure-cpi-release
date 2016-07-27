@@ -26,7 +26,7 @@ azure config mode arm
 DIRECTOR=$(azure network public-ip show ${AZURE_GROUP_NAME_FOR_NETWORK} AzureCPICI-bosh --json | jq '.ipAddress' -r)
 
 source /etc/profile.d/chruby.sh
-chruby 2.1.2
+chruby ${RUBY_VERSION}
 
 semver=`cat version-semver/number`
 cpi_release_name=bosh-azure-cpi
