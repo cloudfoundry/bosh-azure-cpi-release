@@ -15,17 +15,37 @@ There are two types of Microsoft Azure platform events that can affect the avail
 ### How
 
 1. Open your manifest, and configure an availability set into your `resource_pools`.
+   There are two ways to configure an availability set in `resource_pools`:
 
-  ```
-  - name: resource_router
-    network: default
-    stemcell:
-      name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-      version: latest
-    cloud_properties:
-      availability_set: <availability-set-name>
-      instance_type: Standard_D1
-  ```
+   * Specify `availability_set` in `cloud_properties`
+
+      ```
+      - name: resource_router
+        network: default
+        stemcell:
+          name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+          version: latest
+        cloud_properties:
+          availability_set: <availability-set-name>
+          instance_type: Standard_D1
+      ```
+
+   * Specify `bosh.group_name` in `env`
+
+      ```
+      - name: resource_router
+        network: default
+        stemcell:
+          name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+          version: latest
+        cloud_properties:
+          instance_type: Standard_D1
+        env:
+          bosh:
+            group_name: <availability-set-name>
+      ```
+
+   >**NOTE:** if both `availability_set`  (in `cloud_properties`) and `bosh.group_name` (in `env`) are specified, it will pick value of `availability_set` as name of the availability set.
 
   If `<availability-set-name>` does not exist, it will be created automatically.
 

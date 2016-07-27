@@ -75,6 +75,13 @@ module Bosh::AzureCloud
     #    }
     #  }
     #
+    # Sample env config:
+    #  {
+    #    "bosh" => {
+    #      "group_name" => "group-name"
+    #    }
+    #  }
+    #
     # @param [String] agent_id UUID for the agent that will be used later on by the director
     #                 to locate and talk to the agent
     # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
@@ -103,7 +110,8 @@ module Bosh::AzureCloud
           storage_account,
           @stemcell_manager.get_stemcell_uri(storage_account[:name], stemcell_id),
           resource_pool,
-          NetworkConfigurator.new(networks))
+          NetworkConfigurator.new(networks),
+          env)
         @logger.info("Created new vm '#{instance_id}'")
 
         begin

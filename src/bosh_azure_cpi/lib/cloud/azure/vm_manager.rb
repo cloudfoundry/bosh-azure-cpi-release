@@ -13,7 +13,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+    def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
       instance_is_created = false
       disk_info = DiskInfo.for(resource_pool['instance_type'])
       ephemeral_disk_size = disk_info.size
@@ -49,7 +49,7 @@ module Bosh::AzureCloud
       instance_id  = generate_instance_id(storage_account[:name], uuid)
 
       network_interface = create_network_interface(instance_id, storage_account, network_configurator, public_ip, network_security_group, subnet, load_balancer)
-      availability_set = create_availability_set(storage_account, resource_pool)
+      availability_set = create_availability_set(storage_account, resource_pool, env)
 
       os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
       vm_params = {
@@ -220,13 +220,21 @@ module Bosh::AzureCloud
       network_interface = @azure_client2.get_network_interface_by_name(instance_id)
     end
 
-    def create_availability_set(storage_account, resource_pool)
+    def create_availability_set(storage_account, resource_pool, env)
       availability_set = nil
-      unless resource_pool['availability_set'].nil?
-        availability_set = @azure_client2.get_availability_set_by_name(resource_pool['availability_set'])
+
+      availability_set_name = resource_pool.fetch('availability_set', nil)
+      if availability_set_name.nil?
+        unless env.nil? || env['bosh'].nil? || env['bosh']['group_name'].nil?
+          availability_set_name = env['bosh']['group_name']
+        end
+      end
+
+      unless availability_set_name.nil?
+        availability_set = @azure_client2.get_availability_set_by_name(availability_set_name)
         if availability_set.nil?
           avset_params = {
-            :name                         => resource_pool['availability_set'],
+            :name                         => availability_set_name,
             :location                     => storage_account[:location],
             :tags                         => AZURE_TAGS,
             :platform_update_domain_count => resource_pool['platform_update_domain_count'] || 5,
