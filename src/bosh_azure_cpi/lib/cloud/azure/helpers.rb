@@ -101,6 +101,7 @@ module Bosh::AzureCloud
     LIGHT_STEMCELL_PREFIX           = 'bosh-light-stemcell'
     LIGHT_STEMCELL_PROPERTY         = 'image'
     AZURE_SCSI_HOST_DEVICE_ID       = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
+    AZURESTACK_SCSI_HOST_DEVICE_ID  = '{a8ef3b61-ef7a-467c-89fa-7a3e110d5b9e}'
     METADATA_FOR_MIGRATED_BLOB_DISK = {
       "user_agent" => USER_AGENT_FOR_AZURE_RESOURCE, # The key can't be user-agent because '-' is invalid for blob metadata
       "migrated" => "true"

@@ -398,7 +398,7 @@ module Bosh::AzureCloud
           settings["disks"]["persistent"] ||= {}
           settings["disks"]["persistent"][disk_id] =  {
             'lun'            => lun,
-            'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID,
+            'host_device_id' => get_scsi_host_device_id(azure_properties['environment']),
 
             # For compatiblity with old stemcells
             'path'           => get_disk_path_name(lun.to_i)
@@ -559,7 +559,7 @@ module Bosh::AzureCloud
         # Azure uses a data disk as the ephermeral disk and the lun is 0
         settings["disks"]["ephemeral"] = {
           'lun'            => '0',
-          'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID,
+          'host_device_id' => get_scsi_host_device_id(azure_properties['environment']),
 
           # For compatiblity with old stemcells
           'path'           => get_disk_path_name(0)
@@ -592,6 +592,14 @@ module Bosh::AzureCloud
         "/dev/sd#{('c'.ord + lun).chr}"
       else
         "/dev/sd#{('a'.ord + (lun + 2 - 26) / 26).chr}#{('a'.ord + (lun + 2) % 26).chr}"
+      end
+    end
+
+    def get_scsi_host_device_id(environment)
+      if environment == 'AzureStack'
+        AZURESTACK_SCSI_HOST_DEVICE_ID
+      else
+        AZURE_SCSI_HOST_DEVICE_ID
       end
     end
   end
