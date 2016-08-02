@@ -45,6 +45,7 @@ describe Bosh::AzureCloud::VMManager do
       }
     }
     let(:disk_id) { double("fake-disk-id") }
+    let(:env) { {} }
 
     before do
       allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
@@ -79,7 +80,7 @@ describe Bosh::AzureCloud::VMManager do
         end
         it "should raise an error" do
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the subnet `fake-virtual-network-name\/fake-subnet-name' in the resource group `#{MOCK_RESOURCE_GROUP_NAME}'/
         end
       end
@@ -92,7 +93,7 @@ describe Bosh::AzureCloud::VMManager do
         end
         it "should raise an error" do
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the network security group `fake-default-nsg-name'/
         end
       end
@@ -110,7 +111,7 @@ describe Bosh::AzureCloud::VMManager do
             with("fake-resource-group-name", "fake-virtual-network-name", "fake-subnet-name").
             and_return(nil)
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the subnet `fake-virtual-network-name\/fake-subnet-name' in the resource group `fake-resource-group-name'/
         end
       end
@@ -130,7 +131,7 @@ describe Bosh::AzureCloud::VMManager do
 
         it "should raise an error" do
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the network security group `fake-default-nsg-name'/
         end
       end
@@ -154,7 +155,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the public IP address/
         end
       end
@@ -184,7 +185,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the public IP address/
         end
       end
@@ -207,7 +208,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
         }.to raise_error /Cannot find the load balancer/
       end
     end
@@ -240,7 +241,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
         }.to raise_error /network interface is not created/
       end
     end
@@ -283,7 +284,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
         }.to raise_error /availability set is not created/
       end
     end
@@ -309,7 +310,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
         }.to raise_error /OS disk size must not be smaller than 3 GiB/
       end
     end
@@ -382,7 +383,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).to receive(:delete_network_interface)
 
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           }.to raise_error /virtual machine is not created/
         end
       end
@@ -419,7 +420,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           end
         end
 
@@ -440,7 +441,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           end
         end
 
@@ -449,7 +450,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           end
         end
 
@@ -473,7 +474,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           end
         end
 
@@ -497,7 +498,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           end
         end
 
@@ -519,7 +520,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
             end
           end
         end
@@ -545,7 +546,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
             end
           end
 
@@ -560,7 +561,150 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator)
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            end
+          end
+        end
+
+        context "when another process is creating the same availability set" do
+          let(:env) { nil }
+          let(:resource_pool) {
+            {
+              'instance_type' => 'Standard_D1',
+              'availability_set' => 'fake-avset',
+              'platform_update_domain_count' => 5,
+              'platform_fault_domain_count' => 3,
+            }
+          }
+          let(:avset_params) {
+            {
+              :name                         => resource_pool['availability_set'],
+              :location                     => "bar",
+              :tags                         => {'user-agent' => 'bosh'},
+              :platform_update_domain_count => resource_pool['platform_update_domain_count'],
+              :platform_fault_domain_count  => resource_pool['platform_fault_domain_count']
+            }
+          }
+
+          before do
+            allow(client2).to receive(:get_availability_set_by_name).
+              with(resource_pool['availability_set']).
+              and_return(nil, {:name => 'fake-avset'})
+            allow(client2).to receive(:create_availability_set).
+              with(avset_params).
+              and_raise(Bosh::AzureCloud::AzureConflictError)
+          end
+
+          it "should succeed" do
+            expect(client2).not_to receive(:delete_virtual_machine)
+            expect(client2).not_to receive(:delete_network_interface)
+            expect(client2).to receive(:create_availability_set)
+
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+          end
+        end
+
+        context "with env is nil and availability_set is specified in resource_pool" do
+          let(:env) { nil }
+          let(:resource_pool) {
+            {
+              'instance_type' => 'Standard_D1',
+              'availability_set' => 'fake-avset',
+              'platform_update_domain_count' => 5,
+              'platform_fault_domain_count' => 3,
+            }
+          }
+          let(:avset_params) {
+            {
+              :name                         => resource_pool['availability_set'],
+              :location                     => "bar",
+              :tags                         => {'user-agent' => 'bosh'},
+              :platform_update_domain_count => resource_pool['platform_update_domain_count'],
+              :platform_fault_domain_count  => resource_pool['platform_fault_domain_count']
+            }
+          }
+
+          before do
+            allow(client2).to receive(:get_availability_set_by_name).
+              with(resource_pool['availability_set']).
+              and_return(nil)
+          end
+
+          it "should create availability set and use value of availability_set as its name" do
+            expect(client2).to receive(:create_availability_set).
+              with(avset_params)
+
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+          end
+        end
+
+        context "with bosh.group_name specified in env" do
+          let(:env) {
+            {
+              'bosh' => {'group_name' => 'fake-group-name'}
+            }
+          }
+
+          context "when availability_set is specified in resource_pool" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'Standard_D1',
+                'availability_set' => 'fake-avset',
+                'platform_update_domain_count' => 5,
+                'platform_fault_domain_count' => 3,
+              }
+            }
+            let(:avset_params) {
+              {
+                :name                         => resource_pool['availability_set'],
+                :location                     => "bar",
+                :tags                         => {'user-agent' => 'bosh'},
+                :platform_update_domain_count => resource_pool['platform_update_domain_count'],
+                :platform_fault_domain_count  => resource_pool['platform_fault_domain_count']
+              }
+            }
+
+            before do
+              allow(client2).to receive(:get_availability_set_by_name).
+                with(resource_pool['availability_set']).
+                and_return(nil)
+            end
+
+            it "should create availability set and use value of availability_set as its name" do
+              expect(client2).to receive(:create_availability_set).
+                with(avset_params)
+
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            end
+          end
+
+          context "when availability_set is not specified in resource_pool" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'Standard_D1'
+              }
+            }
+            let(:avset_params) {
+              {
+                :name                         => env['bosh']['group_name'],
+                :location                     => "bar",
+                :tags                         => {'user-agent' => 'bosh'},
+                :platform_update_domain_count => 5,
+                :platform_fault_domain_count  => 3
+              }
+            }
+
+            before do
+              allow(client2).to receive(:get_availability_set_by_name).
+                with(env['bosh']['group_name']).
+                and_return(nil)
+            end
+
+            it "should create availability set and use value of env.bosh.group_name as its name" do
+              expect(client2).to receive(:create_availability_set).
+                with(avset_params)
+
+              vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
             end
           end
         end
