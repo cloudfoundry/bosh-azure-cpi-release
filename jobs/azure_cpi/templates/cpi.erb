@@ -26,4 +26,4 @@ export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/bosh_azure_cpi/Gemfile
 bundle_cmd="$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin/bundle"
 
 exec $bundle_cmd exec $BOSH_PACKAGES_DIR/bosh_azure_cpi/bin/azure_cpi \
-  $BOSH_JOBS_DIR/cpi/config/cpi.json
+  $BOSH_JOBS_DIR/azure_cpi/config/cpi.json

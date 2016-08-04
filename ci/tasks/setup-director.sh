@@ -84,7 +84,7 @@ jobs:
   - {name: director, release: bosh}
   - {name: health_monitor, release: bosh}
   - {name: registry, release: bosh}
-  - {name: cpi, release: bosh-azure-cpi}
+  - {name: azure_cpi, release: bosh-azure-cpi}
 
   instances: 1
   resource_pool: vms
@@ -152,7 +152,7 @@ jobs:
       address: 127.0.0.1
       name: bosh
       db: *db
-      cpi_job: cpi
+      cpi_job: azure_cpi
       enable_snapshots: true
       timeout: "180s"
       max_threads: 10
@@ -185,7 +185,7 @@ jobs:
     ntp: &ntp [0.north-america.pool.ntp.org]
 
 cloud_provider:
-  template: {name: cpi, release: bosh-azure-cpi}
+  template: {name: azure_cpi, release: bosh-azure-cpi}
 
   # Tells bosh-init how to SSH into deployed VM
   ssh_tunnel:
