@@ -151,7 +151,7 @@ describe Bosh::AzureCloud::BlobManager do
           expect(blob_service).to receive(:delete_blob)
 
           expect {
-            blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)    
+            blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)
           }.to raise_error /Failed to create empty vhd blob/
         end
       end
@@ -159,48 +159,75 @@ describe Bosh::AzureCloud::BlobManager do
   end  
 
   describe "#list_blobs" do
-    class MyArray < Array
-      attr_accessor :continuation_token
+    context "when the container does not exist" do
+      before do
+        allow(blob_service).to receive(:list_blobs).and_return('The container does not exist')
+      end
+
+      it "should return empty" do
+        expect {
+          blob_manager.list_blobs(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)
+        }.to raise_error /The container does not exist/
+      end
     end
 
     context "when the container is empty" do
-      tmp_blobs = MyArray.new
+      let(:tmp_blobs) { Azure::Service::EnumerationResults.new }
+
       before do
         allow(blob_service).to receive(:list_blobs).and_return(tmp_blobs)
       end
 
-      it "returns empty blobs" do
+      it "should return empty" do
         expect(blob_manager.list_blobs(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)).to be_empty
       end
     end
 
     context "when the container is not empty" do
-      context "when blob service client returns no continuation_token" do
-        tmp_blobs = MyArray.new
-        tmp_blobs << "first blob"
+      context "without continuation_token" do
+        let(:tmp_blobs) { 
+          Azure::Service::EnumerationResults.new(
+            [
+              'fake-blob'
+            ]
+          )
+        }
+
         before do
           allow(blob_service).to receive(:list_blobs).and_return(tmp_blobs)
         end
 
-        it "returns blobs" do
+        it "should return blobs" do
           expect(blob_manager.list_blobs(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name).size).to eq(1)
         end
       end
 
-      context "when blob service client returns continuation_token" do
-        tmp1 = MyArray.new
-        tmp1 << "first blob"
-        tmp1.continuation_token = "fake token"
-        tmp2 = MyArray.new
-        tmp2 << "second blob"
+      context "with continuation_token" do
+        let(:tmp_blobs_1) {
+          Azure::Service::EnumerationResults.new(
+            [
+              'fake-blob'
+            ]
+          )
+        }
+        let(:tmp_blobs_2) {
+          Azure::Service::EnumerationResults.new(
+            [
+              'fake-blob'
+            ]
+          )
+        }
+        let(:continuation_token) { 'fake-token' }
+
         before do
           allow(blob_service).to receive(:list_blobs).
-            with(container_name, {}).and_return(tmp1)
+            with(container_name, {}).and_return(tmp_blobs_1)
+          allow(tmp_blobs_1).to receive(:continuation_token).and_return(continuation_token)
           allow(blob_service).to receive(:list_blobs).
-            with(container_name, {:marker => "fake token"}).and_return(tmp2)
+            with(container_name, {:marker => continuation_token}).and_return(tmp_blobs_2)
         end
 
-        it "returns blobs" do
+        it "should return blobs" do
           expect(blob_manager.list_blobs(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name).size).to eq(2)
         end
       end

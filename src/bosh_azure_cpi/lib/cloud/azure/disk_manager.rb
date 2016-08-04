@@ -157,6 +157,21 @@ module Bosh::AzureCloud
       }
     end
 
+    def list_disks(storage_account_name)
+      @logger.info("list_disks(#{storage_account_name})")
+      disks = []
+      blobs = @blob_manager.list_blobs(storage_account_name, DISK_CONTAINER).select{
+        |blob| blob.name =~ /vhd$/
+      }
+      blobs.each do |blob|
+        disk = {
+          :disk_name => blob.name[0..-5]
+        }
+        disks << disk
+      end
+      disks
+    end
+
     private
 
     def parse_os_disk_name(disk_name)
