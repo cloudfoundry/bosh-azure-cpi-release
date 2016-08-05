@@ -208,7 +208,11 @@ describe Bosh::AzureCloud::DiskManager do
     end
 
     context "without root_disk nor caching" do
-      let(:resource_pool) { {} }
+      let(:resource_pool) {
+        {
+          'instance_type' => 'STANDARD_A1'
+        }
+      }
 
       it "should return correct values" do
         disk_manager.resource_pool = resource_pool
@@ -229,7 +233,12 @@ describe Bosh::AzureCloud::DiskManager do
     context "with caching" do
       context "when caching is valid" do
         let(:disk_caching) { 'ReadOnly' }
-        let(:resource_pool) { { 'caching' => disk_caching } }
+        let(:resource_pool) {
+          {
+            'instance_type' => 'STANDARD_A1',
+            'caching' => disk_caching
+          }
+        }
 
         it "should return correct values" do
           disk_manager.resource_pool = resource_pool
@@ -248,7 +257,12 @@ describe Bosh::AzureCloud::DiskManager do
       end
 
       context "when caching is invalid" do
-        let(:resource_pool) { { 'caching' => 'invalid' } }
+        let(:resource_pool) {
+          {
+            'instance_type' => 'STANDARD_A1',
+            'caching' => 'invalid'
+          }
+        }
 
         it "should raise an error" do
           disk_manager.resource_pool = resource_pool
@@ -262,27 +276,62 @@ describe Bosh::AzureCloud::DiskManager do
 
     context "with root_disk" do
       context "without size" do
-        let(:resource_pool) { { 'root_disk' => {} } }
-
-        it "should return correct values" do
-          disk_manager.resource_pool = resource_pool
-
-          expect(
-            disk_manager.os_disk(instance_id)
-          ).to eq(
+        context "with the ephemeral disk" do
+          let(:resource_pool) {
             {
-              :disk_name    => disk_name,
-              :disk_uri     => disk_uri,
-              :disk_size    => nil,
-              :disk_caching => 'ReadWrite'
+              'instance_type' => 'STANDARD_A1',
+              'root_disk' => {}
             }
-          )
+          }
+
+          it "should return correct values" do
+            disk_manager.resource_pool = resource_pool
+
+            expect(
+              disk_manager.os_disk(instance_id)
+            ).to eq(
+              {
+                :disk_name    => disk_name,
+                :disk_uri     => disk_uri,
+                :disk_size    => nil,
+                :disk_caching => 'ReadWrite'
+              }
+            )
+          end
+        end
+
+        context "without the ephemeral disk" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'STANDARD_A1',
+              'root_disk' => {},
+              'ephemeral_disk' => {
+                'use_root_disk' => true
+              }
+            }
+          }
+
+          it "should return correct values" do
+            disk_manager.resource_pool = resource_pool
+
+            expect(
+              disk_manager.os_disk(instance_id)
+            ).to eq(
+              {
+                :disk_name    => disk_name,
+                :disk_uri     => disk_uri,
+                :disk_size    => 30,
+                :disk_caching => 'ReadWrite'
+              }
+            )
+          end
         end
       end
 
       context "with a valid size" do
         let(:resource_pool) {
           {
+            'instance_type' => 'STANDARD_A1',
             'root_disk' => {
               'size' => 3 * 1024
             }
@@ -309,6 +358,7 @@ describe Bosh::AzureCloud::DiskManager do
         context "When the size is smaller than 3 GiB" do
           let(:resource_pool) {
             {
+              'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 2 * 1024
               }
@@ -327,6 +377,7 @@ describe Bosh::AzureCloud::DiskManager do
         context "When the size is not an integer" do
           let(:resource_pool) {
             {
+              'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 'invalid-size'
               }
