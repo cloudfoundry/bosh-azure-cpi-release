@@ -30,7 +30,8 @@ module Bosh::AzureCloud
     HTTP_CODE_INTERNALSERVERERROR = 500
 
     # https://azure.microsoft.com/en-us/documentation/articles/best-practices-retry-service-specific/#more-information-6
-    AZURE_RETRY_ERROR_CODES       = [408, 500, 502, 503, 504]
+    # Error code 429 is not documented in the url above, but it is a code for throttling error. Add it for issue https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/179
+    AZURE_RETRY_ERROR_CODES       = [408, 429, 500, 502, 503, 504]
 
     REST_API_PROVIDER_COMPUTER           = 'Microsoft.Compute'
     REST_API_COMPUTER_VIRTUAL_MACHINES   = 'virtualMachines'
