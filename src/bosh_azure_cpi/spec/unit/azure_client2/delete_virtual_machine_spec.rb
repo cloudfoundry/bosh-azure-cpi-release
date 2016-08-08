@@ -75,6 +75,45 @@ describe Bosh::AzureCloud::AzureClient2 do
         }.not_to raise_error
       end
 
+      # Fit for all errors with status code in AZURE_RETRY_ERROR_CODES ([408, 429, 500, 502, 503, 504])
+      context "when delete operation returns retryable error code (returns 429)" do
+        # This case will take long time to complete because it retry 10 times.
+        it "should raise error if delete opration always returns 429" do
+          stub_request(:delete, vm_uri).to_return(
+            {
+              :status => 429,
+              :body => '',
+              :headers => {
+              }
+            })
+
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.to raise_error Bosh::AzureCloud::AzureInternalError
+        end
+
+        it "should not raise error if delete opration returns 429 at the first time but returns 200 at the second time" do
+          stub_request(:delete, vm_uri).to_return(
+            {
+              :status => 429,
+              :body => '',
+              :headers => {
+              }
+            },
+            {
+              :status => 200,
+              :body => '',
+              :headers => {
+              }
+            }
+          )
+
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.not_to raise_error
+        end
+      end
+
       context "when delete operation needs to check (returns 202)" do
         it "should raise no error if operation status is Succeeded" do
           stub_request(:delete, vm_uri).to_return(
@@ -93,8 +132,29 @@ describe Bosh::AzureCloud::AzureClient2 do
           }.not_to raise_error
         end
 
-        # TODO
-        it "should raise no error if operation status is InProgress at first and Succeeded finally" do
+        it "should not loop forever or raise an error if operation status is InProgress at first and Succeeded finally" do
+          stub_request(:delete, vm_uri).to_return(
+            :status => 202,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            {
+              :status => 200,
+              :body => '{"status":"InProgress"}',
+              :headers => {}
+            },
+            {
+              :status => 200,
+              :body => '{"status":"Succeeded"}',
+              :headers => {}
+            }
+          )
+
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.not_to raise_error
         end
 
         it "should raise an error if check completion operation is not accepeted" do

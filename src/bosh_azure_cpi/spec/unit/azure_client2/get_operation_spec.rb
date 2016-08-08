@@ -435,6 +435,55 @@ describe Bosh::AzureCloud::AzureClient2 do
     let(:storage_account_name) { "foo" }
     let(:storage_account_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}?api-version=#{api_version}" }
 
+    context "if get operation returns retryable error code (returns 429)" do
+      it "should raise error if it always returns 429" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).to_return(
+          {
+            :status => 429,
+            :body => '',
+            :headers => {}
+          }
+        )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.to raise_error Bosh::AzureCloud::AzureInternalError
+      end
+
+      it "should not raise error if it returns 429 at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).to_return(
+          {
+            :status => 429,
+            :body => '',
+            :headers => {}
+          },
+          {
+            :status => 200,
+            :body => '',
+            :headers => {}
+          }
+        )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.not_to raise_error
+      end
+    end
+
     context "when token is valid, getting response succeeds" do
       context "if response body is null" do
         it "should return null" do

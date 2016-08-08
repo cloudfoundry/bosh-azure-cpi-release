@@ -53,8 +53,36 @@ describe Bosh::AzureCloud::AzureClient2 do
         }.not_to raise_error
       end
 
-      # TODO
-      it "should raise no error if restart operation is InProgress at first and Succeeded finally" do
+      it "should not loop forever or raise an error if restart operation is InProgress at first and Succeeded finally" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:post, vm_restart_uri).to_return(
+          :status => 202,
+          :body => '{}',
+          :headers => {
+            "azure-asyncoperation" => operation_status_link
+          })
+        stub_request(:get, operation_status_link).to_return(
+          {
+            :status => 200,
+            :body => '{"status":"InProgress"}',
+            :headers => {}
+          },
+          {
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {}
+          }
+        )
+
+        expect {
+          azure_client2.restart_virtual_machine(vm_name)
+        }.not_to raise_error
       end
     end
 
@@ -232,6 +260,61 @@ describe Bosh::AzureCloud::AzureClient2 do
             azure_client2.restart_virtual_machine(vm_name)
           }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
         end
+      end
+    end
+
+    context "if post operation returns retryable error code (returns 429)" do
+      it "should raise error if it always returns 429" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:post, vm_restart_uri).to_return(
+          {
+            :status => 429,
+            :body => '{}',
+            :headers => {}
+          }
+        )
+
+        expect {
+          azure_client2.restart_virtual_machine(vm_name)
+        }.to raise_error Bosh::AzureCloud::AzureInternalError
+      end
+
+      it "should not raise error if it returns 429 at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:post, vm_restart_uri).to_return(
+          {
+            :status => 429,
+            :body => '{}',
+            :headers => {}
+          },
+          {
+            :status => 202,
+            :body => '{}',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            }
+          }
+        )
+        stub_request(:get, operation_status_link).to_return(
+          :status => 200,
+          :body => '{"status":"Succeeded"}',
+          :headers => {})
+
+        expect {
+          azure_client2.restart_virtual_machine(vm_name)
+        }.not_to raise_error
       end
     end
   end
