@@ -6,7 +6,7 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
 * A deployment of Diego
 
-  You have deployed your **Diego** on Azure by following this [guide](../deploy-diego/).
+  You have a deployment of Cloud Foundry with Diego enabled.
 
 * A new subnet for Windows Servers ##
 

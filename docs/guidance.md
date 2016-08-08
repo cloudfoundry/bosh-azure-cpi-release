@@ -44,7 +44,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Deploy Cloud Foundry using multiple storage accounts and availability sets](./advanced/deploy-cloudfoundry-for-enterprise/)
   * [Separate network in a different resource group](./advanced/separate-network-in-a-different-resource-group/)
 * Cloud Foundry Scenarios
-  * [Deploy Diego](./advanced/deploy-diego/)
+  * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
   * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
 * Service Brokers
   * [Meta Azure Service Broker](https://github.com/Azure/meta-azure-service-broker)

@@ -275,7 +275,6 @@ azure network vnet create --resource-group bosh-res-group --name boshvnet-crp --
 ```
 azure network vnet subnet create --resource-group $resource_group_name --vnet-name $virtual_network_name --name $bosh_subnet_name --address-prefix $bosh_subnet_cidr
 azure network vnet subnet create --resource-group $resource_group_name --vnet-name $virtual_network_name --name $cloudfoundry_subnet_name --address-prefix $cloudfoundry_subnet_cidr
-azure network vnet subnet create --resource-group $resource_group_name --vnet-name $virtual_network_name --name $diego_subnet_name --address-prefix $diego_subnet_cidr
 ```
 
 Options:
@@ -284,21 +283,17 @@ Options:
 * bosh_subnet_cidr: The subnet network mask in CIDR format for bosh subnet.
 * cloudfoundry_subnet_name: The name of the subnet where VMs for Cloud Foundry will locate.
 * cloudfoundry_subnet_cidr: The subnet network mask in CIDR format for Cloud Foundry.
-* diego_subnet_name: The name of diego subnet where VMs for Diego will locate.
-* diego_subnet_cidr: The subnet network mask in CIDR format for Diego.
 
 You need to create below subnets:
 
 * Name: BOSH, CIDR: 10.0.0.0/24. For BOSH VMs.
 * Name: CloudFoundry, CIDR: 10.0.16.0/20. For Cloud Foundry VMs.
-* Name: Diego, CIDR: 10.0.32.0/20. For Diego VMs.
 
 Example:
 
 ```
 azure network vnet subnet create --resource-group bosh-res-group --vnet-name boshvnet-crp --name BOSH --address-prefix 10.0.0.0/24
 azure network vnet subnet create --resource-group bosh-res-group --vnet-name boshvnet-crp --name CloudFoundry --address-prefix 10.0.16.0/20
-azure network vnet subnet create --resource-group bosh-res-group --vnet-name boshvnet-crp --name Diego --address-prefix 10.0.32.0/20
 ```
 
 ### 1.4.3 Verify the Virtual Network
@@ -333,9 +328,6 @@ data:      Address prefix                : 10.0.0.0/24
 data:
 data:      Name                          : CloudFoundry
 data:      Address prefix                : 10.0.16.0/20
-data:
-data:      Name                          : Diego
-data:      Address prefix                : 10.0.32.0/20
 data:
 info:    network vnet show command OK
 ```
@@ -385,6 +377,7 @@ You can learn more information [here](https://azure.microsoft.com/en-us/document
   ```
   azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-https' --destination-port-range 443
   azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-log' --destination-port-range 4443
+  azure network nsg rule create --resource-group $resource_group_name --nsg-name $nsg_name_for_cloudfoundry --access Allow --protocol Tcp --direction Inbound --priority 203 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-ssh' --destination-port-range 2222
   ```
 
   Example:
@@ -392,6 +385,7 @@ You can learn more information [here](https://azure.microsoft.com/en-us/document
   ```
   azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 201 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-https' --destination-port-range 443
   azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 202 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-log' --destination-port-range 4443
+  azure network nsg rule create --resource-group bosh-res-group --nsg-name nsg-cf --access Allow --protocol Tcp --direction Inbound --priority 203 --source-address-prefix Internet --source-port-range '*' --destination-address-prefix '*' --name 'cf-ssh' --destination-port-range 2222
   ```
 
 ## 1.5 Setup a dev-box

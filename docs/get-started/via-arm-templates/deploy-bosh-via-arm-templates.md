@@ -83,8 +83,6 @@ If you want to customize your `bosh-setup` template, you can modify the followin
 | subnetAddressRangeForBosh | 10.0.0.0/24 |
 | subnetNameForCloudFoundry | CloudFoundry |
 | subnetAddressRangeForCloudFoundry | 10.0.16.0/20 |
-| subnetNameForDiego | Diego |
-| subnetAddressRangeForDiego | 10.0.32.0/20 |
 | devboxNetworkSecurityGroup | nsg-devbox |
 | boshNetworkSecurityGroup | nsg-bosh |
 | cfNetworkSecurityGroup | nsg-cf |
