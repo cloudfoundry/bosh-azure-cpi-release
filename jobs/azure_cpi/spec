@@ -1,5 +1,5 @@
 ---
-name: cpi
+name: azure_cpi
 
 templates:
   cpi.erb: bin/cpi

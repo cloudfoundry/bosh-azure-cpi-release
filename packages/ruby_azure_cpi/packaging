@@ -21,7 +21,7 @@ popd > /dev/null
 echo "Installing ruby"
 tar xzf ruby_azure_cpi/ruby-*.tar.gz
 pushd ruby-* > /dev/null
-  LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET} --without-gmp
+  LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=/usr/local/opt/openssl:${BOSH_INSTALL_TARGET} --without-gmp
   make -j
   make -j install
 popd > /dev/null
