@@ -63,6 +63,12 @@ module Bosh::AzureCloud
     #  {"instance_type" => "Standard_D1"}
     #  {
     #    "instance_type" => "Standard_D1",
+    #    # storage_account_name may not exist. The default storage account will be used.
+    #    # storage_account_name may be a complete name. It will be used to create the VM.
+    #    # storage_account_name may be a pattern '*xxx*'. CPI will filter all storage accounts under the resource group
+    #      by the pattern and pick one storage account which has less than 30 disks to create the VM.
+    #    "storage_account_name" => "xxx",
+    #    "storage_account_max_disk_number" => 30,
     #    "availability_set" => "DEA_set",
     #    "platform_update_domain_count" => 5,
     #    "platform_fault_domain_count" => 3,
@@ -446,12 +452,56 @@ module Bosh::AzureCloud
     end
 
     def get_storage_account(resource_pool)
+      # Use default storage account if storage_account_name is not specified in resource_pool
       storage_account_name = @azure_properties['storage_account_name']
       unless resource_pool['storage_account_name'].nil?
-        storage_account_name = resource_pool['storage_account_name']
-        storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
-        if storage_account.nil?
-          create_storage_account(storage_account_name, resource_pool)
+        if resource_pool['storage_account_name'].include?('*')
+          ret = resource_pool['storage_account_name'].match('^\*{1}[a-z0-9]+\*{1}$')
+          if ret.nil?
+            raise Bosh::Clouds::VMCreationFailed.new(false),
+              "get_storage_account - storage_account_name in resource_pool is invalid. It should be '*keyword*' (keyword only contains numbers and lower-case letters) if it is a pattern."
+          end
+
+          # Users could use *xxx* as the pattern
+          # Users could specify the maximum disk numbers storage_account_max_disk_number in one storage account. Default is 30.
+          # CPI uses the pattern to filter all storage accounts under the default resource group and
+          # then randomly select an available storage account in which the disk numbers under the container `bosh'
+          # is not more than the limitation.
+          pattern = resource_pool['storage_account_name']
+          storage_account_max_disk_number = resource_pool.fetch('storage_account_max_disk_number', 30)
+          @logger.debug("get_storage_account - Picking one available storage account by pattern `#{pattern}', max disk number `#{storage_account_max_disk_number}'")
+
+          # Remove * in the pattern
+          pattern = pattern[1..-2]
+          storage_accounts = @azure_client2.list_storage_accounts().
+                               select{ |s| s[:name] =~ /^.*#{pattern}.*$/ }
+          @logger.debug("get_storage_account - Pick all storage accounts by pattern:\n#{storage_accounts.inspect}")
+
+          result = []
+          # Randomaly pick one storage account
+          storage_accounts.shuffle!
+          storage_accounts.each do |storage_account|
+            disks = @disk_manager.list_disks(storage_account[:name])
+            if disks.size <= storage_account_max_disk_number
+              @logger.debug("get_storage_account - Pick the available storage account `#{storage_account[:name]}', current disk numbers: `#{disks.size}'")
+              return storage_account
+            else
+              result << {
+                :name => storage_account[:name],
+                :disk_count => disks.size
+              }
+            end
+          end
+
+          raise Bosh::Clouds::VMCreationFailed.new(false),
+            "get_storage_account - Cannot find an available storage account.\n#{result.inspect}"
+        else
+          storage_account_name = resource_pool['storage_account_name']
+          storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+          # Create the storage account automatically if the storage account in resource_pool does not exist
+          if storage_account.nil?
+            create_storage_account(storage_account_name, resource_pool)
+          end
         end
       end
 

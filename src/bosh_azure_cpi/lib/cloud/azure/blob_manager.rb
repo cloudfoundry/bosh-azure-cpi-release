@@ -116,6 +116,9 @@ module Bosh::AzureCloud
         options[:prefix] = prefix unless prefix.nil?
         while true do
           temp = @blob_service_client.list_blobs(container_name, options)
+          # Workaround for the issue https://github.com/Azure/azure-storage-ruby/issues/37
+          raise temp unless temp.instance_of?(Azure::Service::EnumerationResults)
+
           blobs += temp if temp.size > 0
           break if temp.continuation_token.nil? || temp.continuation_token.empty?
           options[:marker] = temp.continuation_token

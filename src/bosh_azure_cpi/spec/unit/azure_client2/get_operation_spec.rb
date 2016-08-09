@@ -598,6 +598,101 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
   end
 
+  describe "#list_storage_accounts" do
+    let(:storage_accounts_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Storage/storageAccounts?api-version=#{api_version}" }
+
+    context "when token is valid, getting response succeeds" do
+      context "if response body is null" do
+        it "should return empty" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, storage_accounts_uri).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {})
+          expect(
+            azure_client2.list_storage_accounts()
+          ).to eq([])
+        end
+      end
+
+      context "if response body is not null" do
+        let(:response_body) {
+          {
+            "value" => [
+              {
+                "id" => "fake-id1",
+                "name" => "fake-name1",
+                "location" => "fake-location",
+                "properties" => {
+                  "provisioningState" => "fake-state",
+                  "accountType" => "fake-type",
+                  "primaryEndpoints" => {
+                    "blob" => "fake-blob-endpoint",
+                    "table" => "fake-table-endpoint",
+                  }
+                }
+              }, {
+                "id" => "fake-id2",
+                "name" => "fake-name2",
+                "location" => "fake-location",
+                "properties" => {
+                  "provisioningState" => "fake-state",
+                  "accountType" => "fake-type",
+                  "primaryEndpoints" => {
+                    "blob" => "fake-blob-endpoint"
+                  }
+                }
+              }
+            ]
+          }.to_json
+        }
+        let(:fake_storage_accounts) {
+          [
+            {
+              :id => "fake-id1",
+              :name => "fake-name1",
+              :location => "fake-location",
+              :provisioning_state => "fake-state",
+              :account_type => "fake-type",
+              :storage_blob_host => "fake-blob-endpoint",
+              :storage_table_host => "fake-table-endpoint"
+            }, {
+              :id => "fake-id2",
+              :name => "fake-name2",
+              :location => "fake-location",
+              :provisioning_state => "fake-state",
+              :account_type => "fake-type",
+              :storage_blob_host => "fake-blob-endpoint"
+            }
+          ]
+        }
+
+        it "should return resource including both blob endpoint and table endpoint" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, storage_accounts_uri).to_return(
+            :status => 200,
+            :body => response_body,
+            :headers => {})
+          expect(
+            azure_client2.list_storage_accounts()
+          ).to eq(fake_storage_accounts)
+        end
+      end
+    end
+  end
+
   describe "#get_virtual_machine_by_name" do
     let(:vm_name) { "fake-vm-name" }
     let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version}" }

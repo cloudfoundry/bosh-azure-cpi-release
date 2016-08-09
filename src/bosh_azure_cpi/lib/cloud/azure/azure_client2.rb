@@ -868,6 +868,30 @@ module Bosh::AzureCloud
       keys
     end
 
+    def list_storage_accounts()
+      storage_accounts = []
+      url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS)
+      result = get_resource_by_id(url)
+      unless result.nil?
+        result['value'].each do |value|
+          storage_account = {}
+          storage_account[:id]        = value['id']
+          storage_account[:name]      = value['name']
+          storage_account[:location]  = value['location']
+
+          properties = value['properties']
+          storage_account[:provisioning_state] = properties['provisioningState']
+          storage_account[:account_type]       = properties['accountType']
+          storage_account[:storage_blob_host]  = properties['primaryEndpoints']['blob']
+          if properties['primaryEndpoints'].has_key?('table')
+            storage_account[:storage_table_host] = properties['primaryEndpoints']['table']
+          end
+          storage_accounts << storage_account
+        end
+      end
+      storage_accounts
+    end
+
     private
 
     def filter_credential_in_logs(uri)

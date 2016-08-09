@@ -657,6 +657,331 @@ describe Bosh::AzureCloud::Cloud do
           end
         end
       end
+
+      context 'when the storage account name is a pattern' do
+        context 'when the pattern is valid' do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'fake-vm-size',
+              'storage_account_name' => '*pattern*'
+            }
+          }
+          let(:storage_accounts) {
+            [
+              {
+                :name => 'pattern',
+                :location => 'fake-location'
+              }, {
+                :name => '2pattern',
+                :location => 'fake-location'
+              }, {
+                :name => 'pattern3',
+                :location => 'fake-location'
+              }, {
+                :name => '4pattern4',
+                :location => 'fake-location'
+              }, {
+                :name => 'tpattern',
+                :location => 'fake-location'
+              }, {
+                :name => 'patternt',
+                :location => 'fake-location'
+              }, {
+                :name => 'tpatternt',
+                :location => 'fake-location'
+              }, {
+                :name => 'patten',
+                :location => 'fake-location'
+              }, {
+                :name => 'foo',
+                :location => 'fake-location'
+              }
+            ]
+          }
+
+          context 'when finding an availiable storage account successfully' do
+            let(:disks) {
+              [
+                1,2,3
+              ]
+            }
+
+            before do
+              allow(client2).to receive(:list_storage_accounts)
+                .and_return(storage_accounts)
+                allow(disk_manager).to receive(:list_disks)
+                  .and_return(disks)
+                allow(disk_manager).to receive(:list_disks)
+                  .with('4pattern4').and_return([])
+                allow(stemcell_manager).to receive(:has_stemcell?).
+                  with(anything, stemcell_id).
+                  and_return(true)
+                allow(stemcell_manager).to receive(:get_stemcell_uri).
+                  with(anything, stemcell_id).
+                  and_return(stemcell_uri)
+            end
+
+            context 'without storage_account_max_disk_number' do
+              it 'should not raise any error' do
+                expect(client2).to receive(:list_storage_accounts)
+                expect(client2).not_to receive(:create_storage_account)
+                expect(client2).not_to receive(:get_storage_account_by_name)
+                expect(disk_manager).to receive(:list_disks)
+                  .with(/pattern/)
+                expect(disk_manager).not_to receive(:list_disks)
+                  .with('patten')
+                expect(disk_manager).not_to receive(:list_disks)
+                  .with('foo')
+
+                expect(stemcell_manager).to receive(:has_stemcell?)
+                  .with(/pattern/, stemcell_id)
+                expect(
+                  cloud.create_vm(
+                    agent_id,
+                    stemcell_id,
+                    resource_pool,
+                    networks_spec,
+                    disk_locality,
+                    environment
+                  )
+                ).to eq(instance_id)
+              end
+            end
+
+            context 'with 2 as storage_account_max_disk_number' do
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'fake-vm-size',
+                  'storage_account_name' => '*pattern*',
+                  'storage_account_max_disk_number' => 2
+                }
+              }
+
+              it 'should not raise any error' do
+                expect(client2).to receive(:list_storage_accounts)
+                expect(client2).not_to receive(:create_storage_account)
+                expect(client2).not_to receive(:get_storage_account_by_name)
+                expect(disk_manager).to receive(:list_disks)
+                  .with(/pattern/)
+                expect(disk_manager).not_to receive(:list_disks)
+                  .with('patten')
+                expect(disk_manager).not_to receive(:list_disks)
+                  .with('foo')
+
+                expect(stemcell_manager).to receive(:has_stemcell?)
+                  .with('4pattern4', stemcell_id)
+                expect(
+                  cloud.create_vm(
+                    agent_id,
+                    stemcell_id,
+                    resource_pool,
+                    networks_spec,
+                    disk_locality,
+                    environment
+                  )
+                ).to eq(instance_id)
+              end
+            end
+          end
+
+          context 'when cannot find an availiable storage account' do
+            context 'when cannot find a storage account by the pattern' do
+              let(:storage_accounts) { [] }
+
+              before do
+                allow(client2).to receive(:list_storage_accounts)
+                  .and_return(storage_accounts)
+              end
+
+              it 'should raise an error' do
+                expect(client2).to receive(:list_storage_accounts)
+                expect(client2).not_to receive(:create_storage_account)
+                expect(client2).not_to receive(:get_storage_account_by_name)
+                expect(disk_manager).not_to receive(:list_disks)
+
+                expect {
+                  cloud.create_vm(
+                    agent_id,
+                    stemcell_id,
+                    resource_pool,
+                    networks_spec,
+                    disk_locality,
+                    environment
+                  )
+                }.to raise_error(/get_storage_account - Cannot find an available storage account./)
+              end
+            end
+
+            context 'when the disk number of every storage account is more than the limitation' do
+              let(:disks) { (1..31).to_a }
+
+              before do
+                allow(client2).to receive(:list_storage_accounts)
+                  .and_return(storage_accounts)
+                allow(disk_manager).to receive(:list_disks)
+                  .and_return(disks)
+              end
+
+              it 'should raise an error' do
+                expect(client2).to receive(:list_storage_accounts)
+                expect(client2).not_to receive(:create_storage_account)
+                expect(client2).not_to receive(:get_storage_account_by_name)
+                expect(disk_manager).to receive(:list_disks)
+
+                expect {
+                  cloud.create_vm(
+                    agent_id,
+                    stemcell_id,
+                    resource_pool,
+                    networks_spec,
+                    disk_locality,
+                    environment
+                  )
+                }.to raise_error(/get_storage_account - Cannot find an available storage account./)
+              end
+            end
+          end
+        end
+
+        context 'when the pattern is invalid' do
+          context 'when the pattern contains one asterisk' do
+            context 'when the pattern starts with one asterisk' do
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'fake-vm-size',
+                  'storage_account_name' => '*pattern'
+                }
+              }
+
+              it 'should raise an error' do
+                expect(client2).not_to receive(:list_storage_accounts)
+                expect(client2).not_to receive(:create_storage_account)
+                expect(client2).not_to receive(:get_storage_account_by_name)
+                expect(disk_manager).not_to receive(:list_disks)
+
+                expect {
+                  cloud.create_vm(
+                    agent_id,
+                    stemcell_id,
+                    resource_pool,
+                    networks_spec,
+                    disk_locality,
+                    environment
+                  )
+                }.to raise_error(/get_storage_account - storage_account_name in resource_pool is invalid./)
+              end
+            end
+
+            context 'when the pattern ends with one asterisk' do
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'fake-vm-size',
+                  'storage_account_name' => 'pattern*'
+                }
+              }
+
+              it 'should raise an error' do
+                expect(client2).not_to receive(:list_storage_accounts)
+                expect(client2).not_to receive(:create_storage_account)
+                expect(client2).not_to receive(:get_storage_account_by_name)
+                expect(disk_manager).not_to receive(:list_disks)
+
+                expect {
+                  cloud.create_vm(
+                    agent_id,
+                    stemcell_id,
+                    resource_pool,
+                    networks_spec,
+                    disk_locality,
+                    environment
+                  )
+                }.to raise_error(/get_storage_account - storage_account_name in resource_pool is invalid./)
+              end
+            end
+          end
+
+          context 'when the pattern contains more than two asterisks' do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'fake-vm-size',
+                'storage_account_name' => '**pattern*'
+              }
+            }
+
+            it 'should raise an error' do
+              expect(client2).not_to receive(:list_storage_accounts)
+              expect(client2).not_to receive(:create_storage_account)
+              expect(client2).not_to receive(:get_storage_account_by_name)
+              expect(disk_manager).not_to receive(:list_disks)
+
+              expect {
+                cloud.create_vm(
+                  agent_id,
+                  stemcell_id,
+                  resource_pool,
+                  networks_spec,
+                  disk_locality,
+                  environment
+                )
+              }.to raise_error(/get_storage_account - storage_account_name in resource_pool is invalid./)
+            end
+          end
+
+          context 'when the pattern contains upper-case letters' do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'fake-vm-size',
+                'storage_account_name' => '*PATTERN*'
+              }
+            }
+
+            it 'should raise an error' do
+              expect(client2).not_to receive(:list_storage_accounts)
+              expect(client2).not_to receive(:create_storage_account)
+              expect(client2).not_to receive(:get_storage_account_by_name)
+              expect(disk_manager).not_to receive(:list_disks)
+
+              expect {
+                cloud.create_vm(
+                  agent_id,
+                  stemcell_id,
+                  resource_pool,
+                  networks_spec,
+                  disk_locality,
+                  environment
+                )
+              }.to raise_error(/get_storage_account - storage_account_name in resource_pool is invalid./)
+            end
+          end
+
+          context 'when the pattern contains special characters' do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'fake-vm-size',
+                'storage_account_name' => '*pat+tern*'
+              }
+            }
+
+            it 'should raise an error' do
+              expect(client2).not_to receive(:list_storage_accounts)
+              expect(client2).not_to receive(:create_storage_account)
+              expect(client2).not_to receive(:get_storage_account_by_name)
+              expect(disk_manager).not_to receive(:list_disks)
+
+              expect {
+                cloud.create_vm(
+                  agent_id,
+                  stemcell_id,
+                  resource_pool,
+                  networks_spec,
+                  disk_locality,
+                  environment
+                )
+              }.to raise_error(/get_storage_account - storage_account_name in resource_pool is invalid./)
+            end
+          end
+        end
+      end
     end
 
     context 'when stemcell_id is invalid' do

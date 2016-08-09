@@ -562,4 +562,45 @@ describe Bosh::AzureCloud::DiskManager do
       end
     end
   end
+
+  describe "#list_disks" do
+    context "when the storage account does not contain any disk" do
+      let(:blobs) { [] }
+
+      before do
+        allow(blob_manager).to receive(:list_blobs).
+          and_return(blobs)
+      end
+
+      it "should return empty" do
+        expect(disk_manager.list_disks(storage_account_name)).to eq([])
+      end
+    end
+
+    context "when the storage account contains disks" do
+      let(:blobs) {
+        [
+          double("blob", :name => "a.status"),
+          double("blob", :name => "b.status"),
+          double("blob", :name => "c.vhd"),
+          double("blob", :name => "d.vhd")
+        ]
+      }
+
+      before do
+        allow(blob_manager).to receive(:list_blobs).
+          and_return(blobs)
+      end
+
+      it "should return correct value" do
+        disks = disk_manager.list_disks(storage_account_name)
+        expect(disks).to eq(
+          [
+            { :disk_name => 'c' },
+            { :disk_name => 'd' },
+          ]
+        )
+      end
+    end
+  end
 end
