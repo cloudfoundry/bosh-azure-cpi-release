@@ -55,6 +55,7 @@ module Bosh::AzureCloud
     #      "ip"               => "172.30.41.40",
     #      "gateway"          => "172.30.40.1",
     #      "dns"              => ["172.30.22.153", "172.30.22.154"],
+    #      "default"          => ["dns", "gateway"],
     #      "cloud_properties" => {"virtual_network_name"=>"boshvnet", "subnet_name"=>"BOSH"}
     #    }
     #  }
@@ -113,7 +114,7 @@ module Bosh::AzureCloud
           storage_account,
           @stemcell_manager.get_stemcell_uri(storage_account[:name], stemcell_id),
           resource_pool,
-          NetworkConfigurator.new(networks),
+          NetworkConfigurator.new(@azure_properties, networks),
           env)
         instance_id = vm_params[:name]
         @logger.info("Created new vm '#{instance_id}'")

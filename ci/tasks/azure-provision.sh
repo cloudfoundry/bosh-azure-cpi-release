@@ -13,7 +13,9 @@ set -e
 : ${AZURE_VNET_NAME_FOR_BATS:?}
 : ${AZURE_VNET_NAME_FOR_LIFECYCLE:?}
 : ${AZURE_BOSH_SUBNET_NAME:?}
+: ${AZURE_BOSH_SECOND_SUBNET_NAME:?}
 : ${AZURE_CF_SUBNET_NAME:?}
+: ${AZURE_CF_SECOND_SUBNET_NAME:?}
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
@@ -60,8 +62,14 @@ do
     "subnetNameForBosh": {
       "value": "${AZURE_BOSH_SUBNET_NAME}"
     },
+    "secondSubnetNameForBosh": {
+      "value": "${AZURE_BOSH_SECOND_SUBNET_NAME}"
+    },
     "subnetNameForCloudFoundry": {
       "value": "${AZURE_CF_SUBNET_NAME}"
+    },
+    "secondSubnetNameForCloudFoundry": {
+      "value": "${AZURE_CF_SECOND_SUBNET_NAME}"
     }
   }
 EOF

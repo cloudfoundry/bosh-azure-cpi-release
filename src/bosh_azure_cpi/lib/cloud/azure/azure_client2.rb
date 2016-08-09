@@ -111,9 +111,9 @@ module Bosh::AzureCloud
     #
     # ==== Attributes
     #
-    # @param [Hash] vm_params         - Parameters for creating the virtual machine.
-    # @param [Hash] network_interface - Network Interface Instance.
-    # @param [Hash] availability_set  - Availability set.
+    # @param [Hash] vm_params           - Parameters for creating the virtual machine.
+    # @param [Array] network_interfaces - Network Interface Instances. network_interfaces[0] will be picked as the primary network and able to bind to public ip or load balancers.
+    # @param [Hash] availability_set    - Availability set.
     #
     #  ==== Params
     #
@@ -124,7 +124,7 @@ module Bosh::AzureCloud
     # * +:vm_size+              - String. Specifies the size of the virtual machine instance.
     # * +:username+             - String. User name for the virtual machine instance.
     # * +:ssh_cert_data+        - String. The content of SSH certificate.
-    # * +:custom_data+          - String. Specifies a base-64 encoded string of custom data. 
+    # * +:custom_data+          - String. Specifies a base-64 encoded string of custom data.
     # * +:image_uri+            - String. The URI of the image.
     # * +:os_disk+              - Hash. OS Disk for the virtual machine instance.
     # *   +:disk_name+          - String. The name of the OS disk.
@@ -137,8 +137,21 @@ module Bosh::AzureCloud
     # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Caching option: None, ReadOnly or ReadWrite.
     # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
     #
-    def create_virtual_machine(vm_params, network_interface, availability_set = nil)
+    def create_virtual_machine(vm_params, network_interfaces, availability_set = nil)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: vm_params[:name])
+
+      network_interfaces_params = []
+      network_interfaces.each_with_index do |network_interface, index|
+        network_interfaces_params.push(
+          {
+            'id' => network_interface[:id],
+            'properties' => {
+              'primary' => index == 0 ? true : false
+            }
+          }
+        )
+      end
+
       vm = {
         'name'       => vm_params[:name],
         'location'   => vm_params[:location],
@@ -179,11 +192,7 @@ module Bosh::AzureCloud
             }
           },
           'networkProfile' => {
-            'networkInterfaces' => [
-              {
-                'id' => network_interface[:id]
-              }
-            ]
+            'networkInterfaces' => network_interfaces_params
           }
         }
       }
@@ -341,8 +350,15 @@ module Bosh::AzureCloud
           vm[:data_disks].push(disk)
         end
 
-        interface_id = properties['networkProfile']['networkInterfaces'][0]['id']
-        vm[:network_interface] = get_network_interface(interface_id)
+        vm[:network_interfaces] = []
+        properties['networkProfile']['networkInterfaces'].each do |nic_properties|
+          network_interface = get_network_interface(nic_properties['id'])
+          if network_interface[:primary]
+            vm[:network_interfaces].insert(0, network_interface)
+          else
+            vm[:network_interfaces].push(network_interface)
+          end
+        end
       end
       vm
     end
@@ -619,8 +635,9 @@ module Bosh::AzureCloud
     # Accepted key/value pairs are:
     # * +:name+          - String. Name of network interface.
     # * +:location+      - String. The location where the network interface will be created.
+    # * +:ipconfig_name+ - String. The name of ipConfigurations for the network interface.
     # * +:private_ip     - String. Private IP address which the network interface will use.
-    # * +:dns_servers    - Array. DNS servers. 
+    # * +:dns_servers    - Array. DNS servers.
     # * +:public_ip      - Hash. The public IP which the network interface is binded to.
     # * +:security_group - Hash. The network security group which the network interface is binded to.
     #
@@ -636,9 +653,9 @@ module Bosh::AzureCloud
           },
           'ipConfigurations' => [
             {
-              'name'        => 'ipconfig1',
+              'name'        => nic_params[:ipconfig_name],
               'properties'  => {
-                'privateIPAddress'          => nic_params[:private_ip], 
+                'privateIPAddress'          => nic_params[:private_ip],
                 'privateIPAllocationMethod' => nic_params[:private_ip].nil? ? 'Dynamic' : 'Static',
                 'publicIPAddress'           => nic_params[:public_ip].nil? ? nil : { 'id' => nic_params[:public_ip][:id] },
                 'subnet' => {
@@ -659,7 +676,7 @@ module Bosh::AzureCloud
             'id' => load_balancer[:backend_address_pools][0][:id]
           }
         ]
-        interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] = 
+        interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] =
           load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
       end
 
@@ -672,37 +689,29 @@ module Bosh::AzureCloud
     end
 
     def get_network_interface(url)
-      interface = nil
       result = get_resource_by_id(url)
-      unless result.nil?
-        interface = {}
-        interface[:id] = result['id']
-        interface[:name] = result['name']
-        interface[:location] = result['location']
-        interface[:tags] = result['tags']
+      parse_network_interface(result)
+    end
 
-        properties = result['properties']
-        interface[:provisioning_state] = properties['provisioningState']
-        unless properties['dnsSettings']['dnsServers'].nil?
-          interface[:dns_settings] = []
-          properties['dnsSettings']['dnsServers'].each { |dns| interface[:dns_settings].push(dns) }
-        end
-
-        ip_configuration = properties['ipConfigurations'][0]
-        interface[:ip_configuration_id] = ip_configuration['id']
-
-        ip_configuration_properties = ip_configuration['properties']
-        interface[:private_ip] = ip_configuration_properties['privateIPAddress']
-        interface[:private_ip_allocation_method] = ip_configuration_properties['privateIPAllocationMethod']
-        unless ip_configuration_properties['publicIPAddress'].nil?
-          interface[:public_ip] = get_public_ip(ip_configuration_properties['publicIPAddress']['id'])
-        end
-        unless ip_configuration_properties['loadBalancerBackendAddressPools'].nil?
-          names = parse_name_from_id(ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'])
-          interface[:load_balancer] = get_load_balancer_by_name(names[:resource_name])
+    # Query network interfaces whose name match pattern /#{instance_id}/. #{instance_id} stands for a VM, and NICs of that VM are "#{instance_id}-0", "#{instance_id}-1" and so on.
+    # Return array of network interfaces, however, the network interface here will not contain details about public ip or load balancer.
+    def list_network_interfaces_by_instance_id(instance_id)
+      network_interfaces = []
+      network_interfaces_url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES)
+      results = get_resource_by_id(network_interfaces_url)
+      unless results.nil? || results["value"].nil?
+        results["value"].each do |network_interface_spec|
+          if network_interface_spec["name"].include?(instance_id)
+            network_interface = parse_network_interface(network_interface_spec, recursive: false)
+            if network_interface[:primary]
+              network_interfaces.insert(0, network_interface)
+            else
+              network_interfaces.push(network_interface)
+            end
+          end
         end
       end
-      interface
+      network_interfaces
     end
 
     def delete_network_interface(name)
@@ -753,7 +762,7 @@ module Bosh::AzureCloud
       end
       nsg
     end
-    
+
     # Storage/StorageAccounts
     # https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
     def create_storage_account(name, location, account_type, tags)
@@ -893,6 +902,50 @@ module Bosh::AzureCloud
     end
 
     private
+
+    def parse_network_interface(result, recursive: true)
+      interface = nil
+      unless result.nil?
+        interface = {}
+        interface[:id] = result['id']
+        interface[:name] = result['name']
+        interface[:location] = result['location']
+        interface[:tags] = result['tags']
+
+        properties = result['properties']
+        interface[:provisioning_state] = properties['provisioningState']
+        unless properties['dnsSettings']['dnsServers'].nil?
+          interface[:dns_settings] = []
+          properties['dnsSettings']['dnsServers'].each { |dns| interface[:dns_settings].push(dns) }
+        end
+
+        ip_configuration = properties['ipConfigurations'][0]
+        interface[:ip_configuration_id] = ip_configuration['id']
+
+        ip_configuration_properties = ip_configuration['properties']
+        interface[:private_ip] = ip_configuration_properties['privateIPAddress']
+        interface[:private_ip_allocation_method] = ip_configuration_properties['privateIPAllocationMethod']
+        if ip_configuration_properties["primary"] == true
+          interface[:primary] = true
+        end
+        unless ip_configuration_properties['publicIPAddress'].nil?
+          if recursive
+            interface[:public_ip] = get_public_ip(ip_configuration_properties['publicIPAddress']['id'])
+          else
+            interface[:public_ip] = {:id => ip_configuration_properties['publicIPAddress']['id']}
+          end
+        end
+        unless ip_configuration_properties['loadBalancerBackendAddressPools'].nil?
+          if recursive
+            names = parse_name_from_id(ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'])
+            interface[:load_balancer] = get_load_balancer_by_name(names[:resource_name])
+          else
+            interface[:load_balancer] = {:id => ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id']}
+          end
+        end
+      end
+      interface
+    end
 
     def filter_credential_in_logs(uri)
       if uri.request_uri.include?('/listKeys')

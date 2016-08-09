@@ -8,14 +8,20 @@ set -e
 : ${AZURE_GROUP_NAME:?}
 : ${AZURE_VNET_NAME_FOR_BATS:?}
 : ${AZURE_CF_SUBNET_NAME:?}
+: ${AZURE_CF_SECOND_SUBNET_NAME:?}
 : ${AZURE_DEFAULT_SECURITY_GROUP:?}
 : ${BAT_VCAP_PASSWORD:?}
 : ${BAT_NETWORK_CIDR:?}
-: ${BAT_SECOND_STATIC_IP:?}
+: ${BAT_SECOND_NETWORK_CIDR:?}
+: ${BAT_SECOND_STATIC_IP:?}             # static ip for the first subnet
 : ${BAT_NETWORK_RESERVED_RANGE:?}
+: ${BAT_SECOND_NETWORK_RESERVED_RANGE:?}
 : ${BAT_NETWORK_STATIC_RANGE:?}
+: ${BAT_SECOND_NETWORK_STATIC_RANGE:?}
 : ${BAT_NETWORK_GATEWAY:?}
-: ${BAT_NETWORK_STATIC_IP:?}
+: ${BAT_SECOND_NETWORK_GATEWAY:?}
+: ${BAT_NETWORK_STATIC_IP:?}            # static ip for the first subnet
+: ${BAT_SECOND_NETWORK_STATIC_IP:?}     # static ip for the second subnet
 : ${BOSH_DIRECTOR_USERNAME:?}
 : ${BOSH_DIRECTOR_PASSWORD:?}
 : ${SSH_PRIVATE_KEY:?}
@@ -138,7 +144,9 @@ jobs:
     networks:
     <% properties.job_networks.each_with_index do |network, i| %>
       - name: <%= network.name %>
+        <% if i == 0 %>
         default: [dns, gateway]
+        <% end %>
       <% if network.type == 'manual' %>
         static_ips:
         <% if properties.use_static_ip %>
@@ -182,7 +190,7 @@ export BAT_INFRASTRUCTURE=azure
 export BAT_NETWORKING=manual
 export BAT_DIRECTOR_USER=${BOSH_DIRECTOR_USERNAME}
 export BAT_DIRECTOR_PASSWORD=${BOSH_DIRECTOR_PASSWORD}
-export BAT_RSPEC_FLAGS="--tag ~multiple_manual_networks --tag ~raw_ephemeral_storage"
+export BAT_RSPEC_FLAGS="--tag ~raw_ephemeral_storage"
 
 bosh -n target ${BAT_DIRECTOR}
 echo Using This version of bosh:
@@ -214,6 +222,18 @@ properties:
     reserved: [${BAT_NETWORK_RESERVED_RANGE}]
     static: [${BAT_NETWORK_STATIC_RANGE}]
     gateway: ${BAT_NETWORK_GATEWAY}
+  - name: second
+    type: manual
+    static_ip: ${BAT_SECOND_NETWORK_STATIC_IP}
+    cloud_properties:
+      resource_group_name: ${AZURE_GROUP_NAME}
+      virtual_network_name: ${AZURE_VNET_NAME_FOR_BATS}
+      subnet_name: ${AZURE_CF_SECOND_SUBNET_NAME}
+      security_group: ${AZURE_DEFAULT_SECURITY_GROUP}
+    cidr: ${BAT_SECOND_NETWORK_CIDR}
+    reserved: [${BAT_SECOND_NETWORK_RESERVED_RANGE}]
+    static: [${BAT_SECOND_NETWORK_STATIC_RANGE}]
+    gateway: ${BAT_SECOND_NETWORK_GATEWAY}
   - name: static
     type: vip
     cloud_properties:
