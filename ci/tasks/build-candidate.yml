@@ -1,8 +1,15 @@
 ---
 platform: linux
-image: docker:///boshcpi/azure-cpi-release
+image_resource:
+  type: docker-image
+  source: {repository: boshcpi/azure-cpi-release}
+
 inputs:
-  - name: bosh-cpi-release
+  - name: bosh-cpi-src
   - name: version-semver
+
+outputs:
+  - name: candidate
+
 run:
-  path: bosh-cpi-release/ci/tasks/build-candidate.sh
+  path: bosh-cpi-src/ci/tasks/build-candidate.sh

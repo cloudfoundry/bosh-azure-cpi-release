@@ -2,55 +2,72 @@
 
 set -e
 
-source bosh-cpi-release/ci/tasks/utils.sh
-
-check_param BASE_OS
-check_param AZURE_SUBSCRIPTION_ID
-check_param AZURE_CLIENT_ID
-check_param AZURE_CLIENT_SECRET
-check_param AZURE_TENANT_ID
-check_param AZURE_GROUP_NAME_FOR_VMS
-check_param AZURE_GROUP_NAME_FOR_NETWORK
-check_param AZURE_VNET_NAME_FOR_BATS
-check_param AZURE_STORAGE_ACCOUNT_NAME
-check_param AZURE_BOSH_SUBNET_NAME
-check_param AZURE_DEFAULT_SECURITY_GROUP
-check_param SSH_PRIVATE_KEY
-check_param SSH_PUBLIC_KEY
-check_param BAT_NETWORK_GATEWAY
-check_param BAT_DIRECTOR_PASSWORD
+: ${AZURE_SUBSCRIPTION_ID:?}
+: ${AZURE_CLIENT_ID:?}
+: ${AZURE_CLIENT_SECRET:?}
+: ${AZURE_TENANT_ID:?}
+: ${AZURE_GROUP_NAME_FOR_VMS:?}
+: ${AZURE_GROUP_NAME_FOR_NETWORK:?}
+: ${AZURE_VNET_NAME_FOR_BATS:?}
+: ${AZURE_STORAGE_ACCOUNT_NAME:?}
+: ${AZURE_BOSH_SUBNET_NAME:?}
+: ${AZURE_DEFAULT_SECURITY_GROUP:?}
+: ${AZURE_DEBUG_MODE:?}
+: ${SSH_PRIVATE_KEY:?}
+: ${SSH_PUBLIC_KEY:?}
+: ${BAT_NETWORK_GATEWAY:?}
+: ${BOSH_DIRECTOR_USERNAME:?}
+: ${BOSH_DIRECTOR_PASSWORD:?}
+: ${BOSH_INIT_LOG_LEVEL:?}
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
 
-DIRECTOR=$(azure network public-ip show ${AZURE_GROUP_NAME_FOR_NETWORK} AzureCPICI-bosh --json | jq '.ipAddress' -r)
+DIRECTOR_PIP=$(azure network public-ip show ${AZURE_GROUP_NAME_FOR_NETWORK} AzureCPICI-bosh --json | jq '.ipAddress' -r)
 
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}
 
 semver=`cat version-semver/number`
-cpi_release_name=bosh-azure-cpi
-deployment_dir="${PWD}/deployment"
-manifest_filename="director-manifest.yml"
+cpi_release_name="bosh-azure-cpi"
+output_dir=$(realpath director-state/)
+ssh_key_path="${output_dir}/shared.pem"
 
-mkdir -p $deployment_dir
-echo "$SSH_PRIVATE_KEY" > $deployment_dir/bats.pem
+# deployment manifest references releases and stemcells relative to itself...make it true
+# these resources are also used in the teardown step
+mkdir -p ${output_dir}/{stemcell,bosh-release,cpi-release}
+cp ./stemcell/*.tgz ${output_dir}/stemcell/stemcell.tgz
+cp ./bosh-release/release.tgz ${output_dir}/bosh-release/bosh-release.tgz
+cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${output_dir}/cpi-release/bosh-cpi.tgz
 
-cat > "${deployment_dir}/${manifest_filename}"<<EOF
+# env file generation
+cat > "${output_dir}/director.env" <<EOF
+#!/usr/bin/env bash
+export BOSH_DIRECTOR_IP=${DIRECTOR_PIP}
+export BOSH_DIRECTOR_USERNAME=${BOSH_DIRECTOR_USERNAME}
+export BOSH_DIRECTOR_PASSWORD=${BOSH_DIRECTOR_PASSWORD}
+EOF
+
+manifest_filename="director.yml"
+logfile=$(mktemp /tmp/bosh-init-log.XXXXXX)
+
+echo "${SSH_PRIVATE_KEY}" > ${ssh_key_path}
+
+cat > "${output_dir}/${manifest_filename}"<<EOF
 ---
 name: bosh
 
 releases:
 - name: bosh
-  url: file://bosh-release.tgz
+  url: file://bosh-release/bosh-release.tgz
 - name: bosh-azure-cpi
-  url: file://bosh-azure-cpi.tgz
+  url: file://cpi-release/bosh-cpi.tgz
 
 networks:
 - name: public
   type: vip
   cloud_properties:
-    resource_group_name: $AZURE_GROUP_NAME_FOR_NETWORK
+    resource_group_name: ${AZURE_GROUP_NAME_FOR_NETWORK}
 - name: private
   type: manual
   subnets:
@@ -58,15 +75,15 @@ networks:
     gateway: 10.0.0.1
     dns: [168.63.129.16]
     cloud_properties:
-      resource_group_name: $AZURE_GROUP_NAME_FOR_NETWORK
-      virtual_network_name: $AZURE_VNET_NAME_FOR_BATS
-      subnet_name: $AZURE_BOSH_SUBNET_NAME
+      resource_group_name: ${AZURE_GROUP_NAME_FOR_NETWORK}
+      virtual_network_name: ${AZURE_VNET_NAME_FOR_BATS}
+      subnet_name: ${AZURE_BOSH_SUBNET_NAME}
 
 resource_pools:
 - name: vms
   network: private
   stemcell:
-    url: file://stemcell.tgz
+    url: file://stemcell/stemcell.tgz
   cloud_properties:
     instance_type: Standard_D1
 
@@ -95,7 +112,7 @@ jobs:
     static_ips: [10.0.0.10]
     default: [dns, gateway]
   - name: public
-    static_ips: [$DIRECTOR]
+    static_ips: [${DIRECTOR_PIP}]
 
   properties:
     nats:
@@ -111,7 +128,7 @@ jobs:
       adapter: postgres
 
     dns:
-      address: $DIRECTOR
+      address: ${DIRECTOR_PIP}
       db:
         user: postgres
         password: postgres-password
@@ -135,9 +152,9 @@ jobs:
       address: 10.0.0.10
       host: 10.0.0.10
       db: *db
-      http: {user: admin, password: $BAT_DIRECTOR_PASSWORD, port: 25777}
-      username: admin
-      password: $BAT_DIRECTOR_PASSWORD
+      http: {user: ${BOSH_DIRECTOR_USERNAME}, password: ${BOSH_DIRECTOR_PASSWORD}, port: 25777}
+      username: ${BOSH_DIRECTOR_USERNAME}
+      password: ${BOSH_DIRECTOR_PASSWORD}
       port: 25777
 
     # Tells the Director/agents how to contact blobstore
@@ -160,24 +177,24 @@ jobs:
         provider: local
         local:
           users:
-          - {name: admin, password: $BAT_DIRECTOR_PASSWORD}
-          - {name: hm-user, password: $BAT_DIRECTOR_PASSWORD}
+          - {name: ${BOSH_DIRECTOR_USERNAME}, password: ${BOSH_DIRECTOR_PASSWORD}}
 
     hm:
-      director_account: {user: hm-user, password: $BAT_DIRECTOR_PASSWORD}
-      resurrector_enabled: true
+      http: {user: hm, password: hm-password}
+      director_account: {user: ${BOSH_DIRECTOR_USERNAME}, password: ${BOSH_DIRECTOR_PASSWORD}}
 
     azure: &azure
       environment: AzureCloud
-      subscription_id: $AZURE_SUBSCRIPTION_ID
-      storage_account_name: $AZURE_STORAGE_ACCOUNT_NAME
-      resource_group_name: $AZURE_GROUP_NAME_FOR_VMS
-      tenant_id: $AZURE_TENANT_ID
-      client_id: $AZURE_CLIENT_ID
-      client_secret: $AZURE_CLIENT_SECRET
+      subscription_id: ${AZURE_SUBSCRIPTION_ID}
+      storage_account_name: ${AZURE_STORAGE_ACCOUNT_NAME}
+      resource_group_name: ${AZURE_GROUP_NAME_FOR_VMS}
+      tenant_id: ${AZURE_TENANT_ID}
+      client_id: ${AZURE_CLIENT_ID}
+      client_secret: ${AZURE_CLIENT_SECRET}
       ssh_user: vcap
-      ssh_public_key: $SSH_PUBLIC_KEY
-      default_security_group: $AZURE_DEFAULT_SECURITY_GROUP
+      debug_mode: ${AZURE_DEBUG_MODE}
+      ssh_public_key: ${SSH_PUBLIC_KEY}
+      default_security_group: ${AZURE_DEFAULT_SECURITY_GROUP}
 
     # Tells agents how to contact nats
     agent: {mbus: "nats://nats:nats-password@10.0.0.10:4222"}
@@ -189,14 +206,14 @@ cloud_provider:
 
   # Tells bosh-init how to SSH into deployed VM
   ssh_tunnel:
-    host: $DIRECTOR
+    host: ${DIRECTOR_PIP}
     #host: 10.0.0.10
     port: 22
     user: vcap
-    private_key: $deployment_dir/bats.pem
+    private_key: ${ssh_key_path}
 
   # Tells bosh-init how to contact remote agent
-  mbus: https://mbus-user:mbus-password@$DIRECTOR:6868
+  mbus: https://mbus-user:mbus-password@${DIRECTOR_PIP}:6868
 
   properties:
     azure: *azure
@@ -209,21 +226,34 @@ cloud_provider:
     ntp: *ntp
 EOF
 
-cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${deployment_dir}/${cpi_release_name}.tgz
-cp ./stemcell/*.tgz ${deployment_dir}/stemcell.tgz
-cp ./bosh-release/release.tgz ${deployment_dir}/bosh-release.tgz
+function finish {
+  echo "Final state of director deployment:"
+  echo "=========================================="
+  cat "${output_dir}/director-state.json"
+  echo "=========================================="
 
-initver=$(cat bosh-init/version)
-initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
+  cp -r ${HOME}/.bosh_init ${output_dir}
+  rm -rf ${logfile}
+}
+trap finish EXIT
 
-chmod +x $initexe
-$initexe version
+bosh_init=$(realpath bosh-init/bosh-init-*)
+chmod +x ${bosh_init}
 
-cd $deployment_dir
+echo "using bosh-init CLI version..."
+${bosh_init} version
 
-$initexe deploy $manifest_filename
+pushd ${output_dir} > /dev/null
+  echo "deploying BOSH..."
 
-echo "Final state of director deployment:"
-echo "=========================================="
-cat director-manifest-state.json
-echo "=========================================="
+  set +e
+  BOSH_INIT_LOG_PATH="${logfile}" BOSH_INIT_LOG_LEVEL="${BOSH_INIT_LOG_LEVEL}" ${bosh_init} deploy ${manifest_filename}
+  bosh_init_exit_code="$?"
+  set -e
+
+  if [ ${bosh_init_exit_code} != 0 ]; then
+    echo "bosh-init deploy failed!" >&2
+    cat ${logfile} >&2
+    exit ${bosh_init_exit_code}
+  fi
+popd > /dev/null

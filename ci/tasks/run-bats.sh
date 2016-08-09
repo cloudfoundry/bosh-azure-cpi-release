@@ -2,90 +2,41 @@
 
 set -e
 
-source bosh-cpi-release/ci/tasks/utils.sh
-
-check_param BASE_OS
-check_param AZURE_CLIENT_ID
-check_param AZURE_CLIENT_SECRET
-check_param AZURE_TENANT_ID
-check_param AZURE_GROUP_NAME
-check_param AZURE_VNET_NAME_FOR_BATS
-check_param AZURE_CF_SUBNET_NAME
-check_param AZURE_DEFAULT_SECURITY_GROUP
-check_param BAT_VCAP_PASSWORD
-check_param BAT_NETWORK_CIDR
-check_param BAT_SECOND_STATIC_IP
-check_param BAT_NETWORK_RESERVED_RANGE
-check_param BAT_NETWORK_STATIC_RANGE
-check_param BAT_NETWORK_GATEWAY
-check_param BAT_NETWORK_STATIC_IP
-check_param BAT_DIRECTOR_PASSWORD
-check_param SSH_PRIVATE_KEY
+: ${AZURE_CLIENT_ID:?}
+: ${AZURE_CLIENT_SECRET:?}
+: ${AZURE_TENANT_ID:?}
+: ${AZURE_GROUP_NAME:?}
+: ${AZURE_VNET_NAME_FOR_BATS:?}
+: ${AZURE_CF_SUBNET_NAME:?}
+: ${AZURE_DEFAULT_SECURITY_GROUP:?}
+: ${BAT_VCAP_PASSWORD:?}
+: ${BAT_NETWORK_CIDR:?}
+: ${BAT_SECOND_STATIC_IP:?}
+: ${BAT_NETWORK_RESERVED_RANGE:?}
+: ${BAT_NETWORK_STATIC_RANGE:?}
+: ${BAT_NETWORK_GATEWAY:?}
+: ${BAT_NETWORK_STATIC_IP:?}
+: ${BAT_RSPEC_FLAGS:?}
+: ${BOSH_DIRECTOR_USERNAME:?}
+: ${BOSH_DIRECTOR_PASSWORD:?}
+: ${SSH_PRIVATE_KEY:?}
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
 
-DIRECTOR=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)
+DIRECTOR_PIP=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)
 CF_IP_ADDRESS=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-cf-bats --json | jq '.ipAddress' -r)
 
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}
 
-echo "DirectorIP =" $DIRECTOR
+work_dir=$(realpath .)
+bats_stemcell=$(realpath stemcell/*.tgz)
+bats_spec="${work_dir}/bats-config.yml"
+ssh_key_path="${work_dir}/shared.pem"
+bats_template="${work_dir}/azure.yml.erb"
 
-mkdir -p $PWD/keys
-echo "$SSH_PRIVATE_KEY" > $PWD/keys/bats.pem
-eval $(ssh-agent)
-chmod go-r $PWD/keys/bats.pem
-ssh-add $PWD/keys/bats.pem
-
-export BAT_DIRECTOR=$DIRECTOR
-export BAT_DNS_HOST=$DIRECTOR
-export BAT_STEMCELL=$(echo $PWD/stemcell/*.tgz)
-export BAT_DEPLOYMENT_SPEC="${PWD}/${BASE_OS}-bats-config.yml"
-export BAT_VCAP_PASSWORD=$BAT_VCAP_PASSWORD
-export BAT_VCAP_PRIVATE_KEY=$PWD/keys/bats.pem
-export BAT_INFRASTRUCTURE=azure
-export BAT_NETWORKING=manual
-export BAT_DIRECTOR_PASSWORD=$BAT_DIRECTOR_PASSWORD
-export BAT_RSPEC_FLAGS="--tag ~multiple_manual_networks --tag ~raw_ephemeral_storage"
-
-bosh -n target $BAT_DIRECTOR
-echo Using This version of bosh:
-bosh --version
-cat > "${BAT_DEPLOYMENT_SPEC}" <<EOF
----
-cpi: azure
-manifest_template_path: $(echo `pwd`/azure.yml.erb)
-properties:
-  uuid: $(bosh status --uuid)
-  stemcell:
-    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-    version: latest
-  vip: $CF_IP_ADDRESS
-  pool_size: 1
-  instances: 1
-  second_static_ip: $BAT_SECOND_STATIC_IP
-  networks:
-  - name: default
-    type: manual
-    static_ip: $BAT_NETWORK_STATIC_IP
-    cloud_properties:
-      resource_group_name: $AZURE_GROUP_NAME
-      virtual_network_name: $AZURE_VNET_NAME_FOR_BATS
-      subnet_name: $AZURE_CF_SUBNET_NAME
-      security_group: $AZURE_DEFAULT_SECURITY_GROUP
-    cidr: $BAT_NETWORK_CIDR
-    reserved: ['$BAT_NETWORK_RESERVED_RANGE']
-    static: ['$BAT_NETWORK_STATIC_RANGE']
-    gateway: $BAT_NETWORK_GATEWAY
-  - name: static
-    type: vip
-    cloud_properties:
-      resource_group_name: $AZURE_GROUP_NAME
-  key_name: bosh
-EOF
-cat > azure.yml.erb <<EOF
+cat > "${bats_template}" <<EOF
 ---
 name: <%= properties.name || "bat" %>
 director_uuid: <%= properties.uuid %>
@@ -215,8 +166,64 @@ properties:
     <% end %>
 EOF
 
-pushd bats
+echo "DirectorIP = " ${DIRECTOR_PIP}
+
+echo "${SSH_PRIVATE_KEY}" > ${ssh_key_path}
+chmod go-r ${ssh_key_path}
+eval $(ssh-agent)
+ssh-add ${ssh_key_path}
+
+export BAT_DIRECTOR=${DIRECTOR_PIP}
+export BAT_DNS_HOST=${DIRECTOR_PIP}
+export BAT_STEMCELL=${bats_stemcell}
+export BAT_DEPLOYMENT_SPEC=${bats_spec}
+export BAT_VCAP_PASSWORD=${BAT_VCAP_PASSWORD}
+export BAT_VCAP_PRIVATE_KEY=${ssh_key_path}
+export BAT_INFRASTRUCTURE=azure
+export BAT_NETWORKING=manual
+export BAT_DIRECTOR_USER=${BOSH_DIRECTOR_USERNAME}
+export BAT_DIRECTOR_PASSWORD=${BOSH_DIRECTOR_PASSWORD}
+export BAT_RSPEC_FLAGS="--tag ~multiple_manual_networks --tag ~raw_ephemeral_storage"
+
+bosh -n target ${BAT_DIRECTOR}
+echo Using This version of bosh:
+bosh --version
+
+cat > "${BAT_DEPLOYMENT_SPEC}" <<EOF
+---
+cpi: azure
+manifest_template_path: ${bats_template}
+properties:
+  uuid: $(bosh status --uuid)
+  stemcell:
+    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+    version: latest
+  vip: ${CF_IP_ADDRESS}
+  pool_size: 1
+  instances: 1
+  second_static_ip: ${BAT_SECOND_STATIC_IP}
+  networks:
+  - name: default
+    type: manual
+    static_ip: ${BAT_NETWORK_STATIC_IP}
+    cloud_properties:
+      resource_group_name: ${AZURE_GROUP_NAME}
+      virtual_network_name: ${AZURE_VNET_NAME_FOR_BATS}
+      subnet_name: ${AZURE_CF_SUBNET_NAME}
+      security_group: ${AZURE_DEFAULT_SECURITY_GROUP}
+    cidr: ${BAT_NETWORK_CIDR}
+    reserved: [${BAT_NETWORK_RESERVED_RANGE}]
+    static: [${BAT_NETWORK_STATIC_RANGE}]
+    gateway: ${BAT_NETWORK_GATEWAY}
+  - name: static
+    type: vip
+    cloud_properties:
+      resource_group_name: ${AZURE_GROUP_NAME}
+  key_name: bosh
+EOF
+
+pushd bats > /dev/null
   ./write_gemfile
   bundle install
   bundle exec rspec spec ${BAT_RSPEC_FLAGS}
-popd
+popd > /dev/null

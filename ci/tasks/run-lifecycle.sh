@@ -2,19 +2,17 @@
 
 set -e
 
-source bosh-cpi-release/ci/tasks/utils.sh
-
-check_param AZURE_SUBSCRIPTION_ID
-check_param AZURE_CLIENT_ID
-check_param AZURE_CLIENT_SECRET
-check_param AZURE_TENANT_ID
-check_param AZURE_GROUP_NAME_FOR_VMS
-check_param AZURE_GROUP_NAME_FOR_NETWORK
-check_param AZURE_STORAGE_ACCOUNT_NAME
-check_param AZURE_VNET_NAME_FOR_LIFECYCLE
-check_param AZURE_BOSH_SUBNET_NAME
-check_param AZURE_DEFAULT_SECURITY_GROUP
-check_param SSH_PUBLIC_KEY
+: ${AZURE_SUBSCRIPTION_ID:?}
+: ${AZURE_TENANT_ID:?}
+: ${AZURE_CLIENT_ID:?}
+: ${AZURE_CLIENT_SECRET:?}
+: ${AZURE_STORAGE_ACCOUNT_NAME:?}
+: ${AZURE_GROUP_NAME_FOR_VMS:?}
+: ${AZURE_GROUP_NAME_FOR_NETWORK:?}
+: ${AZURE_VNET_NAME_FOR_LIFECYCLE:?}
+: ${AZURE_BOSH_SUBNET_NAME:?}
+: ${SSH_PUBLIC_KEY:?}
+: ${AZURE_DEFAULT_SECURITY_GROUP:?}
 
 export BOSH_AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
 export BOSH_AZURE_TENANT_ID=${AZURE_TENANT_ID}
@@ -39,14 +37,14 @@ export AZURE_STORAGE_ACCOUNT=${AZURE_STORAGE_ACCOUNT_NAME}
 export AZURE_STORAGE_ACCESS_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} -g ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.[0].value' -r)
 
 # Always upload the latest stemcell for lifecycle test
-tar -xf ${PWD}/stemcell/*.tgz -C /mnt/
+tar -xf $(realpath stemcell/*.tgz) -C /mnt/
 tar -xf /mnt/image -C /mnt/
 azure storage blob upload --quiet --blobtype PAGE /mnt/root.vhd stemcell ${BOSH_AZURE_STEMCELL_ID}.vhd
 
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}
 
-pushd bosh-cpi-release/src/bosh_azure_cpi
+pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   bundle install
   bundle exec rspec spec/integration
-popd
+popd > /dev/null

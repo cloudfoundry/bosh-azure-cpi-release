@@ -1,20 +1,25 @@
 ---
 platform: linux
-image: docker:///boshcpi/azure-cpi-release
+image_resource:
+  type: docker-image
+  source: {repository: boshcpi/azure-cpi-release}
+
 inputs:
-- name: bosh-cpi-release
+  - name: bosh-cpi-src
+
 run:
-  path: bosh-cpi-release/ci/tasks/azure-provision.sh
+  path: bosh-cpi-src/ci/tasks/azure-provision.sh
+
 params:
-  AZURE_CLIENT_ID:               replace-me
-  AZURE_CLIENT_SECRET:           replace-me
-  AZURE_TENANT_ID:               replace-me
-  AZURE_GROUP_NAME_FOR_VMS:      replace-me
-  AZURE_GROUP_NAME_FOR_NETWORK:  replace-me
-  AZURE_REGION_NAME:             replace-me
-  AZURE_REGION_SHORT_NAME:       replace-me
-  AZURE_STORAGE_ACCOUNT_NAME:    replace-me
-  AZURE_VNET_NAME_FOR_BATS:      replace-me
-  AZURE_VNET_NAME_FOR_LIFECYCLE: replace-me
-  AUZRE_BOSH_SUBNET_NAME:        replace-me
-  AZURE_CF_SUBNET_NAME:          replace-me
+  AZURE_CLIENT_ID:               ""
+  AZURE_CLIENT_SECRET:           ""
+  AZURE_TENANT_ID:               ""
+  AZURE_GROUP_NAME_FOR_VMS:      ""
+  AZURE_GROUP_NAME_FOR_NETWORK:  ""
+  AZURE_REGION_NAME:             ""
+  AZURE_REGION_SHORT_NAME:       ""
+  AZURE_STORAGE_ACCOUNT_NAME:    ""
+  AZURE_VNET_NAME_FOR_BATS:      ""
+  AZURE_VNET_NAME_FOR_LIFECYCLE: ""
+  AUZRE_BOSH_SUBNET_NAME:        ""
+  AZURE_CF_SUBNET_NAME:          ""

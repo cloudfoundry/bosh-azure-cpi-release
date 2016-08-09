@@ -2,20 +2,18 @@
 
 set -e
 
-source bosh-cpi-release/ci/tasks/utils.sh
-
-check_param AZURE_CLIENT_ID
-check_param AZURE_CLIENT_SECRET
-check_param AZURE_TENANT_ID
-check_param AZURE_GROUP_NAME_FOR_VMS
-check_param AZURE_GROUP_NAME_FOR_NETWORK
-check_param AZURE_REGION_NAME
-check_param AZURE_REGION_SHORT_NAME
-check_param AZURE_STORAGE_ACCOUNT_NAME
-check_param AZURE_VNET_NAME_FOR_BATS
-check_param AZURE_VNET_NAME_FOR_LIFECYCLE
-check_param AZURE_BOSH_SUBNET_NAME
-check_param AZURE_CF_SUBNET_NAME
+: ${AZURE_CLIENT_ID:?}
+: ${AZURE_CLIENT_SECRET:?}
+: ${AZURE_TENANT_ID:?}
+: ${AZURE_GROUP_NAME_FOR_VMS:?}
+: ${AZURE_GROUP_NAME_FOR_NETWORK:?}
+: ${AZURE_REGION_NAME:?}
+: ${AZURE_REGION_SHORT_NAME:?}
+: ${AZURE_STORAGE_ACCOUNT_NAME:?}
+: ${AZURE_VNET_NAME_FOR_BATS:?}
+: ${AZURE_VNET_NAME_FOR_LIFECYCLE:?}
+: ${AZURE_BOSH_SUBNET_NAME:?}
+: ${AZURE_CF_SUBNET_NAME:?}
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
@@ -23,7 +21,7 @@ azure config mode arm
 set +e
 
 resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK}"
-for resource_group_name in $resource_group_names
+for resource_group_name in ${resource_group_names}
 do
   # Check if the resource group already exists
   echo "azure group list | grep ${resource_group_name}"
@@ -47,7 +45,7 @@ done
 set -e
 
 resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK}"
-for resource_group_name in $resource_group_names
+for resource_group_name in ${resource_group_names}
 do
   echo azure group create ${resource_group_name} ${AZURE_REGION_SHORT_NAME}
   azure group create ${resource_group_name} ${AZURE_REGION_SHORT_NAME}
@@ -67,7 +65,7 @@ do
     }
   }
 EOF
-  azure group deployment create ${resource_group_name} --template-file ./bosh-cpi-release/ci/assets/azure/network.json --parameters-file ./network-parameters.json
+  azure group deployment create ${resource_group_name} --template-file ./bosh-cpi-src/ci/assets/azure/network.json --parameters-file ./network-parameters.json
 done
 
 # Setup the storage account
