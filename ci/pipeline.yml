@@ -143,6 +143,7 @@ jobs:
         BOSH_DIRECTOR_USERNAME:         {{bosh_director_username}}
         BOSH_DIRECTOR_PASSWORD:         {{bosh_director_password}}
         SSH_PRIVATE_KEY:                {{ssh_private_key}}
+        COLUMNS:                        80
 
     ensure:
       do:
