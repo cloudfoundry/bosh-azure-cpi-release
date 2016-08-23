@@ -6,9 +6,9 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
 * A deployment of Diego
 
-  You have a deployment of Cloud Foundry with Diego enabled.
+  You have a deployment of Cloud Foundry with Diego enabled. If you have followed the latest [guidance](../../guidance.md) via ARM templates on Azure, you already have Diego enabled by default.
 
-* A new subnet for Windows Servers ##
+* A new subnet for Windows Servers
 
   1. Sign in to Azure portal.
   2. Find your resource group which was created for your cloud foundry.
@@ -17,9 +17,7 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
     - Name: **Windows**, CIDR: **10.0.48.0/20**
 
-    With the subnet "Diego", you will have two subnets in your virtual network.
-
-    ![create-two-subnets](./create-two-subnets.png "create-two-subnets")
+    ![create-new-subnet](./create-new-subnet.png "create-new-subnet")
 
 ## 2 Update Cloud Foundry
 
@@ -30,23 +28,23 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
     - name: api_z1
       properties:
         nfs_server:
-          allow_from_entries: [10.0.16.0/20, 10.0.32.0/20]
+          allow_from_entries: [10.0.16.0/20]
     =>
     jobs:
     - name: api_z1
       properties:
         nfs_server:
-          allow_from_entries: [10.0.16.0/20, 10.0.32.0/20, 10.0.48.0/20]
+          allow_from_entries: [10.0.16.0/20, 10.0.48.0/20]
   ```
 
   ```
     properties:
       nfs_server:
-        allow_from_entries: [10.0.16.0/20, 10.0.32.0/20]
+        allow_from_entries: [10.0.16.0/20]
     =>
     properties:
       nfs_server:
-        allow_from_entries: [10.0.16.0/20, 10.0.32.0/20, 10.0.48.0/20]
+        allow_from_entries: [10.0.16.0/20, 10.0.48.0/20]
   ```
 
 2. Set BOSH deployment to cloud foundry
@@ -67,18 +65,13 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
   bosh -n deploy
   ```
 
-  >**NOTE:** When updating your cloud foundry, you may hit below error. You can ignore it.
-
-  ```
-      Failed updating job ha_proxy_z1 > ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd) (canary): `ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd)' is not running after update. Review logs for failed jobs: haproxy_config, haproxy (00:10:12)
-    Error 400007: `ha_proxy_z1/0 (ad06f763-9eb2-4db3-a318-2367b7f47bbd)' is not running after update. Review logs for failed jobs: haproxy_config, haproxy
-  ```
-
 ## 3 Add Windows stack
+
+### 3.1 Prepare Windows Virtual Machine
 
 1. Sign in to the Azure portal.
 
-2. On the Hub menu, click **New** > **Compute** > **Windows Server 2012 R2 Datacenter**.
+2. On the Hub menu, click **New** > **Virtual Machines** > **Windows Server 2012 R2 Datacenter**.
 
   ![select-windows-server-2k12R2](./windows-stack-select-windows-server-2k12R2.png "select-windows-server-2k12R2")
 
@@ -86,7 +79,7 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
   ![windows-stack-select-resource-manager](./windows-stack-select-resource-manager.png "windows-stack-select-resource-manager")
 
-4. On the **Create virtual machine** blade, click **Basics**. Enter a **Name** you want for the virtual machine, the administrative **User name**, and a strong **Password**. Please select the **subscription** which you used to deploy cloud foundry. And specify the existing **Resource group** which was created for your cloud foundry and the same **Location** as that for your default storage account.
+4. On the **Create virtual machine** blade, click **Basics**. Select **VM disk type**, enter a **Name** you want for the virtual machine, the administrative **User name**, and a strong **Password**. Please select the **subscription** which you used to deploy cloud foundry. And specify the existing **Resource group** which was created for your cloud foundry and the same **Location** as that for your default storage account.
 
   ![windows-stack-basics](./windows-stack-basics.png "windows-stack-basics")
 
@@ -141,16 +134,39 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
   ![windows-stack-disable-ie-enhanced-security-2.PNG](./windows-stack-disable-ie-enhanced-security-2.PNG "windows-stack-disable-ie-enhanced-security-2")
 
-18. Download [all-in-one](http://cloudfoundry.blob.core.windows.net/windowsstack/all-in-one.zip) and extract it. 
+### 3.2 Deploy Diego Windows on the VM
 
-19. Right click **all-in-one\setup.ps1** and click **Run with PowerShell**.
+1. Find compatible releases version.
 
-20. In command line run **all-in-one\generate.exe** with the following argument template:
+  [diego-windows-release](https://github.com/cloudfoundry/diego-windows-release/releases) and [garden-windows-release](https://github.com/cloudfoundry/garden-windows-release/releases) are required to deploy a Windows Diego.
+
+  Read release notes carefully and find the compatible version of `diego-windows-release` and `garden-windows-release`, please be noted that they also need to be compatible with diego ([diego-release](https://github.com/cloudfoundry/diego-release/releases)) version that you have deployed in [Prerequisites](#1-prerequisites).
+
+  For example, release note of [diego-windows-release](https://github.com/cloudfoundry/diego-windows-release/releases) v0.400:
+
+  ```
+  Built using cloudfoundry/diego-release@23caa9d; Compatible with garden-windows v0.149
+  ```
+
+  This means `diego-windows-release v0.400` is compatible with `garden-windows` v0.149 and `diego-release@23caa9d` (which is released as `diego-release` v0.1476.0). If your deployments in [Prerequisites](#1-prerequisites) is using `diego-release` v0.1476.0, these release versions work for you.
+
+2. Download releases and tools.
+
+  Once you have determined the release versions, go ahead to download releases and tools from the release link of `diego-windows-release` and `garden-windows`.
+
+  * from `garden-windows`, downloads
+    - setup.ps1
+    - GardenWindows.msi
+  * from `diego-windows-release`, downloads
+    - generate.exe
+    - DiegoWindows.msi
+
+3. Right click **setup.ps1** and click **Run with PowerShell**.
+
+4. In command line run **generate.exe** with the following argument template to generate **install.bat** in current directory.
 
   ```
   generate.exe -outputDir=[the directory where the script will output its files]
-               -windowsUsername=[the username of an administrator user for Containerizer to run as]
-               -windowsPassword=[the password for the same user] 
                -boshUrl=[the URL for your BOSH director, with credentials]
                -machineIp=[(optional) IP address of this cell. Auto-discovered if ommitted]
   ```
@@ -158,10 +174,16 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
   For example:
 
   ```
-  generate.exe -outputDir=.\diego -windowsUsername=AzureAdmin -windowsPassword="MyPass123" -boshUrl=https://admin:admin@10.0.0.4:25555 -machineIp=10.0.48.4
+  generate.exe -outputDir=.\ -boshUrl=https://admin:password@10.0.0.4:25555 -machineIp=10.0.48.4
   ```
 
-21. Run the **install.bat** script as Administrator in the output directory "**.\diego**". This will install both of the MSIs with all of the arguments they require.
+  You can get user and password from `jobs.properties.director.user_management` of your bosh deployment yaml file (e.g. `bosh.yml`).
+
+  >**Note:** Parameters for generate.exe might change for different releases, you can use run `generate.exe /?` to get help.
+
+5. Run the **install.bat** script as Administrator in the output directory "**.\**". This will install both of the MSIs with all of the arguments they require.
+
+  >**Note:** `GardenWindows.msi` and `DiegoWindows.msi` must be in the same directory with `install.bat`, if `-outputDir` in previous step specifies a different directory, you need to copy/move `GardenWindows.msi` and `DiegoWindows.msi` to that direcotry before running `install.bat`
 
 ## 4 Configure CF Environment
 
@@ -172,14 +194,12 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
   ```
   wget -O cf.deb http://go-cli.s3-website-us-east-1.amazonaws.com/releases/v6.14.1/cf-cli-installer_6.14.1_x86-64.deb
   sudo dpkg -i cf.deb
-  cf install-plugin Diego-Enabler -r CF-Community
   ```
 
 3. Configure your space
 
   ```
   cf login -a https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io --skip-ssl-validation -u admin -p c1oudc0w
-  cf enable-feature-flag diego_docker
   cf create-org diego
   cf target -o diego
   cf create-space diego
@@ -203,7 +223,6 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
   ```
   cd DiegoMVC
   cf push diegoMVC -m 1g -s windows2012R2 -b https://github.com/ryandotsmith/null-buildpack.git --no-start -p ./
-  cf enable-diego diegoMVC
   cf start diegoMVC
   ```
 
@@ -213,31 +232,9 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
   ![diegomvc](./diegomvc.png "diegomvc")
 
-
 ## 7 Known Issues
 
-1. You may hit below error when executing 'cf enable-diego diegoMVC'. Just retry it.
-
-  ```
-  $ cf enable-diego diegoMVC
-  Setting diegoMVC Diego support to true
-  err 1 UnknownError - An unknown error occurred. [{
-     "error_code": "UnknownError",
-     "description": "An unknown error occurred.",
-     "code": 10001
-  }
-
-  ]
-  FAILED
-  Error:  UnknownError - An unknown error occurred.
-  {
-     "error_code": "UnknownError",
-     "description": "An unknown error occurred.",
-     "code": 10001
-  }
-  ```
-
-2. You may hit below error when executing 'cf start diegoMVC'. Just retry it.
+1. You may hit below error when executing 'cf start diegoMVC'. Just retry it.
 
   ```
   $ cf start diegoMVC
