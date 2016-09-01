@@ -1,6 +1,5 @@
 module Bosh::AzureCloud
   class StemcellManager
-    STEMCELL_CONTAINER = 'stemcell'
     STEMCELL_PREFIX    = 'bosh-stemcell'
     STEMCELL_TABLE     = 'stemcells'
 
@@ -16,14 +15,6 @@ module Bosh::AzureCloud
       @table_manager = table_manager
       @logger = Bosh::Clouds::Config.logger
       @default_storage_account_name = azure_properties['storage_account_name']
-    end
-
-    def prepare(storage_account_name)
-      @logger.info("prepare(#{storage_account_name})")
-      unless @blob_manager.has_container?(storage_account_name, STEMCELL_CONTAINER)
-        @logger.debug("Prepare to create container #{STEMCELL_CONTAINER} in #{storage_account_name}")
-        @blob_manager.create_container(storage_account_name, STEMCELL_CONTAINER, {})
-      end
     end
 
     def delete_stemcell(name)
@@ -112,6 +103,11 @@ module Bosh::AzureCloud
             # Another process is copying the same stemcell
             return wait_stemcell_copy(storage_account_name, name, timeout = DEFAULT_COPY_STEMCELL_TIMEOUT)
           end
+
+          # Create containers if they are missing.
+          # Background: When users create a storage account without containers in it, and use that storage account for a resource pool,
+          #             CPI will try to create related containers when copying stemcell to that storage account.
+          @blob_manager.prepare(storage_account_name)
 
           @logger.info("Copy stemcell #{name} to #{storage_account_name}")
           source_blob_uri = get_stemcell_uri(@default_storage_account_name, name)

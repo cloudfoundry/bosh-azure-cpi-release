@@ -1,6 +1,5 @@
 module Bosh::AzureCloud
   class DiskManager
-    DISK_CONTAINER         = 'bosh'
     OS_DISK_PREFIX         = 'bosh-os'
     DATA_DISK_PREFIX       = 'bosh-data'
     EPHEMERAL_DISK_POSTFIX = 'ephemeral'
@@ -14,14 +13,6 @@ module Bosh::AzureCloud
       @azure_properties = azure_properties
       @blob_manager = blob_manager
       @logger = Bosh::Clouds::Config.logger
-    end
-
-    def prepare(storage_account_name)
-      @logger.info("prepare(#{storage_account_name})")
-      unless @blob_manager.has_container?(storage_account_name, DISK_CONTAINER)
-        @logger.debug("Prepare to create container #{DISK_CONTAINER} in #{storage_account_name}")
-        @blob_manager.create_container(storage_account_name, DISK_CONTAINER)
-      end
     end
 
     def delete_disk(disk_name)

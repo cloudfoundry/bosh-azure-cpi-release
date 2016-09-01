@@ -521,4 +521,59 @@ describe Bosh::AzureCloud::BlobManager do
       end
     end
   end
+
+  describe "#prepare" do
+    let(:another_storage_account_name) { "another-storage-account-name" }
+    let(:another_storage_account) {
+      {
+        :id => "foo",
+        :name => another_storage_account_name,
+        :location => "bar",
+        :provisioning_state => "bar",
+        :account_type => "foo",
+        :storage_blob_host => "fake-blob-endpoint",
+        :storage_table_host => "fake-table-endpoint"
+      }
+    }
+    let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
+    before do
+      allow(azure_client2).to receive(:get_storage_account_by_name).
+        with(another_storage_account_name).
+        and_return(another_storage_account)
+    end
+
+    context "when the container exists" do
+      let(:container) { instance_double(Azure::Storage::Blob::Container::Container) }
+      let(:container_properties) { "fake-properties" }
+
+      before do
+        allow(blob_service).to receive(:get_container_properties).
+          with(container_name).and_return(container)
+        allow(container).to receive(:properties).and_return(container_properties)
+      end
+
+      it "does not create the container" do
+        expect(blob_service).not_to receive(:create_container)
+
+        blob_manager.prepare(another_storage_account_name, containers: [container_name])
+      end
+    end
+
+    context "when the container does not exist" do
+      let(:options) { {} }
+
+      before do
+        allow(blob_service).to receive(:get_container_properties).
+          with(container_name).
+          and_raise("Error code: (404). This is a test!")
+      end
+
+      it "create the container" do
+        expect(blob_service).to receive(:create_container).
+          with(container_name, options)
+
+        blob_manager.prepare(another_storage_account_name, containers: [container_name])
+      end
+    end
+  end
 end

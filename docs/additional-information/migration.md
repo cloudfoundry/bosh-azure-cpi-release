@@ -50,7 +50,7 @@ If you are customers of [Cloud Foundry on Azure Preview 2](https://azure.microso
 
     If this step is not done, you may hit the error [**#4**](#table_not_found).
 
-  3. Create a new storage account and containers in it manually.
+  3. Create a new storage account and containers in it.
 
     ```
     azure storage account create --location $location --type $account-type --resource-group $resource-group-name $storage-account-name
@@ -62,9 +62,9 @@ If you are customers of [Cloud Foundry on Azure Preview 2](https://azure.microso
     azure storage container create --account-name $storage-account-name --account-key $storage-account-key stemcell
     ```
 
-    If this step is not done, you may hit the error [**#5**](#storage_account_not_found).
+    Instead of manual operation, you can also use CPI to create a new storage account and containers automatically (refer to this [guide](../advanced/deploy-cloudfoundry-for-enterprise#multiple-storage-accounts)).
 
-  Please click [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/blob/master/src/bosh_azure_cpi/README.md) to learn more new settings.
+  Please click [**HERE**](http://bosh.io/docs/azure-cpi.html) to learn more new settings.
 
 ## Error
 
@@ -110,11 +110,4 @@ If you are customers of [Cloud Foundry on Azure Preview 2](https://azure.microso
 
   ```
   Error 100: Unknown CPI error 'Unknown' with message 'TableNotFound (404): The table specified does not exist.
-  ```
-
-<a name="storage_account_not_found"></a>
-5. Storage account not found
-
-  ```
-  Error 100: Unknown CPI error 'Bosh::AzureCloud::AzureError' with message 'http_post - error: 404 message: {"error":{"code":"ResourceNotFound","message":"The Resource 'Microsoft.Storage/storageAccounts/<your-storage-account>' under resource group '<your-resource-group>' was not found."}}'
   ```

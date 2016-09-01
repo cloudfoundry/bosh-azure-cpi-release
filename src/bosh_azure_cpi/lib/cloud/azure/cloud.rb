@@ -546,8 +546,7 @@ module Bosh::AzureCloud
           end
           created = @azure_client2.create_storage_account(storage_account_name, location, resource_pool['storage_account_type'], {})
         end
-        @stemcell_manager.prepare(storage_account_name)
-        @disk_manager.prepare(storage_account_name)
+        @blob_manager.prepare(storage_account_name)
         true
       rescue => e
         error_msg = "create_storage_account - "

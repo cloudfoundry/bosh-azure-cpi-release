@@ -9,39 +9,6 @@ describe Bosh::AzureCloud::StemcellManager do
   let(:stemcell_name) { "fake-stemcell-name" }
   let(:storage_account_name) { "fake-storage-account-name" }
 
-  describe "#prepare" do
-    context "when the container exists" do
-      before do
-        allow(blob_manager).to receive(:has_container?).
-          and_return(true)
-      end
-
-      it "should not create the container" do
-        expect(blob_manager).not_to receive(:create_container)
-
-        expect {
-          stemcell_manager.prepare(storage_account_name)
-        }.not_to raise_error
-      end
-    end
-
-    context "when the container does not exist" do
-      before do
-        allow(blob_manager).to receive(:has_container?).
-          and_return(false)
-      end
-
-      it "should create the container" do
-        expect(blob_manager).to receive(:create_container).
-          and_return(true)
-
-        expect {
-          stemcell_manager.prepare(storage_account_name)
-        }.not_to raise_error
-      end
-    end
-  end
-
   describe "#create_stemcell" do
     before do
       allow(Open3).to receive(:capture2e).and_return(["",
@@ -227,6 +194,59 @@ describe Bosh::AzureCloud::StemcellManager do
           expect{
             stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
           }.to raise_error
+        end
+      end
+
+      context "when there is no entity record for the stemcell in stemcell_table" do
+        let(:entity_create) {
+          {
+            :PartitionKey => stemcell_name,
+            :RowKey       => storage_account_name,
+            :Status       => 'pending'
+          }
+        }
+        let(:entity_update) {
+          {
+            'PartitionKey' => stemcell_name,
+            'RowKey'       => storage_account_name,
+            'Status'       => 'success'
+          }
+        }
+
+        let(:entities_query_before_insert) { [] }
+        let(:entities_query_after_insert) {
+          [
+            {
+              'PartitionKey' => stemcell_name,
+              'RowKey'       => storage_account_name,
+              'Status'       => 'pending'
+            }
+          ]
+        }
+
+        let(:stemcell_table) { 'stemcells' }
+        let(:stemcell_container) { 'stemcell' }
+        let(:stemcell_blob_uri) { 'fake-blob-url' }
+
+        it "should try to prepare containers, copy stecmell, and insert/update record to stemcell table" do
+          allow(table_manager).to receive(:insert_entity).
+            with(stemcell_table, entity_create).
+            and_return(true)
+          allow(blob_manager).to receive(:get_blob_uri).
+            with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd").
+            and_return(stemcell_blob_uri)
+          allow(table_manager).to receive(:query_entities).
+            and_return(entities_query_before_insert, entities_query_after_insert)
+
+          expect(blob_manager).to receive(:prepare).
+            with(storage_account_name)
+          expect(blob_manager).to receive(:copy_blob).
+            with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
+          expect(table_manager).to receive(:update_entity).
+            with(stemcell_table, entity_update)
+          expect(
+            stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+          ).to be(true)
         end
       end
     end
