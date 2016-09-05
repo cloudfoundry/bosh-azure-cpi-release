@@ -20,12 +20,13 @@ describe Bosh::AzureCloud::Cloud do
     @secondary_public_ip             = ENV['BOSH_AZURE_SECONDARY_PUBLIC_IP']             || raise("Missing BOSH_AZURE_SECONDARY_PUBLIC_IP")
   end
 
-  let(:vnet_name)     { ENV.fetch('BOSH_AZURE_VNET_NAME', 'boshvnet-crp') }
-  let(:subnet_name)   { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'Bosh') }
-  let(:instance_type) { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1') }
-  let(:vm_metadata) { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
-  let(:network_spec) { {} }
-  let(:resource_pool) { { 'instance_type' => instance_type } }
+  let(:vnet_name)           { ENV.fetch('BOSH_AZURE_VNET_NAME', 'boshvnet-crp') }
+  let(:subnet_name)         { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
+  let(:second_subnet_name)  { ENV.fetch('BOSH_AZURE_SECOND_SUBNET_NAME', 'BOSH2') }
+  let(:instance_type)       { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1') }
+  let(:vm_metadata)         { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
+  let(:network_spec)        { {} }
+  let(:resource_pool)       { { 'instance_type' => instance_type } }
 
   subject(:cpi) do
     described_class.new(
@@ -194,6 +195,38 @@ describe Bosh::AzureCloud::Cloud do
           }
         },
         'network_b' => {
+          'type' => 'vip',
+          'ip' => @primary_public_ip
+        }
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      vm_lifecycle
+    end
+  end
+
+  context 'multiple nics' do
+    let(:instance_type) { 'Standard_D2' }
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'dynamic',
+          'default' => ['dns', 'gateway'],
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        },
+        'network_b' => {
+          'type' => 'manual',
+          'ip' => "10.0.1.#{Random.rand(10..99)}",
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => second_subnet_name
+          }
+        },
+        'network_c' => {
           'type' => 'vip',
           'ip' => @primary_public_ip
         }

@@ -29,7 +29,9 @@ jobs:
       AZURE_REGION_SHORT_NAME:        {{azure_region_short_name}}
       AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
       AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
       AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
+      AZURE_CF_SECOND_SUBNET_NAME:    {{azure_cf_second_subnet_name}}
 
 - name: reset-resources
   serial: true
@@ -49,7 +51,9 @@ jobs:
       AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
       AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
       AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
       AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
+      AZURE_CF_SECOND_SUBNET_NAME:    {{azure_cf_second_subnet_name}}
 
 - name: build-candidate
   serial: true
@@ -87,6 +91,7 @@ jobs:
       AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
       AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
       AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
       AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
       SSH_PUBLIC_KEY:                 {{ssh_public_key}}
 
@@ -126,24 +131,30 @@ jobs:
     - task: run-bats
       file: bosh-cpi-src/ci/tasks/run-bats.yml
       params:
-        AZURE_CLIENT_ID:                {{azure_client_id}}
-        AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-        AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_GROUP_NAME:               {{azure_group_name_for_network}}
-        AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
-        AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
-        AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
-        BAT_NETWORK_CIDR:               {{bat_network_cidr}}
-        BAT_NETWORK_RESERVED_RANGE:     {{bat_network_reserved_range}}
-        BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
-        BAT_NETWORK_STATIC_RANGE:       {{bat_network_static_range}}
-        BAT_NETWORK_STATIC_IP:          {{bat_network_static_ip}}
-        BAT_SECOND_STATIC_IP:           {{bat_second_static_ip}}
-        BAT_VCAP_PASSWORD:              {{bat_vcap_password}}
-        BOSH_DIRECTOR_USERNAME:         {{bosh_director_username}}
-        BOSH_DIRECTOR_PASSWORD:         {{bosh_director_password}}
-        SSH_PRIVATE_KEY:                {{ssh_private_key}}
-        COLUMNS:                        80
+        AZURE_CLIENT_ID:                    {{azure_client_id}}
+        AZURE_CLIENT_SECRET:                {{azure_client_secret}}
+        AZURE_TENANT_ID:                    {{azure_tenant_id}}
+        AZURE_GROUP_NAME:                   {{azure_group_name_for_network}}
+        AZURE_VNET_NAME_FOR_BATS:           {{azure_vnet_name_for_bats}}
+        AZURE_CF_SUBNET_NAME:               {{azure_cf_subnet_name}}
+        AZURE_CF_SECOND_SUBNET_NAME:        {{azure_cf_second_subnet_name}}
+        AZURE_DEFAULT_SECURITY_GROUP:       {{azure_default_security_group}}
+        BAT_NETWORK_CIDR:                   {{bat_network_cidr}}
+        BAT_SECOND_NETWORK_CIDR:            {{bat_second_network_cidr}}
+        BAT_NETWORK_RESERVED_RANGE:         {{bat_network_reserved_range}}
+        BAT_SECOND_NETWORK_RESERVED_RANGE:  {{bat_second_network_reserved_range}}
+        BAT_NETWORK_GATEWAY:                {{bat_network_gateway}}
+        BAT_SECOND_NETWORK_GATEWAY:         {{bat_second_network_gateway}}
+        BAT_NETWORK_STATIC_RANGE:           {{bat_network_static_range}}
+        BAT_SECOND_NETWORK_STATIC_RANGE:    {{bat_second_network_static_range}}
+        BAT_NETWORK_STATIC_IP:              {{bat_network_static_ip}}
+        BAT_SECOND_NETWORK_STATIC_IP:       {{bat_second_network_static_ip}}
+        BAT_SECOND_STATIC_IP:               {{bat_second_static_ip}}
+        BAT_VCAP_PASSWORD:                  {{bat_vcap_password}}
+        BOSH_DIRECTOR_USERNAME:             {{bosh_director_username}}
+        BOSH_DIRECTOR_PASSWORD:             {{bosh_director_password}}
+        SSH_PRIVATE_KEY:                    {{ssh_private_key}}
+        COLUMNS:                            80
 
     ensure:
       do:

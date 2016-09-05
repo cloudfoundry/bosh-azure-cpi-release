@@ -750,7 +750,7 @@ describe Bosh::AzureCloud::AzureClient2 do
            :uri  => "foo",
            :caching => "bar"
         }],
-        :network_interface => fake_nic
+        :network_interfaces => [fake_nic]
       }
     }
 

@@ -148,7 +148,7 @@ describe Bosh::AzureCloud::Cloud do
         and_return(stemcell_uri)
       allow(vm_manager).to receive(:create).and_return(vm_params)
       allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
-          with(networks_spec).
+          with(azure_properties, networks_spec).
           and_return(network_configurator)
       allow(registry).to receive(:update_settings)
       allow(client2).to receive(:get_storage_account_by_name).

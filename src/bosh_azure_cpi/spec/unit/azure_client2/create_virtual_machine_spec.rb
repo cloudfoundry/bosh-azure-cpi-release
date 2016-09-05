@@ -51,7 +51,10 @@ describe Bosh::AzureCloud::AzureClient2 do
         }
       }
     end
-    let(:network_interface) { {:id => "a"} }
+    let(:network_interfaces) {[
+      {:id => "a"},
+      {:id => "a"}
+    ]}
 
     context "when token is valid, create operation is accepted and completed" do
       context "When the ephemeral disk is not nil" do
@@ -75,7 +78,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interface)
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -119,7 +122,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interface)
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -162,7 +165,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interface)
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -176,7 +179,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interface)
+          azure_client2.create_virtual_machine(vm_params, network_interfaces)
         }.to raise_error /get_token - http code: 404/
       end
 
@@ -187,7 +190,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interface)
+          azure_client2.create_virtual_machine(vm_params, network_interfaces)
         }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
       end
 
@@ -205,7 +208,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interface)
+          azure_client2.create_virtual_machine(vm_params, network_interfaces)
         }.to raise_error /Azure authentication failed: Token is invalid./
       end
     end
@@ -239,7 +242,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         it "should not raise an error" do
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interface)
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -266,7 +269,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         it "should raise an error if authentication retry fails" do
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interface)
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
           }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
         end
       end
@@ -287,8 +290,28 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interface)
+          azure_client2.create_virtual_machine(vm_params, network_interfaces)
         }.to raise_error Bosh::AzureCloud::AzureConflictError
+      end
+    end
+
+    context "when network interface count exceeds the max allowed NIC number" do
+      it "should raise AzureError" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:put, vm_uri).to_return(
+          :status => 400,
+          :body => 'The number of network interfaces for virtual machine xxx exceeds the maximum allowed for the virtual machine size Standard_D1.',
+          :headers => {})
+
+        expect {
+          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+        }.to raise_error /The number of network interfaces for virtual machine xxx exceeds the maximum/
       end
     end
 
@@ -313,7 +336,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interface)
+          azure_client2.create_virtual_machine(vm_params, network_interfaces)
         }.to raise_error /check_completion - http code: 404/
       end
 
@@ -337,7 +360,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interface)
+          azure_client2.create_virtual_machine(vm_params, network_interfaces)
         }.to raise_error /status: Cancelled/
       end
     end
