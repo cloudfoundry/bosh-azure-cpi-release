@@ -37,7 +37,7 @@ describe Bosh::AzureCloud::BlobManager do
       and_return(storage_account)
     allow(azure_client).to receive(:storage_blob_host=)
     allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
-    allow(azure_client).to receive(:blobClient).
+    allow(azure_client).to receive(:blob_client).
       and_return(blob_service)
     allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).
       and_return(exponential_retry)
