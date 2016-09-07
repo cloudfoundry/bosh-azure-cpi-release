@@ -1,4 +1,18 @@
-# Push your first .NET application to cloud foundry on Azure
+There are two ways to run ASP.NET applications on Cloud Foundry: with "cflinuxfs2" stack or "windows2012R2" stack.
+
+* "windows2012R2" stack
+  * Requires Diego-Windows, Garden-Windows
+  * Supports .NET SDK 3.5-4.5+
+  * Uses binary_buildpack (applications are pre-compiled, no detect) to deploy the applications
+
+* "cflinuxfs2" stack
+  * Standard CF Linux Stack
+  * Supports ASP.NET Core only
+  * Uses community ASP.NET buildpack to deploy the applications
+
+In this guide, you will learn how to run .NET application on Cloud foundry with "windows2012R2" stack. If you need guide for running ASP.NET application on Cloud foundry with "cflinuxfs2" stack, please go to this [guide](./run-asp-net-apps-with-cflinuxfs2-stack.md).
+
+# Push your first .NET application to cloud foundry with "windows2012R2" stack on Azure
 
 This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/diego-windows-release/blob/master/docs/INSTALL.md)
 
