@@ -292,7 +292,7 @@ module Bosh::AzureCloud
         end
 
         @azure_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob')
-        @blob_service_client = @azure_client.blobClient
+        @blob_service_client = @azure_client.blob_client
         @blob_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
         @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties) && !disable_debug_mode
         yield
