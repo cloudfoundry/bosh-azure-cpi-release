@@ -984,16 +984,13 @@ module Bosh::AzureCloud
         @logger.debug("get_token - authentication_endpoint: #{uri}")
         request = Net::HTTP::Post.new(uri.request_uri)
         request['Content-Type'] = 'application/x-www-form-urlencoded'
-        request['User-Agent']   = USER_AGENT
+        request = merge_http_common_headers(request)
         request.body = URI.encode_www_form(params)
         @logger.debug("get_token - request.header:")
         request.each_header { |k,v| @logger.debug("\t#{k} = #{v}") }
 
         response = http(uri).request(request)
-        message = "request id: #{response['x-ms-request-id']}\n"
-        message += "correlation id: #{response['x-ms-correlation-request-id']}\n"
-        message += "routing id: #{response['x-ms-routing-request-id']}\n"
-        message += "body: #{response.body}"
+        message = get_http_common_headers(response)
         @logger.debug("get_token - #{message}")
         if response.code.to_i == HTTP_CODE_OK
           @token = JSON(response.body)
@@ -1034,27 +1031,23 @@ module Bosh::AzureCloud
       retry_count = 0
 
       begin
-        request['User-Agent']    = USER_AGENT
         request['Content-Type']  = 'application/json'
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
-        @logger.debug("http_get_response - #{retry_count}: #{request.inspect}, URI: #{uri}")
+        request = merge_http_common_headers(request)
+        @logger.debug("http_get_response - #{retry_count}: #{request.inspect}, x-ms-client-request-id: #{request['x-ms-client-request-id']}, URI: #{uri}")
         response = http(uri).request(request)
 
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         status_code = response.code.to_i
         if filter_credential_in_logs(uri)
-          message = "http_get_response - #{retry_count}: #{status_code},"
-          message += " request id: #{response['x-ms-request-id']},"
-          message += " correlation id: #{response['x-ms-correlation-request-id']},"
-          message += " routing id: #{response['x-ms-routing-request-id']},"
-          message += " response.body cannot be logged because it may contain credentials."
+          message = "http_get_response - #{retry_count}: #{status_code}\n"
+          message += get_http_common_headers(response)
+          message += "response.body cannot be logged because it may contain credentials."
           @logger.debug(message)
         else
-          message = "http_get_response - #{retry_count}: #{status_code},"
-          message += " request id: #{response['x-ms-request-id']},"
-          message += " correlation id: #{response['x-ms-correlation-request-id']},"
-          message += " routing id: #{response['x-ms-routing-request-id']},"
-          message += " responsey.body: #{response.body}"
+          message = "http_get_response - #{retry_count}: #{status_code}\n"
+          message += get_http_common_headers(response)
+          message += "responsey.body: #{response.body}"
           @logger.debug(message)
         end
 
@@ -1067,17 +1060,13 @@ module Bosh::AzureCloud
           result = JSON(response.body)
           if result['status'] == 'Failed'
             error = "http_get_response - http code: #{response.code}\n"
-            error += "request id: #{response['x-ms-request-id']}\n"
-            error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
-            error += "routing id: #{response['x-ms-routing-request-id']}\n"
+            error += get_http_common_headers(response)
             error += "Error message: #{response.body}"
             raise AzureAsynInternalError, error
           end
         elsif AZURE_RETRY_ERROR_CODES.include?(status_code)
           error = "http_get_response - http code: #{response.code}\n"
-          error += "request id: #{response['x-ms-request-id']}\n"
-          error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
-          error += "routing id: #{response['x-ms-routing-request-id']}\n"
+          error += get_http_common_headers(response)
           error += "Error message: #{response.body}"
           raise AzureInternalError, error
         end
@@ -1131,9 +1120,7 @@ module Bosh::AzureCloud
         end
       elsif !options[:success_code].include?(response.code.to_i)
         error = "#{options[:operation]} - http code: #{response.code}\n"
-        error += "request id: #{response['x-ms-request-id']}\n"
-        error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
-        error += "routing id: #{response['x-ms-routing-request-id']}\n"
+        error += get_http_common_headers(response)
         error += "Error message: #{response.body}"
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
         raise AzureNotFoundError, error if response.code.to_i == HTTP_CODE_NOTFOUND
@@ -1168,9 +1155,7 @@ module Bosh::AzureCloud
               else
                 error = "status: #{ret['status']}\n"
                 error += "http code: #{status_code}\n"
-                error += "request id: #{response['x-ms-request-id']}\n"
-                error += "correlation id: #{response['x-ms-correlation-request-id']}\n"
-                error += "routing id: #{response['x-ms-routing-request-id']}\n"
+                error += get_http_common_headers(response)
                 error += "error:\n#{ret['error']}"
                 raise AzureError, error
               end
@@ -1292,6 +1277,25 @@ module Bosh::AzureCloud
         end
         raise e
       end
+    end
+
+    def merge_http_common_headers(request)
+      request['User-Agent']    = USER_AGENT
+      # https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
+      # Caller-specified request ID, in the form of a GUID with no decoration such as curly braces.
+      # If specified, this will be included in response information as a way to map the request.
+      request['x-ms-client-request-id'] = SecureRandom.uuid
+      # Indicates if a client-request-id should be returned in the response.
+      request['x-ms-return-client-request-id'] = true
+      request
+    end
+
+    def get_http_common_headers(response)
+      message = "x-ms-client-request-id: #{response['x-ms-client-request-id']}\n"
+      message += "x-ms-request-id: #{response['x-ms-request-id']}\n"
+      message += "x-ms-correlation-request-id: #{response['x-ms-correlation-request-id']}\n"
+      message += "x-ms-routing-request-id: #{response['x-ms-routing-request-id']}\n"
+      message
     end
   end
 end
