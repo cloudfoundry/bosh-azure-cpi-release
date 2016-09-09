@@ -209,6 +209,16 @@ module Bosh::AzureCloud
       end
     end
 
+    def prepare(storage_account_name, containers: [DISK_CONTAINER, STEMCELL_CONTAINER])
+      @logger.info("prepare(#{storage_account_name}, #{containers})")
+      containers.each do |container|
+        unless has_container?(storage_account_name, container)
+          @logger.debug("Creating the container `#{container}' in the storage account `#{storage_account_name}'")
+          create_container(storage_account_name, container)
+        end
+      end
+    end
+
     private
 
     def compute_chunks(file_size, max_chunk_size)

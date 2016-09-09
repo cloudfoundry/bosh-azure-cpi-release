@@ -314,8 +314,7 @@ describe Bosh::AzureCloud::Cloud do
             allow(client2).to receive(:check_storage_account_name_availability)
               .with(storage_account_name).and_return(result)
             allow(client2).to receive(:create_storage_account).and_return(true)
-            allow(stemcell_manager).to receive(:prepare).and_return(nil)
-            allow(disk_manager).to receive(:prepare).and_return(nil)
+            allow(blob_manager).to receive(:prepare).and_return(nil)
             allow(stemcell_manager).to receive(:has_stemcell?).
               with(storage_account_name, stemcell_id).
               and_return(true)
@@ -441,8 +440,7 @@ describe Bosh::AzureCloud::Cloud do
             allow(client2).to receive(:check_storage_account_name_availability)
               .with(storage_account_name).and_return(result)
 
-            allow(stemcell_manager).to receive(:prepare).and_return(nil)
-            allow(disk_manager).to receive(:prepare).and_return(nil)
+            allow(blob_manager).to receive(:prepare).and_return(nil)
             allow(stemcell_manager).to receive(:has_stemcell?).
               with(storage_account_name, stemcell_id).
               and_return(true)
@@ -483,8 +481,7 @@ describe Bosh::AzureCloud::Cloud do
             it 'should not raise any error' do
               expect(client2).not_to receive(:get_resource_group)
               expect(client2).not_to receive(:create_storage_account)
-              expect(stemcell_manager).to receive(:prepare)
-              expect(disk_manager).to receive(:prepare)
+              expect(blob_manager).to receive(:prepare)
 
               expect(
                 cloud.create_vm(
@@ -535,8 +532,7 @@ describe Bosh::AzureCloud::Cloud do
               .with(storage_account_name)
               .and_return(nil, creating_storage_account, storage_account)
 
-            allow(stemcell_manager).to receive(:prepare).and_return(nil)
-            allow(disk_manager).to receive(:prepare).and_return(nil)
+            allow(blob_manager).to receive(:prepare).and_return(nil)
             allow(stemcell_manager).to receive(:has_stemcell?).
               with(storage_account_name, stemcell_id).
               and_return(true)
@@ -547,8 +543,7 @@ describe Bosh::AzureCloud::Cloud do
 
           it 'should not raise any error' do
             expect(client2).to receive(:create_storage_account)
-            expect(stemcell_manager).to receive(:prepare)
-            expect(disk_manager).to receive(:prepare)
+            expect(blob_manager).to receive(:prepare)
 
             expect(
               cloud.create_vm(
@@ -615,30 +610,9 @@ describe Bosh::AzureCloud::Cloud do
             allow(client2).to receive(:create_storage_account).and_return(true)
           end
 
-          context 'when the container stemcell cannot be created' do
+          context 'when the containers cannot be created' do
             before do
-              allow(stemcell_manager).to receive(:prepare).and_raise(StandardError)
-            end
-
-            it 'should raise an error' do
-              expect(client2).to receive(:create_storage_account)
-              expect {
-                cloud.create_vm(
-                  agent_id,
-                  stemcell_id,
-                  resource_pool,
-                  networks_spec,
-                  disk_locality,
-                  environment
-                )
-              }.to raise_error(/create_storage_account - The storage account `fake-storage-account-name' is created successfully.\nBut it failed to create the containers bosh and stemcell.\nYou need to manually create them.\nError/)
-            end
-          end
-
-          context 'when the container bosh cannot be created' do
-            before do
-              allow(stemcell_manager).to receive(:prepare).and_return(nil)
-              allow(disk_manager).to receive(:prepare).and_raise(StandardError)
+              allow(blob_manager).to receive(:prepare).and_raise(StandardError)
             end
 
             it 'should raise an error' do

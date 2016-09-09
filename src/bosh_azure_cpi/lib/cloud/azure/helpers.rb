@@ -47,6 +47,9 @@ module Bosh::AzureCloud
 
     AZURE_MAX_RETRY_COUNT     = 10
 
+    DISK_CONTAINER            = 'bosh'
+    STEMCELL_CONTAINER        = 'stemcell'
+
     ##
     # Raises CloudError exception
     #
