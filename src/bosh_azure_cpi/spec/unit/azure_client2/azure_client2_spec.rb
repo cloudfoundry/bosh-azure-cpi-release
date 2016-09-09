@@ -147,38 +147,138 @@ describe Bosh::AzureCloud::AzureClient2 do
     }
 
     context "when token is valid, getting response succeeds" do
-      it "should return null if response body is null" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, resource_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {})
-        expect(
-          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
-        ).to be_nil
+      context "when no error happens" do
+        it "should return null if response body is null" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, resource_uri).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {})
+          expect(
+            azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+          ).to be_nil
+        end
+
+        it "should return the resource if response body is not null" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, resource_uri).to_return(
+            :status => 200,
+            :body => response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+          ).not_to be_nil
+        end
       end
 
-      it "should return the resource if response body is not null" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, resource_uri).to_return(
-          :status => 200,
-          :body => response_body,
-          :headers => {})
-        expect(
-          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
-        ).not_to be_nil
+      context "when error happens" do
+        context "when Net::OpenTimeout is raised at the first time but returns 200 at the second time" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise(Net::OpenTimeout.new).then.
+              to_return(
+                :status => 200,
+                :body => {
+                  "access_token"=>valid_access_token,
+                  "expires_on"=>expires_on
+                }.to_json,
+                :headers => {})
+            stub_request(:get, resource_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+          end
+
+          it "should return the resource if response body is not null" do
+            expect(
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            ).not_to be_nil
+          end
+        end
+
+        context "when Net::ReadTimeout is raised at the first time but returns 200 at the second time" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise(Net::ReadTimeout.new).then.
+              to_return(
+                :status => 200,
+                :body => {
+                  "access_token"=>valid_access_token,
+                  "expires_on"=>expires_on
+                }.to_json,
+                :headers => {})
+            stub_request(:get, resource_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+          end
+
+          it "should return the resource if response body is not null" do
+            expect(
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            ).not_to be_nil
+          end
+        end
+
+        context "when Errno::ECONNRESET is raised at the first time but returns 200 at the second time" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise(Errno::ECONNRESET.new).then.
+              to_return(
+                :status => 200,
+                :body => {
+                  "access_token"=>valid_access_token,
+                  "expires_on"=>expires_on
+                }.to_json,
+                :headers => {})
+            stub_request(:get, resource_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+          end
+
+          it "should return the resource if response body is not null" do
+            expect(
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            ).not_to be_nil
+          end
+        end
+
+        context "when 'SocketError: Hostname not known' is raised at the first time but returns 200 at the second time" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise('SocketError: Hostname not known').then.
+              to_return(
+                :status => 200,
+                :body => {
+                  "access_token"=>valid_access_token,
+                  "expires_on"=>expires_on
+                }.to_json,
+                :headers => {})
+            stub_request(:get, resource_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+          end
+
+          it "should return the resource if response body is not null" do
+            expect(
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            ).not_to be_nil
+          end
+        end
       end
     end
 

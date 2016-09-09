@@ -482,6 +482,98 @@ describe Bosh::AzureCloud::AzureClient2 do
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
       end
+
+      it "should not raise error if it raises Net::OpenTimeout at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise(Net::OpenTimeout.new).then.
+            to_return(
+              {
+                :status => 200,
+                :body => '',
+                :headers => {}
+              }
+            )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.not_to raise_error
+      end
+
+      it "should not raise error if it raises Net::ReadTimeout at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise(Net::ReadTimeout.new).then.
+            to_return(
+              {
+                :status => 200,
+                :body => '',
+                :headers => {}
+              }
+            )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.not_to raise_error
+      end
+
+      it "should not raise error if it raises Errno::ECONNRESET at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise(Errno::ECONNRESET.new).then.
+            to_return(
+              {
+                :status => 200,
+                :body => '',
+                :headers => {}
+              }
+            )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.not_to raise_error
+      end
+
+      it "should not raise error if it raises 'SocketError: Hostname not known' at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise('SocketError: Hostname not known').then.
+            to_return(
+              {
+                :status => 200,
+                :body => '',
+                :headers => {}
+              }
+            )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.not_to raise_error
+      end
     end
 
     context "when token is valid, getting response succeeds" do

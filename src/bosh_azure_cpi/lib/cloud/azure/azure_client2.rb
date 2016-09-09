@@ -981,15 +981,54 @@ module Bosh::AzureCloud
         params['resource']      = get_token_resource(@azure_properties)
         params['scope']         = 'user_impersonation'
 
-        @logger.debug("get_token - authentication_endpoint: #{uri}")
-        request = Net::HTTP::Post.new(uri.request_uri)
-        request['Content-Type'] = 'application/x-www-form-urlencoded'
-        request = merge_http_common_headers(request)
-        request.body = URI.encode_www_form(params)
-        @logger.debug("get_token - request.header:")
-        request.each_header { |k,v| @logger.debug("\t#{k} = #{v}") }
+        retry_count = 0
+        retry_after = 5
 
-        response = http(uri).request(request)
+        begin
+          @logger.debug("get_token - authentication_endpoint: #{uri}")
+          request = Net::HTTP::Post.new(uri.request_uri)
+          request['Content-Type'] = 'application/x-www-form-urlencoded'
+          request = merge_http_common_headers(request)
+          request.body = URI.encode_www_form(params)
+          @logger.debug("get_token - request.header:")
+          request.each_header { |k,v| @logger.debug("\t#{k} = #{v}") }
+
+          response = http(uri).request(request)
+        rescue Net::OpenTimeout => e
+          if retry_count < AZURE_MAX_RETRY_COUNT
+            @logger.warn("get_token - Fail for an OpenTimeout. Will retry after #{retry_after} seconds.")
+            retry_count += 1
+            sleep(retry_after)
+            retry
+          end
+          raise e
+        rescue Net::ReadTimeout => e
+          if retry_count < AZURE_MAX_RETRY_COUNT
+            @logger.warn("get_token - Fail for a ReadTimeout. Will retry after #{retry_after} seconds.")
+            retry_count += 1
+            sleep(retry_after)
+            retry
+          end
+          raise e
+        rescue Errno::ECONNRESET => e
+          if retry_count < AZURE_MAX_RETRY_COUNT
+            @logger.warn("get_token - Fail for an ECONNRESET. Will retry after #{retry_after} seconds.")
+            retry_count += 1
+            sleep(retry_after)
+            retry
+          end
+          raise e
+        rescue => e
+          # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
+          if e.inspect.include?('SocketError: Hostname not known') && retry_count < AZURE_MAX_RETRY_COUNT
+            @logger.warn("get_token - Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
+            retry_count += 1
+            sleep(retry_after)
+            retry
+          end
+          cloud_error("get_token - #{e.inspect}\n#{e.backtrace.join("\n")}")
+        end
+
         message = get_http_common_headers(response)
         @logger.debug("get_token - #{message}")
         if response.code.to_i == HTTP_CODE_OK
@@ -1091,6 +1130,22 @@ module Bosh::AzureCloud
       rescue Net::OpenTimeout => e
         if retry_count < AZURE_MAX_RETRY_COUNT
           @logger.warn("http_get_response - Fail for an OpenTimeout. Will retry after #{retry_after} seconds.")
+          retry_count += 1
+          sleep(retry_after)
+          retry
+        end
+        raise e
+      rescue Net::ReadTimeout => e
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          @logger.warn("http_get_response - Fail for a ReadTimeout. Will retry after #{retry_after} seconds.")
+          retry_count += 1
+          sleep(retry_after)
+          retry
+        end
+        raise e
+      rescue Errno::ECONNRESET => e
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          @logger.warn("http_get_response - Fail for an ECONNRESET. Will retry after #{retry_after} seconds.")
           retry_count += 1
           sleep(retry_after)
           retry
