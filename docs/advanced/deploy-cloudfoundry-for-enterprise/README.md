@@ -30,7 +30,7 @@ There are two types of Microsoft Azure platform events that can affect the avail
           instance_type: Standard_D1
       ```
 
-   * Specify `bosh.group_name` in `env`
+   * Specify `bosh.group` in `env`
 
       ```
       - name: resource_router
@@ -42,10 +42,10 @@ There are two types of Microsoft Azure platform events that can affect the avail
           instance_type: Standard_D1
         env:
           bosh:
-            group_name: <availability-set-name>
+            group: <availability-set-name>
       ```
 
-   >**NOTE:** if both `availability_set`  (in `cloud_properties`) and `bosh.group_name` (in `env`) are specified, it will pick value of `availability_set` as name of the availability set.
+   >**NOTE:** if both `availability_set`  (in `cloud_properties`) and `bosh.group` (in `env`) are specified, it will pick value of `availability_set` as name of the availability set.
 
   If `<availability-set-name>` does not exist, it will be created automatically.
 
