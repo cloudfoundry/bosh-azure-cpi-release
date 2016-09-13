@@ -86,7 +86,7 @@ module Bosh::AzureCloud
     # Sample env config:
     #  {
     #    "bosh" => {
-    #      "group_name" => "group-name"
+    #      "group" => "group"
     #    }
     #  }
     #

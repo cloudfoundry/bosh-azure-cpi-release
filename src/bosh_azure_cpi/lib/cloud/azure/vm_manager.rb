@@ -216,8 +216,8 @@ module Bosh::AzureCloud
 
       availability_set_name = resource_pool.fetch('availability_set', nil)
       if availability_set_name.nil?
-        unless env.nil? || env['bosh'].nil? || env['bosh']['group_name'].nil?
-          availability_set_name = env['bosh']['group_name']
+        unless env.nil? || env['bosh'].nil? || env['bosh']['group'].nil?
+          availability_set_name = env['bosh']['group']
         end
       end
 

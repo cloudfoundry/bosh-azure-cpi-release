@@ -708,10 +708,10 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
-        context "with bosh.group_name specified in env" do
+        context "with bosh.group specified in env" do
           let(:env) {
             {
-              'bosh' => {'group_name' => 'fake-group-name'}
+              'bosh' => {'group' => 'fake-group'}
             }
           }
 
@@ -758,7 +758,7 @@ describe Bosh::AzureCloud::VMManager do
             }
             let(:avset_params) {
               {
-                :name                         => env['bosh']['group_name'],
+                :name                         => env['bosh']['group'],
                 :location                     => "bar",
                 :tags                         => {'user-agent' => 'bosh'},
                 :platform_update_domain_count => 5,
@@ -768,11 +768,11 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(client2).to receive(:get_availability_set_by_name).
-                with(env['bosh']['group_name']).
+                with(env['bosh']['group']).
                 and_return(nil)
             end
 
-            it "should create availability set and use value of env.bosh.group_name as its name" do
+            it "should create availability set and use value of env.bosh.group as its name" do
               expect(client2).to receive(:create_availability_set).
                 with(avset_params)
 
