@@ -183,24 +183,18 @@ Now you have a service principal account, you need to grant this account access 
 
 ### 2.4.1 Assigning Roles
 
-`Virtual Machine Contributor` can manage virtual machines but not the virtual network or storage account to which they are connected. However, it can list keys of the storage account.
-
-`Network Contributor` can manage all network resources.
+`Contributor` can use terraform to bootstrap the environment
 
 For more information about Azure Role-Based Access Control, please refer to [RBAC: Built-in roles](https://azure.microsoft.com/en-us/documentation/articles/role-based-access-built-in-roles/).
 
-With the roles `Virtual Machine Contributor` and `Network Contributor`, the service principal can deploy BOSH and Cloud Foundry on Azure.
-
 ```
-azure role assignment create --spn <service-principal-name> --roleName "Virtual Machine Contributor" --subscription <subscription-id>
-azure role assignment create --spn <service-principal-name> --roleName "Network Contributor" --subscription <subscription-id>
+azure role assignment create --spn <service-principal-name> --roleName "Contributor" --subscription <subscription-id>
 ```
 
 Example:
 
 ```
-azure role assignment create --spn "http://BOSHAzureCPI" --roleName "Virtual Machine Contributor" --subscription 87654321-1234-5678-1234-678912345678
-azure role assignment create --spn "http://BOSHAzureCPI" --roleName "Network Contributor" --subscription 87654321-1234-5678-1234-678912345678
+azure role assignment create --spn "http://BOSHAzureCPI" --roleName "Contributor" --subscription 87654321-1234-5678-1234-678912345678
 ```
 
 You can verify the assignment with the following command:
@@ -215,17 +209,8 @@ Sample Output:
 info:    Executing command role assignment list
 + Searching for role assignments
 data:    RoleAssignmentId     : /subscriptions/87654321-1234-5678-1234-678912345678/providers/Microsoft.Authorization/roleAssignments/16645a17-3184-47c1-8e00-8eb1d0643d54
-data:    RoleDefinitionName   : Network Contributor
-data:    RoleDefinitionId     : 4d97b98b-1d4f-4787-a291-c67834d212e7
-data:    Scope                : /subscriptions/87654321-1234-5678-1234-678912345678
-data:    Display Name         : CloudFoundry
-data:    SignInName           :
-data:    ObjectId             : 039ccb8a-5b34-4020-bff9-ba38bef98f61
-data:    ObjectType           : ServicePrincipal
-data:
-data:    RoleAssignmentId     : /subscriptions/87654321-1234-5678-1234-678912345678/providers/Microsoft.Authorization/roleAssignments/8af758ad-1377-4aa4-ae12-3c084ab2271f
-data:    RoleDefinitionName   : Virtual Machine Contributor
-data:    RoleDefinitionId     : 9980e02c-c2be-4d73-94e8-173b1dc7cf3c
+data:    RoleDefinitionName   : Contributor
+data:    RoleDefinitionId     : b24988ac-6180-42a0-ab88-20f7382dd24c
 data:    Scope                : /subscriptions/87654321-1234-5678-1234-678912345678
 data:    Display Name         : CloudFoundry
 data:    SignInName           :
@@ -238,8 +223,7 @@ info:    role assignment list command OK
 By default, the scope of the role is set to the subscription. And it can also be assigned to one specific resource group or multiple resource groups if you want.
 
 ```
-azure role assignment create --spn <service-principal-name> --roleName "Virtual Machine Contributor" --resource-group <resource-group-name>
-azure role assignment create --spn <service-principal-name> --roleName "Network Contributor" --resource-group <resource-group-name>
+azure role assignment create --spn <service-principal-name> --roleName "Contributor" --resource-group <resource-group-name>
 ```
 
 For example:
