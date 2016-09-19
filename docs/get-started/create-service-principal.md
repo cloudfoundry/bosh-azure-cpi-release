@@ -46,7 +46,24 @@ azure login --environment $ENVIRONMENT
 
 Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) APIs. We use a Service Principal account to give Azure CPI the access to proper resources.
 
-## 2.1 Set Default Subscription
+## 2.1 Via Script (RECOMMENDED)
+
+1. Download [bash script](create-service-principal.sh) or [Powershell script](create-service-principal.ps1) according to your command line tool.
+
+2. Run the script to generate your Service Principal.
+
+  Sample output:
+  ```
+  ==============Created Serivce Principal==============
+  SUBSCRIPTION_ID: 12345678-1234-5678-1234-678912345678
+  TENANT_ID:       11111111-1234-5678-1234-678912345678
+  CLIEND_ID:       87654321-1234-5678-1234-678912345678
+  CLIENT_SECRET:   RANDOM-STRING
+  ```
+
+## 2.2 Manually
+
+### 2.2.1 Set Default Subscription
 
 1. Check whether you have multiple subscriptions.
 
@@ -115,7 +132,7 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
   info:    account set command OK
   ```
 
-## 2.2 Creating an Azure Active Directory (AAD) application
+## 2.2.2 Creating an Azure Active Directory (AAD) application
 
 Create an AAD application with your information.
 
@@ -150,7 +167,7 @@ info:    ad app create command OK
 
 * `AppId` is your **CLIENT_ID** you need to create the service principal. Please note it down for later use.
 
-## 2.3 Create a Service Principal
+## 2.2.3 Create a Service Principal
 
 ```
 azure ad sp create --applicationId $CLIENT_ID
@@ -177,11 +194,9 @@ info:    ad sp create command OK
 
 You can get **service-principal-name** from any value of **Service Principal Names** to assign role to your service principal.
 
-## 2.4 Assigning roles to your Service Principal
+## 2.2.4 Assigning roles to your Service Principal
 
 Now you have a service principal account, you need to grant this account access to proper resource use Azure CLI.
-
-### 2.4.1 Assigning Roles
 
 `Virtual Machine Contributor` can manage virtual machines but not the virtual network or storage account to which they are connected. However, it can list keys of the storage account.
 
@@ -289,7 +304,7 @@ info:    role assignment list command OK
 ```
 
 <a name="verify-your-service-principal"></a>
-## 2.5 Verify Your Service Principal
+## 2.3 Verify Your Service Principal
 
 Your service principal is created as follows:
 
