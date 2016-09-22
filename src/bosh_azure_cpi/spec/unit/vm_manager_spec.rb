@@ -756,29 +756,68 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               }
             }
-            let(:avset_params) {
-              {
-                :name                         => env['bosh']['group'],
-                :location                     => "bar",
-                :tags                         => {'user-agent' => 'bosh'},
-                :platform_update_domain_count => 5,
-                :platform_fault_domain_count  => 3
-              }
-            }
 
-            before do
-              allow(client2).to receive(:get_availability_set_by_name).
-                with(env['bosh']['group']).
-                and_return(nil)
+            context "when the length of availability_set name equals to 80" do
+              let(:env) {
+                {
+                  'bosh' => {'group' => 'group' * 16}
+                }
+              }
+              let(:avset_params) {
+                {
+                  :name                         => env['bosh']['group'],
+                  :location                     => "bar",
+                  :tags                         => {'user-agent' => 'bosh'},
+                  :platform_update_domain_count => 5,
+                  :platform_fault_domain_count  => 3
+                }
+              }
+
+              before do
+                allow(client2).to receive(:get_availability_set_by_name).
+                  with(env['bosh']['group']).
+                  and_return(nil)
+              end
+
+              it "should create availability set and use value of env.bosh.group as its name" do
+                expect(client2).to receive(:create_availability_set).
+                  with(avset_params)
+
+                expect(client2).to receive(:create_network_interface).exactly(2).times
+                vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
             end
 
-            it "should create availability set and use value of env.bosh.group as its name" do
-              expect(client2).to receive(:create_availability_set).
-                with(avset_params)
+            context "when the length of availability_set name is greater than 80" do
+              let(:env) {
+                {
+                  'bosh' => {'group' => 'a' * 80 + 'group' * 8}
+                }
+              }
+              let(:avset_params) {
+                {
+                  :name                         => "az-21d9858fb04d8ba39cdacdc926c5415e-#{'group' * 8}",
+                  :location                     => "bar",
+                  :tags                         => {'user-agent' => 'bosh'},
+                  :platform_update_domain_count => 5,
+                  :platform_fault_domain_count  => 3
+                }
+              }
 
-              expect(client2).to receive(:create_network_interface).exactly(2).times
-              vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(instance_id)
+              before do
+                allow(client2).to receive(:get_availability_set_by_name).
+                  and_return(nil)
+              end
+
+              it "should create availability set with a truncated value of env.bosh.group as its name" do
+                expect(client2).to receive(:create_availability_set).
+                  with(avset_params)
+
+                expect(client2).to receive(:create_network_interface).exactly(2).times
+                vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
             end
           end
         end
