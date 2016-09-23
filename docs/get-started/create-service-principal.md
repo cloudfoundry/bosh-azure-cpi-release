@@ -132,7 +132,7 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
   info:    account set command OK
   ```
 
-## 2.2.2 Creating an Azure Active Directory (AAD) application
+### 2.2.2 Creating an Azure Active Directory (AAD) application
 
 Create an AAD application with your information.
 
@@ -167,7 +167,7 @@ info:    ad app create command OK
 
 * `AppId` is your **CLIENT_ID** you need to create the service principal. Please note it down for later use.
 
-## 2.2.3 Create a Service Principal
+### 2.2.3 Create a Service Principal
 
 ```
 azure ad sp create --applicationId $CLIENT_ID
@@ -194,17 +194,22 @@ info:    ad sp create command OK
 
 You can get **service-principal-name** from any value of **Service Principal Names** to assign role to your service principal.
 
-## 2.2.4 Assigning roles to your Service Principal
+### 2.2.4 Assigning roles to your Service Principal
 
-Now you have a service principal account, you need to grant this account access to proper resource use Azure CLI.
+Now you have a service principal account, you need to grant this account access to proper resource use Azure CLI. Please refer to [RBAC: Built-in roles](https://azure.microsoft.com/en-us/documentation/articles/role-based-access-built-in-roles/) to learn Azure Role-Based Access Control.
 
-`Virtual Machine Contributor` can manage virtual machines but not the virtual network or storage account to which they are connected. However, it can list keys of the storage account.
+There are two options:
 
-`Network Contributor` can manage all network resources.
+* Please assgin the role `Virtual Machine Contributor` and `Network Contributor`, if the service principal is only for deploying BOSH and Cloud Foundry on Azure.
+* Please assign the role `Contributor` to your service principal if you need to manage other more resources. For example:
+ * Use terraform to bootstrap the environment
+ * Use [Azure Service Broker](https://github.com/Azure/meta-azure-service-broker/blob/master/docs/how-admin-deploy-the-broker.md) to manage Azure services
 
-For more information about Azure Role-Based Access Control, please refer to [RBAC: Built-in roles](https://azure.microsoft.com/en-us/documentation/articles/role-based-access-built-in-roles/).
+In this section, `Virtual Machine Contributor` and `Network Contributor` are assigned.
 
-With the roles `Virtual Machine Contributor` and `Network Contributor`, the service principal can deploy BOSH and Cloud Foundry on Azure.
+  * `Virtual Machine Contributor` can manage virtual machines but not the virtual network or storage account to which they are connected. However, it can list keys of the storage account.
+  * `Network Contributor` can manage all network resources.
+
 
 ```
 azure role assignment create --spn <service-principal-name> --roleName "Virtual Machine Contributor" --subscription <subscription-id>
@@ -330,6 +335,8 @@ Please verify it with the following steps:
 
 2. Verify that the subscription which the service principal belongs to is the same subscription that is used to create your resource group. (This may happen when you have multiple subscriptions.)
 
-3. Recreate a service principal on your tenant if the service principal is invalid.
+3. Verify that your service principal has been assigned the correct roles according to your usage. For example, verify whether you can use the service principal to create the service which you want.
+
+4. Recreate a service principal on your tenant if the service principal is invalid.
 
 > **NOTE:** In some cases, if the service principal is invalid, then the deployment of BOSH will fail. Errors in `~/run.log` will show `get_token - http error` like this [reported issue](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/49).
