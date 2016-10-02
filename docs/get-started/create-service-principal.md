@@ -48,7 +48,7 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
 
 ## 2.1 Via Script (RECOMMENDED)
 
-1. Download [bash script](create-service-principal.sh) or [Powershell script](create-service-principal.ps1) according to your command line tool.
+1. Download [bash script](https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/get-started/create-service-principal.sh) or [Powershell script](https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/get-started/create-service-principal.ps1) according to your command line tool.
 
 2. Run the script to generate your Service Principal.
 
