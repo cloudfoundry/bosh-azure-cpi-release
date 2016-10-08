@@ -460,6 +460,28 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
+  describe "#merge_storage_common_options" do
+    context "request_id is not set" do
+      let(:options) { {} }
+
+      it "should contain request_id" do
+        expect(
+          helpers_tester.merge_storage_common_options(options)[:request_id]
+        ).not_to be_nil
+      end
+    end
+
+    context "request_id is set" do
+      let(:options) { { :request_id => 'fake-request-id' } }
+
+      it "should contain a new request_id" do
+        expect(
+          helpers_tester.merge_storage_common_options(options)[:request_id]
+        ).not_to eq('fake-request-id')
+      end
+    end
+  end
+
   describe "DiskInfo" do
     context "when instance_type is STANDARD_A0" do
       context "when instance_type is lowercase" do

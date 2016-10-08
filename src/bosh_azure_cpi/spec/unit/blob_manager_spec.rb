@@ -24,6 +24,12 @@ describe Bosh::AzureCloud::BlobManager do
       :storage_table_host => "fake-table-endpoint"
     }
   }
+  let(:request_id) { 'fake-client-request-id' }
+  let(:options) {
+    {
+      :request_id => request_id
+    }
+  }
 
   before do
     allow(Azure::Storage::Client).to receive(:create).
@@ -42,13 +48,15 @@ describe Bosh::AzureCloud::BlobManager do
     allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).
       and_return(exponential_retry)
     allow(blob_service).to receive(:with_filter).with(exponential_retry)
+    allow(SecureRandom).to receive(:uuid).and_return(request_id)
   end
 
   describe "#delete_blob" do
     it "delete the blob" do
       expect(blob_service).to receive(:delete_blob).
         with(container_name, blob_name, {
-          :delete_snapshots => :include
+          :delete_snapshots => :include,
+          :request_id => request_id
         })
 
       blob_manager.delete_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
@@ -69,7 +77,8 @@ describe Bosh::AzureCloud::BlobManager do
 
       expect(blob_service).to receive(:delete_blob).
         with(container_name, blob_name, {
-          :snapshot => snapshot_time
+          :snapshot => snapshot_time,
+          :request_id => request_id
         })
 
       blob_manager.delete_blob_snapshot(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, snapshot_time)
@@ -221,10 +230,11 @@ describe Bosh::AzureCloud::BlobManager do
 
         before do
           allow(blob_service).to receive(:list_blobs).
-            with(container_name, {}).and_return(tmp_blobs_1)
+            with(container_name, options).and_return(tmp_blobs_1)
           allow(tmp_blobs_1).to receive(:continuation_token).and_return(continuation_token)
           allow(blob_service).to receive(:list_blobs).
-            with(container_name, {:marker => continuation_token}).and_return(tmp_blobs_2)
+            with(container_name, {:marker => continuation_token, :request_id => request_id}).
+            and_return(tmp_blobs_2)
         end
 
         it "should return blobs" do
@@ -242,7 +252,8 @@ describe Bosh::AzureCloud::BlobManager do
 
       expect(blob_service).to receive(:create_blob_snapshot).
         with(container_name, blob_name, {
-          :metadata => metadata
+          :metadata => metadata,
+          :request_id => request_id
         }).
         and_return(snapshot_time)
 
@@ -341,7 +352,7 @@ describe Bosh::AzureCloud::BlobManager do
         end
 
         it "fails to copy the blob" do
-          expect(blob_service).to receive(:delete_blob).with(container_name, blob_name)
+          expect(blob_service).to receive(:delete_blob).with(container_name, blob_name, options)
 
           expect {
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
@@ -372,7 +383,7 @@ describe Bosh::AzureCloud::BlobManager do
         end
 
         it "fails to copy the blob" do
-          expect(blob_service).to receive(:delete_blob).with(container_name, blob_name)
+          expect(blob_service).to receive(:delete_blob).with(container_name, blob_name, options)
 
           expect {
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
@@ -396,7 +407,7 @@ describe Bosh::AzureCloud::BlobManager do
 
         it "should raise an error" do
           expect(blob_service).to receive(:delete_blob).
-            with(container_name, blob_name)
+            with(container_name, blob_name, options)
 
           expect {
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
@@ -420,7 +431,7 @@ describe Bosh::AzureCloud::BlobManager do
 
         it "should raise an error" do
           expect(blob_service).to receive(:delete_blob).
-            with(container_name, blob_name)
+            with(container_name, blob_name, options)
 
           expect {
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
@@ -431,8 +442,6 @@ describe Bosh::AzureCloud::BlobManager do
   end
 
   describe "#create_container" do
-    let(:options) { {} }
-
     context "when creating container succeeds" do
       context "the container does not exist" do
         before do
@@ -442,7 +451,7 @@ describe Bosh::AzureCloud::BlobManager do
 
         it "should return true" do
           expect(
-            blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, options)
+            blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, {})
           ).to be(true)
         end
       end
@@ -450,13 +459,12 @@ describe Bosh::AzureCloud::BlobManager do
       context "the container exists" do
         before do
           allow(blob_service).to receive(:create_container).
-            with(container_name, options).
             and_raise("(409)")
         end
 
         it "should return true" do
           expect(
-            blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, options)
+            blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, {})
           ).to be(true)
         end
       end
@@ -482,7 +490,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       before do
         allow(blob_service).to receive(:get_container_properties).
-          with(container_name).and_return(container)
+          with(container_name, options).and_return(container)
         allow(container).to receive(:properties).and_return(container_properties)
       end
 
@@ -496,7 +504,6 @@ describe Bosh::AzureCloud::BlobManager do
     context "when the container does not exist" do
       before do
         allow(blob_service).to receive(:get_container_properties).
-          with(container_name).
           and_raise("Error code: (404). This is a test!")
       end
 
@@ -510,7 +517,6 @@ describe Bosh::AzureCloud::BlobManager do
     context "when the server returns an error" do
       before do
         allow(blob_service).to receive(:get_container_properties).
-          with(container_name).
           and_raise(StandardError)
       end
 
@@ -548,7 +554,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       before do
         allow(blob_service).to receive(:get_container_properties).
-          with(container_name).and_return(container)
+          with(container_name, options).and_return(container)
         allow(container).to receive(:properties).and_return(container_properties)
       end
 
@@ -560,11 +566,8 @@ describe Bosh::AzureCloud::BlobManager do
     end
 
     context "when the container does not exist" do
-      let(:options) { {} }
-
       before do
         allow(blob_service).to receive(:get_container_properties).
-          with(container_name).
           and_raise("Error code: (404). This is a test!")
       end
 

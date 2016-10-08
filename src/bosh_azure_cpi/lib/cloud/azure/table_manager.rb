@@ -22,7 +22,9 @@ module Bosh::AzureCloud
     def has_table?(table_name)
       @logger.info("has_table?(#{table_name})")
       begin
-        @table_service_client.get_table(table_name)
+        options = merge_storage_common_options()
+        @logger.info("has_table?: Calling get_table(#{table_name}, #{options})")
+        @table_service_client.get_table(table_name, options)
         true
       rescue => e
         cloud_error("has_table?: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
@@ -34,6 +36,8 @@ module Bosh::AzureCloud
       @logger.info("query_entities(#{table_name}, #{options})")
       entities = Array.new
       while true do
+        options = merge_storage_common_options(options)
+        @logger.info("query_entities: Calling query_entities(#{table_name}, #{options})")
         records = @table_service_client.query_entities(table_name, options)
         records.each { |r| entities.push(r.properties) } if records.size > 0
         break if records.continuation_token.nil? || records.continuation_token.empty?
@@ -51,7 +55,9 @@ module Bosh::AzureCloud
     def insert_entity(table_name, entity)
       @logger.info("insert_entity(#{table_name}, #{entity})")
       begin
-        @table_service_client.insert_entity(table_name, entity)
+        options = merge_storage_common_options()
+        @logger.info("insert_entity: Calling insert_entity(#{table_name}, #{entity}, #{options})")
+        @table_service_client.insert_entity(table_name, entity, options)
         true
       rescue => e
         # Azure EntityAlreadyExists (409) if the specified entity already exists.
@@ -63,7 +69,9 @@ module Bosh::AzureCloud
     def delete_entity(table_name, partition_key, row_key)
       @logger.info("delete_entity(#{table_name}, #{partition_key}, #{row_key})")
       begin
-        @table_service_client.delete_entity(table_name, partition_key, row_key)
+        options = merge_storage_common_options()
+        @logger.info("delete_entity: Calling delete_entity(#{table_name}, #{partition_key}, #{row_key}, #{options})")
+        @table_service_client.delete_entity(table_name, partition_key, row_key, options)
       rescue => e
         cloud_error("delete_entity: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
       end
@@ -71,7 +79,9 @@ module Bosh::AzureCloud
 
     def update_entity(table_name, entity)
       @logger.info("update_entity(#{table_name}, #{entity})")
-      @table_service_client.update_entity(table_name, entity)
+      options = merge_storage_common_options()
+      @logger.info("update_entity: Calling update_entity(#{table_name}, #{entity}, #{options})")
+      @table_service_client.update_entity(table_name, entity, options)
     end
   end
 end

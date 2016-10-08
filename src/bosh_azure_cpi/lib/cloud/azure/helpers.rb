@@ -176,6 +176,11 @@ module Bosh::AzureCloud
       debug_mode
     end
 
+    def merge_storage_common_options(options = {})
+      options.merge!({ :request_id => SecureRandom.uuid })
+      options
+    end
+
     # https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/
     # size: The default ephemeral disk size for the instance type
     #   Reference Azure temporary disk size as the ephemeral disk size

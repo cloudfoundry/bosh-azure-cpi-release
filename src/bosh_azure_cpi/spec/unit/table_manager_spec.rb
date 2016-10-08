@@ -22,6 +22,12 @@ describe Bosh::AzureCloud::TableManager do
       :storage_table_host => "fake-table-endpoint"
     }
   }
+  let(:request_id) { 'fake-client-request-id' }
+  let(:options) {
+    {
+      :request_id => request_id
+    }
+  }
 
   before do
     allow(Azure::Storage::Client).to receive(:create).
@@ -40,6 +46,8 @@ describe Bosh::AzureCloud::TableManager do
     allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).
       and_return(exponential_retry)
     allow(table_service).to receive(:with_filter).with(exponential_retry)
+
+    allow(SecureRandom).to receive(:uuid).and_return(request_id)
   end
 
   class MyArray < Array
@@ -58,7 +66,7 @@ describe Bosh::AzureCloud::TableManager do
     context "when the table exists" do
       before do
         allow(table_service).to receive(:get_table).
-          with(table_name)
+          with(table_name, options)
       end
 
       it "should return true" do
@@ -112,10 +120,10 @@ describe Bosh::AzureCloud::TableManager do
 
     before do
       allow(table_service).to receive(:query_entities).
-        with(table_name, {}).
+        with(table_name, options).
         and_return(records_with_token)
       allow(table_service).to receive(:query_entities).
-        with(table_name, {:continuation_token => fake_continuation_token}).
+        with(table_name, {:continuation_token => fake_continuation_token, :request_id => request_id}).
         and_return(records_without_token)
     end
 
@@ -134,7 +142,7 @@ describe Bosh::AzureCloud::TableManager do
     context "when the specified entity does not exist" do
       before do
         allow(table_service).to receive(:insert_entity).
-          with(table_name, entity)
+          with(table_name, entity, options)
       end
 
       it "should return true" do
@@ -145,7 +153,6 @@ describe Bosh::AzureCloud::TableManager do
     context "when the specified entity already exists" do
       before do
         allow(table_service).to receive(:insert_entity).
-          with(table_name, entity).
           and_raise("(409)")
       end
 
@@ -157,7 +164,6 @@ describe Bosh::AzureCloud::TableManager do
     context "when the status code is not 409" do
       before do
         allow(table_service).to receive(:insert_entity).
-          with(table_name, entity).
           and_raise("error")
       end
 
@@ -176,7 +182,7 @@ describe Bosh::AzureCloud::TableManager do
     context "when the specified entity exists" do
       before do
         allow(table_service).to receive(:delete_entity).
-          with(table_name, partition_key, row_key)
+          with(table_name, partition_key, row_key, options)
       end
 
       it "should not raise an error" do
@@ -189,7 +195,6 @@ describe Bosh::AzureCloud::TableManager do
     context "when the specified entity does not exist" do
       before do
         allow(table_service).to receive(:delete_entity).
-          with(table_name, partition_key, row_key).
           and_raise("(404)")
       end
 
@@ -203,7 +208,6 @@ describe Bosh::AzureCloud::TableManager do
     context "when the status code is not 404" do
       before do
         allow(table_service).to receive(:delete_entity).
-          with(table_name, partition_key, row_key).
           and_raise("error")
       end
 
@@ -222,7 +226,7 @@ describe Bosh::AzureCloud::TableManager do
 
     before do
       allow(table_service).to receive(:update_entity).
-        with(table_name, entity)
+        with(table_name, entity, options)
     end
 
     it "does not raise an error" do
