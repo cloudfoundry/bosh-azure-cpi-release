@@ -534,10 +534,6 @@ describe Bosh::AzureCloud::VMManager do
         context "with the network security group provided in network spec" do
           before do
             allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
-              with("fake-default-nsg-name").
-              and_return(nil)
-            allow(client2).to receive(:get_network_security_group_by_name).
               with(MOCK_RESOURCE_GROUP_NAME, "fake-network-nsg-name").
               and_return(security_group)
           end
