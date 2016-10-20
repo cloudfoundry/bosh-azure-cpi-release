@@ -335,6 +335,30 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
+  context 'when assigning dynamic public IP to VM' do
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'dynamic',
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        }
+      }
+    }
+    let(:resource_pool) {
+      {
+        'instance_type' => instance_type,
+        'assign_dynamic_public_ip' => true,
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      vm_lifecycle
+    end
+  end
+
   def vm_lifecycle(nums = 1)
     instance_id_pool = Array.new
     for i in 1..nums
