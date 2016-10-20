@@ -3,5 +3,9 @@ module Bosh::AzureCloud
     def public_ip
       @ip
     end
+
+    def vip?
+      true
+    end
   end
 end

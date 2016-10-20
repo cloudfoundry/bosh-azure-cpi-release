@@ -36,5 +36,9 @@ module Bosh::AzureCloud
     def spec
       @spec
     end
+
+    def vip?
+      false
+    end
   end
 end

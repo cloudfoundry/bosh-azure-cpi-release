@@ -84,6 +84,8 @@ module Bosh::AzureCloud
         delete_possible_network_interfaces(instance_id)
       end
 
+      delete_possible_public_ips(instance_id)
+
       os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
       @disk_manager.delete_disk(os_disk_name)
 
@@ -170,6 +172,11 @@ module Bosh::AzureCloud
       public_ip
     end
 
+    def create_public_ip(nic_name, location)
+      @azure_client2.create_public_ip(nic_name, location, false)
+      @azure_client2.list_public_ips(@azure_properties['resource_group_name']).find { |ip| ip[:name] == nic_name }
+    end
+
     def get_load_balancer(resource_pool)
       load_balancer = nil
       unless resource_pool['load_balancer'].nil?
@@ -183,16 +190,23 @@ module Bosh::AzureCloud
     def create_network_interfaces(instance_id, location, resource_pool, network_configurator)
       network_interfaces = []
       load_balancer = get_load_balancer(resource_pool)
-      public_ip = get_public_ip(network_configurator.vip_network)
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
-        security_group = get_network_security_group(resource_pool, network)
         nic_name = "#{instance_id}-#{index}"
+        public_ip = nil
+        if network.vip?
+          public_ip = get_public_ip(network_configurator.vip_network)
+        elsif resource_pool['assign_dynamic_public_ips']
+          @logger.info "Assigning public IP for NIC: #{nic_name}"
+          public_ip = create_public_ip(nic_name, location)
+        end
+        security_group = get_network_security_group(resource_pool, network)
+
         nic_params = {
           :name                => nic_name,
           :location            => location,
           :private_ip          => (network.is_a? ManualNetwork) ? network.private_ip : nil,
-          :public_ip           => index == 0 ? public_ip : nil,
+          :public_ip           => public_ip,
           :security_group      => security_group,
           :ipconfig_name       => "ipconfig#{index}"
         }
@@ -208,6 +222,13 @@ module Bosh::AzureCloud
       network_interfaces = @azure_client2.list_network_interfaces_by_instance_id(instance_id)
       network_interfaces.each do |network_interface|
         @azure_client2.delete_network_interface(network_interface[:name])
+      end
+    end
+
+    def delete_possible_public_ips(instance_id)
+      public_ips = @azure_client2.list_public_ips(@azure_properties['resource_group_name'])
+      public_ips.each do |public_ip|
+        @azure_client2.delete_public_ip(public_ip[:name]) if public_ip[:name].match(/^#{instance_id}-[0-9]+$/)
       end
     end
 

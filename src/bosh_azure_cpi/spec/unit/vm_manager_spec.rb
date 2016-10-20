@@ -7,9 +7,9 @@ describe Bosh::AzureCloud::VMManager do
   let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
   let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties, registry_endpoint, disk_manager, client2) }
 
-  let(:vip_network) { instance_double(Bosh::AzureCloud::VipNetwork) }
-  let(:manual_network) { instance_double(Bosh::AzureCloud::ManualNetwork) }
-  let(:dynamic_network) { instance_double(Bosh::AzureCloud::DynamicNetwork) }
+  let(:vip_network) { instance_double(Bosh::AzureCloud::VipNetwork, vip?: true) }
+  let(:manual_network) { instance_double(Bosh::AzureCloud::ManualNetwork, vip?: false) }
+  let(:dynamic_network) { instance_double(Bosh::AzureCloud::DynamicNetwork, vip?: false) }
 
   let(:uuid) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
   let(:instance_id) { "#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}-#{uuid}" }
@@ -246,6 +246,9 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_load_balancer_by_name).
           with(resource_pool['load_balancer'])
           .and_return(load_balancer)
+
+        allow(network_configurator).to receive(:networks).
+            and_return([vip_network, manual_network])
       end
  
       context "when the public ip list azure returns is empty" do
@@ -534,10 +537,6 @@ describe Bosh::AzureCloud::VMManager do
         context "with the network security group provided in network spec" do
           before do
             allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
-              with("fake-default-nsg-name").
-              and_return(nil)
-            allow(client2).to receive(:get_network_security_group_by_name).
               with(MOCK_RESOURCE_GROUP_NAME, "fake-network-nsg-name").
               and_return(security_group)
           end
@@ -821,6 +820,47 @@ describe Bosh::AzureCloud::VMManager do
             end
           end
         end
+
+        context 'with assign dynamic public IPs enabled' do
+          before do
+            resource_pool['assign_dynamic_public_ips'] = true
+            allow(client2).to receive(:create_public_ip)
+          end
+
+          it 'creates a public IP and assigns it to the NIC' do
+            nic_name1 = "#{instance_id}-0"
+            nic_name2 = "#{instance_id}-1"
+
+            expect(client2).to receive(:create_public_ip).with(nic_name1, "bar", false)
+            expect(client2).to receive(:create_public_ip).with(nic_name2, "bar", false)
+
+            expect(client2).to receive(:list_public_ips).twice.with(MOCK_RESOURCE_GROUP_NAME).and_return([
+                {:name => nic_name1, :id => "pip-id-1"},
+                {:name => nic_name2, :id => "pip-id-2"},
+                {:name => "other_thing", :id => "pip-id-3"},
+                                                                                                   ])
+
+            expect(client2).to receive(:create_network_interface).with({
+                :name                => nic_name1,
+                :location            => "bar",
+                :private_ip          => nil,
+                :public_ip           => {:name => nic_name1, :id => "pip-id-1"},
+                :security_group      => security_group,
+                :ipconfig_name       => "ipconfig0"
+            }, subnet, {'user-agent' => 'bosh'}, load_balancer)
+
+            expect(client2).to receive(:create_network_interface).with({
+                :name                => nic_name2,
+                :location            => "bar",
+                :private_ip          => nil,
+                :public_ip           => {:name => nic_name2, :id => "pip-id-2"},
+                :security_group      => security_group,
+                :ipconfig_name       => "ipconfig1"
+            }, subnet, {'user-agent' => 'bosh'}, load_balancer)
+
+            vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+          end
+        end
       end
     end
   end  
@@ -866,6 +906,8 @@ describe Bosh::AzureCloud::VMManager do
       allow(disk_manager).to receive(:generate_ephemeral_disk_name).
         with(instance_id).
         and_return(ephemeral_disk_name)
+      allow(client2).to receive(:list_public_ips).
+          and_return([{:name => "no-match"}])
     end
 
     it "should delete the instance by id" do
@@ -878,6 +920,26 @@ describe Bosh::AzureCloud::VMManager do
         with(storage_account_name, instance_id)
 
       vm_manager.delete(instance_id)
+    end
+
+    context 'when a public IP is found' do
+      it 'should delete all matching public IPs' do
+        allow(client2).to receive(:delete_virtual_machine)
+        allow(client2).to receive(:delete_network_interface)
+        allow(disk_manager).to receive(:delete_disk)
+        allow(disk_manager).to receive(:delete_vm_status_files)
+
+        expect(client2).to receive(:list_public_ips).with(MOCK_RESOURCE_GROUP_NAME).
+            and_return([
+                           {:name => "#{instance_id}-0"},
+                           {:name => "#{instance_id}-1"}
+                       ])
+
+        expect(client2).to receive(:delete_public_ip).with("#{instance_id}-0")
+        expect(client2).to receive(:delete_public_ip).with("#{instance_id}-1")
+
+        vm_manager.delete(instance_id)
+      end
     end
   end  
 
