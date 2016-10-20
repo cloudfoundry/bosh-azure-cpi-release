@@ -88,6 +88,13 @@ module Bosh::AzureCloud
     end
 
     # Resource Groups
+
+    # Get the default resource group's information
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/dn758095.aspx
+    #
     def get_resource_group()
       resource_group = nil
 
@@ -107,7 +114,8 @@ module Bosh::AzureCloud
     end
 
     # Compute/Virtual Machines
-    # Public: Provisions a virtual machine based on the supplied configuration.
+
+    # Provisions a virtual machine based on the supplied configuration.
     #
     # ==== Attributes
     #
@@ -136,6 +144,10 @@ module Bosh::AzureCloud
     # *   +:disk_uri+           - String. The URI of the ephemeral disk.
     # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Caching option: None, ReadOnly or ReadWrite.
     # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
     #
     def create_virtual_machine(vm_params, network_interfaces, availability_set = nil)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: vm_params[:name])
@@ -227,14 +239,26 @@ module Bosh::AzureCloud
       http_put(url, vm, params)
     end
 
+    # Restart a virtual machine
+    # @param [String] name - Name of virtual machine.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163577.aspx
+    #
     def restart_virtual_machine(name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name, others: 'restart')
       http_post(url)
     end
 
-    # Public: Set tags for a VM
-    # @param [String] name Name of virtual machine.
-    # @param [Hash] metadata metadata key/value pairs.
+    # Set tags for a virtual machine
+    # @param [String] name   - Name of virtual machine.
+    # @param [Hash] metadata - metadata key/value pairs.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
+    #
     def update_tags_of_virtual_machine(name, tags)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
@@ -246,11 +270,16 @@ module Bosh::AzureCloud
       http_put(url, vm)
     end
 
-    # Attach a specified disk to a VM
-    # @param [String] name Name of virtual machine.
-    # @param [String] disk_name Disk name.
-    # @param [String] disk_uri URI of disk
-    # @param [String] caching Caching option: None, ReadOnly or ReadWrite
+    # Attach a specified disk to a virtual machine
+    # @param [String] name      - Name of virtual machine.
+    # @param [String] disk_name - Disk name.
+    # @param [String] disk_uri  - URI of disk
+    # @param [String] caching   - Caching option: None, ReadOnly or ReadWrite
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
+    #
     def attach_disk_to_virtual_machine(name, disk_name, disk_uri, caching)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
@@ -292,6 +321,14 @@ module Bosh::AzureCloud
       }
     end
 
+    # Detach a specified disk from a virtual machine
+    # @param [String] name      - Name of virtual machine.
+    # @param [String] disk_name - Disk name.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
+    #
     def detach_disk_from_virtual_machine(name, disk_name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
@@ -310,11 +347,25 @@ module Bosh::AzureCloud
       http_put(url, vm)
     end
 
+    # Get a virtual machine's information
+    # @param [String] name - Name of virtual machine.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163682.aspx
+    #
     def get_virtual_machine_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
       get_virtual_machine(url)
     end
 
+    # Get a virtual machine's information
+    # @param [String] url - URL of virtual machine.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163682.aspx
+    #
     def get_virtual_machine(url)
       vm = nil
       result = get_resource_by_id(url)
@@ -363,6 +414,13 @@ module Bosh::AzureCloud
       vm
     end
 
+    # Delete a virtual machine
+    # @param [String] name - Name of virtual machine.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163594.aspx
+    #
     def delete_virtual_machine(name)
       @logger.debug("delete_virtual_machine - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
@@ -370,7 +428,8 @@ module Bosh::AzureCloud
     end
 
     # Compute/Availability Sets
-    # Public: Create an availability set based on the supplied configuration.
+
+    # Create an availability set based on the supplied configuration.
     #
     # ==== Attributes
     #
@@ -384,6 +443,10 @@ module Bosh::AzureCloud
     # * +:tags+                         - Hash. Tags of availability set.
     # * +:platform_update_domain_count+ - Integer. Specifies the update domain count of availability set.
     # * +:platform_fault_domain_count+  - Integer. Specifies the fault domain count of availability set.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163607.aspx
     #
     def create_availability_set(avset_params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: avset_params[:name])
@@ -400,11 +463,25 @@ module Bosh::AzureCloud
       http_put(url, availability_set)
     end
 
+    # Get an availability set's information
+    # @param [String] name - Name of availability set.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163594.aspx
+    #
     def get_availability_set_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: name)
       get_availability_set(url)
     end
 
+    # Get an availability set's information
+    # @param [String] url - URL of availability set.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163594.aspx
+    #
     def get_availability_set(url)
       availability_set = nil
       result = get_resource_by_id(url)
@@ -429,6 +506,13 @@ module Bosh::AzureCloud
       availability_set
     end
 
+    # Delete an availability set
+    # @param [String] name - Name of availability set.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163602.aspx
+    #
     def delete_availability_set(name)
       @logger.debug("delete_availability_set - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: name)
@@ -436,6 +520,16 @@ module Bosh::AzureCloud
     end
 
     # Network/Public IP
+
+    # Create a public IP
+    # @param [String] name       - Name of public IP.
+    # @param [String] location   - Location where the public IP will be created.
+    # @param [Boolean] is_static - Whether the IP address is stable or dynamic.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163590.aspx
+    #
     def create_public_ip(name, location, is_static = true)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
       public_ip = {
@@ -448,59 +542,57 @@ module Bosh::AzureCloud
       http_put(url, public_ip)
     end
 
+    # Get a public IP's information
+    # @param [String] name - Name of public IP.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163570.aspx
+    #
     def get_public_ip_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
       get_public_ip(url)
     end
 
+    # Get a public IP's information
+    # @param [String] url - URL of public IP.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163570.aspx
+    #
     def get_public_ip(url)
-      ip_address = nil
       result = get_resource_by_id(url)
-      unless result.nil?
-        ip_address = {}
-        ip_address[:id]       = result['id']
-        ip_address[:name]     = result['name']
-        ip_address[:location] = result['location']
-
-        properties = result['properties']
-        ip_address[:provisioning_state]          = properties['provisioningState']
-        ip_address[:ip_address]                  = properties['ipAddress']
-        ip_address[:public_ip_allocation_method] = properties['publicIPAllocationMethod']
-        ip_address[:ip_configuration_id]         = properties['ipConfigurations']['id'] unless properties['ipConfigurations'].nil?
-        unless properties['dnsSettings'].nil?
-          ip_address[:domain_name_label] = properties['dnsSettings']['domainNameLabel']
-          ip_address[:fqdn]              = properties['dnsSettings']['fqdn']
-        end
-      end
-      ip_address
+      parse_public_ip(result)
     end
 
+    # List all public IPs under a specified resource group
+    # @param [String] resource_group_name - Name of resource group.
+    #
+    # @return [Array]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163657.aspx
+    #
     def list_public_ips(resource_group_name)
       ip_addresses = []
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name)
       result = get_resource_by_id(url)
       unless result.nil?
         result['value'].each do |ret|
-          ip_address = {}
-          ip_address[:id]       = ret['id']
-          ip_address[:name]     = ret['name']
-          ip_address[:location] = ret['location']
-
-          properties = ret['properties']
-          ip_address[:provisioning_state]          = properties['provisioningState']
-          ip_address[:ip_address]                  = properties['ipAddress']
-          ip_address[:public_ip_allocation_method] = properties['publicIPAllocationMethod']
-          ip_address[:ip_configuration_id]         = properties['ipConfigurations']['id'] unless properties['ipConfigurations'].nil?
-          unless properties['dnsSettings'].nil?
-            ip_address[:domain_name_label] = properties['dnsSettings']['domainNameLabel']
-            ip_address[:fqdn]              = properties['dnsSettings']['fqdn']
-          end
+          ip_address = parse_public_ip(ret)
           ip_addresses.push(ip_address)
         end
       end
       ip_addresses
     end
 
+    # Delete a public IP
+    # @param [String] name - Name of public IP.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163631.aspx
+    #
     def delete_public_ip(name)
       @logger.debug("delete_public_ip - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
@@ -508,6 +600,18 @@ module Bosh::AzureCloud
     end
 
     # Network/Load Balancer
+
+    # Create a load balancer
+    # @param [String] name         - Name of load balancer.
+    # @param [Hash] public_ip      - Public IP to associate.
+    # @param [Hash] tags           - Tags of load balancer.
+    # @param [Array] tcp_endpoints - TCP endpoints of load balancer.
+    # @param [Array] udp_endpoints - UDP endpoints of load balancer.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163574.aspx
+    #
     def create_load_balancer(name,  public_ip, tags, tcp_endpoints = [], udp_endpoints = [])
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
       load_balancer = {
@@ -568,11 +672,25 @@ module Bosh::AzureCloud
       http_put(url, load_balancer)
     end
 
+    # Get a load balancer's information
+    # @param [String] name - Name of load balancer.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163636.aspx
+    #
     def get_load_balancer_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
       get_load_balancer(url)
     end
 
+    # Get a load balancer's information
+    # @param [String] url - URL of load balancer.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163636.aspx
+    #
     def get_load_balancer(url)
       load_balancer = nil
       result = get_resource_by_id(url)
@@ -614,6 +732,13 @@ module Bosh::AzureCloud
       load_balancer
     end
 
+    # Delete a load balancer
+    # @param [String] name - Name of load balancer.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163566.aspx
+    #
     def delete_load_balancer(name)
       @logger.debug("delete_load_balancer - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
@@ -621,7 +746,8 @@ module Bosh::AzureCloud
     end
 
     # Network/Network Interface
-    # Public: Create a network interface based on the supplied configuration.
+
+    # Create a network interface based on the supplied configuration.
     #
     # ==== Attributes
     #
@@ -640,6 +766,10 @@ module Bosh::AzureCloud
     # * +:dns_servers    - Array. DNS servers.
     # * +:public_ip      - Hash. The public IP which the network interface is binded to.
     # * +:security_group - Hash. The network security group which the network interface is binded to.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163668.aspx
     #
     def create_network_interface(nic_params, subnet, tags, load_balancer = nil)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name: nic_params[:name])
@@ -683,25 +813,44 @@ module Bosh::AzureCloud
       http_put(url, interface)
     end
 
+    # Get a network interface's information
+    # @param [String] name - Name of network interface.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163611.aspx
+    #
     def get_network_interface_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name: name)
       get_network_interface(url)
     end
 
+    # Get a network interface's information
+    # @param [String] url - URL of network interface..
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163611.aspx
+    #
     def get_network_interface(url)
       result = get_resource_by_id(url)
       parse_network_interface(result)
     end
 
-    # Query network interfaces whose name match pattern /#{instance_id}/. #{instance_id} stands for a VM, and NICs of that VM are "#{instance_id}-0", "#{instance_id}-1" and so on.
-    # Return array of network interfaces, however, the network interface here will not contain details about public ip or load balancer.
-    def list_network_interfaces_by_instance_id(instance_id)
+    # List network interfaces whose name contains a keyword
+    # @param [String] keyword - Keyword of network interfaces to list. keyword stands for a VM, and NICs of that VM are "#{keyword}-0", "#{keyword}-1" and so on.
+    #
+    # @return [Array] - Array of network interfaces, however, the network interface here will not contain details about public ip or load balancer.
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163611.aspx
+    #
+    def list_network_interfaces_by_instance_id(keyword)
       network_interfaces = []
       network_interfaces_url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES)
       results = get_resource_by_id(network_interfaces_url)
       unless results.nil? || results["value"].nil?
         results["value"].each do |network_interface_spec|
-          if network_interface_spec["name"].include?(instance_id)
+          if network_interface_spec["name"].include?(keyword)
             network_interface = parse_network_interface(network_interface_spec, recursive: false)
             if network_interface[:primary]
               network_interfaces.insert(0, network_interface)
@@ -714,6 +863,13 @@ module Bosh::AzureCloud
       network_interfaces
     end
 
+    # Delete a network interface
+    # @param [String] name - Name of network interface.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163562.aspx
+    #
     def delete_network_interface(name)
       @logger.debug("delete_network_interface - trying to delete #{name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name: name)
@@ -721,11 +877,28 @@ module Bosh::AzureCloud
     end
 
     # Network/Subnet
+
+    # Get a network subnet's information
+    # @param [String] resource_group_name - Name of resource group.
+    # @param [String] vnet_name           - Name of network.
+    # @param [String] subnet_name         - Name of network subnet.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163583.aspx
+    #
     def get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_VNETS, resource_group_name: resource_group_name, name: vnet_name, others: "subnets/#{subnet_name}")
       get_network_subnet(url)
     end
 
+    # Get a network subnet's information
+    # @param [String] url - URL of network subnet.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163583.aspx
+    #
     def get_network_subnet(url)
       subnet = nil
       result = get_resource_by_id(url)
@@ -742,11 +915,27 @@ module Bosh::AzureCloud
     end
 
     # Network/Network Security Group
+
+    # Get a network security group's information
+    # @param [String] resource_group_name - Name of resource group.
+    # @param [String] name                - Name of network security group.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163654.aspx
+    #
     def get_network_security_group_by_name(resource_group_name, name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_SECURITY_GROUPS, resource_group_name: resource_group_name, name: name)
       get_network_security_group(url)
     end
 
+    # Get a network security group's information
+    # @param [String] url - URL of network security group.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163654.aspx
+    #
     def get_network_security_group(url)
       nsg = nil
       result = get_resource_by_id(url)
@@ -764,7 +953,17 @@ module Bosh::AzureCloud
     end
 
     # Storage/StorageAccounts
-    # https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
+
+    # Create a storage account
+    # @param [String] name         - Name of storage account.
+    # @param [String] location     - Location where the storage account will be created.
+    # @param [String] account_type - Type of storage account. Options: Standard_LRS, Standard_ZRS, Standard_GRS, Standard_RAGRS or Premium_LRS.
+    # @param [Hash] tags           - Tags of storage account.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
+    #
     def create_storage_account(name, location, account_type, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
       storage_account = {
@@ -816,6 +1015,13 @@ module Bosh::AzureCloud
       end
     end
 
+    # Check that account name is valid and is not already in use.
+    # @param [String] name - Name of storage account.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163642.aspx
+    #
     def check_storage_account_name_availability(name)
       url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
       url += "/providers/#{REST_API_PROVIDER_STORAGE}"
@@ -835,11 +1041,25 @@ module Bosh::AzureCloud
       ret
     end
 
+    # Get a storage account's information
+    # @param [String] name - Name of storage account.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163553.aspx
+    #
     def get_storage_account_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
       get_storage_account(url)
     end
 
+    # Get a storage account's information
+    # @param [String] url - URL of storage account.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163553.aspx
+    #
     def get_storage_account(url)
       storage_account = nil
       result = get_resource_by_id(url)
@@ -860,6 +1080,13 @@ module Bosh::AzureCloud
       storage_account
     end
 
+    # Get access keys of a storage account
+    # @param [String] name - Name of storage account.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163589.aspx
+    #
     def get_storage_account_keys_by_name(name)
       result = nil
       begin
@@ -877,6 +1104,12 @@ module Bosh::AzureCloud
       keys
     end
 
+    # List storage accounts under the default resource group
+    #
+    # @return [Array]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/azure/mt163554.aspx
+    #
     def list_storage_accounts()
       storage_accounts = []
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS)
@@ -945,6 +1178,32 @@ module Bosh::AzureCloud
         end
       end
       interface
+    end
+
+    def parse_public_ip(result)
+      ip_address = nil
+      unless result.nil?
+        ip_address = {}
+        ip_address[:id]       = result['id']
+        ip_address[:name]     = result['name']
+        ip_address[:location] = result['location']
+        ip_address[:tags]     = result['tags']
+
+        properties = result['properties']
+        ip_address[:resource_guid]               = properties['resourceGuid']
+        ip_address[:provisioning_state]          = properties['provisioningState']
+        ip_address[:ip_address]                  = properties['ipAddress']
+        ip_address[:public_ip_allocation_method] = properties['publicIPAllocationMethod']
+        ip_address[:public_ip_address_version]   = properties['publicIPAddressVersion']
+        ip_address[:idle_timeout_in_minutes]     = properties['idleTimeoutInMinutes']
+        ip_address[:ip_configuration_id]         = properties['ipConfigurations']['id'] unless properties['ipConfigurations'].nil?
+        unless properties['dnsSettings'].nil?
+          ip_address[:domain_name_label] = properties['dnsSettings']['domainNameLabel']
+          ip_address[:fqdn]              = properties['dnsSettings']['fqdn']
+          ip_address[:reverse_fqdn]      = properties['dnsSettings']['reverseFqdn']
+        end
+      end
+      ip_address
     end
 
     def filter_credential_in_logs(uri)

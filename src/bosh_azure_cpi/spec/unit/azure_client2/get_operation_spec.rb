@@ -33,26 +33,39 @@ describe Bosh::AzureCloud::AzureClient2 do
       "id" => "fake-id",
       "name" => "fake-name",
       "location" => "fake-location",
+      "tags" => "fake-tags",
       "properties" => {
+        "resourceGuid" => "fake-guid",
         "provisioningState" => "fake-state",
         "ipAddress" => "123.123.123.123",
         "publicIPAllocationMethod" => "Dynamic",
+        "publicIPAddressVersion" => "fake-version",
+        "idleTimeoutInMinutes" => 4,
         "ipConfigurations" => {"id"=>"fake-id"},
-        "dnsSettings" => {"domainNameLabel"=>"foo","fqdn"=>"bar"}
+        "dnsSettings" => {
+          "domainNameLabel"=>"foo",
+          "fqdn"=>"bar",
+          "reverseFqdn"=>"ooo"
+        }
       }
-    }.to_json
+    }
   }
   let(:fake_public_ip) {
     {
       :id => "fake-id",
       :name => "fake-name",
       :location => "fake-location",
+      :tags => "fake-tags",
+      :resource_guid => "fake-guid",
       :provisioning_state => "fake-state",
       :ip_address => "123.123.123.123",
       :public_ip_allocation_method => "Dynamic",
+      :public_ip_address_version => "fake-version",
+      :idle_timeout_in_minutes => 4,
       :ip_configuration_id => "fake-id",
       :domain_name_label => "foo",
-      :fqdn => "bar"
+      :fqdn => "bar",
+      :reverse_fqdn => "ooo"
     }
   }
 
@@ -283,7 +296,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       it "should return the resource if response body is not null" do
         stub_request(:get, public_ip_uri).to_return(
           :status => 200,
-          :body => public_ip_response_body,
+          :body => public_ip_response_body.to_json,
           :headers => {})
         expect(
           azure_client2.get_public_ip_by_name(public_ip_name)
@@ -296,32 +309,11 @@ describe Bosh::AzureCloud::AzureClient2 do
     let(:list_public_ips_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/publicIPAddresses?api-version=#{api_version}" }
     let(:list_public_ips_response_body) {
       {
-        "value" => [{
-          "id" => "fake-id",
-          "name" => "fake-name",
-          "location" => "fake-location",
-          "properties" => {
-            "provisioningState" => "fake-state",
-            "ipAddress" => "123.123.123.123",
-            "publicIPAllocationMethod" => "Dynamic",
-            "ipConfigurations" => {"id"=>"fake-id"},
-            "dnsSettings" => {"domainNameLabel"=>"foo","fqdn"=>"bar"}
-          }
-        }]
-      }.to_json
+        "value" => [public_ip_response_body]
+      }
     }
-    let(:fake_public_ip) {
-      [{
-        :id => "fake-id",
-        :name => "fake-name",
-        :location => "fake-location",
-        :provisioning_state => "fake-state",
-        :ip_address => "123.123.123.123",
-        :public_ip_allocation_method => "Dynamic",
-        :ip_configuration_id => "fake-id",
-        :domain_name_label => "foo",
-        :fqdn => "bar"
-      }]
+    let(:fake_public_ip_list) {
+      [fake_public_ip]
     }
     context "when token is valid, getting response succeeds" do
       it "should return null if response body is null" do
@@ -337,11 +329,11 @@ describe Bosh::AzureCloud::AzureClient2 do
       it "should return the resource if response body is not null" do
         stub_request(:get, list_public_ips_uri).to_return(
           :status => 200,
-          :body => list_public_ips_response_body,
+          :body => list_public_ips_response_body.to_json,
           :headers => {})
         expect(
           azure_client2.list_public_ips(resource_group_name)
-        ).to eq(fake_public_ip)
+        ).to eq(fake_public_ip_list)
       end
     end
   end
@@ -365,7 +357,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
         stub_request(:get, public_ip_uri).to_return(
           :status => 200,
-          :body => public_ip_response_body,
+          :body => public_ip_response_body.to_json,
           :headers => {})
         expect(
           azure_client2.get_load_balancer_by_name(load_balancer_name)
@@ -389,7 +381,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       it "should return the resource if response body is not null" do
         stub_request(:get, public_ip_uri).to_return(
           :status => 200,
-          :body => public_ip_response_body,
+          :body => public_ip_response_body.to_json,
           :headers => {})
         stub_request(:get, load_balancer_uri).to_return(
           :status => 200,
@@ -860,7 +852,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       it "should return the resource if response body is not null" do
         stub_request(:get, public_ip_uri).to_return(
           :status => 200,
-          :body => public_ip_response_body,
+          :body => public_ip_response_body.to_json,
           :headers => {})
         stub_request(:get, load_balancer_uri).to_return(
           :status => 200,
