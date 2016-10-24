@@ -61,6 +61,9 @@ module Bosh::AzureCloud
         delete_possible_network_interfaces(instance_id)
       end
 
+      dynamic_public_ip = @azure_client2.get_public_ip_by_name(instance_id)
+      @azure_client2.delete_public_ip(instance_id) unless dynamic_public_ip.nil?
+
       # Replace vmSize with instance_type because only instance_type exists in the manifest
       error_message = e.inspect
       error_message = error_message.gsub!('vmSize', 'instance_type') if error_message.include?('vmSize')
@@ -83,6 +86,9 @@ module Bosh::AzureCloud
       else
         delete_possible_network_interfaces(instance_id)
       end
+
+      dynamic_public_ip = @azure_client2.get_public_ip_by_name(instance_id)
+      @azure_client2.delete_public_ip(instance_id) unless dynamic_public_ip.nil?
 
       os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
       @disk_manager.delete_disk(os_disk_name)
@@ -184,6 +190,11 @@ module Bosh::AzureCloud
       network_interfaces = []
       load_balancer = get_load_balancer(resource_pool)
       public_ip = get_public_ip(network_configurator.vip_network)
+      if public_ip.nil? && resource_pool['assign_dynamic_public_ip'] == true
+        # create dynamic public ip
+        @azure_client2.create_public_ip(instance_id, location, false)
+        public_ip = @azure_client2.get_public_ip_by_name(instance_id)
+      end
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
         security_group = get_network_security_group(resource_pool, network)

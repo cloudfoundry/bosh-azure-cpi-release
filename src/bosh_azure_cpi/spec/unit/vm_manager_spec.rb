@@ -79,6 +79,9 @@ describe Bosh::AzureCloud::VMManager do
       allow(client2).to receive(:get_network_security_group_by_name).
         with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
         and_return(security_group)
+      allow(client2).to receive(:get_public_ip_by_name).
+        with(instance_id).
+        and_return(nil)
 
       allow(network_configurator).to receive(:vip_network).
         and_return(vip_network)
@@ -326,21 +329,24 @@ describe Bosh::AzureCloud::VMManager do
           and_return([{
             :ip_address => "public-ip"
           }])
-      end
-
-      it "should raise an error" do
-        allow(client2).to receive(:list_network_interfaces_by_instance_id).
-          with(instance_id).
-          and_return([])
         allow(client2).to receive(:create_network_interface).
           and_raise("network interface is not created")
+      end
 
-        expect(client2).not_to receive(:delete_virtual_machine)
-        expect(client2).not_to receive(:delete_network_interface)
+      context "when none of network interface is created" do
+        before do
+          allow(client2).to receive(:list_network_interfaces_by_instance_id).
+            with(instance_id).
+            and_return([])
+        end
 
-        expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
-        }.to raise_error /network interface is not created/
+        it "should raise an error and do not delete any network interface" do
+          expect(client2).not_to receive(:delete_virtual_machine)
+          expect(client2).not_to receive(:delete_network_interface)
+          expect {
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+          }.to raise_error /network interface is not created/
+        end
       end
 
       context "when one network interface is create and the another one is not" do
@@ -367,10 +373,27 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         it "should delete the (possible) existing network interface and raise an error" do
-          allow(client2).to receive(:create_network_interface).
-            and_raise("network interface is not created")
-
           expect(client2).to receive(:delete_network_interface).exactly(1).times
+          expect {
+            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+          }.to raise_error /network interface is not created/
+        end
+      end
+
+      context "when dynamic public IP is created" do
+        let(:dynamic_public_ip) { 'fake-dynamic-public-ip' }
+
+        before do
+          resource_pool['assign_dynamic_public_ip'] = true
+          allow(client2).to receive(:get_public_ip_by_name).
+            with(instance_id).and_return(dynamic_public_ip)
+          allow(client2).to receive(:list_network_interfaces_by_instance_id).
+            with(instance_id).
+            and_return([])
+        end
+
+        it "should delete the dynamic public IP" do
+          expect(client2).to receive(:delete_public_ip).with(instance_id)
           expect {
             vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
           }.to raise_error /network interface is not created/
@@ -821,6 +844,39 @@ describe Bosh::AzureCloud::VMManager do
             end
           end
         end
+
+        context "with assign dynamic public IP enabled" do
+          let(:dynamic_public_ip) { 'fake-dynamic-public-ip' }
+          let(:nic0_params) {
+            {
+              :name            => "#{instance_id}-0",
+              :location        => storage_account[:location],
+              :private_ip      => nil,
+              :public_ip       => dynamic_public_ip,
+              :security_group  => security_group,
+              :ipconfig_name   => "ipconfig0"
+            }
+          }
+          let(:tags) { {'user-agent' => 'bosh'} }
+
+          before do
+            resource_pool['assign_dynamic_public_ip'] = true
+            allow(network_configurator).to receive(:vip_network).
+              and_return(nil)
+            allow(client2).to receive(:get_public_ip_by_name).
+              with(instance_id).and_return(dynamic_public_ip)
+          end
+
+          it "creates a public IP and assigns it to the NIC" do
+            expect(client2).to receive(:create_public_ip).
+              with(instance_id, storage_account[:location], false)
+            expect(client2).to receive(:create_network_interface).
+              with(nic0_params, subnet, tags, load_balancer)
+
+            vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            expect(vm_params[:name]).to eq(instance_id)
+          end
+        end
       end
     end
   end  
@@ -852,6 +908,7 @@ describe Bosh::AzureCloud::VMManager do
     }
     let(:os_disk_name) { "fake-os-disk-name" }
     let(:availability_set_name) { "fake-availability-set-name" }
+    let(:public_ip) { "fake-public-ip" }
 
     before do
       allow(client2).to receive(:get_virtual_machine_by_name).
@@ -860,6 +917,8 @@ describe Bosh::AzureCloud::VMManager do
         with(instance_id).and_return(load_balancer)
       allow(client2).to receive(:get_network_interface_by_name).
         with(instance_id).and_return(network_interface)
+      allow(client2).to receive(:get_public_ip_by_name).
+        with(instance_id).and_return(public_ip)
       allow(disk_manager).to receive(:generate_os_disk_name).
         with(instance_id).
         and_return(os_disk_name)
@@ -871,6 +930,7 @@ describe Bosh::AzureCloud::VMManager do
     it "should delete the instance by id" do
       expect(client2).to receive(:delete_virtual_machine).with(instance_id)
       expect(client2).to receive(:delete_network_interface).with("fake-nic").exactly(2).times
+      expect(client2).to receive(:delete_public_ip).with(instance_id)
 
       expect(disk_manager).to receive(:delete_disk).with(os_disk_name)
       expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name)

@@ -524,7 +524,7 @@ module Bosh::AzureCloud
     # Create a public IP
     # @param [String] name       - Name of public IP.
     # @param [String] location   - Location where the public IP will be created.
-    # @param [Boolean] is_static - Whether the IP address is stable or dynamic.
+    # @param [Boolean] is_static - Whether the IP address is static or dynamic.
     #
     # @return [Boolean]
     #

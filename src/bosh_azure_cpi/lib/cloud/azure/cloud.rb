@@ -76,11 +76,12 @@ module Bosh::AzureCloud
     #    "security_group" => "nsg-bosh",
     #    "root_disk" => {
     #      "size" => 50120, # disk size in MiB
-    #    }
+    #    },
     #    "ephemeral_disk" => {
     #      "use_root_disk" => false, # Whether to use OS disk to store the ephemeral data
     #      "size" => 30720, # disk size in MiB
-    #    }
+    #    },
+    #    "assign_dynamic_public_ip": true
     #  }
     #
     # Sample env config:
