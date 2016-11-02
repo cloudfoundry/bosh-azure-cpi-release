@@ -6,7 +6,7 @@ GEM
       faraday (~> 0.9)
       faraday_middleware (~> 0.10)
       nokogiri (~> 1.6)
-    azure-storage (0.11.1.preview)
+    azure-storage (0.11.3.preview)
       addressable (~> 2.3)
       azure-core (~> 0.1)
       faraday (~> 0.9)
@@ -73,7 +73,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  azure-storage (= 0.11.1.preview)
+  azure-storage (= 0.11.3.preview)
   bosh_common
   bosh_cpi
   httpclient (= 2.4.0)
