@@ -18,13 +18,16 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
+<a href="https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
+    <img src="http://azuredeploy.net/AzureGov.png"/>
+</a>
 
 | Name | Required | Default Value | Description |
 |:----:|:--------:|:-------------:|:----------- |
 | vmName | **YES** | | Name of Virtual Machine |
 | adminUsername | **YES** | | Username for the Virtual Machines. **Never use root as the adminUsername**. |
 | sshKeyData | **YES** | | SSH **RSA** public key file as a string. |
-| environment | **YES**  | | Different environments in Azure. Choose AzureCloud for Global Azure, and choose AzureChinaCloud for Mooncake (Azure China Cloud). |
+| environment | **YES**  | | Different environments in Azure. Choose AzureCloud for Global Azure, choose AzureChinaCloud for Azure China Cloud, choose AzureUSGovernment for Azure Government. |
 | tenantID | **YES**  | | ID of the tenant |
 | clientID | **YES**  | | ID of the client |
 | clientSecret | **YES** | | secret of the client |

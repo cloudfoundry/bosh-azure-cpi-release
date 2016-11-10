@@ -29,10 +29,14 @@ if [ -n "$LOGIN_CHECK" ]; then
     echo "Which Azure environment do you want to login?"
     echo "1) AzureCloud (default)"
     echo "2) AzureChinaCloud"
-    read -p "Please choose by entering 1 or 2: " ENV_OPT
+    echo "3) AzureUSGovernment"
+    read -p "Please choose by entering 1, 2 or 3: " ENV_OPT
     ENV="AzureCloud"
     if [ "$ENV_OPT" -eq 2 ]; then
       ENV="AzureChinaCloud"
+    fi
+    if [ "$ENV_OPT" -eq 3 ]; then
+      ENV="AzureUSGovernment"
     fi
     echo "Login to $ENV..."
     azure login --environment $ENV

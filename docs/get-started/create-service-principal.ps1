@@ -40,10 +40,14 @@ if ($LoginCheck) {
   Write-Host "Which Azure environment do you want to login?"
   Write-Host "1) AzureCloud (default)"
   Write-Host "2) AzureChinaCloud"
-  $EnvOpt = Read-Host "Please choose by entering 1 or 2"
+  Write-Host "3) AzureUSGovernment"
+  $EnvOpt = Read-Host "Please choose by entering 1, 2 or 3"
   $Env = "AzureCloud"
   if ("$EnvOpt" -eq 2) {
     $Env = "AzureChinaCloud"
+  }
+  if ("$EnvOpt" -eq 3) {
+    $Env = "AzureUSGovernment"
   }
   Write-Host "Login to $Env..."
   azure login --environment $Env
