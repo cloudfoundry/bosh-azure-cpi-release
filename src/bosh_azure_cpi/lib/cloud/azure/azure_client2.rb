@@ -1332,7 +1332,7 @@ module Bosh::AzureCloud
         request['Content-Type']  = 'application/json'
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
         request = merge_http_common_headers(request)
-        @logger.debug("http_get_response - #{retry_count}: #{request.inspect}, x-ms-client-request-id: #{request['x-ms-client-request-id']}, URI: #{uri}")
+        @logger.debug("http_get_response - #{retry_count}: #{request.method}, x-ms-client-request-id: #{request['x-ms-client-request-id']}, URI: #{uri}")
         response = http(uri).request(request)
 
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
