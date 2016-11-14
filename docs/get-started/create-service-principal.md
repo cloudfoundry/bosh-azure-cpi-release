@@ -39,7 +39,7 @@ azure login --environment $ENVIRONMENT
 
 >**NOTE:**
   * `azure login` requires a work or school account. Never login with your personal account. If you do not have a work or school account currently, you can easily create a work or school account with the [**guide**](https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/).
-  * `$ENVIRONMENT` can be `AzureCloud`, `AzureChinaCloud` and so on.
+  * `$ENVIRONMENT` can be `AzureCloud`, `AzureChinaCloud`, `AzureUSGovernment` and so on.
   * If you fail to login `AzureChinaCloud` with a `CERT_UNTRUSTED` error, please use the latest version of node (4.x) and mostly the issue should be resolved. [azure-xplat-cli/2725](https://github.com/Azure/azure-xplat-cli/issues/2725)
 
 # 2 Create a Service Principal
