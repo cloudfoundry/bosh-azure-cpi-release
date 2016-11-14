@@ -266,6 +266,8 @@ module Bosh::AzureCloud
         raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
 
+      vm = remove_resources_from_vm(vm)
+
       vm['tags'] = tags
       http_put(url, vm)
     end
@@ -286,6 +288,8 @@ module Bosh::AzureCloud
       if vm.nil?
         raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{name}'"
       end
+
+      vm = remove_resources_from_vm(vm)
 
       disk_info = DiskInfo.for(vm['properties']['hardwareProfile']['vmSize'])
       lun = nil
@@ -310,6 +314,7 @@ module Bosh::AzureCloud
         'vhd'          => { 'uri' => disk_uri }
       }
       vm['properties']['storageProfile']['dataDisks'].push(new_disk)
+
       @logger.info("attach_disk_to_virtual_machine - attach disk `#{disk_name}' to `#{lun}'")
       http_put(url, vm)
       disk = {
@@ -335,6 +340,8 @@ module Bosh::AzureCloud
       if vm.nil?
         raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
       end
+
+      vm = remove_resources_from_vm(vm)
 
       @logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(vm)}")
       disk = vm['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name}
@@ -1610,6 +1617,13 @@ module Bosh::AzureCloud
       message += "x-ms-correlation-request-id: #{response['x-ms-correlation-request-id']}\n"
       message += "x-ms-routing-request-id: #{response['x-ms-routing-request-id']}\n"
       message
+    end
+
+    # Sometimes Azure returns VM information with a node 'resources' which contains all extensions' information.
+    # Azure will retrun 'InvalidRequestContent' if CPI does not delete the node 'resources'.
+    def remove_resources_from_vm(vm)
+      vm.delete('resources')
+      vm
     end
   end
 end
