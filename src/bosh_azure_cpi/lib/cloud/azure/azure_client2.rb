@@ -168,7 +168,7 @@ module Bosh::AzureCloud
         'name'       => vm_params[:name],
         'location'   => vm_params[:location],
         'type'       => "#{REST_API_PROVIDER_COMPUTER}/#{REST_API_COMPUTER_VIRTUAL_MACHINES}",
-        'tags'       => vm_params[:metadata],
+        'tags'       => vm_params[:tags],
         'properties' => {
           'hardwareProfile' => {
             'vmSize' => vm_params[:vm_size]
@@ -252,8 +252,8 @@ module Bosh::AzureCloud
     end
 
     # Set tags for a virtual machine
-    # @param [String] name   - Name of virtual machine.
-    # @param [Hash] metadata - metadata key/value pairs.
+    # @param [String] name - Name of virtual machine.
+    # @param [Hash] tags   - tags key/value pairs.
     #
     # @return [Boolean]
     #
