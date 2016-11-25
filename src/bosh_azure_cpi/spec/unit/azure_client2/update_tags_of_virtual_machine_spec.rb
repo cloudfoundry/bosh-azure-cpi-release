@@ -18,7 +18,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
   let(:vm_name) { "fake-vm-name" }
-  let(:tags) { {} }
+  let(:tags) { 'fake-tags' }
 
   let(:valid_access_token) { "valid-access-token" }
   let(:invalid_access_token) { "invalid-access-token" }
@@ -26,45 +26,111 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   describe "#update_tags_of_virtual_machine" do
     let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version}" }
-    let(:response_body) {
-      {
-        "id" => "fake-id",
-        "name" => "fake-name",
-        "location" => "fake-location",
-        "tags" => "fake-tags",
-        "properties" => {
-          "provisioningState" => "fake-state"
-        }
-      }.to_json
-    }
 
     context "when token is valid, create operation is accepted and completed" do
-      it "should raise no error" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, vm_uri).to_return(
-          :status => 200,
-          :body => response_body,
-          :headers => {})
-        stub_request(:put, vm_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
-        stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+      let(:request_body) {
+        {
+          "id" => "fake-id",
+          "name" => "fake-name",
+          "location" => "fake-location",
+          "tags" => tags,
+          "properties" => {
+            "provisioningState" => "fake-state"
+          }
+        }
+      }
 
-        expect {
-          azure_client2.update_tags_of_virtual_machine(vm_name, tags)
-        }.not_to raise_error
+      context "when VM's information does not contain 'resources'" do
+        let(:response_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => "",
+            "properties" => {
+              "provisioningState" => "fake-state"
+            }
+          }.to_json
+        }
+
+        it "should raise no error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, vm_uri).to_return(
+            :status => 200,
+            :body => response_body,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.update_tags_of_virtual_machine(vm_name, tags)
+          }.not_to raise_error
+        end
+      end
+
+      context "when VM's information contains 'resources'" do
+        let(:response_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => "",
+            "properties" => {
+              "provisioningState" => "fake-state"
+            },
+            "resources" => [
+              {
+                "properties": {},
+                "id": "fake-id",
+                "name": "fake-name",
+                "type": "fake-type",
+                "location": "fake-location"
+              }
+            ]
+          }.to_json
+        }
+
+        it "should raise no error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, vm_uri).to_return(
+            :status => 200,
+            :body => response_body,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.update_tags_of_virtual_machine(vm_name, tags)
+          }.not_to raise_error
+        end
       end
     end
 

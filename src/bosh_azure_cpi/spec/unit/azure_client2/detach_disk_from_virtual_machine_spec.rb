@@ -55,32 +55,117 @@ describe Bosh::AzureCloud::AzureClient2 do
     }
 
     context "when token is valid, create operation is accepted and completed" do
-      it "should raise no error" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, vm_uri).to_return(
-          :status => 200,
-          :body => response_body,
-          :headers => {})
-        stub_request(:put, vm_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
-        stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+      let(:request_body) {
+        {
+          "id" => "fake-id",
+          "name" => "fake-name",
+          "location" => "fake-location",
+          "tags" => "fake-tags",
+          "properties" => {
+            "provisioningState" => "fake-state",
+            "storageProfile" => {
+              "dataDisks" => [
+                {
+                  "name" => "wrong name",
+                  "lun" => 0
+                }
+              ]
+            }
+          }
+        }
+      }
 
-        expect {
-          azure_client2.detach_disk_from_virtual_machine(vm_name, disk_name)
-        }.not_to raise_error
+      context "when VM's information does not contain 'resources'" do
+        it "should raise no error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, vm_uri).to_return(
+            :status => 200,
+            :body => response_body,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.detach_disk_from_virtual_machine(vm_name, disk_name)
+          }.not_to raise_error
+        end
+      end
+
+      context "when VM's information contains 'resources'" do
+        let(:response_body_with_resources) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => "fake-tags",
+            "properties" => {
+              "provisioningState" => "fake-state",
+              "storageProfile" => {
+                "dataDisks" => [
+                  {
+                    "name" => disk_name,
+                    "lun" => 1
+                  },
+                  {
+                    "name" => "wrong name",
+                    "lun" => 0
+                  }
+                ]
+              }
+            },
+            "resources" => [
+              {
+                "properties": {},
+                "id": "fake-id",
+                "name": "fake-name",
+                "type": "fake-type",
+                "location": "fake-location"
+              }
+            ]
+          }.to_json
+        }
+
+        it "should raise no error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, vm_uri).to_return(
+            :status => 200,
+            :body => response_body_with_resources,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.detach_disk_from_virtual_machine(vm_name, disk_name)
+          }.not_to raise_error
+        end
       end
     end
 
