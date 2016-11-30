@@ -47,15 +47,16 @@ module Bosh::AzureCloud
     REST_API_COMPUTE_SNAPSHOTS           = 'snapshots'
     REST_API_COMPUTE_PLATFORM_IMAGES     = 'vmimage'
 
-    REST_API_PROVIDER_NETWORK            = 'Microsoft.Network'
-    REST_API_NETWORK_PUBLIC_IP_ADDRESSES = 'publicIPAddresses'
-    REST_API_NETWORK_LOAD_BALANCERS      = 'loadBalancers'
-    REST_API_NETWORK_INTERFACES          = 'networkInterfaces'
-    REST_API_NETWORK_VNETS               = 'virtualNetworks'
-    REST_API_NETWORK_SECURITY_GROUPS     = 'networkSecurityGroups'
+    REST_API_PROVIDER_NETWORK             = 'Microsoft.Network'
+    REST_API_NETWORK_PUBLIC_IP_ADDRESSES  = 'publicIPAddresses'
+    REST_API_NETWORK_LOAD_BALANCERS       = 'loadBalancers'
+    REST_API_NETWORK_INTERFACES           = 'networkInterfaces'
+    REST_API_NETWORK_VNETS                = 'virtualNetworks'
+    REST_API_NETWORK_SECURITY_GROUPS      = 'networkSecurityGroups'
+    REST_API_NETWORK_APPLICATION_GATEWAYS = 'applicationGateways'
 
-    REST_API_PROVIDER_STORAGE            = 'Microsoft.Storage'
-    REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
+    REST_API_PROVIDER_STORAGE             = 'Microsoft.Storage'
+    REST_API_STORAGE_ACCOUNTS             = 'storageAccounts'
 
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = ['adminPassword', 'client_secret', 'customData']
@@ -1462,6 +1463,73 @@ module Bosh::AzureCloud
       result = get_resource_by_id(url)
       parse_subnet(result)
     end
+    
+    # Network/Application Gateway
+    
+    # Add a backend address for an application gateway
+    # @param [String] name - Name of application gateway.
+    # @param [String] backend_address - Backend Address.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/mt684942.aspx
+    #
+    def add_backend_address_of_application_gateway(name, backend_address)
+      @logger.debug("add_backend_address_of_application_gateway - trying to add `#{backend_address}' to the backend address pools of the applicaiton gateway #{name}")
+      ag = get_application_gateway(name)
+
+      backend_addresses = ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']
+      backend_address = {
+        "ipAddress" => backend_address
+      }
+      unless backend_addresses.include? backend_address
+        backend_addresses.push(backend_address)
+        url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_APPLICATION_GATEWAYS, name: name)
+        http_put(url, ag, ignore_canceled_status: true)
+      end
+      return true
+    end
+
+    # Delete a backend address for an application gateway
+    # @param [String] name - Name of application gateway.
+    # @param [String] backend_address - Backend Address.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/mt684942.aspx
+    #
+    def delete_backend_address_of_application_gateway(name, backend_address)
+      @logger.debug("delete_backend_address_of_application_gateway - trying to remove `#{backend_address}' from the backend address pools of the applicaiton gateway #{name}")
+      ag = get_application_gateway(name)
+
+      backend_addresses = ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']
+      backend_address = {
+        "ipAddress" => backend_address
+      }
+      if backend_addresses.include? backend_address
+        backend_addresses.delete(backend_address)
+        url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_APPLICATION_GATEWAYS, name: name)
+        http_put(url, ag, ignore_canceled_status: true)
+      end
+      return true
+    end
+
+    # Get an application gateway's information
+    # @param [String] name - Name of application gateway.
+    #
+    # @return [Hash]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/mt684944.aspx
+    #
+    def get_application_gateway(name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_APPLICATION_GATEWAYS, name: name)
+      ag = get_resource_by_id(url)
+      if ag.nil?
+        raise AzureNotFoundError, "get_application_gateway - cannot find the application gateway by name `#{name}'"
+      end
+
+      return ag
+    end
 
     # Network/Network Security Group
 
@@ -2071,7 +2139,7 @@ module Bosh::AzureCloud
       response
     end
 
-    def check_completion(response, options)
+    def check_completion(response, options, ignore_canceled_status = false)
       operation_status_link = response['azure-asyncoperation']
       @logger.debug("check_completion - azure-asyncoperation: #{operation_status_link}")
       if options[:return_code].include?(response.code.to_i)
@@ -2116,7 +2184,7 @@ module Bosh::AzureCloud
         end
 
         status = result['status']
-        if status == PROVISIONING_STATE_SUCCEEDED
+        if status == PROVISIONING_STATE_SUCCEEDED || (ignore_canceled_status && status == PROVISIONING_STATE_CANCELED)
           return true
         elsif status == PROVISIONING_STATE_INPROGRESS
           @logger.debug("check_completion - InProgress...")
@@ -2157,7 +2225,7 @@ module Bosh::AzureCloud
       result = JSON(response.body) unless response.body.nil?
     end
 
-    def http_put(url, body = nil, params = {}, retry_after = 5)
+    def http_put(url, body = nil, params = {}, retry_after = 5, ignore_canceled_status: false)
       uri = http_url(url, params)
       retry_count = 0
 
@@ -2180,7 +2248,7 @@ module Bosh::AzureCloud
           :api_version  => params['api-version'],
           :retry_after  => retry_after
         }
-        check_completion(response, options)
+        check_completion(response, options, ignore_canceled_status)
       rescue AzureAsynInternalError => e
         if retry_count < AZURE_MAX_RETRY_COUNT
           retry_count += 1
