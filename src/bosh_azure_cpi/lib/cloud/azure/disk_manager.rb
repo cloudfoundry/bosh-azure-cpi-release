@@ -97,7 +97,7 @@ module Bosh::AzureCloud
       "#{OS_DISK_PREFIX}-#{instance_id}-#{EPHEMERAL_DISK_POSTFIX}"
     end
 
-    def os_disk(instance_id)
+    def os_disk(instance_id, minimum_disk_size)
       disk_name = generate_os_disk_name(instance_id)
       disk_uri = get_disk_uri(disk_name)
 
@@ -105,9 +105,9 @@ module Bosh::AzureCloud
       root_disk = @resource_pool.fetch('root_disk', {})
       size = root_disk.fetch('size', nil)
       unless size.nil?
-        validate_disk_size(size)
-        disk_size = size/1024
-        cloud_error('root_disk.size must not be smaller than 3 GiB') if disk_size < 3
+        cloud_error("root_disk.size `#{size}' is smaller than the default OS disk size `#{minimum_disk_size}' MiB") if size < minimum_disk_size
+        disk_size = (size/1024.0).ceil
+        validate_disk_size(disk_size*1024)
       end
 
       disk_caching = @resource_pool.fetch('caching', 'ReadWrite')

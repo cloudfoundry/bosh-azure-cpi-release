@@ -30,6 +30,7 @@ describe Bosh::AzureCloud::BlobManager do
       :request_id => request_id
     }
   }
+  let(:metadata) { {} }
 
   before do
     allow(Azure::Storage::Client).to receive(:create).
@@ -86,6 +87,19 @@ describe Bosh::AzureCloud::BlobManager do
   end  
 
   describe "#create_page_blob" do
+    let(:metadata) {
+      {
+        'property' => 'fake-metadata',
+      }
+    }
+    let(:options) {
+      {
+        :request_id => request_id,
+        :timeout => 120,
+        :metadata => metadata
+      }
+    }
+
     before do
       @file_path = "/tmp/fake_image"
       File.open(@file_path, 'wb') { |f| f.write("Hello CloudFoundry!") }
@@ -96,14 +110,16 @@ describe Bosh::AzureCloud::BlobManager do
 
     context "when uploading page blob succeeds" do
       before do
-        allow(blob_service).to receive(:create_page_blob)
         allow(blob_service).to receive(:put_blob_pages)
         allow(blob_service).to receive(:delete_blob)
       end
 
       it "raise no error" do
+        expect(blob_service).to receive(:create_page_blob).
+          with(container_name, blob_name, kind_of(Numeric), options)
+
         expect {
-          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name) 
+          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
         }.not_to raise_error
       end
     end
@@ -115,7 +131,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       it "should raise an error" do
         expect {
-          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name) 
+          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
         }.to raise_error /Failed to upload page blob/
       end
     end
@@ -166,6 +182,39 @@ describe Bosh::AzureCloud::BlobManager do
       end
     end
   end  
+
+  describe "#get_blob_metadata" do
+    context "when blob exists" do
+      let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
+      let(:metadata) { { 'os_type' => 'fake-os-type' } }
+
+      before do
+        allow(blob).to receive(:metadata).and_return(metadata)
+      end
+
+      it "should get metadata of the blob" do
+        expect(blob_service).to receive(:get_blob_metadata).
+          with(container_name, blob_name, options).
+          and_return(blob)
+        expect(
+          blob_manager.get_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+        ).to eq(metadata)
+      end
+    end
+
+    context "when blob does not exist" do
+      before do
+        allow(blob_service).to receive(:get_blob_metadata).
+          and_raise("(404)")
+      end
+
+      it "should return nil" do
+        expect(
+        blob_manager.get_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+      ).to be(nil)
+      end
+    end
+  end
 
   describe "#list_blobs" do
     context "when the container does not exist" do

@@ -18,7 +18,10 @@ describe Bosh::AzureCloud::VMManager do
 
   describe "#create" do
     # Parameters
-    let(:stemcell_uri) { double("stemcell_uri") }
+    let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
+    let(:stemcell_uri) { "fake-uri" }
+    let(:os_type) { "fake-os-type" }
+    let(:disk_size) { nil }
     let(:resource_pool) {
       {
         'instance_type' => 'Standard_D1',
@@ -71,6 +74,13 @@ describe Bosh::AzureCloud::VMManager do
     }
 
     before do
+      allow(stemcell_info).to receive(:uri).
+        and_return(stemcell_uri)
+      allow(stemcell_info).to receive(:os_type).
+        and_return(os_type)
+      allow(stemcell_info).to receive(:disk_size).
+        and_return(disk_size)
+
       allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
         and_return(client2)
       allow(client2).to receive(:get_network_subnet_by_name).
@@ -140,7 +150,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+          vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
         }.to raise_error /missing required cloud property `instance_type'./
       end
     end
@@ -164,7 +174,7 @@ describe Bosh::AzureCloud::VMManager do
         end
         it "should raise an error" do
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the subnet `fake-virtual-network-name\/fake-subnet-name' in the resource group `#{MOCK_RESOURCE_GROUP_NAME}'/
         end
       end
@@ -187,7 +197,7 @@ describe Bosh::AzureCloud::VMManager do
         end
         it "should raise an error" do
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the network security group `fake-default-nsg-name'/
         end
       end
@@ -218,7 +228,7 @@ describe Bosh::AzureCloud::VMManager do
             with("fake-resource-group-name", "fake-virtual-network-name", "fake-subnet-name").
             and_return(nil)
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the subnet `fake-virtual-network-name\/fake-subnet-name' in the resource group `fake-resource-group-name'/
         end
       end
@@ -238,7 +248,7 @@ describe Bosh::AzureCloud::VMManager do
 
         it "should raise an error" do
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the network security group `fake-default-nsg-name'/
         end
       end
@@ -262,7 +272,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the public IP address/
         end
       end
@@ -291,7 +301,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /Cannot find the public IP address/
         end
       end
@@ -313,7 +323,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(client2).not_to receive(:delete_network_interface)
 
         expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+          vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
         }.to raise_error /Cannot find the load balancer/
       end
     end
@@ -344,7 +354,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).not_to receive(:delete_network_interface)
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /network interface is not created/
         end
       end
@@ -375,7 +385,7 @@ describe Bosh::AzureCloud::VMManager do
         it "should delete the (possible) existing network interface and raise an error" do
           expect(client2).to receive(:delete_network_interface).exactly(1).times
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /network interface is not created/
         end
       end
@@ -395,7 +405,7 @@ describe Bosh::AzureCloud::VMManager do
         it "should delete the dynamic public IP" do
           expect(client2).to receive(:delete_public_ip).with(instance_id)
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /network interface is not created/
         end
       end
@@ -438,7 +448,7 @@ describe Bosh::AzureCloud::VMManager do
 
         expect(client2).to receive(:delete_network_interface).exactly(2).times
         expect {
-          vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+          vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
         }.to raise_error /availability set is not created/
       end
     end
@@ -511,7 +521,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).to receive(:delete_network_interface).exactly(2).times
 
           expect {
-            vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /virtual machine is not created/
         end
       end
@@ -549,8 +559,10 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect(client2).to receive(:create_network_interface).exactly(2).times
-            vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
+            expect(vm_params[:image_uri]).to eq(stemcell_uri)
+            expect(vm_params[:os_type]).to eq(os_type)
           end
         end
 
@@ -570,7 +582,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect(client2).to receive(:create_network_interface).exactly(2).times
-            vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
         end
@@ -580,7 +592,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
 
-            vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
         end
@@ -604,7 +616,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_network_interface)
 
               expect(client2).to receive(:create_network_interface).exactly(2).times
-              vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+              vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
           end
@@ -632,7 +644,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_network_interface)
 
               expect(client2).to receive(:create_network_interface).exactly(2).times
-              vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+              vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
           end
@@ -649,7 +661,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_network_interface)
 
               expect(client2).to receive(:create_network_interface).exactly(2).times
-              vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+              vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
           end
@@ -690,7 +702,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:create_availability_set)
 
             expect(client2).to receive(:create_network_interface).exactly(2).times
-            vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
         end
@@ -726,7 +738,7 @@ describe Bosh::AzureCloud::VMManager do
               with(avset_params)
 
             expect(client2).to receive(:create_network_interface).exactly(2).times
-            vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
         end
@@ -768,7 +780,7 @@ describe Bosh::AzureCloud::VMManager do
                 with(avset_params)
 
               expect(client2).to receive(:create_network_interface).exactly(2).times
-              vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+              vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
           end
@@ -807,7 +819,7 @@ describe Bosh::AzureCloud::VMManager do
                   with(avset_params)
 
                 expect(client2).to receive(:create_network_interface).exactly(2).times
-                vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+                vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
                 expect(vm_params[:name]).to eq(instance_id)
               end
             end
@@ -838,7 +850,7 @@ describe Bosh::AzureCloud::VMManager do
                   with(avset_params)
 
                 expect(client2).to receive(:create_network_interface).exactly(2).times
-                vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+                vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
                 expect(vm_params[:name]).to eq(instance_id)
               end
             end
@@ -873,7 +885,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:create_network_interface).
               with(nic0_params, subnet, tags, load_balancer)
 
-            vm_params = vm_manager.create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
         end

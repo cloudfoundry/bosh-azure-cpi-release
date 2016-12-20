@@ -305,6 +305,25 @@ module Bosh::AzureCloud
       end
     end
 
+    # Stemcell information, got from the stemcell blob file on Azure
+    # * +:uri+      - String. uri of the stemcell, e.g. "https://<storageaccount>.blob.core.windows.net/stemcell/bosh-stemcell-82817f34-ae10-4cfe-8ca8-b18d18ee5cdd.vhd"
+    # * +:os_type+  - String. os type of the stemcell, e.g. "linux"
+    # * +:name+     - String. name of the stemcell, e.g. "bosh-azure-hyperv-ubuntu-trusty-go_agent"
+    # * +:version   - String. version of the stemcell, e.g. "2972"
+    # * +:disk_size - Integer. disk size in MiB, e.g. 3072
+    class StemcellInfo
+      attr_reader :uri, :os_type, :name, :version, :disk_size
+
+      def initialize(uri, metadata)
+        @uri = uri
+        @metadata = metadata
+        @os_type = @metadata['os_type'].nil? ? 'linux': @metadata['os_type'].downcase
+        @name = @metadata['name']
+        @version = @metadata['version']
+        @disk_size = @metadata['disk'].nil? ? 3072 : @metadata['disk'].to_i
+      end
+    end
+
     private
 
     def validate_azure_stack_options(azure_properties)

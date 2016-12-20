@@ -130,8 +130,6 @@ module Bosh::AzureCloud
     # * +:location+             - String. The location where the virtual machine will be created.
     # * +:tags+                 - Hash. Tags of virtual machine.
     # * +:vm_size+              - String. Specifies the size of the virtual machine instance.
-    # * +:username+             - String. User name for the virtual machine instance.
-    # * +:ssh_cert_data+        - String. The content of SSH certificate.
     # * +:custom_data+          - String. Specifies a base-64 encoded string of custom data.
     # * +:image_uri+            - String. The URI of the image.
     # * +:os_disk+              - Hash. OS Disk for the virtual machine instance.
@@ -144,6 +142,9 @@ module Bosh::AzureCloud
     # *   +:disk_uri+           - String. The URI of the ephemeral disk.
     # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Caching option: None, ReadOnly or ReadWrite.
     # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
+    # * +:os_type+              - String. OS type of virutal machine. It can be linux.
+    # * +:ssh_username+         - String. User name for the virtual machine instance. Only available when os_type is linux
+    # * +:ssh_cert_data+        - String. The content of SSH certificate. Only available when os_type is linux
     #
     # @return [Boolean]
     #
@@ -164,6 +165,29 @@ module Bosh::AzureCloud
         )
       end
 
+      osProfile = {
+        'customData'         => vm_params[:custom_data],
+        'computername'       => vm_params[:name],
+      }
+
+      case vm_params[:os_type]
+        when 'linux'
+          osProfile['adminUsername'] = vm_params[:ssh_username]
+          osProfile['linuxConfiguration'] = {
+            'disablePasswordAuthentication' => 'true',
+            'ssh' => {
+              'publicKeys' => [
+                {
+                  'path'    => "/home/#{vm_params[:ssh_username]}/.ssh/authorized_keys",
+                  'keyData' => vm_params[:ssh_cert_data],
+                }
+              ]
+            }
+          }
+        else
+          raise ArgumentError, "Unsupported os type: #{vm_params[:os_type]}"
+      end
+
       vm = {
         'name'       => vm_params[:name],
         'location'   => vm_params[:location],
@@ -173,26 +197,11 @@ module Bosh::AzureCloud
           'hardwareProfile' => {
             'vmSize' => vm_params[:vm_size]
           },
-          'osProfile' => {
-            'customData'         => vm_params[:custom_data],
-            'computername'       => vm_params[:name],
-            'adminUsername'      => vm_params[:username],
-            'linuxConfiguration' => {
-              'disablePasswordAuthentication' => 'true',
-              'ssh' => {
-                'publicKeys' => [
-                  {
-                    'path'    => "/home/#{vm_params[:username]}/.ssh/authorized_keys",
-                    'keyData' => vm_params[:ssh_cert_data],
-                  }
-                ]
-              },
-            },
-          },
+          'osProfile' => osProfile,
           'storageProfile' => {
             'osDisk' => {
               'name'         => vm_params[:os_disk][:disk_name],
-              'osType'       => 'Linux',
+              'osType'       => vm_params[:os_type],
               'createOption' => 'FromImage',
               'caching'      => vm_params[:os_disk][:disk_caching],
               'image'        => {
