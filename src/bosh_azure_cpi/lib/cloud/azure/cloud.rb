@@ -113,7 +113,7 @@ module Bosh::AzureCloud
         vm_params = @vm_manager.create(
           agent_id,
           storage_account,
-          @stemcell_manager.get_stemcell_uri(storage_account[:name], stemcell_id),
+          @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_id),
           resource_pool,
           NetworkConfigurator.new(@azure_properties, networks),
           env)

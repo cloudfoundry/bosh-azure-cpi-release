@@ -170,6 +170,7 @@ describe Bosh::AzureCloud::DiskManager do
     let(:disk_name) { 'fake-disk-name' }
     let(:disk_uri) { 'fake-disk-uri' }
     let(:instance_id) { 'fake-instance-id' }
+    let(:minimum_disk_size) { 3072 }
 
     before do
       allow(disk_manager).to receive(:generate_os_disk_name).
@@ -189,7 +190,7 @@ describe Bosh::AzureCloud::DiskManager do
         disk_manager.resource_pool = resource_pool
 
         expect(
-          disk_manager.os_disk(instance_id)
+          disk_manager.os_disk(instance_id, minimum_disk_size)
         ).to eq(
           {
             :disk_name    => disk_name,
@@ -215,7 +216,7 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect(
-            disk_manager.os_disk(instance_id)
+            disk_manager.os_disk(instance_id, minimum_disk_size)
           ).to eq(
             {
               :disk_name    => disk_name,
@@ -239,7 +240,7 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect {
-            disk_manager.os_disk(instance_id)
+            disk_manager.os_disk(instance_id, minimum_disk_size)
           }.to raise_error /Unknown disk caching/
         end
       end
@@ -259,7 +260,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.os_disk(instance_id)
+              disk_manager.os_disk(instance_id, minimum_disk_size)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -286,7 +287,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.os_disk(instance_id)
+              disk_manager.os_disk(instance_id, minimum_disk_size)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -313,7 +314,7 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect(
-            disk_manager.os_disk(instance_id)
+            disk_manager.os_disk(instance_id, minimum_disk_size)
           ).to eq(
             {
               :disk_name    => disk_name,
@@ -326,7 +327,7 @@ describe Bosh::AzureCloud::DiskManager do
       end
 
       context "with an invalid size" do
-        context "When the size is smaller than 3 GiB" do
+        context "When minimum_disk_size is not specified and the size is smaller than 3 GiB" do
           let(:resource_pool) {
             {
               'instance_type' => 'STANDARD_A1',
@@ -340,8 +341,28 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect {
-              disk_manager.os_disk(instance_id)
-            }.to raise_error /root_disk.size must not be smaller than 3 GiB/
+              disk_manager.os_disk(instance_id, minimum_disk_size)
+            }.to raise_error /root_disk.size `2048' is smaller than the default OS disk size `3072' MiB/
+          end
+        end
+
+        context "When minimum_disk_size is specified and the size is smaller than minimum_disk_size" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'STANDARD_A1',
+              'root_disk' => {
+                'size' => 2 * 1024
+              }
+            }
+          }
+          let(:minimum_disk_size) { 4 * 1024 }
+
+          it "should raise an error" do
+            disk_manager.resource_pool = resource_pool
+
+            expect {
+              disk_manager.os_disk(instance_id, minimum_disk_size)
+            }.to raise_error /root_disk.size `2048' is smaller than the default OS disk size `4096' MiB/
           end
         end
 
@@ -359,8 +380,34 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect {
-              disk_manager.os_disk(instance_id)
+              disk_manager.os_disk(instance_id, minimum_disk_size)
             }.to raise_error
+          end
+        end
+
+        context "When the size is not divisible by 1024" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'STANDARD_A1',
+              'root_disk' => {
+                'size' => 5*1024 + 512
+              }
+            }
+          }
+
+          it "should return the smallest Integer greater than or equal to size/1024 for disk_size" do
+            disk_manager.resource_pool = resource_pool
+
+            expect(
+              disk_manager.os_disk(instance_id, minimum_disk_size)
+            ).to eq(
+              {
+                :disk_name    => disk_name,
+                :disk_uri     => disk_uri,
+                :disk_size    => 6,
+                :disk_caching => 'ReadWrite'
+              }
+           )
           end
         end
       end

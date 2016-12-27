@@ -13,7 +13,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(uuid, storage_account, stemcell_uri, resource_pool, network_configurator, env)
+    def create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
       instance_id = generate_instance_id(storage_account[:name], uuid)
       vm_size = resource_pool.fetch('instance_type', nil)
       cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?
@@ -21,7 +21,7 @@ module Bosh::AzureCloud
       @disk_manager.resource_pool = resource_pool
 
       # Raise errors if the properties are not valid before doing others.
-      os_disk = @disk_manager.os_disk(instance_id)
+      os_disk = @disk_manager.os_disk(instance_id, stemcell_info.disk_size)
       ephemeral_disk = @disk_manager.ephemeral_disk(instance_id)
 
       location = storage_account[:location]
@@ -33,12 +33,13 @@ module Bosh::AzureCloud
         :location            => location,
         :tags                => AZURE_TAGS,
         :vm_size             => vm_size,
-        :username            => @azure_properties['ssh_user'],
+        :ssh_username        => @azure_properties['ssh_user'],
         :ssh_cert_data       => @azure_properties['ssh_public_key'],
         :custom_data         => get_user_data(instance_id, network_configurator.default_dns),
-        :image_uri           => stemcell_uri,
+        :image_uri           => stemcell_info.uri,
         :os_disk             => os_disk,
-        :ephemeral_disk      => ephemeral_disk
+        :ephemeral_disk      => ephemeral_disk,
+        :os_type             => stemcell_info.os_type
       }
 
       @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)

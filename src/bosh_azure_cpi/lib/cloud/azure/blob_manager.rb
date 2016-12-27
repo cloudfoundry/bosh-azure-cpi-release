@@ -47,12 +47,12 @@ module Bosh::AzureCloud
       end
     end
 
-    def create_page_blob(storage_account_name, container_name, file_path, blob_name)
-      @logger.info("create_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name})")
+    def create_page_blob(storage_account_name, container_name, file_path, blob_name, metadata)
+      @logger.info("create_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name}, #{metadata})")
       # Disable debug_mode because we never want to print the content of VHD in the logs
       initialize_blob_client(storage_account_name, true) do
         begin
-          upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num)
+          upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num, metadata)
         rescue => e
           cloud_error("Failed to upload page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
@@ -119,6 +119,21 @@ module Bosh::AzureCloud
           blob.properties
         rescue => e
           cloud_error("get_blob_properties: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
+          nil
+        end
+      end
+    end
+
+    def get_blob_metadata(storage_account_name, container_name, blob_name)
+      @logger.info("get_blob_metadata(#{storage_account_name}, #{container_name}, #{blob_name})")
+      initialize_blob_client(storage_account_name) do
+        begin
+          options = merge_storage_common_options()
+          @logger.info("get_blob_metadata: Calling get_blob_metadata(#{container_name}, #{blob_name}, #{options})")
+          blob = @blob_service_client.get_blob_metadata(container_name, blob_name, options)
+          blob.metadata
+        rescue => e
+          cloud_error("get_blob_metadata: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?("(404)")
           nil
         end
       end
@@ -308,12 +323,13 @@ module Bosh::AzureCloud
       threads.each { |t| t.join }
     end
 
-    def upload_page_blob(container_name, blob_name, file_path, thread_num)
-      @logger.info("upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num})")
+    def upload_page_blob(container_name, blob_name, file_path, thread_num, metadata)
+      @logger.info("upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num}, #{metadata})")
       start_time = Time.new
       file_size = File.lstat(file_path).size
       options = {
-        :timeout => 120 # seconds
+        :timeout => 120, # seconds
+        :metadata => encode_metadata(metadata)
       }
       options = merge_storage_common_options(options)
       @logger.debug("upload_page_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{file_size}, #{options})")

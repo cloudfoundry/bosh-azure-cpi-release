@@ -33,7 +33,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         :name           => vm_name,
         :location       => "b",
         :vm_size        => "c",
-        :username       => "d",
+        :ssh_username   => "d",
         :ssh_cert_data  => "e",
         :custom_data    => "f",
         :image_uri      => "g",
@@ -48,7 +48,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           :disk_uri      => "m",
           :disk_caching  => "n",
           :disk_size     => "o",
-        }
+        },
+        :os_type        => "linux"
       }
     end
     let(:network_interfaces) {[
@@ -89,7 +90,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :name           => vm_name,
             :location       => "b",
             :vm_size        => "c",
-            :username       => "d",
+            :ssh_username   => "d",
             :ssh_cert_data  => "e",
             :custom_data    => "f",
             :image_uri      => "g",
@@ -98,7 +99,8 @@ describe Bosh::AzureCloud::AzureClient2 do
               :disk_uri      => "i",
               :disk_caching  => "j",
               :disk_size     => "k",
-            }
+            },
+            :os_type        => "linux"
           }
         end
 
@@ -133,7 +135,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :name           => vm_name,
             :location       => "b",
             :vm_size        => "c",
-            :username       => "d",
+            :ssh_username   => "d",
             :ssh_cert_data  => "e",
             :custom_data    => "f",
             :image_uri      => "g",
@@ -141,7 +143,8 @@ describe Bosh::AzureCloud::AzureClient2 do
               :disk_name     => "h",
               :disk_uri      => "i",
               :disk_caching  => "j"
-            }
+            },
+            :os_type        => "linux"
           }
         end
 

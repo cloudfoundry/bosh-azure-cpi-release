@@ -557,4 +557,46 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
   end
+
+  describe "StemcellInfo" do
+    context "when metadata is not empty" do
+      let(:uri) { "fake-uri" }
+      let(:metadata) {
+        {
+          "name" => "fake-name",
+          "version" => "fake-version",
+          "infrastructure" => "azure",
+          "hypervisor" => "hyperv",
+          "disk" => "3072",
+          "disk_format" => "vhd",
+          "container_format" => "bare",
+          "os_type" => "linux",
+          "os_distro" => "ubuntu",
+          "architecture" => "x86_64",
+        }
+      }
+
+      it "should return correct values" do
+        stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+        expect(stemcell_info.uri).to eq("fake-uri")
+        expect(stemcell_info.os_type).to eq("linux")
+        expect(stemcell_info.name).to eq("fake-name")
+        expect(stemcell_info.version).to eq("fake-version")
+        expect(stemcell_info.disk_size).to eq(3072)
+      end
+    end
+
+    context "when metadata is empty" do
+      let(:uri) { "fake-uri" }
+      let(:metadata) { {} }
+      it "should return correct values" do
+        stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+        expect(stemcell_info.uri).to eq("fake-uri")
+        expect(stemcell_info.os_type).to eq('linux')
+        expect(stemcell_info.name).to be(nil)
+        expect(stemcell_info.version).to be(nil)
+        expect(stemcell_info.disk_size).to eq(3072)
+      end
+    end
+  end
 end

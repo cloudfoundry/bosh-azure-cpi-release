@@ -46,7 +46,7 @@ module Bosh::AzureCloud
         run_command("tar -zxf #{image_path} -C #{tmp_dir}")
         @logger.info("Start to upload VHD")
         stemcell_name = "#{STEMCELL_PREFIX}-#{SecureRandom.uuid}"
-        @blob_manager.create_page_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{tmp_dir}/root.vhd", "#{stemcell_name}.vhd")
+        @blob_manager.create_page_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{tmp_dir}/root.vhd", "#{stemcell_name}.vhd", cloud_properties)
       end
       stemcell_name
     end
@@ -64,6 +64,14 @@ module Bosh::AzureCloud
     def get_stemcell_uri(storage_account_name, name)
       @logger.info("get_stemcell_uri(#{storage_account_name}, #{name})")
       @blob_manager.get_blob_uri(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
+    end
+
+    def get_stemcell_info(storage_account_name, name)
+      @logger.info("get_stemcell_info(#{storage_account_name}, #{name})")
+      uri = @blob_manager.get_blob_uri(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
+      metadata = @blob_manager.get_blob_metadata(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
+      cloud_error("The stemcell `#{name}' does not exist in the storage account `#{storage_account_name}'") if metadata.nil?
+      StemcellInfo.new(uri, metadata)
     end
 
     private

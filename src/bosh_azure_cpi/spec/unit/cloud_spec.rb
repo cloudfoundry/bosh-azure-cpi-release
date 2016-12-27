@@ -114,9 +114,7 @@ describe Bosh::AzureCloud::Cloud do
 
   describe '#create_vm' do
     let(:storage_account_name) { azure_properties['storage_account_name'] }
-    let(:stemcell_uri) {
-      "https://#{storage_account_name}.blob.core.windows.net/fakecontainer/#{stemcell_id}.vhd"
-    }
+    let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
     let(:resource_pool) { {'instance_type' => 'fake-vm-size'} }
     let(:networks_spec) { {} }
     let(:disk_locality) { double("disk locality") }
@@ -143,9 +141,9 @@ describe Bosh::AzureCloud::Cloud do
       allow(stemcell_manager).to receive(:has_stemcell?).
         with(storage_account_name, stemcell_id).
         and_return(true)
-      allow(stemcell_manager).to receive(:get_stemcell_uri).
+      allow(stemcell_manager).to receive(:get_stemcell_info).
         with(storage_account_name, stemcell_id).
-        and_return(stemcell_uri)
+        and_return(stemcell_info)
       allow(vm_manager).to receive(:create).and_return(vm_params)
       allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
           with(azure_properties, networks_spec).
@@ -318,9 +316,9 @@ describe Bosh::AzureCloud::Cloud do
             allow(stemcell_manager).to receive(:has_stemcell?).
               with(storage_account_name, stemcell_id).
               and_return(true)
-            allow(stemcell_manager).to receive(:get_stemcell_uri).
+            allow(stemcell_manager).to receive(:get_stemcell_info).
               with(storage_account_name, stemcell_id).
-              and_return(stemcell_uri)
+              and_return(stemcell_info)
           end
 
           context 'when storage_account_location is specified' do
@@ -444,9 +442,9 @@ describe Bosh::AzureCloud::Cloud do
             allow(stemcell_manager).to receive(:has_stemcell?).
               with(storage_account_name, stemcell_id).
               and_return(true)
-            allow(stemcell_manager).to receive(:get_stemcell_uri).
+            allow(stemcell_manager).to receive(:get_stemcell_info).
               with(storage_account_name, stemcell_id).
-              and_return(stemcell_uri)
+              and_return(stemcell_info)
           end
 
           context 'when the storage account belongs to other resource group' do
@@ -536,9 +534,9 @@ describe Bosh::AzureCloud::Cloud do
             allow(stemcell_manager).to receive(:has_stemcell?).
               with(storage_account_name, stemcell_id).
               and_return(true)
-            allow(stemcell_manager).to receive(:get_stemcell_uri).
+            allow(stemcell_manager).to receive(:get_stemcell_info).
               with(storage_account_name, stemcell_id).
-              and_return(stemcell_uri)
+              and_return(stemcell_info)
           end
 
           it 'should not raise any error' do
@@ -690,9 +688,9 @@ describe Bosh::AzureCloud::Cloud do
                 allow(stemcell_manager).to receive(:has_stemcell?).
                   with(anything, stemcell_id).
                   and_return(true)
-                allow(stemcell_manager).to receive(:get_stemcell_uri).
+                allow(stemcell_manager).to receive(:get_stemcell_info).
                   with(anything, stemcell_id).
-                  and_return(stemcell_uri)
+                  and_return(stemcell_info)
             end
 
             context 'without storage_account_max_disk_number' do
