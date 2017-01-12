@@ -9,7 +9,7 @@
 2. Install CF CLI and the plugin
 
   ```
-  wget -O cf.deb http://go-cli.s3-website-us-east-1.amazonaws.com/releases/v6.14.1/cf-cli-installer_6.14.1_x86-64.deb
+  wget -O cf.deb https://s3-us-west-1.amazonaws.com/cf-cli-releases/releases/v6.23.0/cf-cli-installer_6.23.0_x86-64.deb
   sudo dpkg -i cf.deb
   ```
 
@@ -20,8 +20,10 @@
   ```
   cf login -a https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io --skip-ssl-validation -u admin -p c1oudc0w
   cf create-space azure
-  cf target -o "default_organization" -s "azure"
+  cf target -o "REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io_ORGANIZATION" -s "azure"
   ```
+
+  NOTE: **If you do not use the default password `c1oudc0w`, you should use your password to login your deployment.**
 
 ## 2 Push Your First Application
 
