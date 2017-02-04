@@ -21,6 +21,8 @@ AZURE_STACK_API_VERSION = '2015-05-01-preview'
 AZURE_CHINA_API_VERSION = '2015-06-15'
 AZURE_USGOV_API_VERSION = '2015-06-15'
 
+ERROR_MSG_OPENSSL_RESET = 'Connection reset by peer - SSL_connect'
+
 def mock_cloud_options
   {
     'plugin' => 'azure',

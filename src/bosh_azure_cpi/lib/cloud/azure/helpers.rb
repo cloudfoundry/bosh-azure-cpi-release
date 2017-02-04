@@ -61,6 +61,10 @@ module Bosh::AzureCloud
     DISK_CONTAINER            = 'bosh'
     STEMCELL_CONTAINER        = 'stemcell'
 
+    # REST Connection Errors
+    ERROR_OPENSSL_RESET           = 'SSL_connect'
+    ERROR_SOCKET_UNKNOWN_HOSTNAME = 'SocketError: Hostname not known'
+
     ##
     # Raises CloudError exception
     #
