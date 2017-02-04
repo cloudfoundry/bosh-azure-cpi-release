@@ -21,7 +21,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
   let(:valid_access_token) { "valid-access-token" }
-  let(:invalid_access_token) { "invalid-access-token" }
+
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
   let(:load_balancer_name) { "fake-load-balancer-name" }
