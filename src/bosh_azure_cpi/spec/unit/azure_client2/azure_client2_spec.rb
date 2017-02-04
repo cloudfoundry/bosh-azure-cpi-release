@@ -22,7 +22,6 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   let(:vm_name) { "fake-vm-name" }
   let(:valid_access_token) { "valid-access-token" }
-  let(:invalid_access_token) { "invalid-access-token" }
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
   describe "#rest_api_url" do
@@ -279,6 +278,81 @@ describe Bosh::AzureCloud::AzureClient2 do
             ).not_to be_nil
           end
         end
+
+        context "when OpenSSL::SSL::SSLError with specified message 'SSL_connect' is raised at the first time but returns 200 at the second time" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise(OpenSSL::SSL::SSLError.new(ERROR_MSG_OPENSSL_RESET)).then.
+              to_return(
+                :status => 200,
+                :body => {
+                  "access_token"=>valid_access_token,
+                  "expires_on"=>expires_on
+                }.to_json,
+                :headers => {})
+            stub_request(:get, resource_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+          end
+
+          it "should return the resource if response body is not null" do
+            expect(
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            ).not_to be_nil
+          end
+        end
+
+        context "when OpenSSL::X509::StoreError with specified message 'SSL_connect' is raised at the first time but returns 200 at the second time" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise(OpenSSL::X509::StoreError.new(ERROR_MSG_OPENSSL_RESET)).then.
+              to_return(
+                :status => 200,
+                :body => {
+                  "access_token"=>valid_access_token,
+                  "expires_on"=>expires_on
+                }.to_json,
+                :headers => {})
+            stub_request(:get, resource_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+          end
+
+          it "should return the resource if response body is not null" do
+            expect(
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            ).not_to be_nil
+          end
+        end
+
+        context "when OpenSSL::SSL::SSLError without specified message 'SSL_connect' is raised" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise(OpenSSL::SSL::SSLError.new)
+          end
+
+          it "should raise OpenSSL::SSL::SSLError" do
+            expect {
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            }.to raise_error OpenSSL::SSL::SSLError
+          end
+        end
+
+        context "when OpenSSL::X509::StoreError without specified message 'SSL_connect' is raised" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise(OpenSSL::X509::StoreError.new)
+          end
+
+          it "should raise OpenSSL::X509::StoreError" do
+            expect {
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            }.to raise_error OpenSSL::X509::StoreError
+          end
+        end
+
       end
     end
 

@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:tags) { {} }
 
   let(:valid_access_token) { "valid-access-token" }
-  let(:invalid_access_token) { "invalid-access-token" }
+
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
   describe "#attach_disk_to_virtual_machine" do
