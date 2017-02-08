@@ -1,5 +1,11 @@
 # BOSH Azure CPI Release
 
+| Concourse Job      | Status                                                                                                                                                                                                                               |
+| ---                | ---                                                                                                                                                                                                                                  |
+| BATS               | [![bosh-azure-cpi.ci.cf-app.com](https://bosh-azure-cpi.ci.cf-app.com/api/v1/pipelines/azure-cpi/jobs/bats-ubuntu/badge)](https://bosh-azure-cpi.ci.cf-app.com/pipelines/azure-cpi/jobs/bats-ubuntu)                             |
+| integration        | [![bosh-azure-cpi.ci.cf-app.com](https://bosh-azure-cpi.ci.cf-app.com/api/v1/pipelines/azure-cpi/jobs/lifecycle/badge)](https://bosh-azure-cpi.ci.cf-app.com/pipelines/azure-cpi/jobs/lifecycle)           |
+| unit tests         | [![bosh-azure-cpi.ci.cf-app.com](https://bosh-azure-cpi.ci.cf-app.com/api/v1/pipelines/azure-cpi/jobs/build-candidate/badge)](https://bosh-azure-cpi.ci.cf-app.com/pipelines/azure-cpi/jobs/build-candidate)           |
+
 * Documentation: [bosh.io/docs](https://bosh.io/docs)
 * Slack: #bosh-azure-cpi on <https://slack.cloudfoundry.org>
 * Mailing list: [cf-bosh](https://lists.cloudfoundry.org/pipermail/cf-bosh)
