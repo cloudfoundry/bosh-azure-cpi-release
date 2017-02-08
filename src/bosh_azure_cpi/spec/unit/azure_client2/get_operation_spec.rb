@@ -21,7 +21,6 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
   let(:valid_access_token) { "valid-access-token" }
-  let(:invalid_access_token) { "invalid-access-token" }
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
   # Public IP
@@ -542,6 +541,84 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
+      end
+
+      it "should not raise error if it raises OpenSSL::SSL::SSLError with specified message 'SSL_connect' at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise(OpenSSL::SSL::SSLError.new(ERROR_MSG_OPENSSL_RESET)).then.
+            to_return(
+              {
+                :status => 200,
+                :body => '',
+                :headers => {}
+              }
+            )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.not_to raise_error
+      end
+
+      it "should not raise error if it raises OpenSSL::X509::StoreError with specified message 'SSL_connect' at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise(OpenSSL::X509::StoreError.new(ERROR_MSG_OPENSSL_RESET)).then.
+            to_return(
+              {
+                :status => 200,
+                :body => '',
+                :headers => {}
+              }
+            )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.not_to raise_error
+      end
+
+      it "should raise OpenSSL::SSL::SSLError if it raises OpenSSL::SSL::SSLError without specified message 'SSL_connect'" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise(OpenSSL::SSL::SSLError.new)
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.to raise_error OpenSSL::SSL::SSLError
+      end
+
+      it "should raise OpenSSL::X509::StoreError if it raises OpenSSL::X509::StoreError without specified message 'SSL_connect'" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise(OpenSSL::X509::StoreError.new)
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.to raise_error OpenSSL::X509::StoreError
       end
 
       it "should not raise error if it raises 'SocketError: Hostname not known' at the first time but returns 200 at the second time" do
