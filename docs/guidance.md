@@ -30,8 +30,8 @@ You have two options to deploy BOSH and Cloud Foundry on Azure. One is ARM templ
 
 ### 2.2.2 Manually
 
-* [Deploy BOSH](./get-started/manually/deploy-bosh-manually.md)
-* [Deploy Cloud Foundry](./get-started/manually/deploy-cloudfoundry-manually.md)
+* [Deploy BOSH](https://bosh.io/docs/init-azure.html)
+* [Deploy Cloud Foundry](https://docs.cloudfoundry.org/deploying/azure/index.html)
 
 ## 2.3 Push Your First Application
 
@@ -61,4 +61,3 @@ If you hit some issues when you deploy BOSH and Cloud Foundry, you can refer to 
 
 * [Known issues](./additional-information/known-issues.md)
 * [Troubleshooting](./additional-information/troubleshooting.md)
-* [Migration from Preview 2](./additional-information/migration.md)

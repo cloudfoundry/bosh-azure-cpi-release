@@ -89,7 +89,7 @@ Before you perform the following steps, you need to understand the basic steps o
 
   * You need to disable `autoDeployBosh` when deploying the template, as you will need to perform additional manual steps before deploying BOSH.
 
-2. Create an additional resource group (e.g. `RG2`) [**manually**](../../get-started/manually/deploy-bosh-manually.md#11-create-an-azure-resource-group)
+2. Create an additional resource group (e.g. `RG2`) [**manually**](https://bosh.io/docs/azure-resources.html#res-group)
 
   * The `location` of `RG2` should be the same as `RG1`.
 
@@ -151,21 +151,19 @@ Before you perform the following steps, you need to understand the basic steps o
 
 ### Manually
 
-You can refer to [the manual steps](../../get-started/manually/deploy-bosh-manually.md) for how to prepare the resource groups.
+You can refer to [the manual steps](https://bosh.io/docs/azure-resources.html) for how to prepare the resource groups.
 
-1. [Create two resource groups](../../get-started/manually/deploy-bosh-manually.md#11-create-an-azure-resource-group) (e.g. `RG1` and `RG2`).
+1. [Create two resource groups](https://bosh.io/docs/azure-resources.html#res-group) (e.g. `RG1` and `RG2`).
 
-2. [Create a public IP for Cloud Foundry](../../get-started/manually/deploy-bosh-manually.md#13-create-a-public-ip-for-cloud-foundry) in `RG2`.
+2. [Create a public IP for Cloud Foundry](https://bosh.io/docs/azure-resources.html#public-ips) in `RG2`.
 
-3. [Create a Virtual Network](../../get-started/manually/deploy-bosh-manually.md#14-create-a-virtual-network) in `RG2`.
+3. [Create a Virtual Network](https://bosh.io/docs/azure-resources.html#virtual-network) in `RG2`.
 
-4. [Setup a default Storage Account](../../get-started/manually/deploy-bosh-manually.md#12-setup-a-default-storage-account) in `RG1`.
-
-5. [Setup a dev-box](../../get-started/manually/deploy-bosh-manually.md#15-setup-a-dev-box) in `RG1`, and login the dev-box.
+4. [Setup a default Storage Account](https://bosh.io/docs/azure-resources.html#storage-account) in `RG1`.
 
   When you create a network interface using a subnet from a different resource group, the command is a little different. You should use `--subnet-id` instead of `--subnet-name` in `azure network nic create`. Similarly, you should use `--subnet-id` in `azure vm create` too.
 
-6. [Update the manifest for BOSH](../../get-started/manually/deploy-bosh-manually.md#21-configure), specify the resource group name and [deploy BOSH](../../get-started/manually/deploy-bosh-manually.md#22-deploy).
+5. Update the manifest for BOSH, specify the resource group name and [deploy BOSH](https://bosh.io/docs/init-azure.html#deploy).
 
   ```
   networks:
@@ -187,7 +185,7 @@ You can refer to [the manual steps](../../get-started/manually/deploy-bosh-manua
 
   * [**Reference**](http://bosh.io/docs/azure-cpi.html#networks)
 
-7. [Update the manifest for Cloud Foundry](../../get-started/manually/deploy-cloudfoundry-manually.md#1-prepare-the-manifest-for-cloud-foundry), specify the resource group name and [deploy Cloud Foundry](../../get-started/manually/deploy-cloudfoundry-manually.md#2-deploy-cloud-foundry).
+7. Update the manifest for Cloud Foundry, specify the resource group name and [deploy Cloud Foundry](https://docs.cloudfoundry.org/deploying/common/deploy.html#deploy).
 
   ```
   networks:
