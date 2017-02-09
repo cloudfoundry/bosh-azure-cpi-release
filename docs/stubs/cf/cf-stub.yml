@@ -1,4 +1,5 @@
 # code_snippet cf-stub-azure start
+# This stub is made according to cf-release v250
 ---
 director_uuid: DIRECTOR_UUID
 meta:
@@ -67,6 +68,28 @@ properties:
     server_key: CONSUL_SERVER_KEY
     agent_cert: CONSUL_AGENT_CERT
     agent_key: CONSUL_AGENT_KEY
+  etcd:
+    require_ssl: true
+    ca_cert: ETCD_CA_CERT
+    client_cert: ETCD_CLIENT_CERT
+    client_key: ETCD_CLIENT_KEY
+    peer_ca_cert: ETCD_PEER_CA_CERT
+    peer_cert: ETCD_PEER_CERT
+    peer_key: ETCD_PEER_KEY
+    server_cert: ETCD_SERVER_CERT
+    server_key: ETCD_SERVER_KEY
+  loggregator:
+    tls:
+      ca_cert: LOGGREGATOR_CA_CERT
+      doppler:
+        cert: DOPPLER_CERT
+        key: DOPPLER_KEY
+      metron:
+        cert: METRON_CERT
+        key: METRON_KEY
+      trafficcontroller:
+        cert: TRAFFICCONTROLLER_CERT
+        key: TRAFFICCONTROLLER_KEY
   loggregator_endpoint:
     shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
   nats:
@@ -137,6 +160,11 @@ properties:
     client_key: HM9000_CLIENT_KEY
     client_cert: HM9000_CLIENT_CERT
     ca_cert: HM9000_CA_CERT
+  login:
+    saml:
+      serviceProviderKey: SAML_KEY
+      serviceProviderKeyPassword: ''
+      serviceProviderCertificate: SAML_CERT
 
 jobs:
   - name: ha_proxy_z1
