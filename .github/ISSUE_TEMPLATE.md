@@ -7,10 +7,16 @@ We've created an outline of recommended sections to fill out that will help us t
 --------------------MESSAGE FROM ADMIN, DELETE BEFORE SUBMITTING----------------------
 
 ### Versions (*please add them if you have more releases for this issue*)
-CPI   Version:
-BOSH  Version:
-CF    Version:
-Diego Version:
+CPI      Version:
+BOSH     Version:
+CF       Version:
+Diego    Version:
+
+### Stemcell
+Version:
+Distro:
+  - [ ] Ubuntu
+  - [ ] CentOS
 
 ### Environment
 - Azure Environment:
