@@ -33,6 +33,7 @@ params:
   BAT_NETWORK_GATEWAY:                ""
   BAT_SECOND_NETWORK_GATEWAY:         ""
   BAT_VCAP_PASSWORD:                  ""
+  BAT_OS_BASE:                        ubuntu-trusty
   BOSH_DIRECTOR_USERNAME:             ""
   BOSH_DIRECTOR_PASSWORD:             ""
   SSH_PRIVATE_KEY:                    ""

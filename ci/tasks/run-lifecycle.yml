@@ -12,15 +12,16 @@ run:
   path: bosh-cpi-src/ci/tasks/run-lifecycle.sh
 
 params:
-  AZURE_SUBSCRIPTION_ID:         ""
-  AZURE_CLIENT_ID:               ""
-  AZURE_CLIENT_SECRET:           ""
-  AZURE_TENANT_ID:               ""
-  AZURE_GROUP_NAME_FOR_VMS:      ""
-  AZURE_GROUP_NAME_FOR_NETWORK:  ""
-  AZURE_STORAGE_ACCOUNT_NAME:    ""
-  AZURE_VNET_NAME_FOR_LIFECYCLE: ""
-  AZURE_BOSH_SUBNET_NAME:        ""
-  AZURE_BOSH_SECOND_SUBNET_NAME: ""
-  AZURE_DEFAULT_SECURITY_GROUP:  ""
-  SSH_PUBLIC_KEY:                ""
+  AZURE_SUBSCRIPTION_ID:                      ""
+  AZURE_CLIENT_ID:                            ""
+  AZURE_CLIENT_SECRET:                        ""
+  AZURE_TENANT_ID:                            ""
+  AZURE_GROUP_NAME_FOR_VMS:                   ""
+  AZURE_GROUP_NAME_FOR_NETWORK:               ""
+  AZURE_STORAGE_ACCOUNT_NAME:                 ""
+  AZURE_VNET_NAME_FOR_LIFECYCLE:              ""
+  AZURE_BOSH_SUBNET_NAME:                     ""
+  AZURE_BOSH_SECOND_SUBNET_NAME:              ""
+  AZURE_DEFAULT_SECURITY_GROUP:               ""
+  AZURE_USE_MANAGED_DISKS:                    false
+  SSH_PUBLIC_KEY:                             ""
