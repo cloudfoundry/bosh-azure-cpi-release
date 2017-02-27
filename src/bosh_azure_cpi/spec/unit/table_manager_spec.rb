@@ -2,8 +2,9 @@ require 'spec_helper'
 
 describe Bosh::AzureCloud::TableManager do
   let(:azure_properties) { mock_azure_properties }
+  let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
   let(:azure_client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
-  let(:table_manager) { Bosh::AzureCloud::TableManager.new(azure_properties, azure_client2) }
+  let(:table_manager) { Bosh::AzureCloud::TableManager.new(azure_properties, storage_account_manager, azure_client2) }
 
   let(:table_name) { "fake-table-name" }
   let(:keys) { ["fake-key-1", "fake-key-2"] }
@@ -30,6 +31,8 @@ describe Bosh::AzureCloud::TableManager do
   }
 
   before do
+    allow(storage_account_manager).to receive(:default_storage_account).
+      and_return(storage_account)
     allow(Azure::Storage::Client).to receive(:create).
       and_return(azure_client)
     allow(Bosh::AzureCloud::AzureClient2).to receive(:new).

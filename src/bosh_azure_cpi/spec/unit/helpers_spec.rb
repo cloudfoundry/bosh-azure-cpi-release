@@ -599,4 +599,65 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
   end
+
+  describe "FileMutex" do
+    context "when the lock does not exist" do
+      let(:file_path) { "/tmp/lock#{SecureRandom.uuid}" }
+      let(:logger) { Logger.new(STDERR) }
+      it "should get the lock" do
+        mutex = Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, 5)
+        expect {
+          mutex.synchronize do
+            sleep(1)
+          end
+        }.not_to raise_error
+      end
+    end
+    
+    context "when the lock exists and timeouts" do
+      let(:file_path) { "/tmp/lock#{SecureRandom.uuid}" }
+      let(:logger) { Logger.new(STDERR) }
+
+      before do
+        File.open(file_path, "w") {|f| f.write("test") }
+      end
+
+      after do
+        File.delete(file_path)
+      end
+
+      it "should timeout" do
+        mutex = Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, 5)
+        expect {
+          mutex.synchronize do
+            sleep(1)
+          end
+        }.to raise_error(/timeout/)
+      end
+    end
+    
+    context "when the lock exists initially and is released before timeout" do
+      let(:file_path) { "/tmp/lock#{SecureRandom.uuid}" }
+      let(:logger) { Logger.new(STDERR) }
+
+      before do
+        File.open(file_path, "w") {|f| f.write("test") }
+      end
+
+      it "should not timeout and continue" do
+        mutex = Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, 5)
+        unlock = Thread.new{
+          sleep(2)
+          logger.info('The lock is released')
+          File.delete(file_path)
+        }
+        expect {
+          mutex.synchronize do
+            sleep(1)
+          end
+        }.not_to raise_error
+        unlock.join()
+      end
+    end
+  end
 end

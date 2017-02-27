@@ -11,6 +11,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
+  let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
   let(:request_id) { "fake-request-id" }
 
@@ -25,7 +26,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
   describe "#update_tags_of_virtual_machine" do
-    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version}" }
+    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
 
     context "when token is valid, create operation is accepted and completed" do
       let(:request_body) {
@@ -57,8 +58,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
           stub_request(:get, vm_uri).to_return(
@@ -108,8 +109,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
           stub_request(:get, vm_uri).to_return(
@@ -139,8 +140,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, vm_uri).to_return(

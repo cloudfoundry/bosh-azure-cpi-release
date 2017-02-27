@@ -14,6 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
+  let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
   let(:request_id) { "fake-request-id" }
 
@@ -26,12 +27,13 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
   describe "#create_virtual_machine" do
-    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version}&validating=true" }
+    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}&validating=true" }
 
     let(:vm_params) do
       {
         :name           => vm_name,
         :location       => "b",
+        :tags           => { "foo" => "bar"},
         :vm_size        => "c",
         :ssh_username   => "d",
         :ssh_cert_data  => "e",
@@ -49,25 +51,378 @@ describe Bosh::AzureCloud::AzureClient2 do
           :disk_caching  => "n",
           :disk_size     => "o",
         },
-        :os_type        => "linux"
+        :os_type        => "linux",
+        :managed        => false
       }
     end
-    let(:network_interfaces) {[
-      {:id => "a"},
-      {:id => "a"}
-    ]}
 
-    context "when token is valid, create operation is accepted and completed" do
-      context "When the ephemeral disk is not nil" do
+    let(:network_interfaces) do
+      [
+        {:id => "a"},
+        {:id => "b"}
+      ]
+    end
+
+    context "parse the parameters" do
+      context "common vm_params are provided" do
+        context "when managed is false" do
+          let(:vm_params) do
+            {
+              :name           => vm_name,
+              :location       => "b",
+              :tags           => { "foo" => "bar"},
+              :vm_size        => "c",
+              :ssh_username   => "d",
+              :ssh_cert_data  => "e",
+              :custom_data    => "f",
+              :image_uri      => "g",
+              :os_disk        => {
+                :disk_name     => "h",
+                :disk_uri      => "i",
+                :disk_caching  => "j",
+                :disk_size     => "k",
+              },
+              :ephemeral_disk => {
+                :disk_name     => "l",
+                :disk_uri      => "m",
+                :disk_caching  => "n",
+                :disk_size     => "o",
+              },
+              :os_type        => "linux",
+              :managed        => false
+            }
+          end
+
+          let(:request_body) {
+            {
+              :name     => vm_name,
+              :location => "b",
+              :type     => "Microsoft.Compute/virtualMachines",
+              :tags     => {
+                :foo => "bar"
+              },
+              :properties => {
+                :hardwareProfile => {
+                  :vmSize => "c"
+                },
+                :osProfile => {
+                  :customData => "f",
+                  :computername => vm_name,
+                  :adminUsername => "d",
+                  :linuxConfiguration => {
+                    :disablePasswordAuthentication => "true",
+                    :ssh => {
+                      :publicKeys => [
+                        {
+                          :path => "/home/d/.ssh/authorized_keys",
+                          :keyData => "e"
+                        }
+                      ]
+                    }
+                  }
+                },
+                :networkProfile => {
+                  :networkInterfaces => [
+                    {
+                      :id => "a",
+                      :properties => {
+                        :primary => true
+                      }
+                    },
+                    {
+                      :id => "b",
+                      :properties => {
+                        :primary => false
+                      }
+                    }
+                  ]
+                },
+                :storageProfile => {
+                  :osDisk => {
+                    :name => "h",
+                    :osType => "linux",
+                    :createOption => "FromImage",
+                    :caching => "j",
+                    :image => {
+                      :uri => "g"
+                    },
+                    :vhd => {
+                      :uri => "i"
+                    },
+                    :diskSizeGB => "k"
+                  },
+                  :dataDisks => [
+                    {
+                      :name => "l",
+                      :lun  => 0,
+                      :createOption => "Empty",
+                      :diskSizeGB => "o",
+                      :vhd => {
+                        :uri => "m"
+                      },
+                      :caching => "n"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+
+          it "should raise no error" do
+            stub_request(:post, token_uri).to_return(
+              :status => 200,
+              :body => {
+                "access_token" => valid_access_token,
+                "expires_on" => expires_on
+              }.to_json,
+              :headers => {})
+            stub_request(:put, vm_uri).with(body: request_body).to_return(
+              :status => 200,
+              :body => '',
+              :headers => {
+                "azure-asyncoperation" => operation_status_link
+              })
+            stub_request(:get, operation_status_link).to_return(
+              :status => 200,
+              :body => '{"status":"Succeeded"}',
+              :headers => {})
+
+            expect {
+              azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            }.not_to raise_error
+          end
+        end
+
+        context "when managed is true" do
+          let(:vm_params_managed) do
+            {
+              :name           => vm_name,
+              :location       => "b",
+              :tags           => { "foo" => "bar"},
+              :vm_size        => "c",
+              :ssh_username   => "d",
+              :ssh_cert_data  => "e",
+              :custom_data    => "f",
+              :image_id       => "g",
+              :os_disk        => {
+                :disk_name     => "h",
+                :disk_caching  => "j",
+                :disk_size     => "k",
+              },
+              :ephemeral_disk => {
+                :disk_name     => "l",
+                :disk_caching  => "n",
+                :disk_size     => "o",
+              },
+              :os_type        => "linux",
+              :managed        => true
+            }
+          end
+
+          let(:request_body) {
+            {
+              :name     => vm_name,
+              :location => "b",
+              :type     => "Microsoft.Compute/virtualMachines",
+              :tags     => {
+                :foo => "bar"
+              },
+              :properties => {
+                :hardwareProfile => {
+                  :vmSize => "c"
+                },
+                :osProfile => {
+                  :customData => "f",
+                  :computername => vm_name,
+                  :adminUsername => "d",
+                  :linuxConfiguration => {
+                    :disablePasswordAuthentication => "true",
+                    :ssh => {
+                      :publicKeys => [
+                        {
+                          :path => "/home/d/.ssh/authorized_keys",
+                          :keyData => "e"
+                        }
+                      ]
+                    }
+                  }
+                },
+                :networkProfile => {
+                  :networkInterfaces => [
+                    {
+                      :id => "a",
+                      :properties => {
+                        :primary => true
+                      }
+                    },
+                    {
+                      :id => "b",
+                      :properties => {
+                        :primary => false
+                      }
+                    }
+                  ]
+                },
+                :storageProfile => {
+                  :imageReference => {
+                    :id => "g"
+                  },
+                  :osDisk => {
+                    :name => "h",
+                    :createOption => "FromImage",
+                    :caching => "j",
+                    :diskSizeGB => "k"
+                  },
+                  :dataDisks => [
+                    {
+                      :name => "l",
+                      :lun  => 0,
+                      :createOption => "Empty",
+                      :diskSizeGB => "o",
+                      :caching => "n"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+
+          it "should raise no error" do
+            stub_request(:post, token_uri).to_return(
+              :status => 200,
+              :body => {
+                "access_token" => valid_access_token,
+                "expires_on" => expires_on
+              }.to_json,
+              :headers => {})
+            stub_request(:put, vm_uri).with(body: request_body).to_return(
+              :status => 200,
+              :body => '',
+              :headers => {
+                "azure-asyncoperation" => operation_status_link
+              })
+            stub_request(:get, operation_status_link).to_return(
+              :status => 200,
+              :body => '{"status":"Succeeded"}',
+              :headers => {})
+
+            expect {
+              azure_client2.create_virtual_machine(vm_params_managed, network_interfaces)
+            }.not_to raise_error
+          end
+        end
+      end
+
+      context "when os_disk.disk_size is false" do
+        let(:vm_params) do
+          {
+            :name           => vm_name,
+            :location       => "b",
+            :tags           => { "foo" => "bar"},
+            :vm_size        => "c",
+            :ssh_username   => "d",
+            :ssh_cert_data  => "e",
+            :custom_data    => "f",
+            :image_uri      => "g",
+            :os_disk        => {
+              :disk_name     => "h",
+              :disk_uri      => "i",
+              :disk_caching  => "j"
+            },
+            :ephemeral_disk => {
+              :disk_name     => "l",
+              :disk_uri      => "m",
+              :disk_caching  => "n",
+              :disk_size     => "o",
+            },
+            :os_type        => "linux",
+            :managed        => false     # true or false doen't matter in this case
+          }
+        end
+
+        let(:request_body) {
+          {
+            :name     => vm_name,
+            :location => "b",
+            :type     => "Microsoft.Compute/virtualMachines",
+            :tags     => {
+              :foo => "bar"
+            },
+            :properties => {
+              :hardwareProfile => {
+                :vmSize => "c"
+              },
+              :osProfile => {
+                :customData => "f",
+                :computername => vm_name,
+                :adminUsername => "d",
+                :linuxConfiguration => {
+                  :disablePasswordAuthentication => "true",
+                  :ssh => {
+                    :publicKeys => [
+                      {
+                        :path => "/home/d/.ssh/authorized_keys",
+                        :keyData => "e"
+                      }
+                    ]
+                  }
+                }
+              },
+              :networkProfile => {
+                :networkInterfaces => [
+                  {
+                    :id => "a",
+                    :properties => {
+                      :primary => true
+                    }
+                  },
+                  {
+                    :id => "b",
+                    :properties => {
+                      :primary => false
+                    }
+                  }
+                ]
+              },
+              :storageProfile => {
+                :osDisk => {
+                  :name => "h",
+                  :osType => "linux",
+                  :createOption => "FromImage",
+                  :caching => "j",
+                  :image => {
+                    :uri => "g"
+                  },
+                  :vhd => {
+                    :uri => "i"
+                  }
+                },
+                :dataDisks => [
+                  {
+                    :name => "l",
+                    :lun  => 0,
+                    :createOption => "Empty",
+                    :diskSizeGB => "o",
+                    :vhd => {
+                      :uri => "m"
+                    },
+                    :caching => "n"
+                  }
+                ]
+              }
+            }
+          }
+        }
+
         it "should raise no error" do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
-          stub_request(:put, vm_uri).to_return(
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
             :status => 200,
             :body => '',
             :headers => {
@@ -89,6 +444,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           {
             :name           => vm_name,
             :location       => "b",
+            :tags           => { "foo" => "bar"},
             :vm_size        => "c",
             :ssh_username   => "d",
             :ssh_cert_data  => "e",
@@ -100,19 +456,83 @@ describe Bosh::AzureCloud::AzureClient2 do
               :disk_caching  => "j",
               :disk_size     => "k",
             },
-            :os_type        => "linux"
+            :os_type        => "linux",
+            :managed        => false     # true or false doen't matter in this case
           }
         end
+
+        let(:request_body) {
+          {
+            :name     => vm_name,
+            :location => "b",
+            :type     => "Microsoft.Compute/virtualMachines",
+            :tags     => {
+              :foo => "bar"
+            },
+            :properties => {
+              :hardwareProfile => {
+                :vmSize => "c"
+              },
+              :osProfile => {
+                :customData => "f",
+                :computername => vm_name,
+                :adminUsername => "d",
+                :linuxConfiguration => {
+                  :disablePasswordAuthentication => "true",
+                  :ssh => {
+                    :publicKeys => [
+                      {
+                        :path => "/home/d/.ssh/authorized_keys",
+                        :keyData => "e"
+                      }
+                    ]
+                  }
+                }
+              },
+              :networkProfile => {
+                :networkInterfaces => [
+                  {
+                    :id => "a",
+                    :properties => {
+                      :primary => true
+                    }
+                  },
+                  {
+                    :id => "b",
+                    :properties => {
+                      :primary => false
+                    }
+                  }
+                ]
+              },
+              :storageProfile => {
+                :osDisk => {
+                  :name => "h",
+                  :osType => "linux",
+                  :createOption => "FromImage",
+                  :caching => "j",
+                  :image => {
+                    :uri => "g"
+                  },
+                  :vhd => {
+                    :uri => "i"
+                  },
+                  :diskSizeGB => "k"
+                }
+              }
+            }
+          }
+        }
 
         it "should raise no error" do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
-          stub_request(:put, vm_uri).to_return(
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
             :status => 200,
             :body => '',
             :headers => {
@@ -129,11 +549,12 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
       end
 
-      context "When the os_disk.size is nil" do
+      context "when availability set is not nil" do
         let(:vm_params) do
           {
             :name           => vm_name,
             :location       => "b",
+            :tags           => { "foo" => "bar"},
             :vm_size        => "c",
             :ssh_username   => "d",
             :ssh_cert_data  => "e",
@@ -142,21 +563,113 @@ describe Bosh::AzureCloud::AzureClient2 do
             :os_disk        => {
               :disk_name     => "h",
               :disk_uri      => "i",
-              :disk_caching  => "j"
+              :disk_caching  => "j",
+              :disk_size     => "k",
             },
-            :os_type        => "linux"
+            :ephemeral_disk => {
+              :disk_name     => "l",
+              :disk_uri      => "m",
+              :disk_caching  => "n",
+              :disk_size     => "o",
+            },
+            :os_type        => "linux",
+            :managed        => false     # true or false doen't matter in this case
           }
         end
+
+        let(:availability_set) do
+          {
+            :id => "a"
+          }
+        end
+
+        let(:request_body) {
+          {
+            :name     => vm_name,
+            :location => "b",
+            :type     => "Microsoft.Compute/virtualMachines",
+            :tags     => {
+              :foo => "bar"
+            },
+            :properties => {
+              :hardwareProfile => {
+                :vmSize => "c"
+              },
+              :osProfile => {
+                :customData => "f",
+                :computername => vm_name,
+                :adminUsername => "d",
+                :linuxConfiguration => {
+                  :disablePasswordAuthentication => "true",
+                  :ssh => {
+                    :publicKeys => [
+                      {
+                        :path => "/home/d/.ssh/authorized_keys",
+                        :keyData => "e"
+                      }
+                    ]
+                  }
+                }
+              },
+              :networkProfile => {
+                :networkInterfaces => [
+                  {
+                    :id => "a",
+                    :properties => {
+                      :primary => true
+                    }
+                  },
+                  {
+                    :id => "b",
+                    :properties => {
+                      :primary => false
+                    }
+                  }
+                ]
+              },
+              :storageProfile => {
+                :osDisk => {
+                  :name => "h",
+                  :osType => "linux",
+                  :createOption => "FromImage",
+                  :caching => "j",
+                  :image => {
+                    :uri => "g"
+                  },
+                  :vhd => {
+                    :uri => "i"
+                  },
+                  :diskSizeGB => "k"
+                },
+                :dataDisks => [
+                  {
+                    :name => "l",
+                    :lun  => 0,
+                    :createOption => "Empty",
+                    :diskSizeGB => "o",
+                    :vhd => {
+                      :uri => "m"
+                    },
+                    :caching => "n"
+                  }
+                ]
+              },
+              :availabilitySet => {
+                :id => "a"
+              }
+            }
+          }
+        }
 
         it "should raise no error" do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
-          stub_request(:put, vm_uri).to_return(
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
             :status => 200,
             :body => '',
             :headers => {
@@ -168,7 +681,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
           }.not_to raise_error
         end
       end
@@ -201,8 +714,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:put, vm_uri).to_return(
@@ -222,8 +735,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return({
               :status => 200,
               :body => {
-                "access_token"=>valid_access_token,
-                "expires_on"=>expires_on
+                "access_token" => valid_access_token,
+                "expires_on" => expires_on
               }.to_json,
               :headers => {}
             })
@@ -255,8 +768,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return({
               :status => 200,
               :body => {
-                "access_token"=>valid_access_token,
-                "expires_on"=>expires_on
+                "access_token" => valid_access_token,
+                "expires_on" => expires_on
               }.to_json,
               :headers => {}
             }, {
@@ -283,8 +796,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:put, vm_uri).to_return(
@@ -303,8 +816,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:put, vm_uri).to_return(
@@ -323,8 +836,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:put, vm_uri).to_return(
@@ -347,8 +860,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:put, vm_uri).to_return(
@@ -365,6 +878,32 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect {
           azure_client2.create_virtual_machine(vm_params, network_interfaces)
         }.to raise_error /status: Cancelled/
+      end
+    end
+
+    context "when token is valid, create operation is accepted and completed" do
+      it "should raise no error" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:put, vm_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {
+            "azure-asyncoperation" => operation_status_link
+          })
+        stub_request(:get, operation_status_link).to_return(
+          :status => 200,
+          :body => '{"status":"Succeeded"}',
+          :headers => {})
+
+        expect {
+          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+        }.not_to raise_error
       end
     end
   end

@@ -1,5 +1,8 @@
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
+require 'simplecov'
+SimpleCov.start
+
 require 'cloud/azure'
 require 'json'
 require 'net/http'
@@ -16,7 +19,8 @@ MOCK_DEFAULT_SECURITY_GROUP = 'fake-default-nsg-name'
 
 # Let us keep the least API versions here for unit tests.
 AZURE_API_VERSION = '2015-06-15'
-AZURE_RESOUCE_PROVIDER_GROUP = '2016-06-01'
+AZURE_RESOURCE_PROVIDER_COMPUTE = '2016-04-30-preview'
+AZURE_RESOURCE_PROVIDER_GROUP = '2016-06-01'
 AZURE_STACK_API_VERSION = '2015-05-01-preview'
 AZURE_CHINA_API_VERSION = '2015-06-15'
 AZURE_USGOV_API_VERSION = '2015-06-15'
@@ -38,7 +42,9 @@ def mock_cloud_options
         'ssh_user' => 'vcap',
         'ssh_public_key' => MOCK_SSH_PUBLIC_KEY,
         'parallel_upload_thread_num' => 16,
-        'default_security_group' => MOCK_DEFAULT_SECURITY_GROUP
+        'default_security_group' => MOCK_DEFAULT_SECURITY_GROUP,
+        'debug_mode' => false,
+        'use_managed_disks' => false
       },
       'registry' => {
         'endpoint' => 'localhost:42288',
@@ -59,6 +65,32 @@ end
 
 def mock_azure_properties
   mock_cloud_options['properties']['azure']
+end
+
+def mock_azure_properties_merge(override_options)
+  mock_cloud_options_merge(override_options, mock_azure_properties)
+end
+
+def mock_cloud_properties_merge(override_options)
+  mock_cloud_options_merge(override_options, mock_cloud_options['properties'])
+end
+
+def mock_cloud_options_merge(override_options, base_hash = mock_cloud_options)
+  merged_options = {}
+  override_options ||= {}
+
+  override_options.each do |key, value|
+    if value.is_a? Hash
+      merged_options[key] = mock_cloud_options_merge(override_options[key], base_hash[key])
+    else
+      merged_options[key] = value
+    end
+  end
+
+  extra_keys = base_hash.keys - override_options.keys
+  extra_keys.each { |key| merged_options[key] = base_hash[key] }
+
+  merged_options
 end
 
 def mock_registry_properties

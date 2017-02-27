@@ -1,9 +1,5 @@
 module Bosh::AzureCloud
   class DiskManager
-    OS_DISK_PREFIX         = 'bosh-os'
-    DATA_DISK_PREFIX       = 'bosh-data'
-    EPHEMERAL_DISK_POSTFIX = 'ephemeral'
-
     include Bosh::Exec
     include Helpers
 
@@ -51,17 +47,13 @@ module Bosh::AzureCloud
     ##
     # Creates a disk (possibly lazily) that will be attached later to a VM.
     #
-    # @param [string] storage_account_name the storage account where the disk is created
     # @param [Integer] size disk size in GiB
-    # @param [Hash] cloud_properties cloud properties to create the disk
+    # @param [string]  storage_account_name  the storage account where the disk is created
+    # @param [string]  caching               the disk caching type. Possible values: None, ReadOnly or ReadWrite.
+    #
     # @return [String] disk name
-    def create_disk(storage_account_name, size, cloud_properties)
-      @logger.info("create_disk(#{storage_account_name}, #{size}, #{cloud_properties})")
-      caching = 'None'
-      if !cloud_properties.nil? && !cloud_properties['caching'].nil?
-        caching = cloud_properties['caching']
-        validate_disk_caching(caching)
-      end
+    def create_disk(size, storage_account_name, caching)
+      @logger.info("create_disk(#{size}, #{storage_account_name}, #{caching})")
       disk_name = generate_data_disk_name(storage_account_name, caching)
       @logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
       @blob_manager.create_empty_vhd_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", size)
@@ -73,6 +65,14 @@ module Bosh::AzureCloud
       storage_account_name = get_storage_account_name(disk_name)
       blob_properties = @blob_manager.get_blob_properties(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
       !blob_properties.nil?
+    end
+
+    def is_migrated?(disk_name)
+      @logger.info("is_migrated?(#{disk_name})")
+      return false unless has_disk?(disk_name)
+      storage_account_name = get_storage_account_name(disk_name)
+      metadata = @blob_manager.get_blob_metadata(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
+      (METADATA_FOR_MIGRATED_BLOB_DISK.to_a - metadata.to_a).empty?
     end
 
     def get_disk_uri(disk_name)
@@ -114,9 +114,11 @@ module Bosh::AzureCloud
       validate_disk_caching(disk_caching)
 
       # The default OS disk size depends on the size of the VHD in the stemcell which is 3 GiB for now.
-      # When using OS disk to store the ephemeral data and root_disk.size is not set, resize it to 30 GiB.
+      # When using OS disk to store the ephemeral data and root_disk.size is not set,
+      # resize it to the minimum disk size if the minimum disk size is larger than 30 GiB;
+      # resize it to 30 GiB if the minimum disk size is smaller than 30 GiB.
       if disk_size.nil? && ephemeral_disk(instance_id).nil?
-        disk_size = 30
+        disk_size = (minimum_disk_size/1024.0).ceil < 30 ? 30 : (minimum_disk_size/1024.0).ceil
       end
 
       return {
@@ -141,7 +143,7 @@ module Bosh::AzureCloud
       end
 
       return {
-        :disk_name    => EPHEMERAL_DISK_NAME,
+        :disk_name    => EPHEMERAL_DISK_POSTFIX,
         :disk_uri     => get_disk_uri(generate_ephemeral_disk_name(instance_id)),
         :disk_size    => disk_size,
         :disk_caching => 'ReadWrite'

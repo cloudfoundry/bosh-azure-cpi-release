@@ -1,8 +1,5 @@
 module Bosh::AzureCloud
   class StemcellManager
-    STEMCELL_PREFIX    = 'bosh-stemcell'
-    STEMCELL_TABLE     = 'stemcells'
-
     STEMCELL_STATUS_PENDING       = 'pending'
     STEMCELL_STATUS_SUCCESS       = 'success'
     DEFAULT_COPY_STEMCELL_TIMEOUT = 20 * 60 #seconds
@@ -10,11 +7,13 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    def initialize(azure_properties, blob_manager, table_manager)
+    def initialize(blob_manager, table_manager, storage_account_manager)
       @blob_manager  = blob_manager
       @table_manager = table_manager
+      @storage_account_manager = storage_account_manager
       @logger = Bosh::Clouds::Config.logger
-      @default_storage_account_name = azure_properties['storage_account_name']
+
+      @default_storage_account_name = @storage_account_manager.default_storage_account_name
     end
 
     def delete_stemcell(name)
@@ -33,8 +32,7 @@ module Bosh::AzureCloud
         end
       end
 
-      storage_account_name = @default_storage_account_name
-      @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(storage_account_name, name)
+      @blob_manager.delete_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(@default_storage_account_name, name)
     end
 
     def create_stemcell(image_path, cloud_properties)
@@ -46,6 +44,7 @@ module Bosh::AzureCloud
         run_command("tar -zxf #{image_path} -C #{tmp_dir}")
         @logger.info("Start to upload VHD")
         stemcell_name = "#{STEMCELL_PREFIX}-#{SecureRandom.uuid}"
+        @logger.info("Upload the stemcell #{stemcell_name} to the storage account #{@default_storage_account_name}")
         @blob_manager.create_page_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{tmp_dir}/root.vhd", "#{stemcell_name}.vhd", cloud_properties)
       end
       stemcell_name

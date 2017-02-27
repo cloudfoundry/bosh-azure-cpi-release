@@ -1,65 +1,101 @@
 module Bosh::AzureCloud
   module Helpers
 
-    AZURE_RESOUCE_PROVIDER_COMPUTER         = 'crp'
-    AZURE_RESOUCE_PROVIDER_NETWORK          = 'nrp'
-    AZURE_RESOUCE_PROVIDER_STORAGE          = 'srp'
-    AZURE_RESOUCE_PROVIDER_GROUP            = 'rp'
-    AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY  = 'ad'
+    AZURE_RESOURCE_PROVIDER_COMPUTE          = 'crp'
+    AZURE_RESOURCE_PROVIDER_NETWORK          = 'nrp'
+    AZURE_RESOURCE_PROVIDER_STORAGE          = 'srp'
+    AZURE_RESOURCE_PROVIDER_GROUP            = 'rp'
+    AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  = 'ad'
 
     AZURE_ENVIRONMENTS = {
       'AzureCloud' => {
         'resourceManagerEndpointUrl' => 'https://management.azure.com/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
         'apiVersion' => {
-          AZURE_RESOUCE_PROVIDER_COMPUTER         => '2016-04-30-preview',
-          AZURE_RESOUCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_STORAGE          => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_GROUP            => '2016-06-01',
-          AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
+          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
+          AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       },
       'AzureChinaCloud' => {
         'resourceManagerEndpointUrl' => 'https://management.chinacloudapi.cn/',
         'activeDirectoryEndpointUrl' => 'https://login.chinacloudapi.cn',
         'apiVersion' => {
-          AZURE_RESOUCE_PROVIDER_COMPUTER         => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_STORAGE          => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_GROUP            => '2016-06-01',
-          AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
+          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       },
       'AzureUSGovernment' => {
         'resourceManagerEndpointUrl' => 'https://management.usgovcloudapi.net/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
         'apiVersion' => {
-          AZURE_RESOUCE_PROVIDER_COMPUTER         => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_STORAGE          => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_GROUP            => '2016-06-01',
-          AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
+          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       },
       'AzureStack' => {
         'resourceManagerEndpointUrl' => 'https://azurestack.local-api/',
         'apiVersion' => {
-          AZURE_RESOUCE_PROVIDER_COMPUTER         => '2015-06-15',
-          AZURE_RESOUCE_PROVIDER_NETWORK          => '2015-05-01-preview',
-          AZURE_RESOUCE_PROVIDER_STORAGE          => '2015-05-01-preview',
-          AZURE_RESOUCE_PROVIDER_GROUP            => '2015-05-01-preview',
-          AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY  => '2015-05-01-preview'
+          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-05-01-preview',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-05-01-preview',
+          AZURE_RESOURCE_PROVIDER_GROUP            => '2015-05-01-preview',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-05-01-preview'
         }
       }
     }
 
-    EPHEMERAL_DISK_NAME       = 'ephemeral-disk'
-    AZURE_SCSI_HOST_DEVICE_ID = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
+    PROVISIONING_STATE_SUCCEEDED  = 'Succeeded'
+    PROVISIONING_STATE_FAILED     = 'Failed'
+    PROVISIONING_STATE_CANCELED   = 'Canceled'
+    PROVISIONING_STATE_INPROGRESS = 'InProgress'
 
-    AZURE_MAX_RETRY_COUNT     = 10
+    # About user-agent:
+    # For REST APIs, the value is "BOSH-AZURE-CPI".
+    # For Azure resource tags, the value is "bosh".
+    USER_AGENT_FOR_REST           = 'BOSH-AZURE-CPI'
+    USER_AGENT_FOR_AZURE_RESOURCE = 'bosh'
+    AZURE_TAGS                    = {
+      'user-agent' => USER_AGENT_FOR_AZURE_RESOURCE
+    }
 
-    DISK_CONTAINER            = 'bosh'
-    STEMCELL_CONTAINER        = 'stemcell'
+    AZURE_MAX_RETRY_COUNT         = 10
+
+    # Storage Account
+    STORAGE_ACCOUNT_TYPE_STANDARD_LRS = 'Standard_LRS'
+    STORAGE_ACCOUNT_TYPE_PREMIUM_LRS  = 'Premium_LRS'
+    STEMCELL_STORAGE_ACCOUNT_TAGS     = AZURE_TAGS.merge({
+      'type' => 'stemcell'
+    })
+    DISK_CONTAINER                    = 'bosh'
+    STEMCELL_CONTAINER                = 'stemcell'
+    STEMCELL_TABLE                    = 'stemcells'
+    PUBLIC_ACCESS_LEVEL_BLOB          = "blob"
+
+    # Disk
+    OS_DISK_PREFIX                  = 'bosh-os'
+    DATA_DISK_PREFIX                = 'bosh-data'
+    MANAGED_OS_DISK_PREFIX          = 'bosh-disk-os'
+    MANAGED_DATA_DISK_PREFIX        = 'bosh-disk-data'
+    EPHEMERAL_DISK_POSTFIX          = 'ephemeral-disk'
+    STEMCELL_PREFIX                 = 'bosh-stemcell'
+    AZURE_SCSI_HOST_DEVICE_ID       = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
+    METADATA_FOR_MIGRATED_BLOB_DISK = {
+      "user_agent" => USER_AGENT_FOR_AZURE_RESOURCE, # The key can't be user-agent because '-' is invalid for blob metadata
+      "migrated" => "true"
+    }
+
+    # Lock
+    BOSH_LOCK_EXCEPTION_TIMEOUT        = 'timeout'
+    BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND = 'lock_not_found'
 
     # REST Connection Errors
     ERROR_OPENSSL_RESET           = 'SSL_connect'
@@ -77,7 +113,6 @@ module Bosh::AzureCloud
     end
 
     ## Encode all values in metadata to string.
-    ## Add a tag user-agent, value is bosh.
     # @param [Hash] metadata
     # @return [Hash]
     def encode_metadata(metadata)
@@ -88,18 +123,21 @@ module Bosh::AzureCloud
       ret
     end
 
-    def generate_instance_id(storage_account_name, uuid)
-      "#{storage_account_name}-#{uuid}"
-    end
-
     def get_storage_account_name_from_instance_id(instance_id)
       ret = instance_id.match('^([^-]*)-(.*)$')
       cloud_error("Invalid instance id #{instance_id}") if ret.nil?
       return ret[1]
     end
 
+    def get_storage_account_name_from_disk_id(disk_id)
+      ret = disk_id.match('^bosh-data-([^-]*)-(.*)$')
+      cloud_error("Invalid disk id #{disk_id}") if ret.nil?
+      return ret[1]
+    end
+
     def validate_disk_caching(caching)
-      if caching != 'None' && caching != 'ReadOnly' && caching != 'ReadWrite'
+      valid_caching = ['None', 'ReadOnly', 'ReadWrite']
+      unless valid_caching.include?(caching)
         cloud_error("Unknown disk caching #{caching}")
       end
     end
@@ -127,7 +165,7 @@ module Bosh::AzureCloud
 
     def get_azure_authentication_endpoint_and_api_version(azure_properties)
       url = nil
-      api_version = get_api_version(azure_properties, AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY)
+      api_version = get_api_version(azure_properties, AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY)
       if azure_properties['environment'] == 'AzureStack'
         validate_azure_stack_options(azure_properties)
         domain = azure_properties['azure_stack_domain']
@@ -138,7 +176,7 @@ module Bosh::AzureCloud
           url = "https://#{domain}/#{azure_properties['tenant_id']}/oauth2/token"
         else
           url = "#{AZURE_ENVIRONMENTS['AzureCloud']['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
-          api_version = AZURE_ENVIRONMENTS['AzureCloud']['apiVersion'][AZURE_RESOUCE_PROVIDER_ACTIVEDIRECTORY]
+          api_version = AZURE_ENVIRONMENTS['AzureCloud']['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
         end
       else
         url = "#{AZURE_ENVIRONMENTS[azure_properties['environment']]['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
@@ -148,7 +186,7 @@ module Bosh::AzureCloud
     end
 
     def initialize_azure_storage_client(storage_account, service = 'blob')
-      azure_client = Azure::Storage::Client.create(storage_account_name: storage_account[:name], storage_access_key: storage_account[:key])
+      azure_client = Azure::Storage::Client.create(storage_account_name: storage_account[:name], storage_access_key: storage_account[:key], user_agent_prefix: USER_AGENT_FOR_REST)
 
       case service
         when 'blob'
@@ -309,14 +347,15 @@ module Bosh::AzureCloud
       end
     end
 
-    # Stemcell information, got from the stemcell blob file on Azure
-    # * +:uri+      - String. uri of the stemcell, e.g. "https://<storageaccount>.blob.core.windows.net/stemcell/bosh-stemcell-82817f34-ae10-4cfe-8ca8-b18d18ee5cdd.vhd"
+    # Stemcell information
+    # * +:uri+      - String. uri of the blob stemcell, e.g. "https://<storage-account-name>.blob.core.windows.net/stemcell/bosh-stemcell-82817f34-ae10-4cfe-8ca8-b18d18ee5cdd.vhd"
+    #                         id of the image stemcell, e.g. "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Compute/images/bosh-stemcell-d42a792c-db7a-45a6-8132-e03c863c9f01-Standard_LRS-southeastasia"
     # * +:os_type+  - String. os type of the stemcell, e.g. "linux"
     # * +:name+     - String. name of the stemcell, e.g. "bosh-azure-hyperv-ubuntu-trusty-go_agent"
     # * +:version   - String. version of the stemcell, e.g. "2972"
     # * +:disk_size - Integer. disk size in MiB, e.g. 3072
     class StemcellInfo
-      attr_reader :uri, :os_type, :name, :version, :disk_size
+      attr_reader :uri, :metadata, :os_type, :name, :version, :disk_size
 
       def initialize(uri, metadata)
         @uri = uri
@@ -326,6 +365,127 @@ module Bosh::AzureCloud
         @version = @metadata['version']
         @disk_size = @metadata['disk'].nil? ? 3072 : @metadata['disk'].to_i
       end
+    end
+
+    # File Mutex
+    #
+    # Example codes:
+    #
+    # expired = 60
+    # mutex = FileMutex('/tmp/bosh-lock-example', logger, expired)
+    #
+    # # If your work can finish before it timeouts.
+    # begin
+    #   mutex.synchronize do
+    #     do_something()
+    #   end
+    # rescue => e
+    #   raise 'what action fails because of timeout' if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+    #   raise e.inspect
+    # end
+    #
+    # # If your work is a long-running task, you need to update the lock before it timeouts.
+    # begin
+    #   mutex.synchronize do
+    #     loop do
+    #       do_something() # MUST be finished in 60 seconds. Otherwise, you need to change your loop.
+    #       mutex.update()
+    #     end
+    #   end
+    # rescue => e
+    #   raise 'what action fails because of timeout' if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+    #   raise e.inspect
+    # end
+    class FileMutex
+      def initialize(file_path, logger, expired = 60)
+        @file_path = file_path
+        @logger = logger
+        @expired = expired
+      end
+
+      def synchronize
+        if lock
+          yield
+          unlock
+        else
+          raise BOSH_LOCK_EXCEPTION_TIMEOUT unless wait
+        end
+      end
+
+      def update()
+        File.open(@file_path, 'wb') { |f|
+          f.write("#{Process.pid}")
+        }
+        @logger.debug("The lock `#{@file_path}' is updated by the process `#{Process.pid}'")
+      rescue => e
+        raise BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND, e
+      end
+
+      private
+
+      def lock()
+        if File.exists?(@file_path)
+          if Time.new() - File.mtime(@file_path) > @expired
+            File.delete(@file_path)
+            @logger.debug("The lock `#{@file_path}' exists, but timeouts.")
+            raise BOSH_LOCK_EXCEPTION_TIMEOUT
+          else
+            @logger.debug("The lock `#{@file_path}' exists")
+            return false
+          end
+        else
+          begin
+            fd = IO::sysopen(@file_path, Fcntl::O_WRONLY | Fcntl::O_EXCL | Fcntl::O_CREAT) # Using O_EXCL, creation fails if the file exists
+            f = IO.open(fd)
+            f.syswrite("#{Process.pid}")
+            @logger.debug("The lock `#{@file_path}' is created by the process `#{Process.pid}'")
+          rescue Errno::EEXIST => e
+            @logger.info("Failed to create the lock file `#{@file_path}' because it already exists.")
+            return false
+          ensure
+            f.close unless f.nil?
+          end
+          return true
+        end
+      end
+
+      def wait()
+        loop do
+          return true unless File.exists?(@file_path)
+          break if Time.new() - File.mtime(@file_path) > @expired
+          sleep(1)
+        end
+        return false
+      end
+
+      def unlock()
+        @logger.debug("The lock `#{@file_path}' is deleted by the process `#{Process.pid}'")
+        File.delete(@file_path)
+      rescue => e
+        raise BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND, e
+      end
+    end
+
+    def get_storage_account_type_by_instance_type(instance_type)
+      instance_type = instance_type.downcase
+      storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
+      if instance_type.start_with?("standard_ds") || instance_type.start_with?("standard_gs") || ((instance_type =~ /^standard_f(\d)+s/) == 0)
+        storage_account_type = STORAGE_ACCOUNT_TYPE_PREMIUM_LRS
+      end
+      storage_account_type
+    end
+
+    def is_managed_vm?(instance_id)
+      # The instance id of a Managed VM is GUID whose length is 36
+      instance_id.length == 36
+    end
+
+    def is_stemcell_storage_account?(tags)
+      (STEMCELL_STORAGE_ACCOUNT_TAGS.to_a - tags.to_a).empty?
+    end
+
+    def is_ephemeral_disk?(name)
+      name.end_with?(EPHEMERAL_DISK_POSTFIX)
     end
 
     private

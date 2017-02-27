@@ -2,31 +2,36 @@ module Bosh::AzureCloud
   class VMManager
     include Helpers
 
-    AZURE_TAGS = {'user-agent' => 'bosh'}
-
-    def initialize(azure_properties, registry_endpoint, disk_manager, azure_client2)
+    def initialize(azure_properties, registry_endpoint, disk_manager, disk_manager2, azure_client2)
       @azure_properties = azure_properties
       @registry_endpoint = registry_endpoint
       @disk_manager = disk_manager
+      @disk_manager2 = disk_manager2
       @azure_client2 = azure_client2
-
+      @use_managed_disks = @azure_properties['use_managed_disks']
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(uuid, storage_account, stemcell_info, resource_pool, network_configurator, env)
-      instance_id = generate_instance_id(storage_account[:name], uuid)
+    def create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+      @logger.info("create(#{instance_id}, #{location}, #{stemcell_info.inspect}, #{resource_pool}, #{network_configurator.inspect}, #{env})")
+
       vm_size = resource_pool.fetch('instance_type', nil)
       cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?
 
-      @disk_manager.resource_pool = resource_pool
-
-      # Raise errors if the properties are not valid before doing others.
-      os_disk = @disk_manager.os_disk(instance_id, stemcell_info.disk_size)
-      ephemeral_disk = @disk_manager.ephemeral_disk(instance_id)
-
-      location = storage_account[:location]
       network_interfaces = create_network_interfaces(instance_id, location, resource_pool, network_configurator)
       availability_set = create_availability_set(location, resource_pool, env)
+
+      @disk_manager.resource_pool = resource_pool
+      @disk_manager2.resource_pool = resource_pool
+
+      # Raise errors if the properties are not valid before doing others.
+      if @use_managed_disks
+        os_disk = @disk_manager2.os_disk(instance_id, stemcell_info.disk_size)
+        ephemeral_disk = @disk_manager2.ephemeral_disk(instance_id)
+      else
+        os_disk = @disk_manager.os_disk(instance_id, stemcell_info.disk_size)
+        ephemeral_disk = @disk_manager.ephemeral_disk(instance_id)
+      end
 
       vm_params = {
         :name                => instance_id,
@@ -36,21 +41,30 @@ module Bosh::AzureCloud
         :ssh_username        => @azure_properties['ssh_user'],
         :ssh_cert_data       => @azure_properties['ssh_public_key'],
         :custom_data         => get_user_data(instance_id, network_configurator.default_dns),
-        :image_uri           => stemcell_info.uri,
         :os_disk             => os_disk,
         :ephemeral_disk      => ephemeral_disk,
-        :os_type             => stemcell_info.os_type
+        :os_type             => stemcell_info.os_type,
+        :managed             => @use_managed_disks
       }
-
+      if @use_managed_disks
+        vm_params[:image_id] = stemcell_info.uri
+      else
+        vm_params[:image_uri] = stemcell_info.uri
+      end
       @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
 
       vm_params
     rescue => e
-      if vm_params
+      if vm_params # There are no other functions between defining vm_params and create_virtual_machine
         @azure_client2.delete_virtual_machine(instance_id)
         unless vm_params[:ephemeral_disk].nil?
-          ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
-          @disk_manager.delete_disk(ephemeral_disk_name)
+          if @use_managed_disks
+            ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(instance_id)
+            @disk_manager2.delete_disk(ephemeral_disk_name)
+          else
+            ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
+            @disk_manager.delete_disk(ephemeral_disk_name)
+          end
         end
       end
 
@@ -91,15 +105,23 @@ module Bosh::AzureCloud
       dynamic_public_ip = @azure_client2.get_public_ip_by_name(instance_id)
       @azure_client2.delete_public_ip(instance_id) unless dynamic_public_ip.nil?
 
-      os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
-      @disk_manager.delete_disk(os_disk_name)
+      if @use_managed_disks
+        os_disk_name = @disk_manager2.generate_os_disk_name(instance_id)
+        @disk_manager2.delete_disk(os_disk_name)
 
-      ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
-      @disk_manager.delete_disk(ephemeral_disk_name)
+        ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(instance_id)
+        @disk_manager2.delete_disk(ephemeral_disk_name)
+      else
+        os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
+        @disk_manager.delete_disk(os_disk_name)
 
-      # Cleanup invalid VM status file
-      storage_account_name = get_storage_account_name_from_instance_id(instance_id)
-      @disk_manager.delete_vm_status_files(storage_account_name, instance_id)
+        ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
+        @disk_manager.delete_disk(ephemeral_disk_name)
+
+        # Cleanup invalid VM status file
+        storage_account_name = get_storage_account_name_from_instance_id(instance_id)
+        @disk_manager.delete_vm_status_files(storage_account_name, instance_id)
+      end
     end
 
     def reboot(instance_id)
@@ -120,9 +142,15 @@ module Bosh::AzureCloud
     # @return [String] lun
     def attach_disk(instance_id, disk_name)
       @logger.info("attach_disk(#{instance_id}, #{disk_name})")
-      disk_uri = @disk_manager.get_disk_uri(disk_name)
-      caching = @disk_manager.get_data_disk_caching(disk_name)
-      disk = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_name, disk_uri, caching)
+      if @use_managed_disks && is_managed_vm?(instance_id)
+        managed_disk = @azure_client2.get_managed_disk_by_name(disk_name)
+        caching = @disk_manager2.get_data_disk_caching(disk_name)
+        disk = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_name, managed_disk[:id], caching, true)
+      else
+        disk_uri = @disk_manager.get_disk_uri(disk_name)
+        caching = @disk_manager.get_data_disk_caching(disk_name)
+        disk = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_name, disk_uri, caching)
+      end
       "#{disk[:lun]}"
     end
 
@@ -246,21 +274,49 @@ module Bosh::AzureCloud
       unless availability_set_name.nil?
         availability_set = @azure_client2.get_availability_set_by_name(availability_set_name)
         if availability_set.nil?
+          # In some regions, the max fault domain count of a managed availability set is 2
           avset_params = {
             :name                         => availability_set_name,
             :location                     => location,
             :tags                         => AZURE_TAGS,
             :platform_update_domain_count => resource_pool['platform_update_domain_count'] || 5,
-            :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || 3
+            :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || (@use_managed_disks ? 2 : 3),
+            :managed                      => @use_managed_disks
           }
           begin
+            @logger.debug("create_availability_set - Creating an availability set `#{avset_params[:name]}'")
             @azure_client2.create_availability_set(avset_params)
             availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
           rescue AzureConflictError => e
             @logger.debug("create_availability_set - Another process is creating the same availability set `#{avset_params[:name]}'")
             loop do
+              # TODO: has to sleep to avoid throttling
               availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
               break unless availability_set.nil?
+            end
+          end
+        else
+          # Update the availability set to a managed one
+          if @use_managed_disks && !availability_set[:managed]
+            avset_params = {
+              :name                         => availability_set[:name],
+              :location                     => availability_set[:location],
+              :tags                         => AZURE_TAGS,
+              :platform_update_domain_count => availability_set[:platform_update_domain_count],
+              :platform_fault_domain_count  => availability_set[:platform_fault_domain_count],
+              :managed                      => true
+            }
+            begin
+              @logger.debug("create_availability_set - Updating the availability set `#{avset_params[:name]}' to a managed one")
+              @azure_client2.create_availability_set(avset_params)
+              availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
+            rescue AzureConflictError => e
+              @logger.debug("create_availability_set - Another process is updating the same availability set `#{avset_params[:name]}'")
+              loop do
+                # TODO: has to sleep to avoid throttling
+                availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
+                break unless availability_set[:managed] == @use_managed_disks
+              end
             end
           end
         end
