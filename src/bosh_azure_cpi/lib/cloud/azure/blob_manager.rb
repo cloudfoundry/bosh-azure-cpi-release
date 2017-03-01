@@ -31,7 +31,7 @@ module Bosh::AzureCloud
     def get_blob_uri(storage_account_name, container_name, blob_name)
       @logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
       initialize_blob_client(storage_account_name) do
-        "#{@azure_client.storage_blob_host}/#{container_name}/#{blob_name}"
+        "#{@azure_storage_client.storage_blob_host}/#{container_name}/#{blob_name}"
       end
     end
 
@@ -139,6 +139,20 @@ module Bosh::AzureCloud
       end
     end
 
+    # metadata names must adhere to the naming rules for C# identifiers (http://msdn.microsoft.com/library/aa664670%28VS.71%29.aspx)
+    def set_blob_metadata(storage_account_name, container_name, blob_name, metadata)
+      @logger.info("set_blob_metadata(#{storage_account_name}, #{container_name}, #{blob_name}, #{metadata})")
+      initialize_blob_client(storage_account_name) do
+        begin
+          options = merge_storage_common_options()
+          @logger.info("set_blob_metadata: Calling set_blob_metadata(#{container_name}, #{blob_name}, #{metadata}, #{options})")
+          @blob_service_client.set_blob_metadata(container_name, blob_name, encode_metadata(metadata), options)
+        rescue => e
+          cloud_error("set_blob_metadata: Failed to set the metadata for the blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
+        end
+      end
+    end
+
     def list_blobs(storage_account_name, container_name, prefix = nil)
       @logger.info("list_blobs(#{storage_account_name}, #{container_name})")
       blobs = Array.new
@@ -186,6 +200,7 @@ module Bosh::AzureCloud
 
           copy_status_description = ""
           while copy_status == "pending" do
+            yield if block_given?
             options = merge_storage_common_options()
             @logger.info("copy_blob: Calling get_blob_properties(#{container_name}, #{blob_name}, #{options})")
             blob = @blob_service_client.get_blob_properties(container_name, blob_name, options)
@@ -225,22 +240,6 @@ module Bosh::AzureCloud
       end
     end
 
-    def create_container(storage_account_name, container_name, options = {})
-      @logger.info("create_container(#{storage_account_name}, #{container_name}, #{options})")
-      initialize_blob_client(storage_account_name) do
-        begin
-          options = merge_storage_common_options(options)
-          @logger.info("create_container: Calling create_container(#{container_name}, #{options})")
-          @blob_service_client.create_container(container_name, options)
-          true
-        rescue => e
-          # Still return true if the container is created by others.
-          return true if e.message.include?("(409)")
-          cloud_error("create_container: Failed to create container: #{e.inspect}\n#{e.backtrace.join("\n")}")
-        end
-      end
-    end
-
     def has_container?(storage_account_name, container_name)
       @logger.info("has_container?(#{storage_account_name}, #{container_name})")
       initialize_blob_client(storage_account_name) do
@@ -260,14 +259,42 @@ module Bosh::AzureCloud
     def prepare(storage_account_name, containers: [DISK_CONTAINER, STEMCELL_CONTAINER])
       @logger.info("prepare(#{storage_account_name}, #{containers})")
       containers.each do |container|
-        unless has_container?(storage_account_name, container)
-          @logger.debug("Creating the container `#{container}' in the storage account `#{storage_account_name}'")
-          create_container(storage_account_name, container)
+        @logger.debug("Creating the container `#{container}' in the storage account `#{storage_account_name}'")
+        create_container(storage_account_name, container)
+      end
+      set_stemcell_container_acl_to_public(storage_account_name)
+    end
+
+    private
+
+    def create_container(storage_account_name, container_name, options = {})
+      @logger.info("create_container(#{storage_account_name}, #{container_name}, #{options})")
+      initialize_blob_client(storage_account_name) do
+        begin
+          options = merge_storage_common_options(options)
+          @logger.info("create_container: Calling create_container(#{container_name}, #{options})")
+          @blob_service_client.create_container(container_name, options)
+          true
+        rescue => e
+          # Still return true if the container is created by others.
+          return true if e.message.include?("ContainerAlreadyExists")
+          cloud_error("create_container: Failed to create container: #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
     end
 
-    private
+    def set_stemcell_container_acl_to_public(storage_account_name)
+      @logger.info("set_stemcell_container_acl_to_public(#{storage_account_name})")
+      @logger.debug("Set the public access level to `#{PUBLIC_ACCESS_LEVEL_BLOB}' for the container `#{STEMCELL_CONTAINER}' in the storage account `#{storage_account_name}'")
+      initialize_blob_client(storage_account_name) do
+        begin
+          options = merge_storage_common_options()
+          @blob_service_client.set_container_acl(STEMCELL_CONTAINER, PUBLIC_ACCESS_LEVEL_BLOB, options)
+        rescue => e
+          cloud_error("set_stemcell_container_acl_to_public: Failed to set the public access level to `#{PUBLIC_ACCESS_LEVEL_BLOB}': #{e.inspect}\n#{e.backtrace.join("\n")}")
+        end
+      end
+    end
 
     def compute_chunks(file_size, max_chunk_size)
       chunks = ChunkList.new
@@ -355,8 +382,8 @@ module Bosh::AzureCloud
           @storage_accounts_keys[storage_account_name] = storage_account
         end
 
-        @azure_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob')
-        @blob_service_client = @azure_client.blob_client
+        @azure_storage_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob')
+        @blob_service_client = @azure_storage_client.blob_client
         @blob_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
         @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties) && !disable_debug_mode
         yield

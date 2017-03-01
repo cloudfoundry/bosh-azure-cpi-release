@@ -6,34 +6,35 @@ require 'cloud'
 
 describe Bosh::AzureCloud::Cloud do
   before(:all) do
-    @subscription_id        = ENV['BOSH_AZURE_SUBSCRIPTION_ID']         || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
-    @tenant_id              = ENV['BOSH_AZURE_TENANT_ID']               || raise("Missing BOSH_AZURE_TENANT_ID")
-    @client_id              = ENV['BOSH_AZURE_CLIENT_ID']               || raise("Missing BOSH_AZURE_CLIENT_ID")
-    @client_secret          = ENV['BOSH_AZURE_CLIENT_SECRET']           || raise("Missing BOSH_AZURE_CLIENT_secret")
-    @storage_account_name   = ENV['BOSH_AZURE_STORAGE_ACCOUNT_NAME']    || raise("Missing BOSH_AZURE_STORAGE_ACCOUNT_NAME")
-    @stemcell_id            = ENV['BOSH_AZURE_STEMCELL_ID']             || raise("Missing BOSH_AZURE_STEMCELL_ID")
-    @ssh_public_key         = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']          || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
-    @default_security_group = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']  || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
+    @subscription_id                 = ENV['BOSH_AZURE_SUBSCRIPTION_ID']                 || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
+    @tenant_id                       = ENV['BOSH_AZURE_TENANT_ID']                       || raise("Missing BOSH_AZURE_TENANT_ID")
+    @client_id                       = ENV['BOSH_AZURE_CLIENT_ID']                       || raise("Missing BOSH_AZURE_CLIENT_ID")
+    @client_secret                   = ENV['BOSH_AZURE_CLIENT_SECRET']                   || raise("Missing BOSH_AZURE_CLIENT_secret")
+    @stemcell_id                     = ENV['BOSH_AZURE_STEMCELL_ID']                     || raise("Missing BOSH_AZURE_STEMCELL_ID")
+    @ssh_public_key                  = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']                  || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
+    @default_security_group          = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']          || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
     @resource_group_name_for_vms     = ENV['BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_VMS']     || raise("Missing BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_VMS")
     @resource_group_name_for_network = ENV['BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_NETWORK'] || raise("Missing BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_NETWORK")
     @primary_public_ip               = ENV['BOSH_AZURE_PRIMARY_PUBLIC_IP']               || raise("Missing BOSH_AZURE_PRIMARY_PUBLIC_IP")
     @secondary_public_ip             = ENV['BOSH_AZURE_SECONDARY_PUBLIC_IP']             || raise("Missing BOSH_AZURE_SECONDARY_PUBLIC_IP")
   end
 
-  let(:vnet_name)           { ENV.fetch('BOSH_AZURE_VNET_NAME', 'boshvnet-crp') }
-  let(:subnet_name)         { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
-  let(:second_subnet_name)  { ENV.fetch('BOSH_AZURE_SECOND_SUBNET_NAME', 'BOSH2') }
-  let(:instance_type)       { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1') }
-  let(:vm_metadata)         { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
-  let(:network_spec)        { {} }
-  let(:resource_pool)       { { 'instance_type' => instance_type } }
+  let(:azure_environment)    { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
+  let(:storage_account_name) { ENV.fetch('BOSH_AZURE_STORAGE_ACCOUNT_NAME', nil) }
+  let(:use_managed_disks)    { ENV.fetch('BOSH_AZURE_USE_MANAGED_DISKS', false).to_s == 'true' }
+  let(:vnet_name)            { ENV.fetch('BOSH_AZURE_VNET_NAME', 'boshvnet-crp') }
+  let(:subnet_name)          { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
+  let(:second_subnet_name)   { ENV.fetch('BOSH_AZURE_SECOND_SUBNET_NAME', 'BOSH2') }
+  let(:instance_type)        { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
+  let(:vm_metadata)          { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
+  let(:network_spec)         { {} }
+  let(:resource_pool)        { { 'instance_type' => instance_type } }
 
-  subject(:cpi) do
-    described_class.new(
+  let(:cloud_options) {
+    {
       'azure' => {
-        'environment' => ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud'),
+        'environment' => azure_environment,
         'subscription_id' => @subscription_id,
-        'storage_account_name' => @storage_account_name,
         'resource_group_name' => @resource_group_name_for_vms,
         'tenant_id' => @tenant_id,
         'client_id' => @client_id,
@@ -41,14 +42,20 @@ describe Bosh::AzureCloud::Cloud do
         'ssh_user' => 'vcap',
         'ssh_public_key' => @ssh_public_key,
         'default_security_group' => @default_security_group,
-        'parallel_upload_thread_num' => 16
+        'parallel_upload_thread_num' => 16,
       },
       'registry' => {
         'endpoint' => 'fake',
         'user' => 'fake',
         'password' => 'fake'
       }
-    )
+    }
+  }
+
+  subject(:cpi) do
+    cloud_options['azure']['storage_account_name'] = storage_account_name unless storage_account_name.nil?
+    cloud_options['azure']['use_managed_disks'] = use_managed_disks
+    described_class.new(cloud_options)
   end
 
   before {
@@ -63,6 +70,7 @@ describe Bosh::AzureCloud::Cloud do
   before { @disk_id_pool = Array.new }
   after {
     @disk_id_pool.each do |disk_id|
+      logger.info("Cleanup: Deleting the disk `#{disk_id}'")
       cpi.delete_disk(disk_id) if disk_id
     end
   }
@@ -135,7 +143,7 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
-    context 'when vm with a attached disk is removed' do
+    context 'when vm with an attached disk is removed' do
       it 'should attach disk to a new vm' do
         disk_id = cpi.create_disk(2048, {})
         expect(disk_id).not_to be_nil
@@ -242,7 +250,7 @@ describe Bosh::AzureCloud::Cloud do
     let(:resource_pool) {
       {
         'instance_type' => instance_type,
-        'availability_set' => 'foo-availability-set',
+        'availability_set' => SecureRandom.uuid,
         'ephemeral_disk' => {
           'size' => 20480
         }

@@ -25,7 +25,7 @@ azure config mode arm
 
 set +e
 
-resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK}"
+resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS}"
 for resource_group_name in ${resource_group_names}
 do
   echo "Check if the resource group exists"
@@ -42,7 +42,7 @@ set -e
 
 echo "Check if the needed resources exist"
 
-resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK}"
+resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS}"
 for resource_group_name in ${resource_group_names}
 do
   vnets="${AZURE_VNET_NAME_FOR_BATS} ${AZURE_VNET_NAME_FOR_LIFECYCLE}"
@@ -104,32 +104,57 @@ done
 
 echo "Deleting the unneeded resources"
 
-vms=$(azure vm list --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.[].name' -r)
-for vm in ${vms}
+resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS}"
+for resource_group_name in ${resource_group_names}
 do
-  echo "azure vm delete --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --name ${vm}"
-  azure vm delete --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --name ${vm} --quiet
-done
+  vms=$(azure vm list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
+  for vm in ${vms}
+  do
+    echo "azure vm delete --resource-group ${resource_group_name} --name ${vm}"
+    azure vm delete --resource-group ${resource_group_name} --name ${vm} --quiet
+  done
 
-nics=$(azure network nic list --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.[].name' -r)
-for nic in ${nics}
-do
-  echo "azure network nic delete --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --name ${nic}"
-  azure network nic delete --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --name ${nic} --quiet
-done
+  nics=$(azure network nic list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
+  for nic in ${nics}
+  do
+    echo "azure network nic delete --resource-group ${resource_group_name} --name ${nic}"
+    azure network nic delete --resource-group ${resource_group_name} --name ${nic} --quiet
+  done
 
-lbs=$(azure network lb list --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.[].name' -r)
-for lb in ${lbs}
-do
-  echo "azure network lb delete --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --name ${lb}"
-  azure network lb delete --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --name ${lb} --quiet
-done
+  disks=$(azure managed-disk list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
+  for disk in ${disks}
+  do
+    echo "azure managed-disk delete --resource-group ${resource_group_name} --name ${disk}"
+    azure managed-disk delete --resource-group ${resource_group_name} --name ${disk} --quiet
+  done
 
-availsets=$(azure availset list --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.[].name' -r)
-for availset in ${availsets}
-do
-  echo "azure availset delete --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --name ${availset}"
-  azure availset delete --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --name ${availset} --quiet
+  images=$(azure managed-image list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
+  for image in ${images}
+  do
+    echo "azure managed-image delete --resource-group ${resource_group_name} --name ${image}"
+    azure managed-image delete --resource-group ${resource_group_name} --name ${image} --quiet
+  done
+
+  snapshots=$(azure managed-snapshot list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
+  for snapshot in ${snapshots}
+  do
+    echo "azure managed-snapshot delete --resource-group ${resource_group_name} --name ${snapshot}"
+    azure managed-snapshot delete --resource-group ${resource_group_name} --name ${snapshot} --quiet
+  done
+
+  lbs=$(azure network lb list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
+  for lb in ${lbs}
+  do
+    echo "azure network lb delete --resource-group ${resource_group_name} --name ${lb}"
+    azure network lb delete --resource-group ${resource_group_name} --name ${lb} --quiet
+  done
+
+  availsets=$(azure availset list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
+  for availset in ${availsets}
+  do
+    echo "azure availset delete --resource-group ${resource_group_name} --name ${availset}"
+    azure availset delete --resource-group ${resource_group_name} --name ${availset} --quiet
+  done
 done
 
 containers="stemcell bosh"

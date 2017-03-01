@@ -11,6 +11,7 @@ dev_releases
 releases/*.tgz
 releases/**/*.tgz
 src/bosh_azure_cpi/vendor/cache
+src/bosh_azure_cpi/coverage
 .DS_Store
 .vagrant
 *.swp

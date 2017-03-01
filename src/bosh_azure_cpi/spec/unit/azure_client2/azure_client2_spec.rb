@@ -151,8 +151,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
           stub_request(:get, resource_uri).to_return(
@@ -168,8 +168,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
           stub_request(:get, resource_uri).to_return(
@@ -190,8 +190,8 @@ describe Bosh::AzureCloud::AzureClient2 do
               to_return(
                 :status => 200,
                 :body => {
-                  "access_token"=>valid_access_token,
-                  "expires_on"=>expires_on
+                  "access_token" => valid_access_token,
+                  "expires_on" => expires_on
                 }.to_json,
                 :headers => {})
             stub_request(:get, resource_uri).to_return(
@@ -214,8 +214,8 @@ describe Bosh::AzureCloud::AzureClient2 do
               to_return(
                 :status => 200,
                 :body => {
-                  "access_token"=>valid_access_token,
-                  "expires_on"=>expires_on
+                  "access_token" => valid_access_token,
+                  "expires_on" => expires_on
                 }.to_json,
                 :headers => {})
             stub_request(:get, resource_uri).to_return(
@@ -238,8 +238,8 @@ describe Bosh::AzureCloud::AzureClient2 do
               to_return(
                 :status => 200,
                 :body => {
-                  "access_token"=>valid_access_token,
-                  "expires_on"=>expires_on
+                  "access_token" => valid_access_token,
+                  "expires_on" => expires_on
                 }.to_json,
                 :headers => {})
             stub_request(:get, resource_uri).to_return(
@@ -262,8 +262,8 @@ describe Bosh::AzureCloud::AzureClient2 do
               to_return(
                 :status => 200,
                 :body => {
-                  "access_token"=>valid_access_token,
-                  "expires_on"=>expires_on
+                  "access_token" => valid_access_token,
+                  "expires_on" => expires_on
                 }.to_json,
                 :headers => {})
             stub_request(:get, resource_uri).to_return(
@@ -394,8 +394,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, resource_uri).to_return(
@@ -415,8 +415,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
           stub_request(:get, resource_uri).to_return({
@@ -441,8 +441,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return({
               :status => 200,
               :body => {
-                "access_token"=>valid_access_token,
-                "expires_on"=>expires_on
+                "access_token" => valid_access_token,
+                "expires_on" => expires_on
               }.to_json,
               :headers => {}
             }, {
@@ -469,8 +469,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, resource_uri).to_return(
@@ -487,8 +487,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, resource_uri).to_return(
@@ -505,8 +505,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, resource_uri).to_return(
@@ -523,7 +523,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   describe "#get_resource_group" do
     let(:url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}" }
-    let(:api_version_1) { AZURE_RESOUCE_PROVIDER_GROUP }
+    let(:api_version_1) { AZURE_RESOURCE_PROVIDER_GROUP }
     let(:resource_uri) { "https://management.azure.com/#{url}?api-version=#{api_version_1}" }
     let(:response_body) {
       {
@@ -551,8 +551,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, resource_uri).to_return(
@@ -568,8 +568,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, resource_uri).to_return(
@@ -650,8 +650,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, network_interfaces_url).to_return(

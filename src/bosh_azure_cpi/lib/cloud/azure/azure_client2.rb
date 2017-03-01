@@ -13,8 +13,6 @@ module Bosh::AzureCloud
   class AzureClient2
     include Helpers
 
-    USER_AGENT                    = 'BOSH-AZURE-CPI'
-
     HTTP_CODE_OK                  = 200
     HTTP_CODE_CREATED             = 201
     HTTP_CODE_ACCEPTED            = 202
@@ -33,9 +31,12 @@ module Bosh::AzureCloud
     # Error code 429 is not documented in the url above, but it is a code for throttling error. Add it for issue https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/179
     AZURE_RETRY_ERROR_CODES       = [408, 429, 500, 502, 503, 504]
 
-    REST_API_PROVIDER_COMPUTER           = 'Microsoft.Compute'
-    REST_API_COMPUTER_VIRTUAL_MACHINES   = 'virtualMachines'
-    REST_API_COMPUTER_AVAILABILITY_SETS  = 'availabilitySets'
+    REST_API_PROVIDER_COMPUTE            = 'Microsoft.Compute'
+    REST_API_COMPUTE_VIRTUAL_MACHINES    = 'virtualMachines'
+    REST_API_COMPUTE_AVAILABILITY_SETS   = 'availabilitySets'
+    REST_API_COMPUTE_DISKS               = 'disks'
+    REST_API_COMPUTE_IMAGES              = 'images'
+    REST_API_COMPUTE_SNAPSHOTS           = 'snapshots'
 
     REST_API_PROVIDER_NETWORK            = 'Microsoft.Network'
     REST_API_NETWORK_PUBLIC_IP_ADDRESSES = 'publicIPAddresses'
@@ -93,7 +94,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/dn758095.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/resources/resourcegroups#ResourceGroups_Get
     #
     def get_resource_group()
       resource_group = nil
@@ -119,11 +120,11 @@ module Bosh::AzureCloud
     #
     # ==== Attributes
     #
-    # @param [Hash] vm_params           - Parameters for creating the virtual machine.
+    # @param [Hash]  vm_params          - Parameters for creating the virtual machine.
     # @param [Array] network_interfaces - Network Interface Instances. network_interfaces[0] will be picked as the primary network and able to bind to public ip or load balancers.
-    # @param [Hash] availability_set    - Availability set.
+    # @param [Hash]  availability_set   - Availability set.
     #
-    #  ==== Params
+    # ==== vm_params
     #
     # Accepted key/value pairs are:
     # * +:name+                 - String. Name of virtual machine.
@@ -131,49 +132,56 @@ module Bosh::AzureCloud
     # * +:tags+                 - Hash. Tags of virtual machine.
     # * +:vm_size+              - String. Specifies the size of the virtual machine instance.
     # * +:custom_data+          - String. Specifies a base-64 encoded string of custom data.
+    #
+    # * +:os_type+              - String. OS type of virutal machine. Possible values: linux. Only Linux is supported now.
+    #
+    #   When os_type is linux, below parameters are required
+    # * +:ssh_username+         - String. User name for the virtual machine instance.
+    # * +:ssh_cert_data+        - String. The content of SSH certificate.
+    #
+    # * +:managed+              - Boolean. Needs to be true to create managed disk VMs. Default value is nil.
+    #
+    #   When managed is true, below parameters are required
+    # * +:image_id+             - String. The id of the image to create the virtual machine.
+    # * +:os_disk+              - Hash. OS Disk for the virtual machine instance.
+    # *   +:disk_name+          - String. The name of the OS disk.
+    # *   +:disk_caching+       - String. The caching option of the OS disk. Possible values: None, ReadOnly or ReadWrite.
+    # *   +:disk_size+          - Integer. The size in GiB of the OS disk. It could be nil.
+    # * +:ephemeral_disk+       - Hash. Ephemeral Disk for the virtual machine instance. It could be nil.
+    # *   +:disk_name+          - String. The name of the ephemeral disk.
+    # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Possible values: None, ReadOnly or ReadWrite.
+    # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
+    #
+    #   When managed is false or nil, below parameters are required
     # * +:image_uri+            - String. The URI of the image.
     # * +:os_disk+              - Hash. OS Disk for the virtual machine instance.
     # *   +:disk_name+          - String. The name of the OS disk.
     # *   +:disk_uri+           - String. The URI of the OS disk.
-    # *   +:disk_caching+       - String. The caching option of the OS disk. Caching option: None, ReadOnly or ReadWrite.
+    # *   +:disk_caching+       - String. The caching option of the OS disk. Possible values: None, ReadOnly or ReadWrite.
     # *   +:disk_size+          - Integer. The size in GiB of the OS disk. It could be nil.
     # * +:ephemeral_disk+       - Hash. Ephemeral Disk for the virtual machine instance. It could be nil.
     # *   +:disk_name+          - String. The name of the ephemeral disk.
     # *   +:disk_uri+           - String. The URI of the ephemeral disk.
-    # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Caching option: None, ReadOnly or ReadWrite.
+    # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Possible values: None, ReadOnly or ReadWrite.
     # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
-    # * +:os_type+              - String. OS type of virutal machine. It can be linux.
-    # * +:ssh_username+         - String. User name for the virtual machine instance. Only available when os_type is linux
-    # * +:ssh_cert_data+        - String. The content of SSH certificate. Only available when os_type is linux
+    #
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
     def create_virtual_machine(vm_params, network_interfaces, availability_set = nil)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: vm_params[:name])
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: vm_params[:name])
 
-      network_interfaces_params = []
-      network_interfaces.each_with_index do |network_interface, index|
-        network_interfaces_params.push(
-          {
-            'id' => network_interface[:id],
-            'properties' => {
-              'primary' => index == 0 ? true : false
-            }
-          }
-        )
-      end
-
-      osProfile = {
+      os_profile = {
         'customData'         => vm_params[:custom_data],
         'computername'       => vm_params[:name],
       }
 
       case vm_params[:os_type]
         when 'linux'
-          osProfile['adminUsername'] = vm_params[:ssh_username]
-          osProfile['linuxConfiguration'] = {
+          os_profile['adminUsername'] = vm_params[:ssh_username]
+          os_profile['linuxConfiguration'] = {
             'disablePasswordAuthentication' => 'true',
             'ssh' => {
               'publicKeys' => [
@@ -188,44 +196,60 @@ module Bosh::AzureCloud
           raise ArgumentError, "Unsupported os type: #{vm_params[:os_type]}"
       end
 
+      network_interfaces_params = []
+      network_interfaces.each_with_index do |network_interface, index|
+        network_interfaces_params.push(
+          {
+            'id' => network_interface[:id],
+            'properties' => {
+              'primary' => index == 0
+            }
+          }
+        )
+      end
+
       vm = {
         'name'       => vm_params[:name],
         'location'   => vm_params[:location],
-        'type'       => "#{REST_API_PROVIDER_COMPUTER}/#{REST_API_COMPUTER_VIRTUAL_MACHINES}",
+        'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_COMPUTE_VIRTUAL_MACHINES}",
         'tags'       => vm_params[:tags],
         'properties' => {
           'hardwareProfile' => {
             'vmSize' => vm_params[:vm_size]
           },
-          'osProfile' => osProfile,
-          'storageProfile' => {
-            'osDisk' => {
-              'name'         => vm_params[:os_disk][:disk_name],
-              'osType'       => vm_params[:os_type],
-              'createOption' => 'FromImage',
-              'caching'      => vm_params[:os_disk][:disk_caching],
-              'image'        => {
-                'uri' => vm_params[:image_uri]
-              },
-              'vhd'          => {
-                'uri' => vm_params[:os_disk][:disk_uri]
-              }
-            }
-          },
+          'osProfile' => os_profile,
           'networkProfile' => {
             'networkInterfaces' => network_interfaces_params
           }
         }
       }
 
-      unless availability_set.nil?
-        vm['properties']['availabilitySet'] = {
-          'id' => availability_set[:id]
+      os_disk = {
+        'name'         => vm_params[:os_disk][:disk_name],
+        'createOption' => 'FromImage',
+        'caching'      => vm_params[:os_disk][:disk_caching]
+      }
+      os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
+      if vm_params[:managed]
+        vm['properties']['storageProfile'] = {
+          'imageReference' => {
+            'id' => vm_params[:image_id]
+          },
+          'osDisk' => os_disk
         }
-      end
-
-      unless vm_params[:os_disk][:disk_size].nil?
-        vm['properties']['storageProfile']['osDisk']['diskSizeGB'] = vm_params[:os_disk][:disk_size]
+      else
+        os_disk.merge!({
+          'osType'       => vm_params[:os_type],
+          'image'        => {
+            'uri' => vm_params[:image_uri]
+          },
+          'vhd'          => {
+            'uri' => vm_params[:os_disk][:disk_uri]
+          }
+        })
+        vm['properties']['storageProfile'] = {
+          'osDisk' => os_disk
+        }
       end
 
       unless vm_params[:ephemeral_disk].nil?
@@ -235,10 +259,20 @@ module Bosh::AzureCloud
           'createOption' => 'Empty',
           'diskSizeGB'   => vm_params[:ephemeral_disk][:disk_size],
           'caching'      => vm_params[:ephemeral_disk][:disk_caching],
-          'vhd'          => {
-            'uri' => vm_params[:ephemeral_disk][:disk_uri]
-          }
         }]
+        unless vm_params[:managed]
+          vm['properties']['storageProfile']['dataDisks'][0].merge!({
+            'vhd'        => {
+              'uri' => vm_params[:ephemeral_disk][:disk_uri]
+            }
+          })
+        end
+      end
+
+      unless availability_set.nil?
+        vm['properties']['availabilitySet'] = {
+          'id' => availability_set[:id]
+        }
       end
 
       params = {
@@ -253,10 +287,10 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163577.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-restart
     #
     def restart_virtual_machine(name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name, others: 'restart')
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: name, others: 'restart')
       http_post(url)
     end
 
@@ -266,13 +300,13 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
     def update_tags_of_virtual_machine(name, tags)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
-        raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name \"#{name}\""
+        raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name `#{name}'"
       end
 
       vm = remove_resources_from_vm(vm)
@@ -284,15 +318,16 @@ module Bosh::AzureCloud
     # Attach a specified disk to a virtual machine
     # @param [String] name      - Name of virtual machine.
     # @param [String] disk_name - Disk name.
-    # @param [String] disk_uri  - URI of disk
+    # @param [String] disk_uri  - URI of disk (managed: false) or ID of managed disk (managed: true)
     # @param [String] caching   - Caching option: None, ReadOnly or ReadWrite
+    # @param [Boolean] managed  - Needs to be true to attach disk to a managed disk VM.
     #
-    # @return [Boolean]
+    # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
-    def attach_disk_to_virtual_machine(name, disk_name, disk_uri, caching)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
+    def attach_disk_to_virtual_machine(name, disk_name, disk_uri, caching, managed = false)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
         raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{name}'"
@@ -319,20 +354,30 @@ module Bosh::AzureCloud
         'name'         => disk_name,
         'lun'          => lun,
         'createOption' => 'Attach',
-        'caching'      => caching,
-        'vhd'          => { 'uri' => disk_uri }
+        'caching'      => caching
       }
-      vm['properties']['storageProfile']['dataDisks'].push(new_disk)
+      if managed
+        new_disk['managedDisk'] = { 'id' => disk_uri }
+      else
+        new_disk['vhd'] = { 'uri' => disk_uri }
+      end
 
-      @logger.info("attach_disk_to_virtual_machine - attach disk `#{disk_name}' to `#{lun}'")
+      vm['properties']['storageProfile']['dataDisks'].push(new_disk)
+      @logger.info("attach_disk_to_virtual_machine - attach disk `#{disk_name}' to lun `#{lun}' of the virtual machine `#{name}', managed: `#{managed}'")
       http_put(url, vm)
+
       disk = {
-        :name         => disk_name,
-        :lun          => lun,
-        :createOption => 'Attach',
-        :caching      => caching,
-        :vhd          => { :uri => disk_uri }
+        :name          => disk_name,
+        :lun           => lun,
+        :create_option => 'Attach',
+        :caching       => caching
       }
+      if managed
+        disk[:managed_disk] = { :id => disk_uri }
+      else
+        disk[:vhd] = { :uri => disk_uri }
+      end
+      disk
     end
 
     # Detach a specified disk from a virtual machine
@@ -341,13 +386,13 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163591.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
     def detach_disk_from_virtual_machine(name, disk_name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
-        raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name \"#{name}\""
+        raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name `#{name}'"
       end
 
       vm = remove_resources_from_vm(vm)
@@ -368,10 +413,10 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163682.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-get
     #
     def get_virtual_machine_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: name)
       get_virtual_machine(url)
     end
 
@@ -380,7 +425,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163682.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-get
     #
     def get_virtual_machine(url)
       vm = nil
@@ -402,18 +447,34 @@ module Bosh::AzureCloud
         end
 
         storageProfile = properties['storageProfile']
+        os_disk = storageProfile['osDisk']
         vm[:os_disk] = {}
-        vm[:os_disk][:name]    = storageProfile['osDisk']['name']
-        vm[:os_disk][:uri]     = storageProfile['osDisk']['vhd']['uri']
-        vm[:os_disk][:caching] = storageProfile['osDisk']['caching']
+        vm[:os_disk][:name]    = os_disk['name']
+        vm[:os_disk][:caching] = os_disk['caching']
+        vm[:os_disk][:size]    = os_disk['diskSizeGb']
+
+        vm[:os_disk][:uri]     = os_disk['vhd']['uri'] if os_disk.has_key?('vhd')
+        if os_disk.has_key?('managedDisk')
+          vm[:os_disk][:managed_disk] = {}
+          vm[:os_disk][:managed_disk][:id]                   = os_disk['managedDisk']['id']
+          vm[:os_disk][:managed_disk][:storage_account_type] = os_disk['managedDisk']['storageAccountType']
+        end
 
         vm[:data_disks] = []
         storageProfile['dataDisks'].each do |data_disk|
           disk = {}
           disk[:name]    = data_disk['name']
           disk[:lun]     = data_disk['lun']
-          disk[:uri]     = data_disk['vhd']['uri']
           disk[:caching] = data_disk['caching']
+          disk[:size]    = data_disk['diskSizeGb']
+
+          disk[:uri]     = data_disk['vhd']['uri'] if data_disk.has_key?('vhd')
+          if data_disk.has_key?('managedDisk')
+            disk[:managed_disk] = {}
+            disk[:managed_disk][:id]                   = data_disk['managedDisk']['id']
+            disk[:managed_disk][:storage_account_type] = data_disk['managedDisk']['storageAccountType']
+          end
+
           vm[:data_disks].push(disk)
         end
 
@@ -435,11 +496,11 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163594.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-delete
     #
     def delete_virtual_machine(name)
       @logger.debug("delete_virtual_machine - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_VIRTUAL_MACHINES, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: name)
       http_delete(url)
     end
 
@@ -449,7 +510,7 @@ module Bosh::AzureCloud
     #
     # ==== Attributes
     #
-    # @param [Hash] avset_params        - Parameters for creating the availability set.
+    # @param [Hash] params              - Parameters for creating the availability set.
     #
     #  ==== Params
     #
@@ -458,24 +519,32 @@ module Bosh::AzureCloud
     # * +:location+                     - String. The location where the availability set will be created.
     # * +:tags+                         - Hash. Tags of availability set.
     # * +:platform_update_domain_count+ - Integer. Specifies the update domain count of availability set.
-    # * +:platform_fault_domain_count+  - Integer. Specifies the fault domain count of availability set.
+    # * +:platform_fault_domain_count+  - Integer. Specifies the fault domain count of availability set. The max value is 2 if managed is true.
+    # * +:managed                       - Boolean. Needs to be true if the availability set intends to host managed disk VMs.
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163607.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/availabilitysets-create
     #
-    def create_availability_set(avset_params)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: avset_params[:name])
+    def create_availability_set(params)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_AVAILABILITY_SETS, name: params[:name])
       availability_set = {
-        'name'       => avset_params[:name],
-        'type'       => "#{REST_API_PROVIDER_COMPUTER}/#{REST_API_COMPUTER_AVAILABILITY_SETS}",
-        'location'   => avset_params[:location],
-        'tags'       => avset_params[:tags],
+        'name'       => params[:name],
+        'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_COMPUTE_AVAILABILITY_SETS}",
+        'location'   => params[:location],
+        'tags'       => params[:tags],
+        'sku'        => {
+          'name' => 'Classic'
+        },
         'properties' => {
-          'platformUpdateDomainCount' => avset_params[:platform_update_domain_count],
-          'platformFaultDomainCount'  => avset_params[:platform_fault_domain_count]
+          'platformUpdateDomainCount' => params[:platform_update_domain_count],
+          'platformFaultDomainCount'  => params[:platform_fault_domain_count]
         }
       }
+      if !params[:managed].nil? && params[:managed] == true
+        availability_set['sku']['name'] = 'Aligned'
+      end
+
       http_put(url, availability_set)
     end
 
@@ -484,10 +553,10 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163594.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/availabilitysets-get
     #
     def get_availability_set_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_AVAILABILITY_SETS, name: name)
       get_availability_set(url)
     end
 
@@ -496,7 +565,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163594.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/availabilitysets-get
     #
     def get_availability_set(url)
       availability_set = nil
@@ -508,11 +577,17 @@ module Bosh::AzureCloud
         availability_set[:location] = result['location']
         availability_set[:tags]     = result['tags']
 
+        if result['sku']['name'] == 'Aligned'
+          availability_set[:managed] = true
+        else
+          availability_set[:managed] = false
+        end
+
         properties = result['properties']
+        availability_set[:provisioning_state]           = properties['provisioningState']
         availability_set[:platform_update_domain_count] = properties['platformUpdateDomainCount']
         availability_set[:platform_fault_domain_count]  = properties['platformFaultDomainCount']
         availability_set[:virtual_machines]             = []
-
         unless properties['virtualMachines'].nil?
           properties['virtualMachines'].each do |vm|
             availability_set[:virtual_machines].push({:id => vm["id"]})
@@ -527,11 +602,286 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163602.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/availabilitysets-delete
     #
     def delete_availability_set(name)
       @logger.debug("delete_availability_set - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTER, REST_API_COMPUTER_AVAILABILITY_SETS, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_AVAILABILITY_SETS, name: name)
+      http_delete(url)
+    end
+
+    # Compute/Disks
+
+    # Create an empty managed disk based on the supplied configuration.
+    #
+    # ==== Attributes
+    #
+    # @param [Hash] params        - Parameters for creating the empty managed disk.
+    #
+    # ==== params
+    #
+    # Accepted key/value pairs are:
+    # * +:name+                         - String. Name of the empty managed disk.
+    # * +:location+                     - String. The location where the empty managed disk will be created.
+    # * +:tags+                         - Hash. Tags of the empty managed disk.
+    # * +:disk_size+                    - Integer. Specifies the size in GB of the empty managed disk.
+    # * +:account_type+                 - String. Specifies the account type of the empty managed disk.
+    #                                     Optional values: Standard_LRS or Premium_LRS.
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
+    #
+    def create_empty_managed_disk(params)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, name: params[:name])
+      disk = {
+        'location'   => params[:location],
+        'tags'       => params[:tags],
+        'properties' => {
+          'creationData' => {
+            'createOption'  => 'Empty'
+          },
+          'accountType'  => params[:account_type],
+          'diskSizeGB'   => params[:disk_size]
+        }
+      }
+      http_put(url, disk)
+    end
+
+    # Create a managed disk from storage blob SAS URI (import).
+    #
+    # ==== Attributes
+    #
+    # @param [Hash] params        - Parameters for creating the managed disk.
+    #
+    # ==== params
+    #
+    # Accepted key/value pairs are:
+    # * +:name+                         - String. Name of the managed disk.
+    # * +:location+                     - String. The location where the managed disk will be created.
+    # * +:tags+                         - Hash. Tags of the managed disk.
+    # * +:source_uri+                   - String. The SAS URI of the source storage blob.
+    # * +:account_type+                 - String. Specifies the account type of the managed disk.
+    #                                     Optional values: Standard_LRS or Premium_LRS.
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
+    #
+    def create_managed_disk_from_blob(params)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, name: params[:name])
+      disk = {
+        'location'   => params[:location],
+        'tags'       => params[:tags],
+        'properties' => {
+          'creationData' => {
+            'createOption'  => 'Import',
+            'sourceUri'  => params[:source_uri]
+          },
+          'accountType'  => params[:account_type]
+        }
+      }
+      http_put(url, disk)
+    end
+
+    # Delete a managed disk
+    # @param [String] name - Name of managed disk.
+    #
+    # @return [Boolean]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-delete
+    #
+    def delete_managed_disk(name)
+      @logger.debug("delete_managed_disk - trying to delete #{name}")
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, name: name)
+      http_delete(url)
+    end
+
+    # Get a managed disk's information
+    # @param [String] name - Name of managed disk.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-get
+    #
+    def get_managed_disk_by_name(name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, name: name)
+      get_managed_disk(url)
+    end
+
+    # Get a managed disk's information
+    # @param [String] url - URL of managed disk.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-get
+    #
+    def get_managed_disk(url)
+      result = get_resource_by_id(url)
+      parse_managed_disk(result)
+    end
+
+    # Get a managed disk's tags
+    # @param [String] name - Name of managed disk.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-get
+    #
+    def get_tags_of_managed_disk(name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, name: name)
+      disk = get_resource_by_id(url)
+      if disk.nil?
+        raise AzureNotFoundError, "get_tags_of_managed_disk - cannot find the managed disk by name `#{name}'"
+      end
+      disk['tags']
+    end
+
+    # Compute/Images
+
+    # Create a vm image
+    #
+    # ==== Attributes
+    #
+    # @param [Hash] params   - Parameters for creating the user image.
+    #
+    # ==== params
+    #
+    # Accepted key/value pairs are:
+    # * +:name+                         - String. Name of the user image.
+    # * +:location+                     - String. The location where the user image will be created.
+    # * +:tags+                         - Hash. Tags of the user image.
+    # * +:os_type+                      - String. OS type. Possible values: linux.
+    # * +:source_uri+                   - String. The SAS URI of the source storage blob.
+    # * +:account_type+                 - String. Specifies the account type of the user image.
+    #                                     Possible values: Standard_LRS or Premium_LRS.
+    #
+    # @return [Boolean]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-create
+    #
+    def create_user_image(params)
+      @logger.debug("create_user_image - trying to create a user image `#{params[:name]}'")
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_IMAGES, name: params[:name])
+      user_image = {
+        'location'   => params[:location],
+        'tags'       => params[:tags],
+        'properties' => {
+          'storageProfile' => {
+            'osDisk' => {
+              'osType' => params[:os_type],
+              'blobUri' => params[:source_uri],
+              'osState' => 'generalized',
+              'caching' => 'readwrite',
+              'storageAccountType' => params[:account_type]
+            }
+          }
+        }
+      }
+
+      http_put(url, user_image)
+    end
+
+    # Delete a user image
+    # @param [String] name - Name of user image.
+    #
+    # @return [Boolean]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-delete
+    #
+    def delete_user_image(name)
+      @logger.debug("delete_user_image - trying to delete `#{name}'")
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_IMAGES, name: name)
+      http_delete(url)
+    end
+
+    # Get a user image's information
+    # @param [String] name - Name of user image
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-get
+    #
+    def get_user_image_by_name(name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_IMAGES, name: name)
+      get_user_image(url)
+    end
+
+    # Get a user image's information
+    # @param [String] url - URL of user image.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-get
+    #
+    def get_user_image(url)
+      result = get_resource_by_id(url)
+      parse_user_image(result)
+    end
+
+    # List user images within the default resource group
+    #
+    # @return [Array]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-list-by-resource-group
+    #
+    def list_user_images()
+      user_images = []
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_IMAGES)
+      result = get_resource_by_id(url)
+      unless result.nil?
+        result['value'].each do |value|
+          user_image = parse_user_image(value)
+          user_images << user_image
+        end
+      end
+      user_images
+    end
+ 
+    # Compute/Snapshots
+
+    # Create a snapshot for a managed disk
+    #
+    # ==== Attributes
+    #
+    # ==== params
+    #
+    # Accepted key/value pairs are:
+    # * +:name+                         - String. Name of the snapshot.
+    # * +:tags+                         - Hash. Tags of the snapshot.
+    # * +:disk_name+                    - String. Name of the disk.
+    #
+    # @return [Boolean]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/snapshots/snapshots-create-or-update
+    #
+    def create_managed_snapshot(params)
+      snapshot_name = params[:name]
+      disk_name = params[:disk_name]
+      @logger.debug("create_managed_snapshot - trying to create a snapshot `#{snapshot_name}' for the managed disk `#{disk_name}'")
+      disk = get_managed_disk_by_name(disk_name)
+      raise AzureNotFoundError, "The disk `#{disk_name}' cannot be found" if disk.nil?
+      snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_SNAPSHOTS, name: snapshot_name)
+      snapshot = {
+        'location'   => disk[:location],
+        'tags'       => params[:tags],
+        'properties' => {
+          'creationData' => {
+            'createOption' => 'Copy',
+            'sourceUri' => rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, name: disk_name)
+          }
+        }
+      }
+
+      http_put(snapshot_url, snapshot)
+    end
+
+    # Delete a snapshot of managed disk
+    # @param [String] name - Name of snapshot.
+    #
+    # @return [Boolean]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/snapshots/snapshots-delete
+    #
+    def delete_managed_snapshot(name)
+      @logger.debug("delete_managed_snapshot - trying to delete `#{name}'")
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_SNAPSHOTS, name: name)
       http_delete(url)
     end
 
@@ -544,7 +894,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163590.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/create-or-update-a-public-ip-address
     #
     def create_public_ip(name, location, is_static = true)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
@@ -563,7 +913,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163570.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-public-ip-address
     #
     def get_public_ip_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
@@ -575,19 +925,19 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163570.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-public-ip-address
     #
     def get_public_ip(url)
       result = get_resource_by_id(url)
       parse_public_ip(result)
     end
 
-    # List all public IPs under a specified resource group
+    # List all public IPs within a specified resource group
     # @param [String] resource_group_name - Name of resource group.
     #
     # @return [Array]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163657.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/list-public-ip-addresses-within-a-resource-group
     #
     def list_public_ips(resource_group_name)
       ip_addresses = []
@@ -607,7 +957,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163631.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/delete-a-public-ip-address
     #
     def delete_public_ip(name)
       @logger.debug("delete_public_ip - trying to delete #{name}")
@@ -626,7 +976,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163574.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/create-or-update-a-load-balancer
     #
     def create_load_balancer(name,  public_ip, tags, tcp_endpoints = [], udp_endpoints = [])
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
@@ -638,7 +988,6 @@ module Bosh::AzureCloud
           'frontendIPConfigurations' => [
             'name'        => 'LBFE',
             'properties'  => {
-              #'privateIPAllocationMethod' => 'Dynamic',
               'publicIPAddress'           => {
                 'id' => public_ip[:id]
               }
@@ -693,7 +1042,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163636.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
     #
     def get_load_balancer_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
@@ -705,7 +1054,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163636.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
     #
     def get_load_balancer(url)
       load_balancer = nil
@@ -753,7 +1102,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163566.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/delete-a-load-balancer
     #
     def delete_load_balancer(name)
       @logger.debug("delete_load_balancer - trying to delete #{name}")
@@ -785,7 +1134,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163668.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/create-or-update-a-network-interface-card
     #
     def create_network_interface(nic_params, subnet, tags, load_balancer = nil)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name: nic_params[:name])
@@ -834,7 +1183,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163611.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-network-interface-card
     #
     def get_network_interface_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, name: name)
@@ -846,7 +1195,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163611.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-network-interface-card
     #
     def get_network_interface(url)
       result = get_resource_by_id(url)
@@ -858,7 +1207,7 @@ module Bosh::AzureCloud
     #
     # @return [Array] - Array of network interfaces, however, the network interface here will not contain details about public ip or load balancer.
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163611.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/list-network-interface-cards-within-a-resource-group
     #
     def list_network_interfaces_by_instance_id(keyword)
       network_interfaces = []
@@ -884,7 +1233,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163562.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/delete-a-network-interface-card
     #
     def delete_network_interface(name)
       @logger.debug("delete_network_interface - trying to delete #{name}")
@@ -901,7 +1250,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163583.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/create-or-update-a-subnet
     #
     def get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_VNETS, resource_group_name: resource_group_name, name: vnet_name, others: "subnets/#{subnet_name}")
@@ -913,7 +1262,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163583.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-subnet
     #
     def get_network_subnet(url)
       subnet = nil
@@ -938,7 +1287,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163654.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-network-security-group
     #
     def get_network_security_group_by_name(resource_group_name, name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_SECURITY_GROUPS, resource_group_name: resource_group_name, name: name)
@@ -950,7 +1299,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163654.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-network-security-group
     #
     def get_network_security_group(url)
       nsg = nil
@@ -978,7 +1327,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_Create
     #
     def create_storage_account(name, location, account_type, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
@@ -1009,7 +1358,7 @@ module Bosh::AzureCloud
 
       @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
       uri = URI(response['Location'])
-      api_version = get_api_version(@azure_properties, AZURE_RESOUCE_PROVIDER_STORAGE)
+      api_version = get_api_version(@azure_properties, AZURE_RESOURCE_PROVIDER_STORAGE)
       request = Net::HTTP::Get.new(uri.request_uri)
       request.add_field('x-ms-version', api_version)
       while true
@@ -1036,7 +1385,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163642.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_CheckNameAvailability
     #
     def check_storage_account_name_availability(name)
       url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
@@ -1062,7 +1411,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163553.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_GetProperties
     #
     def get_storage_account_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
@@ -1074,7 +1423,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163553.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_GetProperties
     #
     def get_storage_account(url)
       storage_account = nil
@@ -1101,7 +1450,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163589.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_ListKeys
     #
     def get_storage_account_keys_by_name(name)
       result = nil
@@ -1120,11 +1469,11 @@ module Bosh::AzureCloud
       keys
     end
 
-    # List storage accounts under the default resource group
+    # List storage accounts within the default resource group
     #
     # @return [Array]
     #
-    # @See https://msdn.microsoft.com/en-us/library/azure/mt163554.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_ListByResourceGroup
     #
     def list_storage_accounts()
       storage_accounts = []
@@ -1136,6 +1485,7 @@ module Bosh::AzureCloud
           storage_account[:id]        = value['id']
           storage_account[:name]      = value['name']
           storage_account[:location]  = value['location']
+          storage_account[:tags]      = value['tags']
 
           properties = value['properties']
           storage_account[:provisioning_state] = properties['provisioningState']
@@ -1149,8 +1499,54 @@ module Bosh::AzureCloud
       end
       storage_accounts
     end
+ 
+    # Set tags for a storage account
+    # @param [String] name - Name of storage account.
+    # @param [Hash] tags   - tags key/value pairs.
+    #
+    # @return [Boolean]
+    #
+    #
+    def update_tags_of_storage_account(name, tags)
+      url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
+      request_body = {
+        "tags": tags
+      }
+      http_patch(url, request_body)
+    end
 
     private
+
+    def parse_managed_disk(result)
+      managed_disk = nil
+      unless result.nil?
+        managed_disk = {}
+        managed_disk[:id]        = result['id']
+        managed_disk[:name]      = result['name']
+        managed_disk[:location]  = result['location']
+        managed_disk[:tags]      = result['tags']
+
+        properties = result['properties']
+        managed_disk[:provisioning_state] = properties['provisioningState']
+        managed_disk[:disk_size]          = properties['diskSizeGB']
+        managed_disk[:account_type]       = properties['accountType']
+      end
+      managed_disk
+    end
+
+    def parse_user_image(result)
+      user_image = nil
+      unless result.nil?
+        user_image = {}
+        user_image[:id]       = result['id']
+        user_image[:name]     = result['name']
+        user_image[:location] = result['location']
+        user_image[:tags]     = result['tags']
+        properties = result['properties']
+        user_image[:provisioning_state] = properties['provisioningState']
+      end
+      user_image
+    end
 
     def parse_network_interface(result, recursive: true)
       interface = nil
@@ -1315,14 +1711,14 @@ module Bosh::AzureCloud
     def http_url(url, params = {})
       unless params.has_key?('api-version')
         resource_provider = nil
-        if url.include?(REST_API_PROVIDER_COMPUTER)
-          resource_provider = AZURE_RESOUCE_PROVIDER_COMPUTER
+        if url.include?(REST_API_PROVIDER_COMPUTE)
+          resource_provider = AZURE_RESOURCE_PROVIDER_COMPUTE
         elsif url.include?(REST_API_PROVIDER_NETWORK)
-          resource_provider = AZURE_RESOUCE_PROVIDER_NETWORK
+          resource_provider = AZURE_RESOURCE_PROVIDER_NETWORK
         elsif url.include?(REST_API_PROVIDER_STORAGE)
-          resource_provider = AZURE_RESOUCE_PROVIDER_STORAGE
+          resource_provider = AZURE_RESOURCE_PROVIDER_STORAGE
         else
-          resource_provider = AZURE_RESOUCE_PROVIDER_GROUP
+          resource_provider = AZURE_RESOURCE_PROVIDER_GROUP
         end
         params['api-version'] = get_api_version(@azure_properties, resource_provider)
       end
@@ -1368,7 +1764,8 @@ module Bosh::AzureCloud
             error = "http_get_response - http code: #{response.code}\n"
             error += get_http_common_headers(response)
             error += "Error message: #{response.body}"
-            raise AzureAsynInternalError, error
+            raise AzureAsynInternalError, error if response.key?('Retry-After')
+            raise AzureError, error
           end
         elsif AZURE_RETRY_ERROR_CODES.include?(status_code)
           error = "http_get_response - http code: #{response.code}\n"
@@ -1455,8 +1852,8 @@ module Bosh::AzureCloud
         unless response.body.nil?
           ret = JSON(response.body)
           unless ret['status'].nil?
-            if ret['status'] != 'InProgress'
-              if ret['status'] == 'Succeeded'
+            if ret['status'] != PROVISIONING_STATE_INPROGRESS
+              if ret['status'] == PROVISIONING_STATE_SUCCEEDED
                 return true
               else
                 error = "status: #{ret['status']}\n"
@@ -1512,7 +1909,40 @@ module Bosh::AzureCloud
         options = {
           :operation    => 'http_put',
           :return_code => [HTTP_CODE_OK],
-          :success_code => [HTTP_CODE_CREATED],
+          :success_code => [HTTP_CODE_CREATED, HTTP_CODE_ACCEPTED],
+          :api_version  => params['api-version'],
+          :retry_after  => retry_after
+        }
+        check_completion(response, options)
+      rescue AzureAsynInternalError => e
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          retry_count += 1
+          retry
+        end
+        raise e
+      end
+    end
+
+    def http_patch(url, body = nil, params = {}, retry_after = 5)
+      uri = http_url(url, params)
+      retry_count = 0
+
+      begin
+        @logger.info("http_patch - #{retry_count}: trying to patch #{uri}")
+
+        request = Net::HTTP::Patch.new(uri.request_uri)
+        unless body.nil?
+          request_body = body.to_json
+          request.body = request_body
+          request['Content-Length'] = request_body.size
+          @logger.debug("http_patch - request body:\n#{request.body}")
+        end
+
+        response = http_get_response(uri, request, retry_after)
+        options = {
+          :operation    => 'http_patch',
+          :return_code => [HTTP_CODE_OK],
+          :success_code => [HTTP_CODE_ACCEPTED],
           :api_version  => params['api-version'],
           :retry_after  => retry_after
         }
@@ -1586,8 +2016,8 @@ module Bosh::AzureCloud
     end
 
     def merge_http_common_headers(request)
-      request['User-Agent']    = USER_AGENT
-      # https://msdn.microsoft.com/en-us/library/azure/mt163564.aspx
+      request['User-Agent']    = USER_AGENT_FOR_REST
+      # https://msdn.microsoft.com/en-us/library/mt766820.aspx
       # Caller-specified request ID, in the form of a GUID with no decoration such as curly braces.
       # If specified, this will be included in response information as a way to map the request.
       request['x-ms-client-request-id'] = SecureRandom.uuid

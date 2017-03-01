@@ -18,7 +18,7 @@ properties:
   azure.resource_group_name:
     description: Resource group name to use when spinning up new vms
   azure.storage_account_name:
-    description: Azure storage account name
+    description: Azure storage account name. This property is required when use_managed_disks is false or upgrading from an existing deployment whose use_managed_disks is false.
   azure.tenant_id:
     description: The tenant id for your service principal
   azure.client_id:
@@ -41,6 +41,9 @@ properties:
     description: The authentication type for your AzureStack deployment. AzureAD, AzureStackAD or AzureStack
   azure.debug_mode:
     description: Enable debug mode to log all raw HTTP requests/responses
+    default: false
+  azure.use_managed_disks:
+    description: Enable managed disks
     default: false
 
   registry.username:

@@ -183,6 +183,40 @@ describe Bosh::AzureCloud::BlobManager do
     end
   end  
 
+  describe "#get_blob_properties" do
+    context "when blob exists" do
+      let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
+      let(:properties) { { "foo" => "bar" } }
+
+      before do
+        allow(blob).to receive(:properties).and_return(properties)
+      end
+
+      it "should get the properties of the blob" do
+        expect(blob_service).to receive(:get_blob_properties).
+          with(container_name, blob_name, options).
+          and_return(blob)
+
+        expect(
+          blob_manager.get_blob_properties(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+        ).to be(properties)
+      end
+    end
+
+    context "when blob does not exist" do
+      before do
+        allow(blob_service).to receive(:get_blob_properties).
+          and_raise("(404)")
+      end
+
+      it "should return nil" do
+        expect(
+          blob_manager.get_blob_properties(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+        ).to be(nil)
+      end
+    end
+  end
+
   describe "#get_blob_metadata" do
     context "when blob exists" do
       let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
@@ -210,9 +244,32 @@ describe Bosh::AzureCloud::BlobManager do
 
       it "should return nil" do
         expect(
-        blob_manager.get_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
-      ).to be(nil)
+          blob_manager.get_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+        ).to be(nil)
       end
+    end
+  end
+
+  describe "#set_blob_metadata" do
+    let(:metadata) {
+      {
+        'os_type' => 'fake-os-type',
+        'integer' => 1024,
+        'boolean' => true
+      }
+    }
+    let(:encoded_metadata) {
+      {
+        'os_type' => 'fake-os-type',
+        'integer' => '1024',
+        'boolean' => 'true'
+      }
+    }
+
+    it "should get metadata of the blob" do
+      expect(blob_service).to receive(:set_blob_metadata).
+        with(container_name, blob_name, encoded_metadata, options)
+      blob_manager.set_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, metadata)
     end
   end
 
@@ -490,48 +547,6 @@ describe Bosh::AzureCloud::BlobManager do
     end
   end
 
-  describe "#create_container" do
-    context "when creating container succeeds" do
-      context "the container does not exist" do
-        before do
-          allow(blob_service).to receive(:create_container).
-            with(container_name, options)
-        end
-
-        it "should return true" do
-          expect(
-            blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, {})
-          ).to be(true)
-        end
-      end
-
-      context "the container exists" do
-        before do
-          allow(blob_service).to receive(:create_container).
-            and_raise("(409)")
-        end
-
-        it "should return true" do
-          expect(
-            blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, {})
-          ).to be(true)
-        end
-      end
-    end
-
-    context "when the status code is not 409" do
-      before do
-        allow(blob_service).to receive(:create_container).and_raise(StandardError)
-      end
-
-      it "should raise an error" do
-        expect {
-          blob_manager.create_container(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, options)
-        }.to raise_error /Failed to create container/
-      end
-    end
-  end
-
   describe "#has_container?" do
     context "when the container exists" do
       let(:container) { instance_double(Azure::Storage::Blob::Container::Container) }
@@ -590,7 +605,6 @@ describe Bosh::AzureCloud::BlobManager do
         :storage_table_host => "fake-table-endpoint"
       }
     }
-    let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
     before do
       allow(azure_client2).to receive(:get_storage_account_by_name).
         with(another_storage_account_name).
@@ -598,17 +612,17 @@ describe Bosh::AzureCloud::BlobManager do
     end
 
     context "when the container exists" do
-      let(:container) { instance_double(Azure::Storage::Blob::Container::Container) }
-      let(:container_properties) { "fake-properties" }
-
       before do
-        allow(blob_service).to receive(:get_container_properties).
-          with(container_name, options).and_return(container)
-        allow(container).to receive(:properties).and_return(container_properties)
+        allow(blob_service).to receive(:create_container).
+          and_raise("ContainerAlreadyExists")
       end
 
       it "does not create the container" do
-        expect(blob_service).not_to receive(:create_container)
+        expect(blob_service).to receive(:create_container).
+          with(container_name, options).
+          and_return(true)
+        expect(blob_service).to receive(:set_container_acl).
+          with(anything, 'blob', options)
 
         blob_manager.prepare(another_storage_account_name, containers: [container_name])
       end
@@ -622,9 +636,28 @@ describe Bosh::AzureCloud::BlobManager do
 
       it "create the container" do
         expect(blob_service).to receive(:create_container).
-          with(container_name, options)
+          with(container_name, options).
+          and_return(true)
+        expect(blob_service).to receive(:set_container_acl).
+          with(anything, 'blob', options)
 
         blob_manager.prepare(another_storage_account_name, containers: [container_name])
+      end
+    end
+
+    context "when the blob service throws an error" do
+      before do
+        allow(blob_service).to receive(:get_container_properties).
+          and_raise("Error code: (404). This is a test!")
+        allow(blob_service).to receive(:create_container).
+          with(container_name, options)
+        allow(blob_service).to receive(:set_container_acl).and_raise(StandardError)
+      end
+
+      it "should fail to set the ACL of the stemcell container to public" do
+        expect {
+          blob_manager.prepare(another_storage_account_name, containers: [container_name])
+        }.to raise_error /Failed to set the public access level/
       end
     end
   end

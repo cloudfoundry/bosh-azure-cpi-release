@@ -14,6 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
+  let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
   let(:request_id) { "fake-request-id" }
 
@@ -31,16 +32,107 @@ describe Bosh::AzureCloud::AzureClient2 do
     let(:disk_name) { "fake-disk-name" }
     let(:disk_uri) { "fake-disk-uri" }
     let(:caching) { "ReadWrite" }
-    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version}" }
+    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
     let(:disk) {
       {
-        :name         => disk_name,
-        :lun          => 2,
-        :createOption => 'Attach',
-        :caching      => 'ReadWrite',
-        :vhd          => { :uri => disk_uri }
+        :name          => disk_name,
+        :lun           => 2,
+        :create_option => 'Attach',
+        :caching       => 'ReadWrite',
+        :vhd           => { :uri => disk_uri }
       }
     }
+
+    context "when attaching a managed disk" do
+      let(:managed) { true }
+      let(:disk_id) { "fake-disk-id" }
+      let(:request_body) {
+        {
+          "id" => "fake-id",
+          "name" => "fake-name",
+          "location" => "fake-location",
+          "tags" => "fake-tags",
+          "properties" => {
+            "provisioningState" => "fake-state",
+            "storageProfile" => {
+              "dataDisks" => [
+                { "lun" => 0 },
+                { "lun" => 1 },
+                {
+                  "name" => disk_name,
+                  "lun"  => 2,
+                  "createOption" => "Attach",
+                  "caching"      => 'ReadWrite',
+                  "managedDisk"  => { "id" => disk_id }
+                }
+              ]
+            },
+            "hardwareProfile" => {
+              "vmSize" => "Standard_A5"
+            }
+          }
+        }
+      }
+
+      let(:response_body) {
+        {
+          "id" => "fake-id",
+          "name" => "fake-name",
+          "location" => "fake-location",
+          "tags" => "fake-tags",
+          "properties" => {
+            "provisioningState" => "fake-state",
+            "storageProfile" => {
+              "dataDisks" => [
+                { "lun" => 0 },
+                { "lun" => 1 }
+              ]
+            },
+            "hardwareProfile" => {
+              "vmSize" => "Standard_A5"
+            }
+          }
+        }.to_json
+      }
+
+      let(:disk) {
+        {
+          :name          => disk_name,
+          :lun           => 2,
+          :create_option => 'Attach',
+          :caching       => 'ReadWrite',
+          :managed_disk  => { :id => disk_id }
+        }
+      }
+
+      it "should raise no error" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, vm_uri).to_return(
+          :status => 200,
+          :body => response_body,
+          :headers => {})
+        stub_request(:put, vm_uri).with(body: request_body).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {
+            "azure-asyncoperation" => operation_status_link
+          })
+        stub_request(:get, operation_status_link).to_return(
+          :status => 200,
+          :body => '{"status":"Succeeded"}',
+          :headers => {})
+
+        expect(
+          azure_client2.attach_disk_to_virtual_machine(vm_name, disk_name, disk_id, caching, managed)
+        ).to eq(disk)
+      end
+    end
 
     context "when token is valid, create operation is accepted and completed" do
       let(:request_body) {
@@ -59,8 +151,8 @@ describe Bosh::AzureCloud::AzureClient2 do
                   "name" => disk_name,
                   "lun"  => 2,
                   "createOption" => "Attach",
-                  "caching"      => 'ReadWrite',
-                  "vhd"          => { "uri" => disk_uri }
+                  "caching"       => 'ReadWrite',
+                  "vhd"           => { "uri" => disk_uri }
                 }
               ]
             },
@@ -97,8 +189,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
           stub_request(:get, vm_uri).to_return(
@@ -157,8 +249,8 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {
-              "access_token"=>valid_access_token,
-              "expires_on"=>expires_on
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
             }.to_json,
             :headers => {})
           stub_request(:get, vm_uri).to_return(
@@ -188,8 +280,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, vm_uri).to_return(
@@ -229,8 +321,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, vm_uri).to_return(
@@ -270,8 +362,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, vm_uri).to_return(
@@ -296,8 +388,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
           }.to_json,
           :headers => {})
         stub_request(:get, vm_uri).to_return(
