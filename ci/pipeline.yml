@@ -9,7 +9,6 @@ groups:
       - bats-ubuntu-unmanaged-disks
       - lifecycle-managed-disks
       - bats-ubuntu-managed-disks
-      - bats-centos
       - promote-candidate
 jobs:
 - name: recreate-infrastructure-primary
@@ -270,7 +269,7 @@ jobs:
   serial: true
   plan:
   - aggregate:
-    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+    - {trigger: false,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
     - {trigger: false,                            get: stemcell, resource: azure-centos-stemcell}
     - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
     - {trigger: false,                            get: bats}
@@ -336,7 +335,7 @@ jobs:
 - name: promote-candidate
   plan:
   - aggregate:
-    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [lifecycle-unmanaged-disks, bats-ubuntu-unmanaged-disks, lifecycle-managed-disks, bats-ubuntu-managed-disks, bats-centos]}
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [lifecycle-unmanaged-disks, bats-ubuntu-unmanaged-disks, lifecycle-managed-disks, bats-ubuntu-managed-disks]}
     - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
     - {trigger: false, get: release-version-semver, params: {bump: major}}
 
