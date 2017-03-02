@@ -24,9 +24,9 @@ When you decide to enable managed disks, you need to update the [global properti
 
 Below are behavior changes with a new deployment:
 
-1. In Azure environment preparing stage, you no longer need to create or add storage account when creating/attaching a new disk.
+1. In Azure environment preparing stage, you no longer need to create or add storage account when creating/attaching a new disk. So, **you must not specify storage_account_name in bosh.yml for a new deployment.**
 
-1. When deploying BOSH, you need to specify additional parameters:
+1. When deploying BOSH, you need to specify additional parameters in `bosh.yml`:
 
   ```
   azure:
@@ -37,7 +37,7 @@ Below are behavior changes with a new deployment:
       storage_account_type # New parameter: Standard_LRS or Premium_LRS.
   ```
 
-1. When deploying Cloud Foundry, you need to specify additional parameters:
+1. When deploying Cloud Foundry, you need to specify additional parameters in your CF manifest:
 
   ```
   disk_pools:
