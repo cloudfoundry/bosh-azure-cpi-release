@@ -125,21 +125,21 @@ do
   for disk in ${disks}
   do
     echo "azure managed-disk delete --resource-group ${resource_group_name} --name ${disk}"
-    azure managed-disk delete --resource-group ${resource_group_name} --name ${disk} --quiet
+    azure managed-disk delete --resource-group ${resource_group_name} --name ${disk}
   done
 
   images=$(azure managed-image list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
   for image in ${images}
   do
     echo "azure managed-image delete --resource-group ${resource_group_name} --name ${image}"
-    azure managed-image delete --resource-group ${resource_group_name} --name ${image} --quiet
+    azure managed-image delete --resource-group ${resource_group_name} --name ${image}
   done
 
   snapshots=$(azure managed-snapshot list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
   for snapshot in ${snapshots}
   do
     echo "azure managed-snapshot delete --resource-group ${resource_group_name} --name ${snapshot}"
-    azure managed-snapshot delete --resource-group ${resource_group_name} --name ${snapshot} --quiet
+    azure managed-snapshot delete --resource-group ${resource_group_name} --name ${snapshot}
   done
 
   lbs=$(azure network lb list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
