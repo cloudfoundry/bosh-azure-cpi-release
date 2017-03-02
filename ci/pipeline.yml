@@ -49,18 +49,22 @@ jobs:
   - task: reset-resources
     file: bosh-cpi-src/ci/tasks/reset-resources.yml
     params:
-      AZURE_TENANT_ID:                {{azure_tenant_id}}
-      AZURE_CLIENT_ID:                {{azure_client_id}}
-      AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-      AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms}}
-      AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network}}
-      AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
-      AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
-      AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
-      AZURE_CF_SUBNET_NAME:           {{azure_cf_subnet_name}}
-      AZURE_CF_SECOND_SUBNET_NAME:    {{azure_cf_second_subnet_name}}
+      AZURE_TENANT_ID:                            {{azure_tenant_id}}
+      AZURE_CLIENT_ID:                            {{azure_client_id}}
+      AZURE_CLIENT_SECRET:                        {{azure_client_secret}}
+      AZURE_GROUP_NAME_FOR_VMS:                   {{azure_group_name_for_vms}}
+      AZURE_GROUP_NAME_FOR_NETWORK:               {{azure_group_name_for_network}}
+      AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS:     {{azure_group_name_for_vms_managed_disks}}
+      AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS: {{azure_group_name_for_network_managed_disks}}
+      AZURE_GROUP_NAME_FOR_VMS_CENTOS:            {{azure_group_name_for_vms_centos}}
+      AZURE_GROUP_NAME_FOR_NETWORK_CENTOS:        {{azure_group_name_for_network_centos}}
+      AZURE_STORAGE_ACCOUNT_NAME:                 {{azure_storage_account_name}}
+      AZURE_VNET_NAME_FOR_BATS:                   {{azure_vnet_name_for_bats}}
+      AZURE_VNET_NAME_FOR_LIFECYCLE:              {{azure_vnet_name_for_lifecycle}}
+      AZURE_BOSH_SUBNET_NAME:                     {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME:              {{azure_bosh_second_subnet_name}}
+      AZURE_CF_SUBNET_NAME:                       {{azure_cf_subnet_name}}
+      AZURE_CF_SECOND_SUBNET_NAME:                {{azure_cf_second_subnet_name}}
 
 - name: build-candidate
   serial: true
