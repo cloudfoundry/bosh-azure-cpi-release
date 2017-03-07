@@ -533,16 +533,16 @@ module Bosh::AzureCloud
         'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_COMPUTE_AVAILABILITY_SETS}",
         'location'   => params[:location],
         'tags'       => params[:tags],
-        'sku'        => {
-          'name' => 'Classic'
-        },
         'properties' => {
           'platformUpdateDomainCount' => params[:platform_update_domain_count],
           'platformFaultDomainCount'  => params[:platform_fault_domain_count]
         }
       }
-      if !params[:managed].nil? && params[:managed] == true
-        availability_set['sku']['name'] = 'Aligned'
+
+      if params[:managed]
+        availability_set['sku'] = {
+          'name' => 'Aligned'
+        }
       end
 
       http_put(url, availability_set)
@@ -577,10 +577,9 @@ module Bosh::AzureCloud
         availability_set[:location] = result['location']
         availability_set[:tags]     = result['tags']
 
-        if result['sku']['name'] == 'Aligned'
-          availability_set[:managed] = true
-        else
-          availability_set[:managed] = false
+        availability_set[:managed] = false
+        unless result['sku'].nil?
+          availability_set[:managed] = true if result['sku']['name'] == 'Aligned'
         end
 
         properties = result['properties']
