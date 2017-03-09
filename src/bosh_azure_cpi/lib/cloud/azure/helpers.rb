@@ -169,9 +169,7 @@ module Bosh::AzureCloud
 
     def get_arm_endpoint(azure_properties)
       if azure_properties['environment'] == 'AzureStack'
-        validate_azure_stack_options(azure_properties)
-        domain = azure_properties['azure_stack_domain']
-        "https://api.#{domain}"
+        "https://#{azure_properties['azure_stack_endpoint_prefix']}.#{azure_properties['azure_stack_domain']}"
       else
         AZURE_ENVIRONMENTS[azure_properties['environment']]['resourceManagerEndpointUrl']
       end
@@ -189,7 +187,6 @@ module Bosh::AzureCloud
       url = nil
       api_version = get_api_version(azure_properties, AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY)
       if azure_properties['environment'] == 'AzureStack'
-        validate_azure_stack_options(azure_properties)
         domain = azure_properties['azure_stack_domain']
 
         if azure_properties['azure_stack_authentication']  == 'AzureStack'

@@ -41,6 +41,9 @@ properties:
     description: The authentication type for your AzureStack deployment. AzureAD, AzureStackAD or AzureStack
   azure.azure_stack_resource:
     description: The resource for your AzureStack deployment
+  azure.azure_stack_endpoint_prefix:
+    description: The endpoint prefix for your AzureStack deployment
+    default: api
   azure.debug_mode:
     description: Enable debug mode to log all raw HTTP requests/responses
     default: false
