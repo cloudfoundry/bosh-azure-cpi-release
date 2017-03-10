@@ -46,9 +46,6 @@ describe Bosh::AzureCloud::AzureClient2 do
         :tags     => {
           :foo => "bar"
         },
-        :sku => {
-          :name => "Classic"
-        },
         :properties => {
           :platformUpdateDomainCount => 5,
           :platformFaultDomainCount  => 2
@@ -115,7 +112,9 @@ describe Bosh::AzureCloud::AzureClient2 do
     context "When managed is true" do
       before do
         avset_params[:managed] = true
-        request_body[:sku][:name] = "Aligned"
+        request_body[:sku] = {
+          :name => "Aligned"
+        }
       end
 
       it "should raise no error" do
@@ -203,15 +202,85 @@ describe Bosh::AzureCloud::AzureClient2 do
 
     context "when there are machines in the availibility set" do
       before do
-      response_body[:properties][:virtualMachines] = [
-        {
-          :id => "vm-id-1"
-        },
-        {
-          :id => "vm-id-2"
-        }
-      ]
-      avset[:virtual_machines] = response_body[:properties][:virtualMachines]
+        response_body[:properties][:virtualMachines] = [
+          {
+            :id => "vm-id-1"
+          },
+          {
+            :id => "vm-id-2"
+          }
+        ]
+        avset[:virtual_machines] = response_body[:properties][:virtualMachines]
+      end
+
+      it "should raise no error" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, avset_uri).to_return(
+          :status => 200,
+          :body => response_body.to_json,
+          :headers => {})
+
+        expect(
+          azure_client2.get_availability_set_by_name(avset_name)
+        ).to eq(avset)
+      end
+    end
+
+    context "when the response body of availibility set contains the property sku, and the sku name is Aligned" do
+      it "should raise no error" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, avset_uri).to_return(
+          :status => 200,
+          :body => response_body.to_json,
+          :headers => {})
+
+        expect(
+          azure_client2.get_availability_set_by_name(avset_name)
+        ).to eq(avset)
+      end
+    end
+
+    context "when the response body of availibility set contains the property sku, and the sku name is Classic" do
+      before do
+        response_body[:sku][:name] = "Classic"
+        avset[:managed] = false
+      end
+
+      it "should raise no error" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, avset_uri).to_return(
+          :status => 200,
+          :body => response_body.to_json,
+          :headers => {})
+
+        expect(
+          azure_client2.get_availability_set_by_name(avset_name)
+        ).to eq(avset)
+      end
+    end
+
+    context "when the response body of availibility set does not contain the property sku" do
+      before do
+        response_body.delete(:sku)
+        avset[:managed] = false
       end
 
       it "should raise no error" do
