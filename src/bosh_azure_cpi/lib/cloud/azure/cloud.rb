@@ -160,6 +160,13 @@ module Bosh::AzureCloud
           instance_id = "#{storage_account[:name]}-#{agent_id}"
         end
 
+        if stemcell_info.is_windows?
+          cloud_error("Currently Azure CPI only supports to create Windows VMs with managed disks. Supporting Windows VMs without managed disks is coming soon.") unless @use_managed_disks
+
+          # Windows VM name can't be longer than 15 characters, regenerate instance_id
+          instance_id = generate_unique_id(WINDOWS_VM_NAME_LENGTH)
+        end
+
         vm_params = @vm_manager.create(
           instance_id,
           location,

@@ -7,61 +7,63 @@ require 'cloud/azure'
 require 'json'
 require 'net/http'
 
-MOCK_AZURE_SUBSCRIPTION_ID = 'aa643f05-5b67-4d58-b433-54c2e9131a59'
+MOCK_AZURE_SUBSCRIPTION_ID        = 'aa643f05-5b67-4d58-b433-54c2e9131a59'
 MOCK_DEFAULT_STORAGE_ACCOUNT_NAME = '8853f441db154b438550a853'
-MOCK_AZURE_STORAGE_ACCESS_KEY = '3e795106-5887-4342-8c73-338facbb09fa'
-MOCK_RESOURCE_GROUP_NAME = '352ec9c1-6dd5-4a24-b11e-21bbe3d712ca'
-MOCK_AZURE_TENANT_ID = 'e441d583-68c5-46b3-bf43-ab49c5f07fed'
-MOCK_AZURE_CLIENT_ID = '62bd3eaa-e231-4e13-8baf-0e2cc8a898a1'
-MOCK_AZURE_CLIENT_SECRET = '0e67d8fc-150e-4cc0-bbf3-087e6c4b9e2a'
-MOCK_SSH_PUBLIC_KEY = 'bar'
-MOCK_DEFAULT_SECURITY_GROUP = 'fake-default-nsg-name'
+MOCK_AZURE_STORAGE_ACCESS_KEY     = '3e795106-5887-4342-8c73-338facbb09fa'
+MOCK_RESOURCE_GROUP_NAME          = '352ec9c1-6dd5-4a24-b11e-21bbe3d712ca'
+MOCK_AZURE_TENANT_ID              = 'e441d583-68c5-46b3-bf43-ab49c5f07fed'
+MOCK_AZURE_CLIENT_ID              = '62bd3eaa-e231-4e13-8baf-0e2cc8a898a1'
+MOCK_AZURE_CLIENT_SECRET          = '0e67d8fc-150e-4cc0-bbf3-087e6c4b9e2a'
+MOCK_SSH_PUBLIC_KEY               = 'bar'
+MOCK_DEFAULT_SECURITY_GROUP       = 'fake-default-nsg-name'
 
 # Let us keep the least API versions here for unit tests.
 AZURE_API_VERSION = '2015-06-15'
 AZURE_RESOURCE_PROVIDER_COMPUTE = '2016-04-30-preview'
-AZURE_RESOURCE_PROVIDER_GROUP = '2016-06-01'
-AZURE_STACK_API_VERSION = '2015-05-01-preview'
-AZURE_CHINA_API_VERSION = '2015-06-15'
-AZURE_USGOV_API_VERSION = '2015-06-15'
-AZURE_GERMAN_API_VERSION = '2015-06-15'
+AZURE_RESOURCE_PROVIDER_GROUP   = '2016-06-01'
+AZURE_STACK_API_VERSION         = '2015-05-01-preview'
+AZURE_CHINA_API_VERSION         = '2015-06-15'
+AZURE_USGOV_API_VERSION         = '2015-06-15'
+AZURE_GERMAN_API_VERSION        = '2015-06-15'
 
-ERROR_MSG_OPENSSL_RESET = 'Connection reset by peer - SSL_connect'
+WINDOWS_VM_NAME_LENGTH          = 15
 
-STEMCELL_STORAGE_ACCOUNT_TAGS = {
+ERROR_MSG_OPENSSL_RESET         = 'Connection reset by peer - SSL_connect'
+
+STEMCELL_STORAGE_ACCOUNT_TAGS   = {
   'user-agent' => 'bosh',
   'type' => 'stemcell'
 }
 
 def mock_cloud_options
   {
-    'plugin' => 'azure',
+    'plugin'     => 'azure',
     'properties' => {
-      'azure' => {
-        'environment' => 'AzureCloud',
-        'subscription_id' => MOCK_AZURE_SUBSCRIPTION_ID,
-        'storage_account_name' => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-        'resource_group_name' => MOCK_RESOURCE_GROUP_NAME,
-        'tenant_id' => MOCK_AZURE_TENANT_ID,
-        'client_id' => MOCK_AZURE_CLIENT_ID,
-        'client_secret' => MOCK_AZURE_CLIENT_SECRET,
-        'ssh_user' => 'vcap',
-        'ssh_public_key' => MOCK_SSH_PUBLIC_KEY,
+      'azure'     => {
+        'environment'                => 'AzureCloud',
+        'subscription_id'            => MOCK_AZURE_SUBSCRIPTION_ID,
+        'storage_account_name'       => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+        'resource_group_name'        => MOCK_RESOURCE_GROUP_NAME,
+        'tenant_id'                  => MOCK_AZURE_TENANT_ID,
+        'client_id'                  => MOCK_AZURE_CLIENT_ID,
+        'client_secret'              => MOCK_AZURE_CLIENT_SECRET,
+        'ssh_user'                   => 'vcap',
+        'ssh_public_key'             => MOCK_SSH_PUBLIC_KEY,
         'parallel_upload_thread_num' => 16,
-        'default_security_group' => MOCK_DEFAULT_SECURITY_GROUP,
-        'debug_mode' => false,
-        'use_managed_disks' => false
+        'default_security_group'     => MOCK_DEFAULT_SECURITY_GROUP,
+        'debug_mode'                 => false,
+        'use_managed_disks'          => false
       },
       'registry' => {
-        'endpoint' => 'localhost:42288',
-        'user' => 'admin',
-        'password' => 'admin'
+        'endpoint'  => 'localhost:42288',
+        'user'      => 'admin',
+        'password'  => 'admin'
       },
-      'agent' => {
+      'agent'   => {
         'blobstore' => {
           'address' => '10.0.0.5'
         },
-        'nats' => {
+        'nats'  => {
           'address' => '10.0.0.5'
         }
       }

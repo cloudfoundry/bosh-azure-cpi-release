@@ -114,6 +114,10 @@ module Bosh::AzureCloud
     ERROR_OPENSSL_RESET           = 'SSL_connect'
     ERROR_SOCKET_UNKNOWN_HOSTNAME = 'SocketError: Hostname not known'
 
+    # Length of instance id
+    UUID_LENGTH                   = 36
+    WINDOWS_VM_NAME_LENGTH        = 15
+
     ##
     # Raises CloudError exception
     #
@@ -392,6 +396,10 @@ module Bosh::AzureCloud
         !@image.nil?
       end
 
+      def is_windows?
+        @os_type == 'windows'
+      end
+
       # This will be used when creating VMs
       # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
       #
@@ -515,8 +523,8 @@ module Bosh::AzureCloud
     end
 
     def is_managed_vm?(instance_id)
-      # The instance id of a Managed VM is GUID whose length is 36
-      instance_id.length == 36
+      # The instance id of a Managed VM is GUID whose length is 36 or WINDOWS_VM_NAME_LENGTH (Windows VM must be managed disk VM)
+      instance_id.length == UUID_LENGTH || instance_id.length == WINDOWS_VM_NAME_LENGTH
     end
 
     def is_stemcell_storage_account?(tags)
@@ -533,6 +541,23 @@ module Bosh::AzureCloud
 
     def is_light_stemcell_id?(stemcell_id)
       stemcell_id.start_with?(LIGHT_STEMCELL_PREFIX)
+    end
+
+    # use timestamp and process id to generate a uniq id
+    # @param [Integer] length  - Length of the id that to be generated
+    #
+    def generate_unique_id(length)
+      prefix = Time.now.to_f
+      prefix = prefix.to_s.delete('.')
+      prefix = prefix.to_i.to_s(32) # example timestamp 1482829740.3734238 -> "d5e883lv66u"
+      suffix = Process.pid.to_s(32) # default max pid 65536, .to_s(32) -> '2000'
+      padding_length = length - prefix.length - suffix.length
+      if padding_length >= 0
+        prefix + '0'*padding_length + suffix
+      else
+        @logger.warn("length of id is too short, can not make sure it is uniq")
+        (prefix + suffix)[prefix.length + suffix.length - length, prefix.length + suffix.length]  # get tail
+      end
     end
 
     private

@@ -133,12 +133,16 @@ module Bosh::AzureCloud
     # * +:tags+                 - Hash. Tags of virtual machine.
     # * +:vm_size+              - String. Specifies the size of the virtual machine instance.
     # * +:custom_data+          - String. Specifies a base-64 encoded string of custom data.
-    # * +:os_type+              - String. OS type of virutal machine. Possible values: linux. Only Linux is supported now.
+    # * +:os_type+              - String. OS type of virutal machine. Possible values: linux, windows. When os_type is windows, the VM must be a managed disk VM.
     # * +:image_reference+      - Hash. Reference a platform image. When this is set, neither image_id nor image_uri is needed.
     #
     #   When os_type is linux, below parameters are required
     # * +:ssh_username+         - String. User name for the virtual machine instance.
     # * +:ssh_cert_data+        - String. The content of SSH certificate.
+    #
+    #   When os_type is windows, below parameters are required
+    # * +:windows_username+     - String. User name for the virtual machine instance.
+    # * +:windows_password+     - String. Password for the virtual machine instance.
     #
     # * +:managed+              - Boolean. Needs to be true to create managed disk VMs. Default value is nil.
     #
@@ -193,6 +197,9 @@ module Bosh::AzureCloud
               ]
             }
           }
+        when 'windows'
+          os_profile['adminUsername'] = vm_params[:windows_username]
+          os_profile['adminPassword'] = vm_params[:windows_password]
         else
           raise ArgumentError, "Unsupported os type: #{vm_params[:os_type]}"
       end
