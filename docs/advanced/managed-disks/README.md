@@ -6,15 +6,7 @@ With [managed disks](https://azure.microsoft.com/en-us/blog/announcing-general-a
 
 In earlier versions of CPI (up to V20), you must manually create storage accounts and then configure them in CF manifest file due to [the limitation on the number of disks per storage account](https://docs.microsoft.com/en-us/azure/azure-subscription-service-limits). Considering best performance, every standard storage account only can host up to 40 disks and every premium storage account only can host up to 35 disks.
 
-For better performance in a large-scale deployment, you need to create multiple storage accounts before deployment and manually configure them in every resource pools in the manifest. This is very painful. Managed Disks will hide these complexities and free the users from the need to be aware of the limitations associated with storage account.
-
-Below issues are fixed with managed disk.
-
-* [#228: Can we support managed disks?](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/228)
-* [#225: Stripe storage account placement across each VM in an availability set](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/225)
-* [#178: Avoid using storage account tables to keep track of copying process](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/178)
-* [#116: user should be able to set storage_account_name on a persistent disk](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/116)
-* [#68: CID of VMs is not well named](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/68)
+For better performance in a large-scale deployment, you need to create multiple storage accounts before deployment and manually configure them in every resource pools in the manifest. This is very painful. Managed Disks will hide these complexities and free the users from the need to be aware of the limitations associated with storage account. We recommend you utilize Managed Disks in your CF deployment by default.
 
 ## Changed Manifest Configuration
 
@@ -55,7 +47,7 @@ Below are behavior changes with a new deployment:
 
   The reason: When `use_managed_disks` is `true`, the default value of `platform_fault_domain_count` is `2` because [the maximum number of fault domain is 2 in some regions](#with-avset).
 
-## Upgrading an Existing Deployment
+## Migrating an Existing Deployment
 
 CPI does not migrate snapshots. you need to delete all snapshots and disable snapshots in `bosh.yml` before migration, if you enabled snapshots in the existing deployment. You can enable snapshots after full migration if you want.
 
@@ -153,9 +145,11 @@ Delete all storage accounts **without** below tags in the resource group. Please
 <a name="with-avset">
 #### With availability sets
 
-Only managed availability set can host VMs with managed disks. [The maximum number of fault domains of managed availability sets varies by region - either two or three managed disk fault domains per region.](https://docs.microsoft.com/en-us/azure/virtual-machines/virtual-machines-windows-manage-availability#configure-multiple-virtual-machines-in-an-availability-set-for-redundancy)
+Only managed availability set can host VMs with managed disks. However, [the maximum number of fault domains of managed availability sets varies by region - either two or three managed disk fault domains per region.](https://docs.microsoft.com/en-us/azure/virtual-machines/virtual-machines-windows-manage-availability#configure-multiple-virtual-machines-in-an-availability-set-for-redundancy)
 
-CPI will try to migrate the old unmanaged availability sets into managed availability sets automatically. During the migration, the fault domain number can't be changed. Let's assume that the fault domain number is set to **3** in your existing deployment.
+By default, CPI will migrate the old unmanaged availability sets into managed availability sets automatically, and during the migration, the fault domain number can't be changed. However due to the deployment schedule, the new managed availability set may not support the same maximum number of fault domain as the old unmanaged availability set; in this case, the migration might be blocked. You need to wait till the region supports the same maximum number of fault domains.
+
+Let's assume that the fault domain number is set to `3` in your existing deployment.
 
 * For the regions which support 3 FDs, the migration will succeed.
 * For the regions which only support 2 FDs

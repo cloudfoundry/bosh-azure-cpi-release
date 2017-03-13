@@ -69,6 +69,8 @@ There are two types of Microsoft Azure platform events that can affect the avail
 
 ## Multiple Storage Accounts
 
+>**NOTE:** With the latest CPI release ([V21](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/releases/tag/v21)+) that supports Azure Managed Disks, you no longer need to manage the storage account yourself. You can migrate your existing deployment, or start a new deployment utilizing Managed Disks, without worrying about the storage account limitation, see the [doc](../managed-disks/) for detailed steps. If your region or your scenario does not support Managed Disks temporally, you need to follow below steps to manage the storage accounts.
+
 ### Why
 
 By default there is one Standard Tier storage account created for each resource pool, providing 40 highly utilized disks with maximum 20,000 IOPS (See [Azure Storage Limits](https://azure.microsoft.com/en-us/documentation/articles/azure-subscription-service-limits/#storage-limits)). When you need more highly utilized disks, you need multiple storage accounts. In addition, since each resource pool can only contain single storage account, with multiple storage accounts, you also need to split the resource pool into multiple resource pools, each with a single storage account.
