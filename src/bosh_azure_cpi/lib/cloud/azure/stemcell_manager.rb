@@ -35,8 +35,8 @@ module Bosh::AzureCloud
       @blob_manager.delete_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(@default_storage_account_name, name)
     end
 
-    def create_stemcell(image_path, cloud_properties)
-      @logger.info("create_stemcell(#{image_path}, #{cloud_properties})")
+    def create_stemcell(image_path, stemcell_properties)
+      @logger.info("create_stemcell(#{image_path}, #{stemcell_properties})")
 
       stemcell_name = nil
       Dir.mktmpdir('sc-') do |tmp_dir|
@@ -45,7 +45,7 @@ module Bosh::AzureCloud
         @logger.info("Start to upload VHD")
         stemcell_name = "#{STEMCELL_PREFIX}-#{SecureRandom.uuid}"
         @logger.info("Upload the stemcell #{stemcell_name} to the storage account #{@default_storage_account_name}")
-        @blob_manager.create_page_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{tmp_dir}/root.vhd", "#{stemcell_name}.vhd", cloud_properties)
+        @blob_manager.create_page_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{tmp_dir}/root.vhd", "#{stemcell_name}.vhd", stemcell_properties)
       end
       stemcell_name
     end

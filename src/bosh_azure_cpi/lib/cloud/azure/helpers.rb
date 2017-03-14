@@ -98,6 +98,8 @@ module Bosh::AzureCloud
     MANAGED_DATA_DISK_PREFIX        = 'bosh-disk-data'
     EPHEMERAL_DISK_POSTFIX          = 'ephemeral-disk'
     STEMCELL_PREFIX                 = 'bosh-stemcell'
+    LIGHT_STEMCELL_PREFIX           = 'bosh-light-stemcell'
+    LIGHT_STEMCELL_PROPERTY         = 'image'
     AZURE_SCSI_HOST_DEVICE_ID       = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
     METADATA_FOR_MIGRATED_BLOB_DISK = {
       "user_agent" => USER_AGENT_FOR_AZURE_RESOURCE, # The key can't be user-agent because '-' is invalid for blob metadata
@@ -365,8 +367,13 @@ module Bosh::AzureCloud
     # * +:name+     - String. name of the stemcell, e.g. "bosh-azure-hyperv-ubuntu-trusty-go_agent"
     # * +:version   - String. version of the stemcell, e.g. "2972"
     # * +:disk_size - Integer. disk size in MiB, e.g. 3072
+    # * +:image     - Hash. It is nil when the stemcell is not a light stemcell.
+    # *   +publisher+      - String. The publisher of the platform image.
+    # *   +offer+          - String. The offer from the publisher.
+    # *   +sku+            - String. The sku of the publisher's offer.
+    # *   +version+        - String. The version of the sku.
     class StemcellInfo
-      attr_reader :uri, :metadata, :os_type, :name, :version, :disk_size
+      attr_reader :uri, :metadata, :os_type, :name, :version, :disk_size, :image
 
       def initialize(uri, metadata)
         @uri = uri
@@ -375,6 +382,27 @@ module Bosh::AzureCloud
         @name = @metadata['name']
         @version = @metadata['version']
         @disk_size = @metadata['disk'].nil? ? 3072 : @metadata['disk'].to_i
+
+        if @metadata.has_key?('image')
+          @image = @metadata['image'].kind_of?(Hash) ? @metadata['image'] : eval(@metadata['image'])
+        end
+      end
+
+      def is_light_stemcell?
+        !@image.nil?
+      end
+
+      # This will be used when creating VMs
+      # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
+      #
+      def image_reference
+        return nil unless is_light_stemcell?
+        {
+          'publisher' => @image['publisher'],
+          'offer'     => @image['offer'],
+          'sku'       => @image['sku'],
+          'version'   => @image['version']
+        }
       end
     end
 
@@ -497,6 +525,14 @@ module Bosh::AzureCloud
 
     def is_ephemeral_disk?(name)
       name.end_with?(EPHEMERAL_DISK_POSTFIX)
+    end
+
+    def has_light_stemcell_property?(stemcell_properties)
+      stemcell_properties.has_key?(LIGHT_STEMCELL_PROPERTY)
+    end
+
+    def is_light_stemcell_id?(stemcell_id)
+      stemcell_id.start_with?(LIGHT_STEMCELL_PREFIX)
     end
 
     private

@@ -596,29 +596,101 @@ describe Bosh::AzureCloud::Helpers do
 
   describe "StemcellInfo" do
     context "when metadata is not empty" do
-      let(:uri) { "fake-uri" }
-      let(:metadata) {
-        {
-          "name" => "fake-name",
-          "version" => "fake-version",
-          "infrastructure" => "azure",
-          "hypervisor" => "hyperv",
-          "disk" => "3072",
-          "disk_format" => "vhd",
-          "container_format" => "bare",
-          "os_type" => "linux",
-          "os_distro" => "ubuntu",
-          "architecture" => "x86_64",
+      context "but metadata does not contain image" do
+        let(:uri) { "fake-uri" }
+        let(:metadata) {
+          {
+            "name" => "fake-name",
+            "version" => "fake-version",
+            "infrastructure" => "azure",
+            "hypervisor" => "hyperv",
+            "disk" => "3072",
+            "disk_format" => "vhd",
+            "container_format" => "bare",
+            "os_type" => "linux",
+            "os_distro" => "ubuntu",
+            "architecture" => "x86_64",
+          }
         }
-      }
 
-      it "should return correct values" do
-        stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
-        expect(stemcell_info.uri).to eq("fake-uri")
-        expect(stemcell_info.os_type).to eq("linux")
-        expect(stemcell_info.name).to eq("fake-name")
-        expect(stemcell_info.version).to eq("fake-version")
-        expect(stemcell_info.disk_size).to eq(3072)
+        it "should return correct values" do
+          stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+          expect(stemcell_info.uri).to eq("fake-uri")
+          expect(stemcell_info.os_type).to eq("linux")
+          expect(stemcell_info.name).to eq("fake-name")
+          expect(stemcell_info.version).to eq("fake-version")
+          expect(stemcell_info.disk_size).to eq(3072)
+          expect(stemcell_info.is_light_stemcell?).to be(false)
+          expect(stemcell_info.image_reference).to be(nil)
+        end
+      end
+
+      context "when metadata contains image" do
+        context "and image is a hash" do
+          let(:uri) { "fake-uri" }
+          let(:metadata) {
+            {
+              "name" => "fake-name",
+              "version" => "fake-version",
+              "infrastructure" => "azure",
+              "hypervisor" => "hyperv",
+              "disk" => "3072",
+              "disk_format" => "vhd",
+              "container_format" => "bare",
+              "os_type" => "linux",
+              "os_distro" => "ubuntu",
+              "architecture" => "x86_64",
+              "image" => "{\"publisher\"=>\"bosh\", \"offer\"=>\"UbuntuServer\", \"sku\"=>\"trusty\", \"version\"=>\"fake-version\"}"
+            }
+          }
+
+          it "should return correct values" do
+            stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+            expect(stemcell_info.uri).to eq("fake-uri")
+            expect(stemcell_info.os_type).to eq("linux")
+            expect(stemcell_info.name).to eq("fake-name")
+            expect(stemcell_info.version).to eq("fake-version")
+            expect(stemcell_info.disk_size).to eq(3072)
+            expect(stemcell_info.is_light_stemcell?).to be(true)
+            expect(stemcell_info.image_reference['publisher']).to eq('bosh')
+            expect(stemcell_info.image_reference['offer']).to eq('UbuntuServer')
+            expect(stemcell_info.image_reference['sku']).to eq('trusty')
+            expect(stemcell_info.image_reference['version']).to eq('fake-version')
+          end
+        end
+
+        context "and image is a string" do
+          let(:uri) { "fake-uri" }
+          let(:metadata) {
+            {
+              "name" => "fake-name",
+              "version" => "fake-version",
+              "infrastructure" => "azure",
+              "hypervisor" => "hyperv",
+              "disk" => "3072",
+              "disk_format" => "vhd",
+              "container_format" => "bare",
+              "os_type" => "linux",
+              "os_distro" => "ubuntu",
+              "architecture" => "x86_64",
+              "image" => {"publisher"=>"bosh", "offer"=>"UbuntuServer", "sku"=>"trusty", "version"=>"fake-version"}
+            }
+          }
+
+          it "should return correct values" do
+            stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+            expect(stemcell_info.uri).to eq("fake-uri")
+            expect(stemcell_info.os_type).to eq("linux")
+            expect(stemcell_info.name).to eq("fake-name")
+            expect(stemcell_info.version).to eq("fake-version")
+            expect(stemcell_info.disk_size).to eq(3072)
+            expect(stemcell_info.is_light_stemcell?).to be(true)
+            expect(stemcell_info.image_reference['publisher']).to eq('bosh')
+            expect(stemcell_info.image_reference['offer']).to eq('UbuntuServer')
+            expect(stemcell_info.image_reference['sku']).to eq('trusty')
+            expect(stemcell_info.image_reference['version']).to eq('fake-version')
+          end
+        end
       end
     end
 
@@ -637,9 +709,10 @@ describe Bosh::AzureCloud::Helpers do
   end
 
   describe "FileMutex" do
+    let(:logger) { Logger.new('/dev/null') }
+    let(:file_path) { "/tmp/lock#{SecureRandom.uuid}" }
+
     context "when the lock does not exist" do
-      let(:file_path) { "/tmp/lock#{SecureRandom.uuid}" }
-      let(:logger) { Logger.new(STDERR) }
       it "should get the lock" do
         mutex = Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, 5)
         expect {
@@ -651,9 +724,6 @@ describe Bosh::AzureCloud::Helpers do
     end
     
     context "when the lock exists and timeouts" do
-      let(:file_path) { "/tmp/lock#{SecureRandom.uuid}" }
-      let(:logger) { Logger.new(STDERR) }
-
       before do
         File.open(file_path, "w") {|f| f.write("test") }
       end
@@ -673,11 +743,12 @@ describe Bosh::AzureCloud::Helpers do
     end
     
     context "when the lock exists initially and is released before timeout" do
-      let(:file_path) { "/tmp/lock#{SecureRandom.uuid}" }
-      let(:logger) { Logger.new(STDERR) }
-
       before do
         File.open(file_path, "w") {|f| f.write("test") }
+      end
+
+      after do
+        File.delete(file_path) if File.exists?(file_path)
       end
 
       it "should not timeout and continue" do
@@ -693,6 +764,58 @@ describe Bosh::AzureCloud::Helpers do
           end
         }.not_to raise_error
         unlock.join()
+      end
+    end
+  end
+
+  describe "#has_light_stemcell_property?" do
+    context "with 'image'" do
+      let(:stemcell_properties) {
+        {
+          'image' => 'fake-image'
+        }
+      }
+
+      it "should return true" do
+        expect(
+          helpers_tester.has_light_stemcell_property?(stemcell_properties)
+        ).to be(true)
+      end
+    end
+
+    context "without 'image'" do
+      let(:stemcell_properties) {
+        {
+          'a' => 'b'
+        }
+      }
+
+      it "should return false" do
+        expect(
+          helpers_tester.has_light_stemcell_property?(stemcell_properties)
+        ).to be(false)
+      end
+    end
+  end
+
+  describe "#is_light_stemcell_id?" do
+    context "when stemcell is light" do
+      let(:stemcell_id) { 'bosh-light-stemcell-xxx' }
+
+      it "should return true" do
+        expect(
+          helpers_tester.is_light_stemcell_id?(stemcell_id)
+        ).to be(true)
+      end
+    end
+
+    context "when stemcell is heavy" do
+      let(:stemcell_id) { 'bosh-stemcell-xxx' }
+
+      it "should return false" do
+        expect(
+          helpers_tester.is_light_stemcell_id?(stemcell_id)
+        ).to be(false)
       end
     end
   end

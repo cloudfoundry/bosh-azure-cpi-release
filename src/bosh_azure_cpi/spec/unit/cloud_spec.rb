@@ -9,6 +9,7 @@ describe Bosh::AzureCloud::Cloud do
       'use_managed_disks' => true
     })
   }
+  let(:managed_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'use_managed_disks' => true}})) }
 
   let(:client2) { instance_double('Bosh::AzureCloud::AzureClient2') }
   before do
@@ -21,6 +22,7 @@ describe Bosh::AzureCloud::Cloud do
   let(:table_manager) { instance_double('Bosh::AzureCloud::TableManager') }
   let(:stemcell_manager) { instance_double('Bosh::AzureCloud::StemcellManager') }
   let(:stemcell_manager2) { instance_double('Bosh::AzureCloud::StemcellManager2') }
+  let(:light_stemcell_manager) { instance_double('Bosh::AzureCloud::LightStemcellManager') }
   let(:disk_manager) { instance_double('Bosh::AzureCloud::DiskManager') }
   let(:disk_manager2) { instance_double('Bosh::AzureCloud::DiskManager2') }
   let(:vm_manager) { instance_double('Bosh::AzureCloud::VMManager') }
@@ -34,6 +36,8 @@ describe Bosh::AzureCloud::Cloud do
       and_return(table_manager)
     allow(Bosh::AzureCloud::StemcellManager).to receive(:new).
       and_return(stemcell_manager)
+    allow(Bosh::AzureCloud::LightStemcellManager).to receive(:new).
+      and_return(light_stemcell_manager)
     allow(Bosh::AzureCloud::DiskManager).to receive(:new).
       and_return(disk_manager)
     allow(Bosh::AzureCloud::StemcellManager2).to receive(:new).
@@ -68,37 +72,95 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   describe '#create_stemcell' do
-    # Parameters
     let(:stemcell_id) { "fake-stemcell-id" }
-
-    let(:cloud_properties) { {} }
     let(:image_path) { "fake-image-path" }
 
-    it 'should create a stemcell' do
-      expect(stemcell_manager).to receive(:create_stemcell).
-        with(image_path, cloud_properties).and_return(stemcell_id)
+    context 'when a light stemcell is used' do
+      let(:stemcell_properties) { { 'image' => 'fake-image' } }
 
-      expect(
-        cloud.create_stemcell(image_path, cloud_properties)
-      ).to eq(stemcell_id)
+      it 'should succeed' do
+        expect(light_stemcell_manager).to receive(:create_stemcell).
+          with(stemcell_properties).and_return(stemcell_id)
+
+        expect(
+          cloud.create_stemcell(image_path, stemcell_properties)
+        ).to eq(stemcell_id)
+      end
+    end
+
+    context 'when a heavy stemcell is used' do
+      let(:stemcell_properties) { {} }
+
+      context 'and use_managed_disks is false' do
+        it 'should succeed' do
+          expect(stemcell_manager).to receive(:create_stemcell).
+            with(image_path, stemcell_properties).and_return(stemcell_id)
+
+          expect(
+            cloud.create_stemcell(image_path, stemcell_properties)
+          ).to eq(stemcell_id)
+        end
+      end
+
+      context 'and use_managed_disks is true' do
+        it 'should succeed' do
+          expect(stemcell_manager2).to receive(:create_stemcell).
+            with(image_path, stemcell_properties).and_return(stemcell_id)
+
+          expect(
+            managed_cloud.create_stemcell(image_path, stemcell_properties)
+          ).to eq(stemcell_id)
+        end
+      end
     end
   end
 
   describe '#delete_stemcell' do
-    # Parameters
-    let(:stemcell_id) { "fake-stemcell-id" }
+    context 'when a light stemcell is used' do
+      let(:stemcell_id) { "bosh-light-stemcell-xxx" }
 
-    it 'should delete a stemcell' do
-      expect(stemcell_manager).to receive(:delete_stemcell).with(stemcell_id)
+      it 'should succeed' do
+        expect(light_stemcell_manager).to receive(:delete_stemcell).
+          with(stemcell_id)
 
-      cloud.delete_stemcell(stemcell_id)
+        expect {
+          cloud.delete_stemcell(stemcell_id)
+        }.not_to raise_error
+      end
+    end
+
+    context 'when a heavy stemcell is used' do
+      let(:stemcell_id) { "bosh-stemcell-xxx" }
+
+      context 'and use_managed_disks is false' do
+        it 'should succeed' do
+          expect(stemcell_manager).to receive(:delete_stemcell).
+            with(stemcell_id)
+
+          expect {
+            cloud.delete_stemcell(stemcell_id)
+          }.not_to raise_error
+        end
+      end
+
+      context 'and use_managed_disks is true' do
+        it 'should succeed' do
+          expect(stemcell_manager2).to receive(:delete_stemcell).
+            with(stemcell_id)
+
+          expect {
+            managed_cloud.delete_stemcell(stemcell_id)
+          }.not_to raise_error
+        end
+      end
     end
   end
 
   describe '#create_vm' do
     # Parameters
     let(:agent_id) { "e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
-    let(:stemcell_id) { "fake-stemcell-id" }
+    let(:stemcell_id) { "bosh-stemcell-xxx" }
+    let(:light_stemcell_id) { "bosh-light-stemcell-xxx" }
     let(:resource_pool) { {'instance_type' => 'fake-vm-size'} }
     let(:networks_spec) { {} }
     let(:disk_locality) { double("disk locality") }
@@ -146,22 +208,61 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       context 'when everything is OK' do
-        it 'should create the VM' do
-          expect(vm_manager).to receive(:create).
-            with(instance_id, location, stemcell_info, resource_pool, network_configurator, environment).
-            and_return(vm_params)
-          expect(registry).to receive(:update_settings)
+        context 'and a heavy stemcell is used' do
+          it 'should create the VM' do
+            expect(vm_manager).to receive(:create).
+              with(instance_id, location, stemcell_info, resource_pool, network_configurator, environment).
+              and_return(vm_params)
+            expect(registry).to receive(:update_settings)
 
-          expect(
-            cloud.create_vm(
-              agent_id,
-              stemcell_id,
-              resource_pool,
-              networks_spec,
-              disk_locality,
-              environment
-            )
-          ).to eq(instance_id)
+            expect(stemcell_manager).to receive(:get_stemcell_info)
+            expect(light_stemcell_manager).not_to receive(:has_stemcell?)
+            expect(light_stemcell_manager).not_to receive(:get_stemcell_info)
+
+            expect(
+              cloud.create_vm(
+                agent_id,
+                stemcell_id,
+                resource_pool,
+                networks_spec,
+                disk_locality,
+                environment
+              )
+            ).to eq(instance_id)
+          end
+        end
+
+        context 'and a light stemcell is used' do
+          before do
+            allow(light_stemcell_manager).to receive(:has_stemcell?).
+              with(location, light_stemcell_id).
+              and_return(true)
+            allow(light_stemcell_manager).to receive(:get_stemcell_info).
+              with(light_stemcell_id).
+              and_return(stemcell_info)
+          end
+
+          it 'should create the VM' do
+            expect(vm_manager).to receive(:create).
+              with(instance_id, location, stemcell_info, resource_pool, network_configurator, environment).
+              and_return(vm_params)
+            expect(registry).to receive(:update_settings)
+
+            expect(light_stemcell_manager).to receive(:has_stemcell?)
+            expect(light_stemcell_manager).to receive(:get_stemcell_info)
+            expect(stemcell_manager).not_to receive(:get_stemcell_info)
+
+            expect(
+              cloud.create_vm(
+                agent_id,
+                light_stemcell_id,
+                resource_pool,
+                networks_spec,
+                disk_locality,
+                environment
+              )
+            ).to eq(instance_id)
+          end
         end
       end
 
@@ -278,8 +379,6 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
 
-      let(:cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'use_managed_disks' => true}})) }
-
       let(:location) { "fake-location" }
       let(:resource_group) {
         {
@@ -290,29 +389,66 @@ describe Bosh::AzureCloud::Cloud do
       before do
         allow(client2).to receive(:get_resource_group).
           and_return(resource_group)
-        allow(stemcell_manager2).to receive(:get_user_image_info).
-          and_return(stemcell_info)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
           with(azure_properties_managed, networks_spec).
           and_return(network_configurator)
       end
 
-      it 'should create the VM' do
-        expect(vm_manager).to receive(:create).
-          with(instance_id, location, stemcell_info, resource_pool, network_configurator, environment).
-          and_return(vm_params)
-        expect(registry).to receive(:update_settings)
+      context 'when a heavy stemcell is used' do
+        before do
+          allow(stemcell_manager2).to receive(:get_user_image_info).
+            and_return(stemcell_info)
+        end
 
-        expect(
-          cloud.create_vm(
-            agent_id,
-            stemcell_id,
-            resource_pool,
-            networks_spec,
-            disk_locality,
-            environment
-          )
-        ).to eq(instance_id)
+        it 'should create the VM' do
+          expect(vm_manager).to receive(:create).
+            with(instance_id, location, stemcell_info, resource_pool, network_configurator, environment).
+            and_return(vm_params)
+          expect(registry).to receive(:update_settings)
+
+          expect(
+            managed_cloud.create_vm(
+              agent_id,
+              stemcell_id,
+              resource_pool,
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          ).to eq(instance_id)
+        end
+      end
+
+      context 'when a light stemcell is used' do
+        before do
+          allow(light_stemcell_manager).to receive(:has_stemcell?).
+            with(location, light_stemcell_id).
+            and_return(true)
+          allow(light_stemcell_manager).to receive(:get_stemcell_info).
+            with(light_stemcell_id).
+            and_return(stemcell_info)
+        end
+
+        it 'should create the VM' do
+          expect(vm_manager).to receive(:create).
+            with(instance_id, location, stemcell_info, resource_pool, network_configurator, environment).
+            and_return(vm_params)
+          expect(registry).to receive(:update_settings)
+
+          expect(light_stemcell_manager).to receive(:has_stemcell?)
+          expect(light_stemcell_manager).to receive(:get_stemcell_info)
+
+          expect(
+            managed_cloud.create_vm(
+              agent_id,
+              light_stemcell_id,
+              resource_pool,
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          ).to eq(instance_id)
+        end
       end
     end
   end
@@ -728,5 +864,4 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
   end
-
 end

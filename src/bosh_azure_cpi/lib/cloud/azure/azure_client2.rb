@@ -37,6 +37,7 @@ module Bosh::AzureCloud
     REST_API_COMPUTE_DISKS               = 'disks'
     REST_API_COMPUTE_IMAGES              = 'images'
     REST_API_COMPUTE_SNAPSHOTS           = 'snapshots'
+    REST_API_COMPUTE_PLATFORM_IMAGES     = 'vmimage'
 
     REST_API_PROVIDER_NETWORK            = 'Microsoft.Network'
     REST_API_NETWORK_PUBLIC_IP_ADDRESSES = 'publicIPAddresses'
@@ -132,8 +133,8 @@ module Bosh::AzureCloud
     # * +:tags+                 - Hash. Tags of virtual machine.
     # * +:vm_size+              - String. Specifies the size of the virtual machine instance.
     # * +:custom_data+          - String. Specifies a base-64 encoded string of custom data.
-    #
     # * +:os_type+              - String. OS type of virutal machine. Possible values: linux. Only Linux is supported now.
+    # * +:image_reference+      - Hash. Reference a platform image. When this is set, neither image_id nor image_uri is needed.
     #
     #   When os_type is linux, below parameters are required
     # * +:ssh_username+         - String. User name for the virtual machine instance.
@@ -230,25 +231,42 @@ module Bosh::AzureCloud
         'caching'      => vm_params[:os_disk][:disk_caching]
       }
       os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
-      if vm_params[:managed]
-        vm['properties']['storageProfile'] = {
-          'imageReference' => {
-            'id' => vm_params[:image_id]
-          },
-          'osDisk' => os_disk
-        }
-      else
-        os_disk.merge!({
-          'osType'       => vm_params[:os_type],
-          'image'        => {
-            'uri' => vm_params[:image_uri]
-          },
-          'vhd'          => {
-            'uri' => vm_params[:os_disk][:disk_uri]
+
+      if vm_params[:image_reference].nil?
+        if vm_params[:managed]
+          vm['properties']['storageProfile'] = {
+            'imageReference' => {
+              'id' => vm_params[:image_id]
+            },
+            'osDisk' => os_disk
           }
-        })
+        else
+          os_disk.merge!({
+            'osType'       => vm_params[:os_type],
+            'image'        => {
+              'uri' => vm_params[:image_uri]
+            },
+            'vhd'          => {
+              'uri' => vm_params[:os_disk][:disk_uri]
+            }
+          })
+          vm['properties']['storageProfile'] = {
+            'osDisk' => os_disk
+          }
+        end
+      else
+        unless vm_params[:managed]
+          os_disk.merge!({
+            'osType' => vm_params[:os_type],
+            'vhd'    => {
+              'uri' => vm_params[:os_disk][:disk_uri]
+            }
+          })
+        end
+
         vm['properties']['storageProfile'] = {
-          'osDisk' => os_disk
+          'imageReference' => vm_params[:image_reference],
+          'osDisk'         => os_disk
         }
       end
 
@@ -882,6 +900,38 @@ module Bosh::AzureCloud
       @logger.debug("delete_managed_snapshot - trying to delete `#{name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_SNAPSHOTS, name: name)
       http_delete(url)
+    end
+
+    # Compute/Platform Images
+
+    # List all versions of a specified platform image
+    # @param [String] location  - The location where the platform image exists.
+    # @param [String] publisher - The publisher of the platform image.
+    # @param [String] offer     - The offer from the publisher.
+    # @param [String] sku       - The sku of the publisher's offer.
+    #
+    # @return [Array]
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/platformimages/platformimages-list-publisher-offer-sku-versions
+    #
+    def list_platform_image_versions(location, publisher, offer, sku)
+      images = []
+      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
+      url += "/locations/#{location}"
+      url += "/publishers/#{publisher}"
+      url += "/artifacttypes/#{REST_API_COMPUTE_PLATFORM_IMAGES}"
+      url += "/offers/#{offer}"
+      url += "/skus/#{sku}"
+      url += "/versions"
+
+      result = get_resource_by_id(url)
+      unless result.nil?
+        result.each do |value|
+          image = parse_platform_image(value)
+          images << image
+        end
+      end
+      images
     end
 
     # Network/Public IP
@@ -1546,6 +1596,17 @@ module Bosh::AzureCloud
         user_image[:provisioning_state] = properties['provisioningState']
       end
       user_image
+    end
+
+    def parse_platform_image(result)
+      image = nil
+      unless result.nil?
+        image = {}
+        image[:id]       = result['id']
+        image[:name]     = result['name']
+        image[:location] = result['location']
+      end
+      image
     end
 
     def parse_network_interface(result, recursive: true)

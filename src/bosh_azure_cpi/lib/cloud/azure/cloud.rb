@@ -24,15 +24,17 @@ module Bosh::AzureCloud
     # Creates a stemcell
     #
     # @param [String] image_path path to an opaque blob containing the stemcell image
-    # @param [Hash] cloud_properties properties required for creating this template
+    # @param [Hash] stemcell_properties properties required for creating this template
     #               specific to a CPI
     # @return [String] opaque id later used by {#create_vm} and {#delete_stemcell}
-    def create_stemcell(image_path, cloud_properties)
-      with_thread_name("create_stemcell(#{image_path}...)") do
-        if @use_managed_disks
-          @stemcell_manager2.create_stemcell(image_path, cloud_properties)
+    def create_stemcell(image_path, stemcell_properties)
+      with_thread_name("create_stemcell(#{image_path}, #{stemcell_properties})") do
+        if has_light_stemcell_property?(stemcell_properties)
+          @light_stemcell_manager.create_stemcell(stemcell_properties)
+        elsif @use_managed_disks
+          @stemcell_manager2.create_stemcell(image_path, stemcell_properties)
         else
-          @stemcell_manager.create_stemcell(image_path, cloud_properties)
+          @stemcell_manager.create_stemcell(image_path, stemcell_properties)
         end
       end
     end
@@ -44,7 +46,9 @@ module Bosh::AzureCloud
     # @return [void]
     def delete_stemcell(stemcell_id)
       with_thread_name("delete_stemcell(#{stemcell_id})") do
-        if @use_managed_disks
+        if is_light_stemcell_id?(stemcell_id)
+          @light_stemcell_manager.delete_stemcell(stemcell_id)
+        elsif @use_managed_disks
           @stemcell_manager2.delete_stemcell(stemcell_id)
         else
           @stemcell_manager.delete_stemcell(stemcell_id)
@@ -124,20 +128,33 @@ module Bosh::AzureCloud
           else
             location = @azure_client2.get_resource_group()[:location]
           end
-          begin
-            # Treat user_image_info as stemcell_info
-            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_id, storage_account_type, location)
-          rescue => e
-            raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell `#{stemcell_id}': #{e.inspect}\n#{e.backtrace.join("\n")}"
+
+          if is_light_stemcell_id?(stemcell_id)
+            raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
+            stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
+          else
+            begin
+              # Treat user_image_info as stemcell_info
+              stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_id, storage_account_type, location)
+            rescue => e
+              raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell `#{stemcell_id}': #{e.inspect}\n#{e.backtrace.join("\n")}"
+            end
           end
         else
           storage_account = @storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
-          unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)
-            raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist"
-          end
-          instance_id = "#{storage_account[:name]}-#{agent_id}"
           location = storage_account[:location]
-          stemcell_info = @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_id)
+
+          if is_light_stemcell_id?(stemcell_id)
+            raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
+            stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
+          else
+            unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)
+              raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist"
+            end
+            stemcell_info = @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_id)
+          end
+
+          instance_id = "#{storage_account[:name]}-#{agent_id}"
         end
 
         vm_params = @vm_manager.create(
@@ -483,6 +500,7 @@ module Bosh::AzureCloud
       @stemcell_manager        = Bosh::AzureCloud::StemcellManager.new(@blob_manager, @table_manager, @storage_account_manager)
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client2)
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @table_manager, @storage_account_manager, @azure_client2)
+      @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client2)
       @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_properties, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client2)
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager

@@ -4,6 +4,7 @@ module Bosh::AzureCloud
 
     MAX_CHUNK_SIZE = 2 * 1024 * 1024  # 2MB
     HASH_OF_2MB_EMPTY_CONTENT = 'b2d1236c286a3c0704224fe4105eca49' # The hash value of 2MB empty content
+    TIMEOUT_FOR_BLOB_OPERATIONS = 120 # Timeout in seconds for Blob Service Operations. https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations
 
     def initialize(azure_properties, azure_client2)
       @parallel_upload_thread_num = 16
@@ -59,6 +60,24 @@ module Bosh::AzureCloud
       end
     end
 
+    def create_empty_page_blob(storage_account_name, container_name, blob_name, blob_size_in_kb, metadata)
+      @logger.info("create_empty_page_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{blob_size_in_kb}, #{metadata})")
+      initialize_blob_client(storage_account_name) do
+        begin
+          options = {
+            :timeout => TIMEOUT_FOR_BLOB_OPERATIONS,
+            :metadata => encode_metadata(metadata)
+          }
+          blob_size = blob_size_in_kb * 1024
+          options = merge_storage_common_options(options)
+          @logger.info("create_empty_page_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
+          @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
+        rescue => e
+          cloud_error("Failed to create empty page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
+        end
+      end
+    end
+
     ##
     # Creates an empty vhd blob.
     #
@@ -85,7 +104,7 @@ module Bosh::AzureCloud
           vhd_size = blob_size_in_gb * 1024 * 1024 * 1024
           blob_size = vhd_size + 512
           options = {
-            :timeout => 120 # seconds
+            :timeout => TIMEOUT_FOR_BLOB_OPERATIONS
           }
           options = merge_storage_common_options(options)
           @logger.info("create_empty_vhd_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
@@ -310,7 +329,7 @@ module Bosh::AzureCloud
     def upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
       chunks = compute_chunks(file_size, MAX_CHUNK_SIZE)
       options = {
-        :timeout => 120 # seconds
+        :timeout => TIMEOUT_FOR_BLOB_OPERATIONS
       }
       threads = []
       thread_num.times do |id|
@@ -355,7 +374,7 @@ module Bosh::AzureCloud
       start_time = Time.new
       file_size = File.lstat(file_path).size
       options = {
-        :timeout => 120, # seconds
+        :timeout => TIMEOUT_FOR_BLOB_OPERATIONS,
         :metadata => encode_metadata(metadata)
       }
       options = merge_storage_common_options(options)
