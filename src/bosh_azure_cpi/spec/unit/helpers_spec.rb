@@ -5,6 +5,7 @@ describe Bosh::AzureCloud::Helpers do
   let(:azure_stack_api_version) { AZURE_STACK_API_VERSION }
   let(:azure_china_api_version) { AZURE_CHINA_API_VERSION }
   let(:azure_usgov_api_version) { AZURE_USGOV_API_VERSION }
+  let(:azure_german_api_version) { AZURE_GERMAN_API_VERSION }
 
   class HelpersTester
     include Bosh::AzureCloud::Helpers
@@ -144,6 +145,16 @@ describe Bosh::AzureCloud::Helpers do
         end
       end
     end
+
+    context "when environment is AzureGermanCloud" do
+      let(:azure_properties) { {'environment' => 'AzureGermanCloud'} }
+
+      it "should return AzureGermanCloud ARM endpoint" do
+        expect(
+          helpers_tester.get_arm_endpoint(azure_properties)
+        ).to eq("https://management.microsoftazure.de/")
+      end
+    end
   end
 
   describe "#get_token_resource" do
@@ -190,6 +201,16 @@ describe Bosh::AzureCloud::Helpers do
         expect(
           helpers_tester.get_token_resource(azure_properties)
         ).to eq("https://azurestack.local-api/")
+      end
+    end
+
+    context "when environment is AzureGermanCloud" do
+      let(:azure_properties) { {'environment' => 'AzureGermanCloud'} }
+
+      it "should return AzureGermanCloud resource" do
+        expect(
+          helpers_tester.get_token_resource(azure_properties)
+        ).to eq("https://management.microsoftazure.de/")
       end
     end
   end
@@ -358,6 +379,21 @@ describe Bosh::AzureCloud::Helpers do
             ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", api_version])
           end
         end
+      end
+    end
+
+    context "when environment is AzureGermanCloud" do
+      let(:azure_properties) {
+        {
+          'environment' => 'AzureGermanCloud',
+          'tenant_id'   => 'fake-tenant-id'
+        }
+      }
+
+      it "should return AzureGermanCloud authentication endpoint and api version" do
+        expect(
+          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+        ).to eq(["https://login.microsoftonline.de/fake-tenant-id/oauth2/token", azure_german_api_version])
       end
     end
   end
