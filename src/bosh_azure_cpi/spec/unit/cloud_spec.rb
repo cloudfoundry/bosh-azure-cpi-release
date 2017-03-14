@@ -165,6 +165,27 @@ describe Bosh::AzureCloud::Cloud do
         end
       end
 
+      context 'when it failed to get the user image info' do
+        let(:cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'use_managed_disks' => true}})) }
+        before do
+          allow(client2).to receive(:get_resource_group).and_return({:location => 'fake-location'})
+          allow(stemcell_manager2).to receive(:get_user_image_info).and_raise(StandardError)
+        end
+
+        it 'should raise an error' do
+          expect {
+            cloud.create_vm(
+              agent_id,
+              stemcell_id,
+              resource_pool,
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          }.to raise_error(/Failed to get the user image information for the stemcell `#{stemcell_id}'/)
+        end
+      end
+
       context 'when stemcell_id is invalid' do
         before do
           allow(stemcell_manager).to receive(:has_stemcell?).
