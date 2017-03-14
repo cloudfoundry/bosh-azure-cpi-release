@@ -556,14 +556,49 @@ describe Bosh::AzureCloud::StorageAccountManager do
         :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME
       }
     }
+    before do
+      allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
+    end
 
     context 'When the global configurations contain storage_account_name' do
-      before do
-        allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
+      context 'When use_managed_disks is false' do
+        it 'should return the default storage account, and do not set the tags' do
+          expect(client2).not_to receive(:update_tags_of_storage_account)
+          expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
+        end
       end
 
-      it 'should return the default storage account' do
-        expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
+      context 'When use_managed_disks is true' do
+        let(:azure_properties_managed) {
+          mock_azure_properties_merge({
+            'use_managed_disks' => true
+          })
+        }
+        let(:storage_account_manager) { Bosh::AzureCloud::StorageAccountManager.new(azure_properties_managed, blob_manager, disk_manager, client2) }
+
+        context 'When the default storage account do not have the tags' do
+          it 'should return the default storage account, and set the tags' do
+            expect(client2).to receive(:update_tags_of_storage_account).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, STEMCELL_STORAGE_ACCOUNT_TAGS)
+            expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
+          end
+        end
+
+        context 'When the default storage account has the tags' do
+          let(:default_storage_account) {
+            {
+              :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+              :tags => STEMCELL_STORAGE_ACCOUNT_TAGS
+            }
+          }
+          before do
+            allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
+          end
+
+          it 'should return the default storage account, and do not set the tags' do
+            expect(client2).not_to receive(:update_tags_of_storage_account)
+            expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
+          end
+        end
       end
     end
 

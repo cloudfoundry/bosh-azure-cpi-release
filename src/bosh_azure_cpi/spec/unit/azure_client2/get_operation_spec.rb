@@ -672,6 +672,9 @@ describe Bosh::AzureCloud::AzureClient2 do
               "id" => "fake-id",
               "name" => "fake-name",
               "location" => "fake-location",
+              "tags" => {
+                "foo" => "bar"
+              },
               "properties" => {
                 "provisioningState" => "fake-state",
                 "accountType" => "fake-type",
@@ -687,6 +690,9 @@ describe Bosh::AzureCloud::AzureClient2 do
               :id => "fake-id",
               :name => "fake-name",
               :location => "fake-location",
+              :tags => {
+                "foo" => "bar"
+              },
               :provisioning_state => "fake-state",
               :account_type => "fake-type",
               :storage_blob_host => "fake-blob-endpoint",
@@ -718,6 +724,9 @@ describe Bosh::AzureCloud::AzureClient2 do
               "id" => "fake-id",
               "name" => "fake-name",
               "location" => "fake-location",
+              "tags" => {
+                "foo" => "bar"
+              },
               "properties" => {
                 "provisioningState" => "fake-state",
                 "accountType" => "fake-type",
@@ -732,6 +741,9 @@ describe Bosh::AzureCloud::AzureClient2 do
               :id => "fake-id",
               :name => "fake-name",
               :location => "fake-location",
+              :tags => {
+                "foo" => "bar"
+              },
               :provisioning_state => "fake-state",
               :account_type => "fake-type",
               :storage_blob_host => "fake-blob-endpoint"

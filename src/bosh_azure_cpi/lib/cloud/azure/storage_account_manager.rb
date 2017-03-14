@@ -7,6 +7,7 @@ module Bosh::AzureCloud
       @blob_manager  = blob_manager
       @disk_manager  = disk_manager
       @azure_client2 = azure_client2
+      @use_managed_disks = @azure_properties['use_managed_disks']
       @logger = Bosh::Clouds::Config.logger
 
       @default_storage_account_name = nil
@@ -136,6 +137,9 @@ module Bosh::AzureCloud
         storage_account_name = @azure_properties['storage_account_name']
         @logger.debug("The default storage account is `#{storage_account_name}'")
         @default_storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+        if @use_managed_disks && !is_stemcell_storage_account?(@default_storage_account[:tags])
+          @azure_client2.update_tags_of_storage_account(storage_account_name, STEMCELL_STORAGE_ACCOUNT_TAGS)
+        end
         return @default_storage_account
       end
 

@@ -28,6 +28,11 @@ AZURE_GERMAN_API_VERSION = '2015-06-15'
 
 ERROR_MSG_OPENSSL_RESET = 'Connection reset by peer - SSL_connect'
 
+STEMCELL_STORAGE_ACCOUNT_TAGS = {
+  'user-agent' => 'bosh',
+  'type' => 'stemcell'
+}
+
 def mock_cloud_options
   {
     'plugin' => 'azure',

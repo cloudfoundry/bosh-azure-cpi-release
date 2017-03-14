@@ -1432,6 +1432,7 @@ module Bosh::AzureCloud
         storage_account[:id]        = result['id']
         storage_account[:name]      = result['name']
         storage_account[:location]  = result['location']
+        storage_account[:tags]      = result['tags']
 
         properties = result['properties']
         storage_account[:provisioning_state] = properties['provisioningState']
