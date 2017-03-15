@@ -256,13 +256,13 @@ module Bosh::AzureCloud
       end
     end
 
-    def prepare(storage_account_name, containers: [DISK_CONTAINER, STEMCELL_CONTAINER])
+    def prepare(storage_account_name, containers: [DISK_CONTAINER, STEMCELL_CONTAINER], is_default_storage_account: false)
       @logger.info("prepare(#{storage_account_name}, #{containers})")
       containers.each do |container|
         @logger.debug("Creating the container `#{container}' in the storage account `#{storage_account_name}'")
         create_container(storage_account_name, container)
       end
-      set_stemcell_container_acl_to_public(storage_account_name)
+      set_stemcell_container_acl_to_public(storage_account_name) if is_default_storage_account
     end
 
     private

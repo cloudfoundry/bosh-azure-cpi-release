@@ -124,8 +124,12 @@ module Bosh::AzureCloud
           else
             location = @azure_client2.get_resource_group()[:location]
           end
-          # Treat user_image_info as stemcell_info
-          stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_id, storage_account_type, location)
+          begin
+            # Treat user_image_info as stemcell_info
+            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_id, storage_account_type, location)
+          rescue => e
+            raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell `#{stemcell_id}': #{e.inspect}\n#{e.backtrace.join("\n")}"
+          end
         else
           storage_account = @storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
           unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)

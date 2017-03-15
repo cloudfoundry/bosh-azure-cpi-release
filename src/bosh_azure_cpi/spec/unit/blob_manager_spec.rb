@@ -605,59 +605,32 @@ describe Bosh::AzureCloud::BlobManager do
         :storage_table_host => "fake-table-endpoint"
       }
     }
+
     before do
       allow(azure_client2).to receive(:get_storage_account_by_name).
         with(another_storage_account_name).
         and_return(another_storage_account)
     end
 
-    context "when the container exists" do
-      before do
-        allow(blob_service).to receive(:create_container).
-          and_raise("ContainerAlreadyExists")
-      end
-
-      it "does not create the container" do
+    context "when the storage account is default storage account" do
+      it "creates the container, and set the acl" do
         expect(blob_service).to receive(:create_container).
           with(container_name, options).
           and_return(true)
-        expect(blob_service).to receive(:set_container_acl).
-          with(anything, 'blob', options)
+        expect(blob_service).to receive(:set_container_acl).with('stemcell', 'blob', options)
 
-        blob_manager.prepare(another_storage_account_name, containers: [container_name])
+        blob_manager.prepare(another_storage_account_name, containers: [container_name], is_default_storage_account: true)
       end
     end
 
-    context "when the container does not exist" do
-      before do
-        allow(blob_service).to receive(:get_container_properties).
-          and_raise("Error code: (404). This is a test!")
-      end
-
-      it "create the container" do
+    context "when the storage account is not default storage account" do
+      it "creates the container, and doesn't set the acl" do
         expect(blob_service).to receive(:create_container).
           with(container_name, options).
           and_return(true)
-        expect(blob_service).to receive(:set_container_acl).
-          with(anything, 'blob', options)
+        expect(blob_service).not_to receive(:set_container_acl)
 
         blob_manager.prepare(another_storage_account_name, containers: [container_name])
-      end
-    end
-
-    context "when the blob service throws an error" do
-      before do
-        allow(blob_service).to receive(:get_container_properties).
-          and_raise("Error code: (404). This is a test!")
-        allow(blob_service).to receive(:create_container).
-          with(container_name, options)
-        allow(blob_service).to receive(:set_container_acl).and_raise(StandardError)
-      end
-
-      it "should fail to set the ACL of the stemcell container to public" do
-        expect {
-          blob_manager.prepare(another_storage_account_name, containers: [container_name])
-        }.to raise_error /Failed to set the public access level/
       end
     end
   end
