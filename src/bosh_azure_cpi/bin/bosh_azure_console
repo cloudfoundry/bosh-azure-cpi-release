@@ -27,10 +27,6 @@ module ConsoleHelpers
     @cpi ||= Bosh::AzureCloud::Cloud.new(@config)
   end
 
-  def azure
-    cpi.azure
-  end
-
   def registry
     cpi.registry
   end

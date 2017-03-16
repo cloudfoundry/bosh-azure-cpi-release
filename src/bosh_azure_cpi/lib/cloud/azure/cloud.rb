@@ -2,6 +2,9 @@ module Bosh::AzureCloud
   class Cloud < Bosh::Cloud
     attr_reader   :registry
     attr_reader   :options
+    # Below defines are for test purpose
+    attr_reader   :azure_client2, :blob_manager, :table_manager, :storage_account_manager
+    attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
 
     include Helpers
 
