@@ -137,6 +137,44 @@ describe Bosh::AzureCloud::BlobManager do
     end
   end  
 
+  describe "#create_empty_page_blob" do
+    let(:metadata) {
+      {
+        'property' => 'fake-metadata',
+      }
+    }
+    let(:options) {
+      {
+        :request_id => request_id,
+        :timeout => 120,
+        :metadata => metadata
+      }
+    }
+
+    context "when create empty page blob succeeds" do
+      it "raise no error" do
+        expect(blob_service).to receive(:create_page_blob).
+          with(container_name, blob_name, 1024, options)
+
+        expect {
+          blob_manager.create_empty_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1, metadata)
+        }.not_to raise_error
+      end
+    end
+
+    context "when create empty page blob fails" do
+      before do
+        allow(blob_service).to receive(:create_page_blob).and_raise(StandardError)
+      end
+
+      it "should raise an error" do
+        expect {
+          blob_manager.create_empty_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1, metadata)
+        }.to raise_error /Failed to create empty page blob/
+      end
+    end
+  end  
+
   describe "#create_empty_vhd_blob" do
     context "when creating empty vhd blob succeeds" do
       before do

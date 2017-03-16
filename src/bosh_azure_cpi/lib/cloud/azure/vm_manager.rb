@@ -46,10 +46,14 @@ module Bosh::AzureCloud
         :os_type             => stemcell_info.os_type,
         :managed             => @use_managed_disks
       }
-      if @use_managed_disks
-        vm_params[:image_id] = stemcell_info.uri
+      if stemcell_info.is_light_stemcell?
+        vm_params[:image_reference] = stemcell_info.image_reference
       else
-        vm_params[:image_uri] = stemcell_info.uri
+        if @use_managed_disks
+          vm_params[:image_id] = stemcell_info.uri
+        else
+          vm_params[:image_uri] = stemcell_info.uri
+        end
       end
       @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
 

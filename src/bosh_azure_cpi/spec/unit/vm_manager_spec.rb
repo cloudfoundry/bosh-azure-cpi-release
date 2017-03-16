@@ -98,6 +98,8 @@ describe Bosh::AzureCloud::VMManager do
         and_return(os_type)
       allow(stemcell_info).to receive(:disk_size).
         and_return(disk_size)
+      allow(stemcell_info).to receive(:is_light_stemcell?).
+        and_return(false)
 
       allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
         and_return(client2)
@@ -162,7 +164,6 @@ describe Bosh::AzureCloud::VMManager do
 
     context "when instance_type is not provided" do
       let(:resource_pool) { {} }
-
 
       it "should raise an error" do
         expect(client2).not_to receive(:delete_virtual_machine)
@@ -580,15 +581,45 @@ describe Bosh::AzureCloud::VMManager do
               and_return(security_group)
           end
 
-          it "should succeed" do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
+          context "and a heavy stemcell is used" do
+            it "should succeed" do
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_network_interface)
 
-            expect(client2).to receive(:create_network_interface).exactly(2).times
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
-            expect(vm_params[:image_uri]).to eq(stemcell_uri)
-            expect(vm_params[:os_type]).to eq(os_type)
+              expect(client2).to receive(:create_network_interface).exactly(2).times
+              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              expect(vm_params[:name]).to eq(instance_id)
+              expect(vm_params[:image_uri]).to eq(stemcell_uri)
+              expect(vm_params[:os_type]).to eq(os_type)
+            end
+          end
+
+          context "and a light stemcell is used" do
+            let(:platform_image) {
+              {
+                'publisher' => 'fake-publisher',
+                'offer'     => 'fake-offer',
+                'sku'       => 'fake-sku',
+                'version'   => 'fake-version'
+              }
+            }
+
+            before do
+              allow(stemcell_info).to receive(:is_light_stemcell?).
+                and_return(true)
+              allow(stemcell_info).to receive(:image_reference).
+                and_return(platform_image)
+            end
+
+            it "should succeed" do
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_network_interface)
+
+              expect(client2).to receive(:create_network_interface).exactly(2).times
+              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              expect(vm_params[:name]).to eq(instance_id)
+              expect(vm_params[:os_type]).to eq(os_type)
+            end
           end
         end
 
