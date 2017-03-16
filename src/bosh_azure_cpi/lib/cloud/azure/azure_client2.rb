@@ -734,22 +734,6 @@ module Bosh::AzureCloud
       parse_managed_disk(result)
     end
 
-    # Get a managed disk's tags
-    # @param [String] name - Name of managed disk.
-    #
-    # @return [Hash]
-    #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-get
-    #
-    def get_tags_of_managed_disk(name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, name: name)
-      disk = get_resource_by_id(url)
-      if disk.nil?
-        raise AzureNotFoundError, "get_tags_of_managed_disk - cannot find the managed disk by name `#{name}'"
-      end
-      disk['tags']
-    end
-
     # Compute/Images
 
     # Create a vm image
