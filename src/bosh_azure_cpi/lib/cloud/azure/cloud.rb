@@ -470,6 +470,20 @@ module Bosh::AzureCloud
       end
     end
 
+    ##
+    # Set metadata for a disk
+    #
+    # Optional. Implement to provide more information for the IaaS.
+    #
+    # @param [String] disk_id disk id that was once returned by {#create_disk}
+    # @param [Hash] metadata metadata key/value pairs
+    # @return [void]
+    def set_disk_metadata(disk_id, metadata)
+      @logger.info("set_disk_metadata(#{disk_id}, #{metadata})")
+      # TBD
+      raise Bosh::Clouds::NotImplemented
+    end
+
     private
 
     def agent_properties
