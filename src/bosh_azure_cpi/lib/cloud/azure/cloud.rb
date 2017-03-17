@@ -596,11 +596,7 @@ module Bosh::AzureCloud
     end
 
     def get_scsi_host_device_id(environment)
-      if environment == 'AzureStack'
-        AZURESTACK_SCSI_HOST_DEVICE_ID
-      else
-        AZURE_SCSI_HOST_DEVICE_ID
-      end
+      environment == ENVIRONMENT_AZURESTACK ? AZURESTACK_SCSI_HOST_DEVICE_ID : AZURE_SCSI_HOST_DEVICE_ID
     end
   end
 end

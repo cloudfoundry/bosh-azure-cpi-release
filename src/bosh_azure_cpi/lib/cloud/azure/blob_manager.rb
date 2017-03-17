@@ -400,8 +400,9 @@ module Bosh::AzureCloud
           storage_account[:key] = keys[0]
           @storage_accounts_keys[storage_account_name] = storage_account
         end
-
-        @azure_storage_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob', @azure_properties['environment'])
+        use_http = false
+        use_http = @azure_properties['azure_stack']['use_http_to_access_storage_account'] if @azure_properties['environment'] == ENVIRONMENT_AZURESTACK
+        @azure_storage_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob', use_http)
         @blob_service_client = @azure_storage_client.blob_client
         @blob_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
         @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties) && !disable_debug_mode

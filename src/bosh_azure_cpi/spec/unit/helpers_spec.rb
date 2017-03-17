@@ -103,50 +103,21 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context "when environment is AzureStack" do
-      context "when azure_stack_domain is not provided" do
-        let(:azure_properties) {
-          {
-            'environment'                => 'AzureStack',
-            'azure_stack_authentication' => 'fake-authentication'
+      let(:azure_properties) {
+        {
+          'environment' => 'AzureStack',
+          'azure_stack' => {
+            'domain'          => 'fake-domain',
+            'authentication'  => 'fake-authentication',
+            'endpoint_prefix' => 'api'
           }
         }
+      }
 
-        it "should return an error" do
-          expect {
-            helpers_tester.get_arm_endpoint(azure_properties)
-          }.to raise_error /missing configuration parameters for AzureStack/
-        end
-      end
-
-      context "when azure_stack_authentication is not provided" do
-        let(:azure_properties) {
-          {
-            'environment'                => 'AzureStack',
-            'azure_stack_domain'         => 'fake-domain'
-          }
-        }
-
-        it "should return an error" do
-          expect {
-            helpers_tester.get_arm_endpoint(azure_properties)
-          }.to raise_error /missing configuration parameters for AzureStack/
-        end
-      end
-
-      context "when all required parameters are provided" do
-        let(:azure_properties) {
-          {
-            'environment'                => 'AzureStack',
-            'azure_stack_domain'         => 'fake-domain',
-            'azure_stack_authentication' => 'fake-authentication'
-          }
-        }
-
-        it "should return AzureStack ARM endpoint" do
-          expect(
-            helpers_tester.get_arm_endpoint(azure_properties)
-          ).to eq("https://api.fake-domain")
-        end
+      it "should return AzureStack ARM endpoint" do
+        expect(
+          helpers_tester.get_arm_endpoint(azure_properties)
+        ).to eq("https://api.fake-domain")
       end
     end
 
@@ -195,9 +166,10 @@ describe Bosh::AzureCloud::Helpers do
     context "when environment is AzureStack" do
       let(:azure_properties) {
         {
-          'environment'                => 'AzureStack',
-          'azure_stack_domain'         => 'fake-domain',
-          'azure_stack_authentication' => 'fake-authentication'
+          'environment' => 'AzureStack',
+          'azure_stack' => {
+             'resource' => 'https://azurestack.local-api/'
+          }
         }
       }
 
@@ -266,122 +238,62 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context "when environment is AzureStack" do
-      context "when azure_stack_domain is not provided" do
-        context "when azure_stack_domain is missing" do
-          let(:azure_properties) {
-            {
-              'environment'                => 'AzureStack',
-              'azure_stack_authentication' => 'fake-authentication'
-            }
-          }
+      let(:azure_properties) {
+        {
+          'environment' => 'AzureStack',
+          'azure_stack' => {
+            'domain'          => 'fake-domain',
+            'endpoint_prefix' => 'api',
+          },
+          'tenant_id'   => 'fake-tenant-id'
+        }
+      }
 
-          it "should return an error" do
-            expect {
-              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            }.to raise_error /missing configuration parameters for AzureStack/
-          end
+      context "when azure_stack.authentication is AzureStack" do
+        before do
+          azure_properties['azure_stack']['authentication'] = 'AzureStack'
         end
 
-        context "when azure_stack_domain is nil" do
-          let(:azure_properties) {
-            {
-              'environment'                => 'AzureStack',
-              'azure_stack_authentication' => 'fake-authentication',
-              'azure_stack_domain'         => nil
-            }
-          }
-
-          it "should return an error" do
-            expect {
-              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            }.to raise_error /missing configuration parameters for AzureStack/
-          end
+        it "should return AzureStack authentication endpoint and api version" do
+          expect(
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          ).to eq(["https://fake-domain/oauth2/token", azure_stack_api_version])
         end
       end
 
-      context "when azure_stack_authentication is not provided" do
-        context "when azure_stack_authentication is missing" do
-          let(:azure_properties) {
-            {
-              'environment'                => 'AzureStack',
-              'azure_stack_domain'         => 'fake-domain'
-            }
-          }
-
-          it "should return an error" do
-            expect {
-              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            }.to raise_error /missing configuration parameters for AzureStack/
-          end
+      context "when azure_stack.authentication is AzureStackAD" do
+        before do
+          azure_properties['azure_stack']['authentication'] = 'AzureStackAD'
         end
 
-        context "when azure_stack_authentication is nil" do
-          let(:azure_properties) {
-            {
-              'environment'                => 'AzureStack',
-              'azure_stack_domain'         => 'fake-domain',
-              'azure_stack_authentication' => nil
-            }
-          }
-
-          it "should return an error" do
-            expect {
-              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            }.to raise_error /missing configuration parameters for AzureStack/
-          end
+        it "should return AzureStack authentication endpoint and api version" do
+          expect(
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          ).to eq(["https://fake-domain/fake-tenant-id/oauth2/token", azure_stack_api_version])
         end
       end
 
-      context "when all required parameters are provided" do
-        context "when azure_stack_authentication is AzureStack" do
-          let(:azure_properties) {
-            {
-              'environment'                => 'AzureStack',
-              'azure_stack_domain'         => 'fake-domain',
-              'azure_stack_authentication' => 'AzureStack',
-              'tenant_id'                  => 'fake-tenant-id'
-            }
-          }
-
-          it "should return AzureStack authentication endpoint and api version" do
-            expect(
-              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            ).to eq(["https://fake-domain/oauth2/token", azure_stack_api_version])
-          end
+      context "when azure_stack.authentication is AzureAD" do
+        before do
+          azure_properties['azure_stack']['authentication'] = 'AzureAD'
         end
 
-        context "when azure_stack_authentication is AzureStackAD" do
-          let(:azure_properties) {
-            {
-              'environment'                => 'AzureStack',
-              'azure_stack_domain'         => 'fake-domain',
-              'azure_stack_authentication' => 'AzureStackAD',
-              'tenant_id'                  => 'fake-tenant-id'
-            }
-          }
+        it "should return Azure authentication endpoint and api version" do
+          expect(
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", api_version])
+        end
+      end
 
-          it "should return AzureStack authentication endpoint and api version" do
-            expect(
-              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            ).to eq(["https://fake-domain/fake-tenant-id/oauth2/token", azure_stack_api_version])
-          end
+      context "when the value of azure_stack.authentication is not supported" do
+        before do
+          azure_properties['azure_stack']['authentication'] = 'NotSupportedValue'
         end
 
-        context "when azure_stack_authentication is AzureAD" do
-          let(:azure_properties) {
-            {
-              'environment'                => 'AzureStack',
-              'azure_stack_domain'         => 'fake-domain',
-              'azure_stack_authentication' => 'AzureAD',
-              'tenant_id'                  => 'fake-tenant-id'
-            }
-          }
-
-          it "should return Azure authentication endpoint and api version" do
-            expect(
-              helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-            ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", api_version])
-          end
+        it "should raise an error" do
+          expect {
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          }.to raise_error(/No support for the AzureStack authentication: `NotSupportedValue'/)
         end
       end
     end
@@ -411,38 +323,62 @@ describe Bosh::AzureCloud::Helpers do
       {
         :name => storage_account_name,
         :key => storage_access_key,
-        :storage_blob_host => 'fake-blob-host/',
-        :storage_table_host => 'fake-table-host/',
+        :storage_blob_host => 'https://fake-blob-host:443/',
+        :storage_table_host => 'https://fake-table-host:443/',
       }
     }
-    let(:blob_host) { "fake-blob-host" }
-    let(:table_host) { "fake-table-host" }
+    let(:blob_host_https) { "https://fake-blob-host:443" }
+    let(:table_host_https) { "https://fake-table-host:443" }
+    let(:blob_host_http) { "http://fake-blob-host" }
+    let(:table_host_http) { "http://fake-table-host" }
 
     before do
       allow(Azure::Storage::Client).to receive(:create).
         and_return(azure_client)
       allow(azure_client).to receive(:storage_blob_host=)
-      allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
+      allow(azure_client).to receive(:storage_blob_host).and_return(blob_host_https)
       allow(azure_client).to receive(:storage_table_host=)
-      allow(azure_client).to receive(:storage_table_host).and_return(table_host)
+      allow(azure_client).to receive(:storage_table_host).and_return(table_host_https)
     end
 
     context "for blob" do
-      it "should return an azure storage client with setting storage blob host" do
-        client = helpers_tester.initialize_azure_storage_client(storage_account, 'blob')
-        expect(
-          client.storage_blob_host
-        ).to eq(blob_host)
+      context "use https" do
+        it "should return an azure storage client with setting storage blob host (https)" do
+          client = helpers_tester.initialize_azure_storage_client(storage_account, 'blob')
+          expect(
+            client.storage_blob_host
+          ).to eq(blob_host_https)
+        end
+      end
+
+      context "use http" do
+        it "should return an azure storage client with setting storage blob host (http)" do
+          client = helpers_tester.initialize_azure_storage_client(storage_account, 'blob', true)
+          expect(
+            client.storage_blob_host
+          ).to eq(blob_host_http)
+        end
       end
     end
 
     context "for table" do
       context "when the storage account is standard" do
-        it "should return an azure storage client with setting table blob host" do
-          client = helpers_tester.initialize_azure_storage_client(storage_account, 'table')
-          expect(
-            client.storage_table_host
-          ).to eq(table_host)
+        context "use https" do
+          it "should return an azure storage client with setting table blob host (https)" do
+            client = helpers_tester.initialize_azure_storage_client(storage_account, 'table')
+            expect(
+              client.storage_table_host
+            ).to eq(table_host_https)
+          end
+        end
+
+        context "use http" do
+          it "should return an azure storage client with setting table blob host (http)" do
+            client = helpers_tester.initialize_azure_storage_client(storage_account, 'table', true)
+            expect(
+              client.storage_table_host
+            ).to eq(table_host_http)
+          end
         end
       end
 
@@ -451,7 +387,7 @@ describe Bosh::AzureCloud::Helpers do
           {
             :name => storage_account_name,
             :key => storage_access_key,
-            :storage_blob_host => 'fake-blob-host/',
+            :storage_blob_host => 'https://fake-blob-host:443/',
           }
         }
 

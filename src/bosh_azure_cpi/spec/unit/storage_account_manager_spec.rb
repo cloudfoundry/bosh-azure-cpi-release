@@ -6,6 +6,13 @@ describe Bosh::AzureCloud::StorageAccountManager do
   let(:disk_manager) { instance_double(Bosh::AzureCloud::DiskManager) }
   let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
   let(:storage_account_manager) { Bosh::AzureCloud::StorageAccountManager.new(azure_properties, blob_manager, disk_manager, client2) }
+  let(:azure_client) { instance_double(Azure::Storage::Client) }
+
+  before do
+    allow(Azure::Storage::Client).to receive(:create).
+      and_return(azure_client)
+    allow(azure_client).to receive(:storage_table_host)
+  end
 
   describe '#create_storage_account' do
     # Parameters
