@@ -53,6 +53,22 @@
     raise 'ssh_certificate has been replaced by ssh_public_key. Please read https://bosh.io/docs/azure-cpi.html.'
   end
 
+  if_p('azure.windows') do
+    params['cloud']['properties']['azure']['windows'] = {}
+    if_p('azure.windows.username') do |username|
+      raise 'The username of Windows can not be empty' if username.empty?
+      params['cloud']['properties']['azure']['windows']['username'] = username
+    end.else do
+      raise 'You must provide a username for Windows'
+    end
+    if_p('azure.windows.password') do |password|
+      raise 'The password of Windows can not be empty' if password.empty?
+      params['cloud']['properties']['azure']['windows']['password'] = password
+    end.else do
+      raise 'You must provide a password for Windows'
+    end
+  end
+
   if p('azure.environment') == 'AzureStack'
     params['cloud']['properties']['azure']['azure_stack_domain'] = p('azure.azure_stack_domain')
     params['cloud']['properties']['azure']['azure_stack_authentication'] = p('azure.azure_stack_authentication')

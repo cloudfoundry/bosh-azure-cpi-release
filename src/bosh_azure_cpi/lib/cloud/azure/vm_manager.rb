@@ -18,6 +18,10 @@ module Bosh::AzureCloud
       vm_size = resource_pool.fetch('instance_type', nil)
       cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?
 
+      if stemcell_info.is_windows? && @azure_properties["windows"].nil?
+        cloud_error("You must provide azure.windows.username and azure.windows.password in global configurations to deploy VMs with a Windows stemcell")
+      end
+
       network_interfaces = create_network_interfaces(instance_id, location, resource_pool, network_configurator)
       availability_set = create_availability_set(location, resource_pool, env)
 
@@ -38,8 +42,6 @@ module Bosh::AzureCloud
         :location            => location,
         :tags                => AZURE_TAGS,
         :vm_size             => vm_size,
-        :ssh_username        => @azure_properties['ssh_user'],
-        :ssh_cert_data       => @azure_properties['ssh_public_key'],
         :custom_data         => get_user_data(instance_id, network_configurator.default_dns),
         :os_disk             => os_disk,
         :ephemeral_disk      => ephemeral_disk,
@@ -55,6 +57,16 @@ module Bosh::AzureCloud
           vm_params[:image_uri] = stemcell_info.uri
         end
       end
+
+      case stemcell_info.os_type
+      when 'linux'
+        vm_params[:ssh_username] = @azure_properties['ssh_user']
+        vm_params[:ssh_cert_data] = @azure_properties['ssh_public_key']
+      when 'windows'
+        vm_params[:windows_username] = @azure_properties['windows']['username']
+        vm_params[:windows_password] = @azure_properties['windows']['password']
+      end
+
       @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
 
       vm_params

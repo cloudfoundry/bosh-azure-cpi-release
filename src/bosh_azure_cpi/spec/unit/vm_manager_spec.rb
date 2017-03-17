@@ -35,13 +35,13 @@ describe Bosh::AzureCloud::VMManager do
     let(:disk_size) { nil }
     let(:resource_pool) {
       {
-        'instance_type' => 'Standard_D1',
-        'storage_account_name' => 'dfe03ad623f34d42999e93ca',
-        'caching' => 'ReadWrite',
-        'availability_set' => 'fake-avset',
+        'instance_type'                => 'Standard_D1',
+        'storage_account_name'         => 'dfe03ad623f34d42999e93ca',
+        'caching'                      => 'ReadWrite',
+        'availability_set'             => 'fake-avset',
         'platform_update_domain_count' => 5,
-        'platform_fault_domain_count' => 3,
-        'load_balancer' => 'fake-lb-name'
+        'platform_fault_domain_count'  => 3,
+        'load_balancer'                => 'fake-lb-name'
       }
     }
     let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
@@ -54,12 +54,12 @@ describe Bosh::AzureCloud::VMManager do
     let(:subnet) { double("subnet") }
     let(:storage_account) {
       {
-        :id => "foo",
-        :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-        :location => "bar",
+        :id                 => "foo",
+        :name               => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+        :location           => "bar",
         :provisioning_state => "bar",
-        :account_type => "foo",
-        :primary_endpoints => "bar"
+        :account_type       => "foo",
+        :primary_endpoints  => "bar"
       }
     }
     let(:disk_id) { double("fake-disk-id") }
@@ -96,6 +96,8 @@ describe Bosh::AzureCloud::VMManager do
         and_return(stemcell_uri)
       allow(stemcell_info).to receive(:os_type).
         and_return(os_type)
+      allow(stemcell_info).to receive(:is_windows?).
+        and_return(false)
       allow(stemcell_info).to receive(:disk_size).
         and_return(disk_size)
       allow(stemcell_info).to receive(:is_light_stemcell?).
@@ -177,6 +179,21 @@ describe Bosh::AzureCloud::VMManager do
         expect {
           vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
         }.to raise_error /missing required cloud property `instance_type'./
+      end
+    end
+
+    context "when os type is windows but configuration of azure.windows is missed" do
+      before do
+        allow(stemcell_info).to receive(:is_windows?).
+          and_return('true')
+        azure_properties.delete('windows')
+        allow(client2).to receive(:list_network_interfaces_by_instance_id).and_return([])
+      end
+
+      it "should raise an error" do
+        expect {
+          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+        }.to raise_error /You must provide azure.windows/
       end
     end
 
@@ -285,7 +302,7 @@ describe Bosh::AzureCloud::VMManager do
           with(resource_pool['load_balancer'])
           .and_return(load_balancer)
       end
- 
+
       context "when the public ip list azure returns is empty" do
         it "should raise an error" do
           allow(client2).to receive(:list_network_interfaces_by_instance_id).
@@ -497,12 +514,12 @@ describe Bosh::AzureCloud::VMManager do
       }
       let(:storage_account) {
         {
-          :id => "foo",
-          :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-          :location => "bar",
+          :id                 => "foo",
+          :name               => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+          :location           => "bar",
           :provisioning_state => "bar",
-          :account_type => "foo",
-          :storage_blob_host => "fake-blob-endpoint",
+          :account_type       => "foo",
+          :storage_blob_host  => "fake-blob-endpoint",
           :storage_table_host => "fake-table-endpoint"
         }
       }
@@ -561,14 +578,14 @@ describe Bosh::AzureCloud::VMManager do
         context "with the network security group provided in resource_pool" do
           let(:resource_pool) {
             {
-              'instance_type' => 'Standard_D1',
-              'storage_account_name' => 'dfe03ad623f34d42999e93ca',
-              'caching' => 'ReadWrite',
-              'availability_set' => 'fake-avset',
-              'platform_update_domain_count' => 5,
-              'platform_fault_domain_count' => 3,
-              'load_balancer' => 'fake-lb-name',
-              'security_group' => 'fake-nsg-name'
+              'instance_type'                 => 'Standard_D1',
+              'storage_account_name'          => 'dfe03ad623f34d42999e93ca',
+              'caching'                       => 'ReadWrite',
+              'availability_set'              => 'fake-avset',
+              'platform_update_domain_count'  => 5,
+              'platform_fault_domain_count'   => 3,
+              'load_balancer'                 => 'fake-lb-name',
+              'security_group'                => 'fake-nsg-name'
             }
           }
 
@@ -812,10 +829,10 @@ describe Bosh::AzureCloud::VMManager do
             }
             let(:resource_pool) {
               {
-                'instance_type' => 'Standard_D1',
-                'availability_set' => 'fake-avset',
+                'instance_type'                => 'Standard_D1',
+                'availability_set'             => 'fake-avset',
                 'platform_update_domain_count' => 5,
-                'platform_fault_domain_count' => 3,
+                'platform_fault_domain_count'  => 3,
               }
             }
             let(:avset_params) {
@@ -1024,53 +1041,96 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         context "with use_managed_disks enabled" do
-          let(:vm_params) {
-            {
-              :name                => instance_id,
-              :location            => location,
-              :tags                => { 'user-agent' => 'bosh' },
-              :vm_size             => "Standard_D1",
-              :ssh_username        => azure_properties_managed['ssh_user'],
-              :ssh_cert_data       => azure_properties_managed['ssh_public_key'],
-              :custom_data         => "eyJyZWdpc3RyeSI6eyJlbmRwb2ludCI6ImxvY2FsaG9zdDo0MjI4OCJ9LCJzZXJ2ZXIiOnsibmFtZSI6Ijg4NTNmNDQxZGIxNTRiNDM4NTUwYTg1My1lNTUxNDRhMy0wYzA2LTQyNDAtOGYxNS05YTdiYzdiMzVkMWYifSwiZG5zIjp7Im5hbWVzZXJ2ZXIiOiJmYWtlLWRucyJ9fQ==",
-              :os_disk             => {
-                :disk_name    => "fake-disk-name",
-                :disk_size    => "fake-disk-size",
-                :disk_caching => "fake-disk-caching"
-              },
-              :ephemeral_disk      => nil,
-              :os_type=>"fake-os-type",
-              :managed=>true,
-              :image_id=>"fake-uri"
-            }
-          }
-
           let(:network_interfaces) {
             [
-              {:name=>"foo"},
-              {:name=>"foo"}
+              {:name => "foo"},
+              {:name => "foo"}
             ]
           }
 
-          it "should succeed" do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).to receive(:create_virtual_machine).
-              with(vm_params, network_interfaces, availability_set)
-            vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
+          context "when os type is linux" do
+            let(:vm_params) {
+              {
+                :name                => instance_id,
+                :location            => location,
+                :tags                => { 'user-agent' => 'bosh' },
+                :vm_size             => "Standard_D1",
+                :ssh_username        => azure_properties_managed['ssh_user'],
+                :ssh_cert_data       => azure_properties_managed['ssh_public_key'],
+                :custom_data         => "eyJyZWdpc3RyeSI6eyJlbmRwb2ludCI6ImxvY2FsaG9zdDo0MjI4OCJ9LCJzZXJ2ZXIiOnsibmFtZSI6Ijg4NTNmNDQxZGIxNTRiNDM4NTUwYTg1My1lNTUxNDRhMy0wYzA2LTQyNDAtOGYxNS05YTdiYzdiMzVkMWYifSwiZG5zIjp7Im5hbWVzZXJ2ZXIiOiJmYWtlLWRucyJ9fQ==",
+                :os_disk             => {
+                  :disk_name    => "fake-disk-name",
+                  :disk_size    => "fake-disk-size",
+                  :disk_caching => "fake-disk-caching"
+                },
+                :ephemeral_disk      => nil,
+                :os_type             => "linux",
+                :managed             => true,
+                :image_id            => "fake-uri"
+              }
+            }
+
+            before do
+              allow(stemcell_info).to receive(:os_type).and_return('linux')
+            end
+
+            it "should succeed" do
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_network_interface)
+              expect(client2).to receive(:create_virtual_machine).
+                with(vm_params, network_interfaces, availability_set)
+              result = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              expect(result[:name]).to eq(instance_id)
+            end
+          end
+
+          context "when os type is windows" do
+            let(:vm_params) {
+              {
+                :name                => instance_id,
+                :location            => location,
+                :tags                => { 'user-agent' => 'bosh' },
+                :vm_size             => "Standard_D1",
+                :windows_username    => 'u',
+                :windows_password    => 'p',
+                :custom_data         => "eyJyZWdpc3RyeSI6eyJlbmRwb2ludCI6ImxvY2FsaG9zdDo0MjI4OCJ9LCJzZXJ2ZXIiOnsibmFtZSI6Ijg4NTNmNDQxZGIxNTRiNDM4NTUwYTg1My1lNTUxNDRhMy0wYzA2LTQyNDAtOGYxNS05YTdiYzdiMzVkMWYifSwiZG5zIjp7Im5hbWVzZXJ2ZXIiOiJmYWtlLWRucyJ9fQ==",
+                :os_disk             => {
+                  :disk_name    => "fake-disk-name",
+                  :disk_size    => "fake-disk-size",
+                  :disk_caching => "fake-disk-caching"
+                },
+                :ephemeral_disk      => nil,
+                :os_type             => "windows",
+                :managed             => true,
+                :image_id            => "fake-uri"
+              }
+            }
+
+            before do
+              azure_properties_managed['windows'] = {'username' => 'u', 'password' => 'p'}
+              allow(stemcell_info).to receive(:is_windows?).and_return(true)
+              allow(stemcell_info).to receive(:os_type).and_return('windows')
+            end
+
+            it "should succeed" do
+              expect(client2).to receive(:create_virtual_machine).
+                with(vm_params, network_interfaces, availability_set)
+              expect {
+               vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.not_to raise_error
+            end
           end
         end
       end
     end
-  end  
+  end
 
   describe "#find" do
     it "finds the instance by id" do
       expect(client2).to receive(:get_virtual_machine_by_name).with(instance_id)
       vm_manager.find(instance_id)
     end
-  end  
+  end
 
   describe "#delete" do
     let(:vm) {
@@ -1151,14 +1211,14 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
-  end  
+  end
 
   describe "#reboot" do
     it "reboots the instance by id" do
       expect(client2).to receive(:restart_virtual_machine).with(instance_id)
       vm_manager.reboot(instance_id)
     end
-  end  
+  end
 
   describe "#set_metadata" do
     it "sets the metadata of the instance by id" do
@@ -1166,7 +1226,7 @@ describe Bosh::AzureCloud::VMManager do
         with(instance_id, {'user-agent' => 'bosh'})
       vm_manager.set_metadata(instance_id, {})
     end
-  end  
+  end
 
   describe "#attach_disk" do
     let(:caching) { "None" }
@@ -1231,7 +1291,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("1")
       end
     end
-  end  
+  end
 
   describe "#detach_disk" do
     let(:disk_name) { "fake-disk-name" }
@@ -1240,5 +1300,5 @@ describe Bosh::AzureCloud::VMManager do
         with(instance_id, disk_name)
       vm_manager.detach_disk(instance_id, disk_name)
     end
-  end  
+  end
 end

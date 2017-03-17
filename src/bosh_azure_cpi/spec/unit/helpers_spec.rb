@@ -9,6 +9,10 @@ describe Bosh::AzureCloud::Helpers do
 
   class HelpersTester
     include Bosh::AzureCloud::Helpers
+
+    def initialize
+      @logger = Logger.new('/dev/null')
+    end
   end
 
   helpers_tester = HelpersTester.new
@@ -816,6 +820,25 @@ describe Bosh::AzureCloud::Helpers do
         expect(
           helpers_tester.is_light_stemcell_id?(stemcell_id)
         ).to be(false)
+       end
+     end
+   end
+
+   describe "#generate_unique_id" do
+    context "when expected id length is long enough" do
+      let (:length) { 20 }
+
+      it "should return the uniq string" do
+        expect(helpers_tester.generate_unique_id(length)).to be_a(String)
+        expect(helpers_tester.generate_unique_id(length).length).to eq(length)
+      end
+    end
+
+    context "when expected id length is too short" do
+      let (:length) { 8 }
+
+      it "should return string with the expected length" do
+        expect(helpers_tester.generate_unique_id(length).length).to eq(length)
       end
     end
   end

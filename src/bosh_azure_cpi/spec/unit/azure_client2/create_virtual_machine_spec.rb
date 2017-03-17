@@ -685,6 +685,135 @@ describe Bosh::AzureCloud::AzureClient2 do
           }.not_to raise_error
         end
       end
+
+      context "when os_type is windows" do
+        let(:vm_params) do
+          {
+            :name               => vm_name,
+            :location           => "b",
+            :tags               => { "foo" => "bar"},
+            :vm_size            => "c",
+            :windows_username   => "d",
+            :windows_password   => "e",
+            :custom_data        => "f",
+            :image_uri          => "g",
+            :os_disk            => {
+              :disk_name         => "h",
+              :disk_uri          => "i",
+              :disk_caching      => "j",
+              :disk_size         => "k",
+            },
+            :os_type            => "windows",
+            :managed            => false     # true or false doen't matter in this case
+          }
+        end
+
+        let(:request_body) {
+          {
+            :name     => vm_name,
+            :location => "b",
+            :type     => "Microsoft.Compute/virtualMachines",
+            :tags     => {
+              :foo => "bar"
+            },
+            :properties => {
+              :hardwareProfile => {
+                :vmSize => "c"
+              },
+              :osProfile => {
+                :customData => "f",
+                :computername => vm_name,
+                :adminUsername => "d",
+                :adminPassword => "e"
+              },
+              :networkProfile => {
+                :networkInterfaces => [
+                  {
+                    :id => "a",
+                    :properties => {
+                      :primary => true
+                    }
+                  },
+                  {
+                    :id => "b",
+                    :properties => {
+                      :primary => false
+                    }
+                  }
+                ]
+              },
+              :storageProfile => {
+                :osDisk => {
+                  :name => "h",
+                  :osType => "windows",
+                  :createOption => "FromImage",
+                  :caching => "j",
+                  :image => {
+                    :uri => "g"
+                  },
+                  :vhd => {
+                    :uri => "i"
+                  },
+                  :diskSizeGB => "k"
+                }
+              }
+            }
+          }
+        }
+
+        it "should raise no error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          }.not_to raise_error
+        end
+      end
+
+      context "when os_type is invalid" do
+        let(:vm_params) do
+          {
+            :name               => vm_name,
+            :location           => "b",
+            :tags               => { "foo" => "bar"},
+            :vm_size            => "c",
+            :windows_username   => "d",
+            :windows_password   => "e",
+            :custom_data        => "f",
+            :image_uri          => "g",
+            :os_disk            => {
+              :disk_name         => "h",
+              :disk_uri          => "i",
+              :disk_caching      => "j",
+              :disk_size         => "k",
+            },
+            :os_type            => "fake-os-type",
+            :managed            => false     # true or false doen't matter in this case
+          }
+        end
+
+        it "should reaise error" do
+          expect {
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          }.to raise_error /Unsupported os type/
+        end
+      end
     end
 
     context "when token is invalid" do
