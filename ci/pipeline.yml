@@ -346,8 +346,8 @@ jobs:
   - task: promote
     file: bosh-cpi-src/ci/tasks/promote-candidate.yml
     params:
-      S3_ACCESS_KEY_ID:     {{s3_access_key__primary}}
-      S3_SECRET_ACCESS_KEY: {{s3_secret_key__primary}}
+      S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
+      S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
 
   - put: bosh-cpi-src
     resource: bosh-cpi-src-out
