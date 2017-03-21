@@ -18,10 +18,6 @@ module Bosh::AzureCloud
       vm_size = resource_pool.fetch('instance_type', nil)
       cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?
 
-      if stemcell_info.is_windows? && @azure_properties["windows"].nil?
-        cloud_error("You must provide azure.windows.username and azure.windows.password in global configurations to deploy VMs with a Windows stemcell")
-      end
-
       network_interfaces = create_network_interfaces(instance_id, location, resource_pool, network_configurator)
       availability_set = create_availability_set(location, resource_pool, env)
 
@@ -63,8 +59,24 @@ module Bosh::AzureCloud
         vm_params[:ssh_username] = @azure_properties['ssh_user']
         vm_params[:ssh_cert_data] = @azure_properties['ssh_public_key']
       when 'windows'
-        vm_params[:windows_username] = @azure_properties['windows']['username']
-        vm_params[:windows_password] = @azure_properties['windows']['password']
+        # Generate secure random strings as username and password for Windows VMs
+        # Users do not use this credential to logon to Windows VMs
+        # If users want to logon to Windows VMs, they need to add a new user via the job `user_add'
+        # https://github.com/cloudfoundry/bosh-deployment/blob/master/jumpbox-user.yml
+        #
+        # https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
+        # adminUsername:
+        #   Max-length (Windows): 20 characters
+        vm_params[:windows_username] = SecureRandom.uuid.delete('-')[0,20]
+        # adminPassword:
+        #   Minimum-length (Windows): 8 characters
+        #   Max-length (Windows): 123 characters
+        #   Complexity requirements: 3 out of 4 conditions below need to be fulfilled
+        #     Has lower characters
+        #     Has upper characters
+        #     Has a digit
+        #     Has a special character (Regex match [\W_])
+        vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".split('').shuffle.join
       end
 
       @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)

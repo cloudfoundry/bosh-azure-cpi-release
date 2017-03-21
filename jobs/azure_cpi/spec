@@ -45,10 +45,6 @@ properties:
   azure.use_managed_disks:
     description: Enable managed disks
     default: false
-  azure.windows.username:
-    description: Admin user to use when spinning up new Windows VMs. Only available for Windows
-  azure.windows.password:
-    description: Password to use when spinning up new Windows VMs. Only available for Windows
 
   registry.username:
     description: User to access the Registry

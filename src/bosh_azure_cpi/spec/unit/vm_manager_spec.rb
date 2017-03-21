@@ -182,21 +182,6 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
-    context "when os type is windows but configuration of azure.windows is missed" do
-      before do
-        allow(stemcell_info).to receive(:is_windows?).
-          and_return('true')
-        azure_properties.delete('windows')
-        allow(client2).to receive(:list_network_interfaces_by_instance_id).and_return([])
-      end
-
-      it "should raise an error" do
-        expect {
-          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-        }.to raise_error /You must provide azure.windows/
-      end
-    end
-
     context "when the resource group name is not specified in the network spec" do
       context "when subnet is not found in the default resource group" do
         before do
@@ -1085,14 +1070,15 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context "when os type is windows" do
+            let(:uuid) { '25900ee5-1215-433c-8b88-f1eaaa9731fe' }
             let(:vm_params) {
               {
                 :name                => instance_id,
                 :location            => location,
                 :tags                => { 'user-agent' => 'bosh' },
                 :vm_size             => "Standard_D1",
-                :windows_username    => 'u',
-                :windows_password    => 'p',
+                :windows_username    => uuid.delete('-')[0,20],
+                :windows_password    => 'fake-password',
                 :custom_data         => "eyJyZWdpc3RyeSI6eyJlbmRwb2ludCI6ImxvY2FsaG9zdDo0MjI4OCJ9LCJzZXJ2ZXIiOnsibmFtZSI6Ijg4NTNmNDQxZGIxNTRiNDM4NTUwYTg1My1lNTUxNDRhMy0wYzA2LTQyNDAtOGYxNS05YTdiYzdiMzVkMWYifSwiZG5zIjp7Im5hbWVzZXJ2ZXIiOiJmYWtlLWRucyJ9fQ==",
                 :os_disk             => {
                   :disk_name    => "fake-disk-name",
@@ -1107,7 +1093,9 @@ describe Bosh::AzureCloud::VMManager do
             }
 
             before do
-              azure_properties_managed['windows'] = {'username' => 'u', 'password' => 'p'}
+              allow(SecureRandom).to receive(:uuid).and_return(uuid)
+              expect_any_instance_of(Array).to receive(:shuffle).and_return(['fake-array'])
+              expect_any_instance_of(Array).to receive(:join).and_return('fake-password')
               allow(stemcell_info).to receive(:is_windows?).and_return(true)
               allow(stemcell_info).to receive(:os_type).and_return('windows')
             end
@@ -1115,6 +1103,7 @@ describe Bosh::AzureCloud::VMManager do
             it "should succeed" do
               expect(client2).to receive(:create_virtual_machine).
                 with(vm_params, network_interfaces, availability_set)
+              expect(SecureRandom).to receive(:uuid).exactly(3).times
               expect {
                vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               }.not_to raise_error
