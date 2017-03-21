@@ -13,9 +13,60 @@ describe Bosh::AzureCloud::Helpers do
     def initialize
       @logger = Logger.new('/dev/null')
     end
+
+    def set_logger(logger)
+      @logger = logger
+    end
   end
 
   helpers_tester = HelpersTester.new
+
+  describe "#cloud_error" do
+    let(:message) { "fake-error-message" }
+
+    after do
+      helpers_tester.set_logger(Logger.new('/dev/null'))
+    end
+
+    context "when logger is not nil" do
+      let(:logger_strio) { StringIO.new }
+      before do
+        helpers_tester.set_logger(Logger.new(logger_strio))
+      end
+
+      context "when exception is nil" do
+        it "should raise CloudError and log the message" do
+          expect {
+            helpers_tester.cloud_error(message)
+          }.to raise_error(Bosh::Clouds::CloudError, message)
+          expect(logger_strio.string).to include(message)
+        end
+      end
+
+      context "when exception is not nil" do
+        let(:fake_exception) { StandardError.new('fake-exception') }
+        it "should raise CloudError, log the message and the exception" do
+          expect {
+            helpers_tester.cloud_error(message, fake_exception)
+          }.to raise_error(Bosh::Clouds::CloudError, message)
+          expect(logger_strio.string).to include(message)
+          expect(logger_strio.string).to include("fake-exception")
+        end
+      end
+    end
+
+    context "when logger is nil" do
+      before do
+        helpers_tester.set_logger(nil)
+      end
+
+      it "should raise CloudError" do
+        expect {
+          helpers_tester.cloud_error(message)
+        }.to raise_error(Bosh::Clouds::CloudError, message)
+      end
+    end
+  end
 
   describe "#encode_metadata" do
     let(:metadata) do
