@@ -107,7 +107,7 @@ describe Bosh::AzureCloud::AzureClient2 do
                 },
                 :osProfile => {
                   :customData => "f",
-                  :computername => vm_name,
+                  :computerName => vm_name,
                   :adminUsername => "d",
                   :linuxConfiguration => {
                     :disablePasswordAuthentication => "true",
@@ -233,7 +233,7 @@ describe Bosh::AzureCloud::AzureClient2 do
                 },
                 :osProfile => {
                   :customData => "f",
-                  :computername => vm_name,
+                  :computerName => vm_name,
                   :adminUsername => "d",
                   :linuxConfiguration => {
                     :disablePasswordAuthentication => "true",
@@ -313,7 +313,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
       end
 
-      context "when os_disk.disk_size is false" do
+      context "when os_disk.disk_size is nil" do
         let(:vm_params) do
           {
             :name           => vm_name,
@@ -354,7 +354,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               },
               :osProfile => {
                 :customData => "f",
-                :computername => vm_name,
+                :computerName => vm_name,
                 :adminUsername => "d",
                 :linuxConfiguration => {
                   :disablePasswordAuthentication => "true",
@@ -475,7 +475,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               },
               :osProfile => {
                 :customData => "f",
-                :computername => vm_name,
+                :computerName => vm_name,
                 :adminUsername => "d",
                 :linuxConfiguration => {
                   :disablePasswordAuthentication => "true",
@@ -597,7 +597,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               },
               :osProfile => {
                 :customData => "f",
-                :computername => vm_name,
+                :computerName => vm_name,
                 :adminUsername => "d",
                 :linuxConfiguration => {
                   :disablePasswordAuthentication => "true",
@@ -722,7 +722,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               },
               :osProfile => {
                 :customData => "f",
-                :computername => vm_name,
+                :computerName => vm_name,
                 :adminUsername => "d",
                 :adminPassword => "e"
               },
@@ -812,6 +812,134 @@ describe Bosh::AzureCloud::AzureClient2 do
           expect {
             azure_client2.create_virtual_machine(vm_params, network_interfaces)
           }.to raise_error /Unsupported os type/
+        end
+      end
+
+      context "when computer_name is set" do
+        let(:computer_name) { 'fake-computer-name' }
+        let(:vm_params) do
+          {
+            :name           => vm_name,
+            :computer_name  => computer_name,
+            :location       => "b",
+            :tags           => { "foo" => "bar"},
+            :vm_size        => "c",
+            :ssh_username   => "d",
+            :ssh_cert_data  => "e",
+            :custom_data    => "f",
+            :image_uri      => "g",
+            :os_disk        => {
+              :disk_name     => "h",
+              :disk_uri      => "i",
+              :disk_caching  => "j"
+            },
+            :ephemeral_disk => {
+              :disk_name     => "l",
+              :disk_uri      => "m",
+              :disk_caching  => "n",
+              :disk_size     => "o",
+            },
+            :os_type        => "linux",
+            :managed        => false     # true or false doen't matter in this case
+          }
+        end
+
+        let(:request_body) {
+          {
+            :name     => vm_name,
+            :location => "b",
+            :type     => "Microsoft.Compute/virtualMachines",
+            :tags     => {
+              :foo => "bar"
+            },
+            :properties => {
+              :hardwareProfile => {
+                :vmSize => "c"
+              },
+              :osProfile => {
+                :customData => "f",
+                :computerName => computer_name,
+                :adminUsername => "d",
+                :linuxConfiguration => {
+                  :disablePasswordAuthentication => "true",
+                  :ssh => {
+                    :publicKeys => [
+                      {
+                        :path => "/home/d/.ssh/authorized_keys",
+                        :keyData => "e"
+                      }
+                    ]
+                  }
+                }
+              },
+              :networkProfile => {
+                :networkInterfaces => [
+                  {
+                    :id => "a",
+                    :properties => {
+                      :primary => true
+                    }
+                  },
+                  {
+                    :id => "b",
+                    :properties => {
+                      :primary => false
+                    }
+                  }
+                ]
+              },
+              :storageProfile => {
+                :osDisk => {
+                  :name => "h",
+                  :osType => "linux",
+                  :createOption => "FromImage",
+                  :caching => "j",
+                  :image => {
+                    :uri => "g"
+                  },
+                  :vhd => {
+                    :uri => "i"
+                  }
+                },
+                :dataDisks => [
+                  {
+                    :name => "l",
+                    :lun  => 0,
+                    :createOption => "Empty",
+                    :diskSizeGB => "o",
+                    :vhd => {
+                      :uri => "m"
+                    },
+                    :caching => "n"
+                  }
+                ]
+              }
+            }
+          }
+        }
+
+        it "should raise no error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          }.not_to raise_error
         end
       end
     end

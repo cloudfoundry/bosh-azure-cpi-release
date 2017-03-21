@@ -129,6 +129,9 @@ module Bosh::AzureCloud
     #
     # Accepted key/value pairs are:
     # * +:name+                 - String. Name of virtual machine.
+    # * +:computer_name+        - String. Specifies the host OS name of the virtual machine. Above name will be used if this is not set.
+    #                             Max-length (Windows): 15 characters
+    #                             Max-length (Linux): 64 characters.
     # * +:location+             - String. The location where the virtual machine will be created.
     # * +:tags+                 - Hash. Tags of virtual machine.
     # * +:vm_size+              - String. Specifies the size of the virtual machine instance.
@@ -180,7 +183,7 @@ module Bosh::AzureCloud
 
       os_profile = {
         'customData'         => vm_params[:custom_data],
-        'computername'       => vm_params[:name],
+        'computerName'       => vm_params[:computer_name].nil? ? vm_params[:name] : vm_params[:computer_name]
       }
 
       case vm_params[:os_type]
