@@ -7,8 +7,14 @@ module Bosh::AzureCloud
     AZURE_RESOURCE_PROVIDER_GROUP            = 'rp'
     AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  = 'ad'
 
+    ENVIRONMENT_AZURECLOUD        = 'AzureCloud'
+    ENVIRONMENT_AZURECHINACLOUD   = 'AzureChinaCloud'
+    ENVIRONMENT_AZUREUSGOVERNMENT = 'AzureUSGovernment'
+    ENVIRONMENT_AZURESTACK        = 'AzureStack'
+    ENVIRONMENT_AZUREGermanCloud  = 'AzureGermanCloud'
+
     AZURE_ENVIRONMENTS = {
-      'AzureCloud' => {
+      ENVIRONMENT_AZURECLOUD => {
         'resourceManagerEndpointUrl' => 'https://management.azure.com/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
         'apiVersion' => {
@@ -19,7 +25,7 @@ module Bosh::AzureCloud
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       },
-      'AzureChinaCloud' => {
+      ENVIRONMENT_AZURECHINACLOUD => {
         'resourceManagerEndpointUrl' => 'https://management.chinacloudapi.cn/',
         'activeDirectoryEndpointUrl' => 'https://login.chinacloudapi.cn',
         'apiVersion' => {
@@ -30,7 +36,7 @@ module Bosh::AzureCloud
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       },
-      'AzureUSGovernment' => {
+      ENVIRONMENT_AZUREUSGOVERNMENT => {
         'resourceManagerEndpointUrl' => 'https://management.usgovcloudapi.net/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
         'apiVersion' => {
@@ -41,8 +47,7 @@ module Bosh::AzureCloud
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       },
-      'AzureStack' => {
-        'resourceManagerEndpointUrl' => 'https://azurestack.local-api/',
+      ENVIRONMENT_AZURESTACK => {
         'apiVersion' => {
           AZURE_RESOURCE_PROVIDER_COMPUTE          => '2015-06-15',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-05-01-preview',
@@ -51,7 +56,7 @@ module Bosh::AzureCloud
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-05-01-preview'
         }
       },
-      'AzureGermanCloud' => {
+      ENVIRONMENT_AZUREGermanCloud => {
         'resourceManagerEndpointUrl' => 'https://management.microsoftazure.de/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.de',
         'apiVersion' => {
@@ -101,6 +106,7 @@ module Bosh::AzureCloud
     LIGHT_STEMCELL_PREFIX           = 'bosh-light-stemcell'
     LIGHT_STEMCELL_PROPERTY         = 'image'
     AZURE_SCSI_HOST_DEVICE_ID       = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
+    AZURESTACK_SCSI_HOST_DEVICE_ID  = '{a8ef3b61-ef7a-467c-89fa-7a3e110d5b9e}'
     METADATA_FOR_MIGRATED_BLOB_DISK = {
       "user_agent" => USER_AGENT_FOR_AZURE_RESOURCE, # The key can't be user-agent because '-' is invalid for blob metadata
       "migrated" => "true"
@@ -117,6 +123,11 @@ module Bosh::AzureCloud
     # Length of instance id
     UUID_LENGTH                   = 36
     WINDOWS_VM_NAME_LENGTH        = 15
+
+    # Azure Stack Authentication Type
+    AZURESTACK_AUTHENTICATION_TYPE_AZURESTACK   = 'AzureStack'
+    AZURESTACK_AUTHENTICATION_TYPE_AZURESTACKAD = 'AzureStackAD'
+    AZURESTACK_AUTHENTICATION_TYPE_AZUREAD      = 'AzureAD'
 
     ##
     # Raises CloudError exception
@@ -167,33 +178,37 @@ module Bosh::AzureCloud
     end
 
     def get_arm_endpoint(azure_properties)
-      if azure_properties['environment'] == 'AzureStack'
-        validate_azure_stack_options(azure_properties)
-        domain = azure_properties['azure_stack_domain']
-        "https://api.#{domain}"
+      if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
+        "https://#{azure_properties['azure_stack']['endpoint_prefix']}.#{azure_properties['azure_stack']['domain']}"
       else
         AZURE_ENVIRONMENTS[azure_properties['environment']]['resourceManagerEndpointUrl']
       end
     end
 
     def get_token_resource(azure_properties)
-      AZURE_ENVIRONMENTS[azure_properties['environment']]['resourceManagerEndpointUrl']
+      if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
+        azure_properties['azure_stack']['resource']
+      else
+        AZURE_ENVIRONMENTS[azure_properties['environment']]['resourceManagerEndpointUrl']
+      end
     end
 
     def get_azure_authentication_endpoint_and_api_version(azure_properties)
       url = nil
       api_version = get_api_version(azure_properties, AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY)
-      if azure_properties['environment'] == 'AzureStack'
-        validate_azure_stack_options(azure_properties)
-        domain = azure_properties['azure_stack_domain']
+      if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
+        domain = azure_properties['azure_stack']['domain']
+        authentication = azure_properties['azure_stack']['authentication']
 
-        if azure_properties['azure_stack_authentication']  == 'AzureStack'
+        if authentication == AZURESTACK_AUTHENTICATION_TYPE_AZURESTACK
           url = "https://#{domain}/oauth2/token"
-        elsif azure_properties['azure_stack_authentication']  == 'AzureStackAD'
+        elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_AZURESTACKAD
           url = "https://#{domain}/#{azure_properties['tenant_id']}/oauth2/token"
+        elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_AZUREAD
+          url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
+          api_version = AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
         else
-          url = "#{AZURE_ENVIRONMENTS['AzureCloud']['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
-          api_version = AZURE_ENVIRONMENTS['AzureCloud']['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
+          cloud_error("No support for the AzureStack authentication: `#{authentication}'")
         end
       else
         url = "#{AZURE_ENVIRONMENTS[azure_properties['environment']]['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
@@ -202,7 +217,7 @@ module Bosh::AzureCloud
       return url, api_version
     end
 
-    def initialize_azure_storage_client(storage_account, service = 'blob')
+    def initialize_azure_storage_client(storage_account, service = 'blob', use_http = false)
       azure_client = Azure::Storage::Client.create(storage_account_name: storage_account[:name], storage_access_key: storage_account[:key], user_agent_prefix: USER_AGENT_FOR_REST)
 
       case service
@@ -212,6 +227,12 @@ module Bosh::AzureCloud
           else
             azure_client.storage_blob_host  = storage_account[:storage_blob_host]
           end
+
+          if use_http
+            azure_client.storage_blob_host.gsub!('https', 'http')
+            azure_client.storage_blob_host.gsub!(':443', '')
+          end
+          @logger.debug("initialize_azure_storage_client - storage_blob_host: #{azure_client.storage_blob_host}")
         when 'table'
           if storage_account[:storage_table_host].nil?
             cloud_error("The storage account `#{storage_account[:name]}' does not support table")
@@ -222,6 +243,12 @@ module Bosh::AzureCloud
           else
             azure_client.storage_table_host = storage_account[:storage_table_host]
           end
+
+          if use_http
+            azure_client.storage_table_host.gsub!('https', 'http')
+            azure_client.storage_table_host.gsub!(':443', '')
+          end
+          @logger.debug("initialize_azure_storage_client - storage_table_host: #{azure_client.storage_table_host}")
         else
           cloud_error("No support for the storage service: `#{service}'")
       end
@@ -558,15 +585,6 @@ module Bosh::AzureCloud
         @logger.warn("length of id is too short, can not make sure it is uniq")
         (prefix + suffix)[prefix.length + suffix.length - length, prefix.length + suffix.length]  # get tail
       end
-    end
-
-    private
-
-    def validate_azure_stack_options(azure_properties)
-      missing_keys = []
-      missing_keys << "azure_stack_domain" if azure_properties['azure_stack_domain'].nil?
-      missing_keys << "azure_stack_authentication" if azure_properties['azure_stack_authentication'].nil?
-      raise ArgumentError, "missing configuration parameters for AzureStack > #{missing_keys.join(', ')}" unless missing_keys.empty?
     end
   end
 end

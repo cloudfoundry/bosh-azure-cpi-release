@@ -44,6 +44,7 @@ describe Bosh::AzureCloud::TableManager do
       and_return(storage_account)
 
     allow(azure_client).to receive(:storage_table_host=)
+    allow(azure_client).to receive(:storage_table_host)
     allow(azure_client).to receive(:table_client).
       and_return(table_service)
     allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).

@@ -44,18 +44,26 @@
   if_p('registry.endpoint') do |endpoint|
     params['cloud']['properties']['registry']['endpoint'] = endpoint
   end.else do
-    params['cloud']['properties']['registry']['endpoint'] = "http://#{p('registry.username')}:#{p('registry.password')}@#{p('registry.host')}:#{p('registry.port')}"
+    params['cloud']['properties']['registry']['endpoint'] = "http://#{p('registry.username')}:#{ERB::Util.url_encode(p('registry.password'))}@#{p('registry.host')}:#{p('registry.port')}"
   end
 
   if_p('azure.ssh_public_key') do |ssh_public_key|
     params['cloud']['properties']['azure']['ssh_public_key'] = ssh_public_key
   end.else do
-    raise 'ssh_certificate has been replaced by ssh_public_key. Please read https://bosh.io/docs/azure-cpi.html.'
+    raise '"ssh_public_key" is not set. Please read https://bosh.io/docs/azure-cpi.html.'
   end
 
   if p('azure.environment') == 'AzureStack'
-    params['cloud']['properties']['azure']['azure_stack_domain'] = p('azure.azure_stack_domain')
-    params['cloud']['properties']['azure']['azure_stack_authentication'] = p('azure.azure_stack_authentication')
+    azure_stack = p('azure.azure_stack')
+    resource = azure_stack['resource']
+    raise '"resource" must be set for AzureStack' if resource.nil? || resource.empty?
+    params['cloud']['properties']['azure']['azure_stack'] = {}
+    params['cloud']['properties']['azure']['azure_stack']['domain'] = p('azure.azure_stack.domain')
+    params['cloud']['properties']['azure']['azure_stack']['authentication'] = p('azure.azure_stack.authentication')
+    params['cloud']['properties']['azure']['azure_stack']['resource'] = resource
+    params['cloud']['properties']['azure']['azure_stack']['endpoint_prefix'] = p('azure.azure_stack.endpoint_prefix')
+    params['cloud']['properties']['azure']['azure_stack']['skip_ssl_validation'] = p('azure.azure_stack.skip_ssl_validation')
+    params['cloud']['properties']['azure']['azure_stack']['use_http_to_access_storage_account'] = p('azure.azure_stack.use_http_to_access_storage_account')
   end
 
   if_p('blobstore') do
