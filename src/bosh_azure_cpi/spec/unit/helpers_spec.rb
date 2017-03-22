@@ -811,21 +811,32 @@ describe Bosh::AzureCloud::Helpers do
      end
    end
 
-   describe "#generate_unique_id" do
-    context "when expected id length is long enough" do
-      let (:length) { 20 }
+   describe "#generate_windows_computer_name" do
+    let(:process) { class_double(Process).as_stubbed_const }
 
-      it "should return the uniq string" do
-        expect(helpers_tester.generate_unique_id(length)).to be_a(String)
-        expect(helpers_tester.generate_unique_id(length).length).to eq(length)
+    context "when generated raw string is shorter than expect length" do
+      before do
+        expect_any_instance_of(Time).to receive(:to_f).and_return(1482829740.3734238) #1482829740.3734238 -> 'd5e883lv66u'
+        expect(process).to receive(:pid).and_return(6)                                #6 -> '6'
+      end
+
+      it "should return string padded with '0' for raw string to make its length eq WINDOWS_VM_NAME_LENGTH" do
+        computer_name = helpers_tester.generate_windows_computer_name
+        expect(computer_name).to eq('d5e883lv66u0006')
+        expect(computer_name.length).to eq(WINDOWS_VM_NAME_LENGTH)
       end
     end
 
-    context "when expected id length is too short" do
-      let (:length) { 8 }
+    context "when generated raw string is longer than expect length" do
+      before do
+        expect_any_instance_of(Time).to receive(:to_f).and_return(1482829740.3734238) #1482829740.3734238 -> 'd5e883lv66u'
+        expect(process).to receive(:pid).and_return(6553600)                          #6553600 -> '68000'
+      end
 
-      it "should return string with the expected length" do
-        expect(helpers_tester.generate_unique_id(length).length).to eq(length)
+      it "should get tail of the string to make its length eq WINDOWS_VM_NAME_LENGTH" do
+        computer_name = helpers_tester.generate_windows_computer_name
+        expect(computer_name).to eq('5e883lv66u68000')
+        expect(computer_name.length).to eq(WINDOWS_VM_NAME_LENGTH)
       end
     end
   end

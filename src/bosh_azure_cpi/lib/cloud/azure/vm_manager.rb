@@ -38,7 +38,6 @@ module Bosh::AzureCloud
         :location            => location,
         :tags                => AZURE_TAGS,
         :vm_size             => vm_size,
-        :custom_data         => get_user_data(instance_id, network_configurator.default_dns),
         :os_disk             => os_disk,
         :ephemeral_disk      => ephemeral_disk,
         :os_type             => stemcell_info.os_type,
@@ -56,8 +55,9 @@ module Bosh::AzureCloud
 
       case stemcell_info.os_type
       when 'linux'
-        vm_params[:ssh_username] = @azure_properties['ssh_user']
+        vm_params[:ssh_username]  = @azure_properties['ssh_user']
         vm_params[:ssh_cert_data] = @azure_properties['ssh_public_key']
+        vm_params[:custom_data]   = get_user_data(instance_id, network_configurator.default_dns)
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
         # Users do not use this credential to logon to Windows VMs
@@ -77,6 +77,9 @@ module Bosh::AzureCloud
         #     Has a digit
         #     Has a special character (Regex match [\W_])
         vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".split('').shuffle.join
+        computer_name = generate_windows_computer_name()
+        vm_params[:computer_name] = computer_name
+        vm_params[:custom_data]   = get_user_data(instance_id, network_configurator.default_dns, computer_name)
       end
 
       @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
@@ -189,9 +192,17 @@ module Bosh::AzureCloud
 
     private
 
-    def get_user_data(vm_name, dns)
+    # Example -
+    # For Linux:     {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"server":{"name":"<instance-id>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
+    # For Windows:   {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"instance-id":"<instance-id>","server":{"name":"<randomgeneratedname>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
+    def get_user_data(vm_name, dns, computer_name = nil)
       user_data = {registry: {endpoint: @registry_endpoint}}
-      user_data[:server] = {name: vm_name}
+      if computer_name
+        user_data[:'instance-id'] = vm_name
+        user_data[:server] = {name: computer_name}
+      else
+        user_data[:server] = {name: vm_name}
+      end
       user_data[:dns] = {nameserver: dns} if dns
       Base64.strict_encode64(JSON.dump(user_data))
     end

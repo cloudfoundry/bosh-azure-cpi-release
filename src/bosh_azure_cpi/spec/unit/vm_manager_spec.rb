@@ -1034,6 +1034,13 @@ describe Bosh::AzureCloud::VMManager do
           }
 
           context "when os type is linux" do
+            let(:user_data) {
+              {
+                :registry          => { :endpoint   => registry_endpoint },
+                :server            => { :name       => instance_id },
+                :dns               => { :nameserver => 'fake-dns'}
+              }
+            }
             let(:vm_params) {
               {
                 :name                => instance_id,
@@ -1042,7 +1049,7 @@ describe Bosh::AzureCloud::VMManager do
                 :vm_size             => "Standard_D1",
                 :ssh_username        => azure_properties_managed['ssh_user'],
                 :ssh_cert_data       => azure_properties_managed['ssh_public_key'],
-                :custom_data         => "eyJyZWdpc3RyeSI6eyJlbmRwb2ludCI6ImxvY2FsaG9zdDo0MjI4OCJ9LCJzZXJ2ZXIiOnsibmFtZSI6Ijg4NTNmNDQxZGIxNTRiNDM4NTUwYTg1My1lNTUxNDRhMy0wYzA2LTQyNDAtOGYxNS05YTdiYzdiMzVkMWYifSwiZG5zIjp7Im5hbWVzZXJ2ZXIiOiJmYWtlLWRucyJ9fQ==",
+                :custom_data         => Base64.strict_encode64(JSON.dump(user_data)),
                 :os_disk             => {
                   :disk_name    => "fake-disk-name",
                   :disk_size    => "fake-disk-size",
@@ -1071,6 +1078,15 @@ describe Bosh::AzureCloud::VMManager do
 
           context "when os type is windows" do
             let(:uuid) { '25900ee5-1215-433c-8b88-f1eaaa9731fe' }
+            let(:computer_name) { 'fake-server-name' }
+            let(:user_data) {
+              {
+                :registry          => { :endpoint   => registry_endpoint },
+                :'instance-id'     => instance_id,
+                :server            => { :name       => computer_name },
+                :dns               => { :nameserver => 'fake-dns'}
+              }
+            }
             let(:vm_params) {
               {
                 :name                => instance_id,
@@ -1078,8 +1094,8 @@ describe Bosh::AzureCloud::VMManager do
                 :tags                => { 'user-agent' => 'bosh' },
                 :vm_size             => "Standard_D1",
                 :windows_username    => uuid.delete('-')[0,20],
-                :windows_password    => 'fake-password',
-                :custom_data         => "eyJyZWdpc3RyeSI6eyJlbmRwb2ludCI6ImxvY2FsaG9zdDo0MjI4OCJ9LCJzZXJ2ZXIiOnsibmFtZSI6Ijg4NTNmNDQxZGIxNTRiNDM4NTUwYTg1My1lNTUxNDRhMy0wYzA2LTQyNDAtOGYxNS05YTdiYzdiMzVkMWYifSwiZG5zIjp7Im5hbWVzZXJ2ZXIiOiJmYWtlLWRucyJ9fQ==",
+                :windows_password    => 'fake-array',
+                :custom_data         => Base64.strict_encode64(JSON.dump(user_data)),
                 :os_disk             => {
                   :disk_name    => "fake-disk-name",
                   :disk_size    => "fake-disk-size",
@@ -1088,16 +1104,16 @@ describe Bosh::AzureCloud::VMManager do
                 :ephemeral_disk      => nil,
                 :os_type             => "windows",
                 :managed             => true,
-                :image_id            => "fake-uri"
+                :image_id            => "fake-uri",
+                :computer_name       => computer_name
               }
             }
 
             before do
               allow(SecureRandom).to receive(:uuid).and_return(uuid)
               expect_any_instance_of(Array).to receive(:shuffle).and_return(['fake-array'])
-              expect_any_instance_of(Array).to receive(:join).and_return('fake-password')
-              allow(stemcell_info).to receive(:is_windows?).and_return(true)
               allow(stemcell_info).to receive(:os_type).and_return('windows')
+              allow(vm_manager2).to receive(:generate_windows_computer_name).and_return(computer_name)
             end
 
             it "should succeed" do
