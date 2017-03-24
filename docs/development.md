@@ -47,7 +47,7 @@ rbenv global 2.2.4
 ruby -v
 
 # Install postgres which bosh-registry depends on
-sudo apt-get install -y postgresql postgresql-contrib libpg-dev g++ libmysqlclient-dev libsqlite3-dev
+sudo apt-get install -y postgresql postgresql-contrib libpq-dev g++ libmysqlclient-dev libsqlite3-dev
 
 # Create database and user
 cat > create_db.sql <<EOS

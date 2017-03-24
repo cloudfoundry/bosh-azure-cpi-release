@@ -550,8 +550,8 @@ module Bosh::AzureCloud
     end
 
     def is_managed_vm?(instance_id)
-      # The instance id of a Managed VM is GUID whose length is 36 or WINDOWS_VM_NAME_LENGTH (Windows VM must be managed disk VM)
-      instance_id.length == UUID_LENGTH || instance_id.length == WINDOWS_VM_NAME_LENGTH
+      # The instance id of a Managed VM is GUID whose length is 36
+      instance_id.length == UUID_LENGTH
     end
 
     def is_stemcell_storage_account?(tags)
@@ -570,20 +570,19 @@ module Bosh::AzureCloud
       stemcell_id.start_with?(LIGHT_STEMCELL_PREFIX)
     end
 
-    # use timestamp and process id to generate a uniq id
-    # @param [Integer] length  - Length of the id that to be generated
+    # use timestamp and process id to generate a unique string for computer name of Windows
     #
-    def generate_unique_id(length)
+    def generate_windows_computer_name
       prefix = Time.now.to_f
       prefix = prefix.to_s.delete('.')
-      prefix = prefix.to_i.to_s(32) # example timestamp 1482829740.3734238 -> "d5e883lv66u"
+      prefix = prefix.to_i.to_s(32) # example timestamp 1482829740.3734238 -> 'd5e883lv66u'
       suffix = Process.pid.to_s(32) # default max pid 65536, .to_s(32) -> '2000'
-      padding_length = length - prefix.length - suffix.length
+      padding_length = WINDOWS_VM_NAME_LENGTH - prefix.length - suffix.length
       if padding_length >= 0
         prefix + '0'*padding_length + suffix
       else
-        @logger.warn("length of id is too short, can not make sure it is uniq")
-        (prefix + suffix)[prefix.length + suffix.length - length, prefix.length + suffix.length]  # get tail
+        @logger.warn("Length of generated string is longer than expected, so it is truncated. It may be not unique.")
+        (prefix + suffix)[prefix.length + suffix.length - WINDOWS_VM_NAME_LENGTH, prefix.length + suffix.length]  # get tail
       end
     end
   end

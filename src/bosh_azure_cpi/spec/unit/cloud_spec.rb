@@ -205,7 +205,6 @@ describe Bosh::AzureCloud::Cloud do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
           with(azure_properties, networks_spec).
           and_return(network_configurator)
-        allow(stemcell_info).to receive(:is_windows?).and_return(false)
       end
 
       context 'when everything is OK' do
@@ -393,7 +392,6 @@ describe Bosh::AzureCloud::Cloud do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
           with(azure_properties_managed, networks_spec).
           and_return(network_configurator)
-        allow(stemcell_info).to receive(:is_windows?).and_return(false)
       end
 
       context 'when a heavy stemcell is used' do
@@ -450,37 +448,6 @@ describe Bosh::AzureCloud::Cloud do
               environment
             )
           ).to eq(instance_id)
-        end
-      end
-
-      context 'when os type is windows' do
-        let(:vm_params) {
-          {
-            :name => 'fake-name'
-          }
-        }
-
-        before do
-          allow(stemcell_info).to receive(:is_windows?).
-            and_return(true)
-          allow(stemcell_manager2).to receive(:get_user_image_info).
-            and_return(stemcell_info)
-          allow(vm_manager).to receive(:create).and_return(vm_params)
-        end
-
-        it 'should regenerate instance_id' do
-          expect(registry).to receive(:update_settings)
-
-          expect(
-            managed_cloud.create_vm(
-              agent_id,
-              stemcell_id,
-              resource_pool,
-              networks_spec,
-              disk_locality,
-              environment
-            ).length
-          ).to eq(WINDOWS_VM_NAME_LENGTH)
         end
       end
     end
