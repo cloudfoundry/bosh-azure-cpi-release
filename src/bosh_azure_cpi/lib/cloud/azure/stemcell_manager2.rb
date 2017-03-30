@@ -88,7 +88,10 @@ module Bosh::AzureCloud
               @storage_account_manager.create_storage_account(storage_account_name, storage_account_type, location, STEMCELL_STORAGE_ACCOUNT_TAGS)
             end
           rescue => e
-            cloud_error("Failed to finish the creation of the storage account `#{storage_account_name}', `#{storage_account_type}' in location `#{location}' in 60 seconds.") if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+            if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+              cloud_error("Failed to finish the creation of the storage account `#{storage_account_name}', `#{storage_account_type}' in location `#{location}' in 60 seconds.")
+            end
+            raise e
           end
         else
           storage_account_name = storage_account[:name]
@@ -106,7 +109,10 @@ module Bosh::AzureCloud
             end
           end
         rescue => e
-          cloud_error("Failed to finish the copying process of the stemcell `#{stemcell_name}' from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}' in `#{BOSH_LOCK_COPY_STEMCELL_TIMEOUT}' seconds.") if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+          if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+            cloud_error("Failed to finish the copying process of the stemcell `#{stemcell_name}' from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}' in `#{BOSH_LOCK_COPY_STEMCELL_TIMEOUT}' seconds.")
+          end
+          raise e
         end
       end
 
