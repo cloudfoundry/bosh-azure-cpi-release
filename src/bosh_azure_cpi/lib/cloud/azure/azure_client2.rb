@@ -203,6 +203,9 @@ module Bosh::AzureCloud
         when 'windows'
           os_profile['adminUsername'] = vm_params[:windows_username]
           os_profile['adminPassword'] = vm_params[:windows_password]
+          os_profile['windowsConfiguration'] = {
+            'enableAutomaticUpdates' => false
+          }
         else
           raise ArgumentError, "Unsupported os type: #{vm_params[:os_type]}"
       end

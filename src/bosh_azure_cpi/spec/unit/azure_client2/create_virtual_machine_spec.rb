@@ -724,7 +724,10 @@ describe Bosh::AzureCloud::AzureClient2 do
                 :customData => "f",
                 :computerName => vm_name,
                 :adminUsername => "d",
-                :adminPassword => "e"
+                :adminPassword => "e",
+                :windowsConfiguration => {
+                  :enableAutomaticUpdates => false
+                }
               },
               :networkProfile => {
                 :networkInterfaces => [
