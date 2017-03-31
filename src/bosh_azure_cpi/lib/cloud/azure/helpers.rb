@@ -413,10 +413,7 @@ module Bosh::AzureCloud
         @name = @metadata['name']
         @version = @metadata['version']
         @disk_size = @metadata['disk'].nil? ? 3072 : @metadata['disk'].to_i
-
-        if @metadata.has_key?('image')
-          @image = @metadata['image'].kind_of?(Hash) ? @metadata['image'] : eval(@metadata['image'])
-        end
+        @image = @metadata['image']
       end
 
       def is_light_stemcell?

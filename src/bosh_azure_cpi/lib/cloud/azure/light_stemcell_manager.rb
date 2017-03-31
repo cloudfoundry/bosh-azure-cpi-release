@@ -25,7 +25,9 @@ module Bosh::AzureCloud
       cloud_error("Cannot find the light stemcell (#{stemcell_properties['image']}) in the location `#{@default_location}'") unless platform_image_exists?(@default_location, stemcell_properties)
 
       stemcell_name = "#{LIGHT_STEMCELL_PREFIX}-#{SecureRandom.uuid}"
-      @blob_manager.create_empty_page_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd", 1, stemcell_properties)
+      metadata = stemcell_properties.dup
+      metadata['image'] = JSON.dump(metadata['image'])
+      @blob_manager.create_empty_page_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd", 1, metadata)
       stemcell_name
     end
 
@@ -47,7 +49,11 @@ module Bosh::AzureCloud
     private
 
     def get_metadata(name)
-      @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
+      metadata = @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
+      return nil if metadata.nil?
+
+      metadata['image'] = JSON.parse(metadata['image'])
+      metadata
     end
 
     def platform_image_exists?(location, stemcell_properties)
