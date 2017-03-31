@@ -281,6 +281,12 @@ module Bosh::AzureCloud
           'imageReference' => vm_params[:image_reference],
           'osDisk'         => os_disk
         }
+
+        vm['plan'] = {
+          'name' => vm_params[:image_reference]['sku'],
+          'publisher' => vm_params[:image_reference]['publisher'],
+          'product' => vm_params[:image_reference]['offer']
+        }
       end
 
       unless vm_params[:ephemeral_disk].nil?

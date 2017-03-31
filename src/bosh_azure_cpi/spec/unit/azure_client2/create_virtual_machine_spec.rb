@@ -686,6 +686,147 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
       end
 
+      context "when image_reference is not nil" do
+        let(:image_reference) {
+          {
+            'publisher'    => 'p',
+            'offer'        => 'q',
+            'sku'          => 'r',
+            'version'      => 's'
+          }
+        }
+
+        let(:vm_params) {
+          {
+            :name           => vm_name,
+            :location       => "b",
+            :tags           => { "foo" => "bar"},
+            :vm_size        => "c",
+            :ssh_username   => "d",
+            :ssh_cert_data  => "e",
+            :custom_data    => "f",
+            :image_uri      => "g",
+            :os_disk        => {
+              :disk_name     => "h",
+              :disk_uri      => "i",
+              :disk_caching  => "j",
+              :disk_size     => "k",
+            },
+            :ephemeral_disk => {
+              :disk_name     => "l",
+              :disk_uri      => "m",
+              :disk_caching  => "n",
+              :disk_size     => "o",
+            },
+            :os_type        => "linux",
+            :managed        => false,     # true or false doen't matter in this case
+            :image_reference => image_reference
+          }
+        }
+
+        let(:request_body) {
+          {
+            :name     => vm_name,
+            :location => "b",
+            :type     => "Microsoft.Compute/virtualMachines",
+            :tags     => {
+              :foo => "bar"
+            },
+            :properties => {
+              :hardwareProfile => {
+                :vmSize => "c"
+              },
+              :osProfile => {
+                :customData => "f",
+                :computerName => vm_name,
+                :adminUsername => "d",
+                :linuxConfiguration => {
+                  :disablePasswordAuthentication => "true",
+                  :ssh => {
+                    :publicKeys => [
+                      {
+                        :path => "/home/d/.ssh/authorized_keys",
+                        :keyData => "e"
+                      }
+                    ]
+                  }
+                }
+              },
+              :networkProfile => {
+                :networkInterfaces => [
+                  {
+                    :id => "a",
+                    :properties => {
+                      :primary => true
+                    }
+                  },
+                  {
+                    :id => "b",
+                    :properties => {
+                      :primary => false
+                    }
+                  }
+                ]
+              },
+              :storageProfile => {
+                :imageReference => image_reference,
+                :osDisk => {
+                  :name => "h",
+                  :osType => "linux",
+                  :createOption => "FromImage",
+                  :caching => "j",
+                  :vhd => {
+                    :uri => "i"
+                  },
+                  :diskSizeGB => "k"
+                },
+                :dataDisks => [
+                  {
+                    :name => "l",
+                    :lun  => 0,
+                    :createOption => "Empty",
+                    :diskSizeGB => "o",
+                    :vhd => {
+                      :uri => "m"
+                    },
+                    :caching => "n"
+                  }
+                ]
+              }
+            },
+            :plan => {
+              :name => image_reference['sku'],
+              :publisher => image_reference['publisher'],
+              :product => image_reference['offer']
+            }
+          }
+        }
+
+        it "should raise no error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          }.not_to raise_error
+        end
+      end
+
       context "when os_type is windows" do
         let(:vm_params) do
           {
