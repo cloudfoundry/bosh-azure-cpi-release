@@ -49,6 +49,9 @@ module Bosh::AzureCloud
     REST_API_PROVIDER_STORAGE            = 'Microsoft.Storage'
     REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
 
+    # Please add the key into this list if you want to redact its value in request body.
+    CREDENTIAL_KEYWORD_LIST = ['adminPassword', 'client_secret']
+
     def initialize(azure_properties, logger)
       @logger = logger
 
@@ -1398,7 +1401,7 @@ module Bosh::AzureCloud
       request_body = storage_account.to_json
       request.body = request_body
       request['Content-Length'] = request_body.size
-      @logger.debug("create_storage_account - request body:\n#{request.body}")
+      @logger.debug("create_storage_account - request body:\n#{redact_credentials_in_request_body(storage_account)}")
 
       retry_after = 10
       response = http_get_response(uri, request, retry_after)
@@ -1683,10 +1686,18 @@ module Bosh::AzureCloud
     end
 
     def filter_credential_in_logs(uri)
-      if uri.request_uri.include?('/listKeys')
+      if !is_debug_mode(@azure_properties) && uri.request_uri.include?('/listKeys')
         return true
       end
       false
+    end
+
+    def redact_credentials(keys, hash)
+      Hash[hash.map { |k,v| [k, v.kind_of?(Hash) ? redact_credentials(keys, v) : (keys.include?(k) ? '<redacted>' : v) ] }]
+    end
+
+    def redact_credentials_in_request_body(body)
+      is_debug_mode(@azure_properties) ? body.to_json : redact_credentials(CREDENTIAL_KEYWORD_LIST, body).to_json
     end
 
     def http(uri)
@@ -1730,6 +1741,7 @@ module Bosh::AzureCloud
           request.body = URI.encode_www_form(params)
           @logger.debug("get_token - request.header:")
           request.each_header { |k,v| @logger.debug("\t#{k} = #{v}") }
+          @logger.debug("get_token - request body:\n#{redact_credentials_in_request_body(params)}")
 
           response = http(uri).request(request)
         rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET => e
@@ -1969,7 +1981,7 @@ module Bosh::AzureCloud
           request_body = body.to_json
           request.body = request_body
           request['Content-Length'] = request_body.size
-          @logger.debug("http_put - request body:\n#{request.body}")
+          @logger.debug("http_put - request body:\n#{redact_credentials_in_request_body(body)}")
         end
 
         response = http_get_response(uri, request, retry_after)
@@ -2002,7 +2014,7 @@ module Bosh::AzureCloud
           request_body = body.to_json
           request.body = request_body
           request['Content-Length'] = request_body.size
-          @logger.debug("http_patch - request body:\n#{request.body}")
+          @logger.debug("http_patch - request body:\n#{redact_credentials_in_request_body(body)}")
         end
 
         response = http_get_response(uri, request, retry_after)
@@ -2062,7 +2074,7 @@ module Bosh::AzureCloud
           request_body = body.to_json
           request.body = request_body
           request['Content-Length'] = request_body.size
-          @logger.debug("http_put - request body:\n#{request.body}")
+          @logger.debug("http_put - request body:\n#{redact_credentials_in_request_body(body)}")
         end
         response = http_get_response(uri, request, retry_after)
         options = {

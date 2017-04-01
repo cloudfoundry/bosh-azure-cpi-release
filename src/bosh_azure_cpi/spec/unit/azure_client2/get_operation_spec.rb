@@ -270,6 +270,8 @@ describe Bosh::AzureCloud::AzureClient2 do
     }
   }
 
+  let(:storage_account_name) { "fake-name" }
+
   before do
     stub_request(:post, token_uri).to_return(
       :status => 200,
@@ -423,7 +425,6 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe "#get_storage_account_by_name" do
-    let(:storage_account_name) { "foo" }
     let(:storage_account_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}?api-version=#{api_version}" }
 
     context "if get operation returns retryable error code (returns 429)" do
@@ -1103,6 +1104,87 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(
           azure_client2.get_network_security_group_by_name(resource_group_name, nsg_name)
         ).to eq(fake_nsg)
+      end
+    end
+  end
+
+  describe "#get_storage_account_keys_by_name" do
+    let(:storage_account_list_keys_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}/listKeys?api-version=#{api_version}" }
+    let(:storage_account_list_keys_response_body) {
+      {
+        "key1" => "fake-key-1",
+        "key2" => "fake-key-2"
+      }.to_json
+    }
+    let(:fake_keys) {
+      [
+        "fake-key-1",
+        "fake-key-2"
+      ]
+    }
+
+    context "when token is valid but cannot find the storage account" do
+      it "should return []" do
+        stub_request(:post, storage_account_list_keys_uri).to_return(
+          :status => 404,
+          :body => '',
+          :headers => {})
+
+        expect(
+          azure_client2.get_storage_account_keys_by_name(storage_account_name)
+        ).to eq([])
+      end
+    end
+
+    context "when token is valid, getting response succeeds" do
+      let(:logger_strio) { StringIO.new }
+
+      context "and debug_mode is set to false" do
+        let(:azure_client2) {
+          Bosh::AzureCloud::AzureClient2.new(
+            mock_cloud_options["properties"]["azure"],
+            Logger.new(logger_strio)
+          )
+        }
+
+        it "should return keys and filter keys in logs" do
+          stub_request(:post, storage_account_list_keys_uri).to_return(
+            :status => 200,
+            :body => storage_account_list_keys_response_body,
+            :headers => {})
+
+          expect(
+            azure_client2.get_storage_account_keys_by_name(storage_account_name)
+          ).to eq(fake_keys)
+
+          logs = logger_strio.string
+          expect(logs.include?('fake-key-1')).to be(false)
+          expect(logs.include?('fake-key-2')).to be(false)
+        end
+      end
+
+      context "and debug_mode is set to true" do
+        let(:azure_client2) {
+          Bosh::AzureCloud::AzureClient2.new(
+            mock_cloud_options["properties"]["azure"].merge({ 'debug_mode' => true }),
+            Logger.new(logger_strio)
+          )
+        }
+
+        it "should return keys and log keys" do
+          stub_request(:post, storage_account_list_keys_uri).to_return(
+            :status => 200,
+            :body => storage_account_list_keys_response_body,
+            :headers => {})
+
+          expect(
+            azure_client2.get_storage_account_keys_by_name(storage_account_name)
+          ).to eq(fake_keys)
+
+          logs = logger_strio.string
+          expect(logs.include?('fake-key-1')).to be(true)
+          expect(logs.include?('fake-key-2')).to be(true)
+        end
       end
     end
   end

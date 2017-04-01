@@ -13,7 +13,8 @@ module Bosh::AzureCloud
     end
 
     def create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-      @logger.info("create(#{instance_id}, #{location}, #{stemcell_info.inspect}, #{resource_pool}, #{network_configurator.inspect}, #{env})")
+      # network_configurator contains service principal in azure_properties so we must not log it.
+      @logger.info("create(#{instance_id}, #{location}, #{stemcell_info.inspect}, #{resource_pool}, ..., ...)")
 
       vm_size = resource_pool.fetch('instance_type', nil)
       cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?

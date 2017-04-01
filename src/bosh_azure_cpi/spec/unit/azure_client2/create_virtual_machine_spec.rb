@@ -828,6 +828,8 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
 
       context "when os_type is windows" do
+        let(:logger_strio) { StringIO.new }
+        let(:windows_password) { 'THISISWINDOWSCREDENTIAL' }
         let(:vm_params) do
           {
             :name               => vm_name,
@@ -835,7 +837,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :tags               => { "foo" => "bar"},
             :vm_size            => "c",
             :windows_username   => "d",
-            :windows_password   => "e",
+            :windows_password   => windows_password,
             :custom_data        => "f",
             :image_uri          => "g",
             :os_disk            => {
@@ -865,7 +867,7 @@ describe Bosh::AzureCloud::AzureClient2 do
                 :customData => "f",
                 :computerName => vm_name,
                 :adminUsername => "d",
-                :adminPassword => "e",
+                :adminPassword => windows_password,
                 :windowsConfiguration => {
                   :enableAutomaticUpdates => false
                 }
@@ -905,28 +907,80 @@ describe Bosh::AzureCloud::AzureClient2 do
           }
         }
 
-        it "should raise no error" do
-          stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
-            }.to_json,
-            :headers => {})
-          stub_request(:put, vm_uri).with(body: request_body).to_return(
-            :status => 200,
-            :body => '',
-            :headers => {
-              "azure-asyncoperation" => operation_status_link
-            })
-          stub_request(:get, operation_status_link).to_return(
-            :status => 200,
-            :body => '{"status":"Succeeded"}',
-            :headers => {})
+        context "redact credentials in logs" do
+          let(:azure_client2) {
+            Bosh::AzureCloud::AzureClient2.new(
+              mock_cloud_options["properties"]["azure"],
+              Logger.new(logger_strio)
+            )
+          }
 
-          expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
-          }.not_to raise_error
+          it "should raise no error" do
+            stub_request(:post, token_uri).to_return(
+              :status => 200,
+              :body => {
+                "access_token" => valid_access_token,
+                "expires_on" => expires_on
+              }.to_json,
+              :headers => {})
+            stub_request(:put, vm_uri).with(body: request_body).to_return(
+              :status => 200,
+              :body => '',
+              :headers => {
+                "azure-asyncoperation" => operation_status_link
+              })
+            stub_request(:get, operation_status_link).to_return(
+              :status => 200,
+              :body => '{"status":"Succeeded"}',
+              :headers => {})
+
+            expect {
+              azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            }.not_to raise_error
+
+            logs = logger_strio.string
+            expect(logs.include?(windows_password)).to be(false)
+            expect(logs.include?(MOCK_AZURE_CLIENT_SECRET)).to be(false)
+            expect(logs.scan('<redacted>').count).to eq(2)
+          end
+        end
+
+        context "do not redact credentials in logs" do
+          let(:azure_client2) {
+            Bosh::AzureCloud::AzureClient2.new(
+              mock_cloud_options["properties"]["azure"].merge({ 'debug_mode' => true }),
+              Logger.new(logger_strio)
+            )
+          }
+
+          it "should raise no error" do
+            stub_request(:post, token_uri).to_return(
+              :status => 200,
+              :body => {
+                "access_token" => valid_access_token,
+                "expires_on" => expires_on
+              }.to_json,
+              :headers => {})
+            stub_request(:put, vm_uri).with(body: request_body).to_return(
+              :status => 200,
+              :body => '',
+              :headers => {
+                "azure-asyncoperation" => operation_status_link
+              })
+            stub_request(:get, operation_status_link).to_return(
+              :status => 200,
+              :body => '{"status":"Succeeded"}',
+              :headers => {})
+
+            expect {
+              azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            }.not_to raise_error
+
+            logs = logger_strio.string
+            expect(logs.include?(windows_password)).to be(true)
+            expect(logs.include?(MOCK_AZURE_CLIENT_SECRET)).to be(true)
+            expect(logs.include?('<redacted>')).to be(false)
+          end
         end
       end
 
