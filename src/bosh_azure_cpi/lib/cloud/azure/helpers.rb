@@ -582,5 +582,12 @@ module Bosh::AzureCloud
         (prefix + suffix)[prefix.length + suffix.length - WINDOWS_VM_NAME_LENGTH, prefix.length + suffix.length]  # get tail
       end
     end
+
+    def validate_idle_timeout(idle_timeout_in_minutes)
+      raise ArgumentError, 'idle_timeout_in_minutes needs to be an integer' unless idle_timeout_in_minutes.kind_of?(Integer)
+
+      cloud_error('Minimum idle_timeout_in_minutes is 4 minutes') if idle_timeout_in_minutes < 4
+      cloud_error('Maximum idle_timeout_in_minutes is 30 minutes') if idle_timeout_in_minutes > 30
+    end
   end
 end

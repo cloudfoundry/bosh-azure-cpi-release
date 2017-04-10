@@ -489,6 +489,16 @@ describe Bosh::AzureCloud::Helpers do
         }.to raise_error "Azure CPI maximum disk size is 1023 GiB"
       end
     end
+
+    context "disk size is a correct value" do
+      let(:disk_size) { 30 * 1024 }
+
+      it "should not raise an error" do
+        expect {
+          helpers_tester.validate_disk_size(disk_size)
+        }.not_to raise_error
+      end
+    end
   end
 
   describe "#is_debug_mode" do
@@ -802,6 +812,48 @@ describe Bosh::AzureCloud::Helpers do
         computer_name = helpers_tester.generate_windows_computer_name
         expect(computer_name).to eq('5e883lv66u68000')
         expect(computer_name.length).to eq(WINDOWS_VM_NAME_LENGTH)
+      end
+    end
+  end
+
+  describe "#validate_idle_timeout" do
+    context "idle_timeout_in_minutes is not an integer" do
+      let(:idle_timeout_in_minutes) { "fake-idle-timeout" }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
+        }.to raise_error "idle_timeout_in_minutes needs to be an integer"
+      end
+    end
+
+    context "idle_timeout_in_minutes is smaller than 4 minutes" do
+      let(:idle_timeout_in_minutes) { 3 }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
+        }.to raise_error "Minimum idle_timeout_in_minutes is 4 minutes"
+      end
+    end
+
+    context "idle_timeout_in_minutes is larger than 30 minutes" do
+      let(:idle_timeout_in_minutes) { 31 }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
+        }.to raise_error "Maximum idle_timeout_in_minutes is 30 minutes"
+      end
+    end
+
+    context "idle_timeout_in_minutes is a correct value" do
+      let(:idle_timeout_in_minutes) { 20 }
+
+      it "should not raise an error" do
+        expect {
+          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
+        }.not_to raise_error
       end
     end
   end

@@ -1014,14 +1014,32 @@ describe Bosh::AzureCloud::VMManager do
               with(instance_id).and_return(dynamic_public_ip)
           end
 
-          it "creates a public IP and assigns it to the NIC" do
-            expect(client2).to receive(:create_public_ip).
-              with(instance_id, location, false)
-            expect(client2).to receive(:create_network_interface).
-              with(nic0_params, subnet, tags, load_balancer)
+          context "and idle_timeout_in_minutes is set" do
+            before do
+              resource_pool['idle_timeout_in_minutes'] = 20
+            end
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
+            it "creates a public IP and assigns it to the NIC" do
+              expect(client2).to receive(:create_public_ip).
+                with(instance_id, location, false, 20)
+              expect(client2).to receive(:create_network_interface).
+                with(nic0_params, subnet, tags, load_balancer)
+
+              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              expect(vm_params[:name]).to eq(instance_id)
+            end
+          end
+
+          context "and idle_timeout_in_minutes is not set" do
+            it "creates a public IP and assigns it to the NIC" do
+              expect(client2).to receive(:create_public_ip).
+                with(instance_id, location, false, 4)
+              expect(client2).to receive(:create_network_interface).
+                with(nic0_params, subnet, tags, load_balancer)
+
+              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              expect(vm_params[:name]).to eq(instance_id)
+            end
           end
         end
 

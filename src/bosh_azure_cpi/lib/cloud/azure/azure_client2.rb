@@ -943,21 +943,23 @@ module Bosh::AzureCloud
     # Network/Public IP
 
     # Create a public IP
-    # @param [String] name       - Name of public IP.
-    # @param [String] location   - Location where the public IP will be created.
-    # @param [Boolean] is_static - Whether the IP address is static or dynamic.
+    # @param [String] name                     - Name of public IP.
+    # @param [String] location                 - Location where the public IP will be created.
+    # @param [Boolean] is_static               - Whether the IP address is static or dynamic.
+    # @param [Integer] idle_timeout_in_minutes - Timeout for the TCP idle connection. The value can be set between 4 and 30 minutes.
     #
     # @return [Boolean]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/network/create-or-update-a-public-ip-address
     #
-    def create_public_ip(name, location, is_static = true)
+    def create_public_ip(name, location, is_static = true, idle_timeout_in_minutes = 4)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, name: name)
       public_ip = {
         'name'       => name,
         'location'   => location,
         'properties' => {
-          'publicIPAllocationMethod' => is_static ? 'Static' : 'Dynamic'
+          'publicIPAllocationMethod' => is_static ? 'Static' : 'Dynamic',
+          'idleTimeoutInMinutes'     => idle_timeout_in_minutes
         }
       }
       http_put(url, public_ip)
