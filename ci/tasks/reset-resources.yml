@@ -27,3 +27,5 @@ params:
   AZURE_BOSH_SECOND_SUBNET_NAME:              ""
   AZURE_CF_SUBNET_NAME:                       ""
   AZURE_CF_SECOND_SUBNET_NAME:                ""
+  AZURE_BOSH_EXTERNAL_LB_NAME:                ""
+  AZURE_BOSH_INTERNAL_LB_NAME:                ""

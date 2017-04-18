@@ -21,6 +21,8 @@ set -e
 : ${AZURE_BOSH_SECOND_SUBNET_NAME:?}
 : ${AZURE_CF_SUBNET_NAME:?}
 : ${AZURE_CF_SECOND_SUBNET_NAME:?}
+: ${AZURE_BOSH_EXTERNAL_LB_NAME:?}
+: ${AZURE_BOSH_INTERNAL_LB_NAME:?}
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
@@ -75,6 +77,12 @@ do
     },
     "secondSubnetNameForCloudFoundry": {
       "value": "${AZURE_CF_SECOND_SUBNET_NAME}"
+    },
+    "externalLoadBalancerName": {
+      "value": "${AZURE_BOSH_EXTERNAL_LB_NAME}"
+    },
+    "internalLoadBalancerName": {
+      "value": "${AZURE_BOSH_INTERNAL_LB_NAME}"
     }
   }
 EOF

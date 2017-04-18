@@ -23,6 +23,8 @@ function exit_if_error {
 : ${AZURE_BOSH_SECOND_SUBNET_NAME:?}
 : ${AZURE_CF_SUBNET_NAME:?}
 : ${AZURE_CF_SECOND_SUBNET_NAME:?}
+: ${AZURE_BOSH_EXTERNAL_LB_NAME:?}
+: ${AZURE_BOSH_INTERNAL_LB_NAME:?}
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
@@ -71,13 +73,24 @@ do
     fi
   done
   
-  public_ips="AzureCPICI-bosh AzureCPICI-cf-lifecycle AzureCPICI-cf-bats"
+  public_ips="AzureCPICI-bosh AzureCPICI-cf-lifecycle AzureCPICI-cf-bats AzureCPICI-elb"
   for public_ip in ${public_ips}
   do
     echo "azure network public-ip show --resource-group ${resource_group_name} --name ${public_ip} --json | jq '.name' -r"
     public_ip_actual=$(azure network public-ip show --resource-group ${resource_group_name} --name ${public_ip} --json | jq '.name' -r)
     if [ "${public_ip_actual}" != "${public_ip}" ]; then
       echo "The task failed because the public IP ${public_ip} does not exist in resource group ${resource_group_name}"
+      exit_if_error
+    fi
+  done
+
+  load_balancers="${AZURE_BOSH_EXTERNAL_LB_NAME} ${AZURE_BOSH_INTERNAL_LB_NAME}"
+  for load_balancer in ${load_balancers}
+  do
+    echo "azure network lb show --resource-group ${resource_group_name} --name ${load_balancer} --json | jq '.name' -r"
+    load_balancer_actual=$(azure network lb show --resource-group ${resource_group_name} --name ${load_balancer} --json | jq '.name' -r)
+    if [ "${load_balancer_actual}" != "${load_balancer}" ]; then
+      echo "The task failed because the load balancer ${load_balancer} does not exist in resource group ${resource_group_name}"
       exit_if_error
     fi
   done
@@ -144,13 +157,6 @@ do
   do
     echo "azure managed-snapshot delete --resource-group ${resource_group_name} --name ${snapshot}"
     azure managed-snapshot delete --resource-group ${resource_group_name} --name ${snapshot}
-  done
-
-  lbs=$(azure network lb list --resource-group ${resource_group_name} --json | jq '.[].name' -r)
-  for lb in ${lbs}
-  do
-    echo "azure network lb delete --resource-group ${resource_group_name} --name ${lb}"
-    azure network lb delete --resource-group ${resource_group_name} --name ${lb} --quiet
   done
 
   availsets=$(azure availset list --resource-group ${resource_group_name} --json | jq '.[].name' -r)

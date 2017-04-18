@@ -39,6 +39,8 @@ jobs:
       AZURE_BOSH_SECOND_SUBNET_NAME:              {{azure_bosh_second_subnet_name}}
       AZURE_CF_SUBNET_NAME:                       {{azure_cf_subnet_name}}
       AZURE_CF_SECOND_SUBNET_NAME:                {{azure_cf_second_subnet_name}}
+      AZURE_BOSH_EXTERNAL_LB_NAME:                {{azure_bosh_external_lb_name}}
+      AZURE_BOSH_INTERNAL_LB_NAME:                {{azure_bosh_internal_lb_name}}
 
 - name: reset-resources
   serial: true
@@ -65,6 +67,8 @@ jobs:
       AZURE_BOSH_SECOND_SUBNET_NAME:              {{azure_bosh_second_subnet_name}}
       AZURE_CF_SUBNET_NAME:                       {{azure_cf_subnet_name}}
       AZURE_CF_SECOND_SUBNET_NAME:                {{azure_cf_second_subnet_name}}
+      AZURE_BOSH_EXTERNAL_LB_NAME:                {{azure_bosh_external_lb_name}}
+      AZURE_BOSH_INTERNAL_LB_NAME:                {{azure_bosh_internal_lb_name}}
 
 - name: build-candidate
   serial: true
@@ -106,6 +110,8 @@ jobs:
       AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
       AZURE_USE_MANAGED_DISKS:        false
       SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+      AZURE_BOSH_EXTERNAL_LB_NAME:    {{azure_bosh_external_lb_name}}
+      AZURE_BOSH_INTERNAL_LB_NAME:    {{azure_bosh_internal_lb_name}}
 
 - name: bats-ubuntu-unmanaged-disks
   serial: true
@@ -201,6 +207,8 @@ jobs:
       AZURE_DEFAULT_SECURITY_GROUP:  {{azure_default_security_group}}
       AZURE_USE_MANAGED_DISKS:       true
       SSH_PUBLIC_KEY:                {{ssh_public_key}}
+      AZURE_BOSH_EXTERNAL_LB_NAME:   {{azure_bosh_external_lb_name}}
+      AZURE_BOSH_INTERNAL_LB_NAME:   {{azure_bosh_internal_lb_name}}
 
 - name: bats-ubuntu-managed-disks
   serial: true
