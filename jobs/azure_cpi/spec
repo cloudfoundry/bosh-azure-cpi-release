@@ -41,6 +41,9 @@ properties:
   azure.use_managed_disks:
     description: Enable managed disks
     default: false
+  azure.pip_idle_timeout_in_minutes:
+    description: Idle timeouts in minutes for dynamic public IPs
+    default: 4
   azure.azure_stack.domain:
     description: The domain for your AzureStack deployment
     default: local.azurestack.external

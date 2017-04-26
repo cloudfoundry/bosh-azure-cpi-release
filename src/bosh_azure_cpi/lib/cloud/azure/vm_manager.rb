@@ -261,7 +261,7 @@ module Bosh::AzureCloud
       public_ip = get_public_ip(network_configurator.vip_network)
       if public_ip.nil? && resource_pool['assign_dynamic_public_ip'] == true
         # create dynamic public ip
-        idle_timeout_in_minutes = resource_pool.fetch('idle_timeout_in_minutes', 4)
+        idle_timeout_in_minutes = @azure_properties.fetch('pip_idle_timeout_in_minutes', 4)
         validate_idle_timeout(idle_timeout_in_minutes)
         @azure_client2.create_public_ip(instance_id, location, false, idle_timeout_in_minutes)
         public_ip = @azure_client2.get_public_ip_by_name(instance_id)

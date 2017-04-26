@@ -56,19 +56,20 @@ describe 'cpi.json.erb' do
         'plugin'=>'azure',
         'properties'=> {
           'azure'=>{
-            'environment'                => 'AzureCloud',
-            'subscription_id'            => 'fake-subscription-id',
-            'tenant_id'                  => 'fake-tenant-id',
-            'client_id'                  => 'fake-client-id',
-            'client_secret'              => 'fake-client-secret',
-            'resource_group_name'        => 'fake-resource-group-name',
-            'storage_account_name'       => 'fake-storage-account-name',
-            'ssh_user'                   => 'vcap',
-            'ssh_public_key'             => 'ssh-rsa ABCDEFGHIJKLMN',
-            'default_security_group'     => 'fake-default-security-group',
-            'parallel_upload_thread_num' => 16,
-            'debug_mode'                 => false,
-            'use_managed_disks'          => false
+            'environment'                 => 'AzureCloud',
+            'subscription_id'             => 'fake-subscription-id',
+            'tenant_id'                   => 'fake-tenant-id',
+            'client_id'                   => 'fake-client-id',
+            'client_secret'               => 'fake-client-secret',
+            'resource_group_name'         => 'fake-resource-group-name',
+            'storage_account_name'        => 'fake-storage-account-name',
+            'ssh_user'                    => 'vcap',
+            'ssh_public_key'              => 'ssh-rsa ABCDEFGHIJKLMN',
+            'default_security_group'      => 'fake-default-security-group',
+            'parallel_upload_thread_num'  => 16,
+            'debug_mode'                  => false,
+            'use_managed_disks'           => false,
+            'pip_idle_timeout_in_minutes' => 4
           },
           'registry'=>{
             'address'=>'registry-host.example.com',
@@ -109,6 +110,16 @@ describe 'cpi.json.erb' do
 
       it 'is able to render use_managed_disks to true' do
         expect(subject['cloud']['properties']['azure']['use_managed_disks']).to be(true)
+      end
+    end
+
+    context 'when pip_idle_timeout_in_minutes is set to 20' do
+      before do
+        manifest['properties']['azure']['pip_idle_timeout_in_minutes'] = 20
+      end
+
+      it 'is able to render pip_idle_timeout_in_minutes to 20' do
+        expect(subject['cloud']['properties']['azure']['pip_idle_timeout_in_minutes']).to be(20)
       end
     end
 
