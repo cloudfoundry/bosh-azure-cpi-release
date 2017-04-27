@@ -9,6 +9,14 @@ module Bosh::AzureCloud
   class AzureConflictError < AzureError; end
   class AzureInternalError < AzureError; end
   class AzureAsynInternalError < AzureError; end
+  class AzureAsynchronousError < AzureError
+    attr_accessor :status, :error
+
+    def initialize(status = nil, error = nil)
+      @status = status
+      @error = error
+    end
+  end
 
   class AzureClient2
     include Helpers
@@ -1405,35 +1413,61 @@ module Bosh::AzureCloud
       request['Content-Length'] = request_body.size
       @logger.debug("create_storage_account - request body:\n#{redact_credentials_in_request_body(storage_account)}")
 
-      retry_after = 10
-      response = http_get_response(uri, request, retry_after)
-      if response.code.to_i == HTTP_CODE_OK
-        return true
-      elsif response.code.to_i != HTTP_CODE_ACCEPTED
-        raise AzureError, "create_storage_account - Cannot create the storage account \"#{name}\". http code: #{response.code}. Error message: #{response.body}"
-      end
-
-      @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
-      uri = URI(response['Location'])
-      api_version = get_api_version(@azure_properties, AZURE_RESOURCE_PROVIDER_STORAGE)
-      request = Net::HTTP::Get.new(uri.request_uri)
-      request.add_field('x-ms-version', api_version)
-      while true
-        retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
-        sleep(retry_after)
-
-        @logger.debug("create_storage_account - trying to get the status of asynchronous operation: #{uri}")
-        response = http_get_response(uri, request, retry_after, true)
-
-        status_code = response.code.to_i
-        if status_code == HTTP_CODE_OK
+      retry_count = 0
+      begin
+        retry_after = 10
+        response = http_get_response(uri, request, retry_after)
+        if response.code.to_i == HTTP_CODE_OK
           return true
-        elsif status_code == HTTP_CODE_INTERNALSERVERERROR
-          error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
-          @logger.warn(error)
-        elsif status_code != HTTP_CODE_ACCEPTED
-          raise AzureError, "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
+        elsif response.code.to_i != HTTP_CODE_ACCEPTED
+          raise AzureError, "create_storage_account - Cannot create the storage account \"#{name}\". http code: #{response.code}. Error message: #{response.body}"
         end
+
+        @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
+        uri = URI(response['Location'])
+        api_version = get_api_version(@azure_properties, AZURE_RESOURCE_PROVIDER_STORAGE)
+        request = Net::HTTP::Get.new(uri.request_uri)
+        request.add_field('x-ms-version', api_version)
+        while true
+          retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
+          sleep(retry_after)
+
+          @logger.debug("create_storage_account - trying to get the status of asynchronous operation: #{uri}")
+          response = http_get_response(uri, request, retry_after)
+
+          status_code = response.code.to_i
+          if status_code == HTTP_CODE_OK
+            # Need to check status in response body for asynchronous operation even if status_code is HTTP_CODE_OK.
+            # Ignore exception if the body of the response is not JSON format
+            ignore_exception do
+              result = JSON(response.body)
+              if result['status'] == PROVISIONING_STATE_FAILED
+                error = "create_storage_account - http code: #{response.code}\n"
+                error += get_http_common_headers(response)
+                error += "Error message: #{response.body}"
+                if response.key?('Retry-After')
+                  retry_after = response['Retry-After'].to_i
+                  @logger.warn("create_storage_account - Fail for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
+                  sleep(retry_after)
+                  raise AzureAsynInternalError, error
+                end
+                raise AzureAsynchronousError.new(result['status'], result['error']), error
+              end
+            end
+            return true
+          elsif status_code == HTTP_CODE_INTERNALSERVERERROR
+            error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
+            @logger.warn(error)
+          elsif status_code != HTTP_CODE_ACCEPTED
+            raise AzureAsynchronousError.new(nil, "create_storage_account - http code: #{response.code}. Error message: #{response.body}")
+          end
+        end
+      rescue AzureAsynInternalError => e
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          retry_count += 1
+          retry
+        end
+        raise e
       end
     end
 
@@ -1808,7 +1842,7 @@ module Bosh::AzureCloud
       uri
     end
 
-    def http_get_response(uri, request, retry_after, is_async = false)
+    def http_get_response(uri, request, retry_after)
       response = nil
       refresh_token = false
       retry_count = 0
@@ -1838,17 +1872,7 @@ module Bosh::AzureCloud
           raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid. Error message: #{response.body}"
         end
         refresh_token = false
-        if status_code == HTTP_CODE_OK && is_async
-          # Need to check status in response body for asynchronous operation even if status_code is HTTP_CODE_OK.
-          result = JSON(response.body)
-          if result['status'] == 'Failed'
-            error = "http_get_response - http code: #{response.code}\n"
-            error += get_http_common_headers(response)
-            error += "Error message: #{response.body}"
-            raise AzureAsynInternalError, error if response.key?('Retry-After')
-            raise AzureError, error
-          end
-        elsif AZURE_RETRY_ERROR_CODES.include?(status_code)
+        if AZURE_RETRY_ERROR_CODES.include?(status_code)
           error = "http_get_response - http code: #{response.code}\n"
           error += get_http_common_headers(response)
           error += "Error message: #{response.body}"
@@ -1859,10 +1883,6 @@ module Bosh::AzureCloud
           refresh_token = true
           retry
         end
-        raise e
-      rescue AzureAsynInternalError => e
-        @logger.warn("http_get_response - Fail for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
-        sleep(retry_after)
         raise e
       rescue AzureInternalError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET => e
         if retry_count < AZURE_MAX_RETRY_COUNT
@@ -1919,34 +1939,42 @@ module Bosh::AzureCloud
       request = Net::HTTP::Get.new(uri.request_uri)
       uri.query = URI.encode_www_form(params)
       request.add_field('x-ms-version', options[:api_version])
+
       while true
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         sleep(retry_after)
 
         @logger.debug("check_completion - trying to get the status of asynchronous operation: #{uri}")
-        response = http_get_response(uri, request, retry_after, true)
+        response = http_get_response(uri, request, retry_after)
         status_code = response.code.to_i
         if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
-          raise AzureError, "check_completion - http code: #{response.code}. Error message: #{response.body}"
+          raise AzureAsynchronousError.new(nil, "check_completion - http code: #{response.code}. Error message: #{response.body}")
         end
 
-        unless response.body.nil?
-          ret = JSON(response.body)
-          unless ret['status'].nil?
-            if ret['status'] != PROVISIONING_STATE_INPROGRESS
-              if ret['status'] == PROVISIONING_STATE_SUCCEEDED
-                return true
-              else
-                error = "status: #{ret['status']}\n"
-                error += "http code: #{status_code}\n"
-                error += get_http_common_headers(response)
-                error += "error:\n#{ret['error']}"
-                raise AzureError, error
-              end
-            else
-              @logger.debug("check_completion - InProgress...")
-            end
+        raise AzureAsynchronousError.new(nil, 'The body of the asynchronous response is empty') if response.body.nil?
+        result = JSON(response.body)
+        if result['status'].nil?
+          raise AzureAsynchronousError.new(nil, "The body of the asynchronous response does not contain `status'. Response: #{response.body}")
+        end
+
+        status = result['status']
+        if status == PROVISIONING_STATE_SUCCEEDED
+          return true
+        elsif status == PROVISIONING_STATE_INPROGRESS
+          @logger.debug("check_completion - InProgress...")
+        else
+          error = "check_completion - http code: #{response.code}\n"
+          error += get_http_common_headers(response)
+          error += "Error message: #{response.body}"
+
+          if status == PROVISIONING_STATE_FAILED && status_code == HTTP_CODE_OK && response.key?('Retry-After')
+            retry_after = response['Retry-After'].to_i
+            @logger.warn("check_completion - #{options[:operation]} fails for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
+            sleep(retry_after)
+            raise AzureAsynInternalError, error
           end
+
+          raise AzureAsynchronousError.new(status, error)
         end
       end
     end

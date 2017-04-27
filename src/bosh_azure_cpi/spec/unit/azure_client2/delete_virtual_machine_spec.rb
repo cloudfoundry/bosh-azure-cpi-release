@@ -158,6 +158,90 @@ describe Bosh::AzureCloud::AzureClient2 do
           }.not_to raise_error
         end
 
+        it "should retry and succeed if operation status is Failed with 'Retry-After' in the header at first and Succeeded finally" do
+          stub_request(:delete, vm_uri).to_return(
+            :status => 202,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            {
+              :status => 200,
+              :body => '{"status":"Failed"}',
+              :headers => { 'Retry-After' => '1' }
+            },
+            {
+              :status => 200,
+              :body => '{"status":"Succeeded"}',
+              :headers => {}
+            }
+          )
+
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.not_to raise_error
+        end
+
+        it "should not retry and raise an error if operation status is Failed without 'Retry-After' in the header" do
+          stub_request(:delete, vm_uri).to_return(
+            :status => 202,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            {
+              :status => 200,
+              :body => '{"status":"Failed"}',
+              :headers => {}
+            }
+          )
+
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.to raise_error { |error| expect(error.status).to eq('Failed') }
+        end
+
+        it "should raise an error if the body of the asynchronous response is empty" do
+          stub_request(:delete, vm_uri).to_return(
+            :status => 202,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            {
+              :status => 200,
+              :headers => {}
+            }
+          )
+
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.to raise_error { |error| expect(error.error).to match(/The body of the asynchronous response is empty/) }
+        end
+
+        it "should raise an error if the body of the asynchronous response does not contain 'status'" do
+          stub_request(:delete, vm_uri).to_return(
+            :status => 202,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            {
+              :status => 200,
+              :body => '{}',
+              :headers => {}
+            }
+          )
+
+          expect {
+            azure_client2.delete_virtual_machine(vm_name)
+          }.to raise_error { |error| expect(error.error).to match(/The body of the asynchronous response does not contain `status'/) }
+        end
+
         it "should raise an error if check completion operation is not accepeted" do
           stub_request(:delete, vm_uri).to_return(
             :status => 202,
@@ -172,7 +256,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
           expect {
             azure_client2.delete_virtual_machine(vm_name)
-          }.to raise_error /check_completion - http code: 404/
+          }.to raise_error { |error| expect(error.error).to match(/check_completion - http code: 404/) }
         end
 
         it "should raise an error if create peration failed" do
@@ -189,7 +273,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
           expect {
             azure_client2.delete_virtual_machine(vm_name)
-          }.to raise_error /status: Cancelled/
+          }.to raise_error { |error| expect(error.status).to eq('Cancelled') }
         end
       end
     end

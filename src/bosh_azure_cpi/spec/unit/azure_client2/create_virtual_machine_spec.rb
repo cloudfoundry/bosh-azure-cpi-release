@@ -1308,7 +1308,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.create_virtual_machine(vm_params, network_interfaces)
-        }.to raise_error /check_completion - http code: 404/
+        }.to raise_error { |error| expect(error.error).to match(/check_completion - http code: 404/) }
       end
 
       it "should raise an error if create operation failed" do
@@ -1332,7 +1332,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect {
           azure_client2.create_virtual_machine(vm_params, network_interfaces)
-        }.to raise_error /status: Cancelled/
+        }.to raise_error { |error| expect(error.status).to eq('Cancelled') }
       end
     end
 

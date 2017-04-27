@@ -4,6 +4,7 @@ describe Bosh::AzureCloud::VMManager do
   let(:instance_id) { "#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}-e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
   let(:managed_instance_id) { "e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
   let(:storage_account_name) { MOCK_DEFAULT_STORAGE_ACCOUNT_NAME }
+  let(:os_disk_name) { "fake-os-disk-name" }
   let(:ephemeral_disk_name) { "fake-ephemeral-disk-name" }
   let(:location) { "fake-location" }
   let(:vip_network) { instance_double(Bosh::AzureCloud::VipNetwork) }
@@ -72,11 +73,26 @@ describe Bosh::AzureCloud::VMManager do
         :disk_caching => "fake-disk-caching"
       }
     }
+    let(:ephemeral_disk) {
+      {
+        :disk_name    => 'fake-disk-name',
+        :disk_uri     => 'fake-disk-uri',
+        :disk_size    => 'fake-disk-size',
+        :disk_caching => 'fake-disk-caching'
+      }
+    }
     let(:os_disk_managed) {
       {
-        :disk_name    => "fake-disk-name",
-        :disk_size    => "fake-disk-size",
-        :disk_caching => "fake-disk-caching"
+        :disk_name    => 'fake-disk-name',
+        :disk_size    => 'fake-disk-size',
+        :disk_caching => 'fake-disk-caching'
+      }
+    }
+    let(:ephemeral_disk_managed) {
+      {
+        :disk_name    => 'fake-disk-name',
+        :disk_size    => 'fake-disk-size',
+        :disk_caching => 'fake-disk-caching'
       }
     }
     let(:load_balancer) {
@@ -149,19 +165,27 @@ describe Bosh::AzureCloud::VMManager do
 
       allow(disk_manager).to receive(:delete_disk).
         and_return(nil)
+      allow(disk_manager).to receive(:generate_os_disk_name).
+        and_return(os_disk_name)
       allow(disk_manager).to receive(:generate_ephemeral_disk_name).
         and_return(ephemeral_disk_name)
       allow(disk_manager).to receive(:resource_pool=)
       allow(disk_manager).to receive(:os_disk).
         and_return(os_disk)
       allow(disk_manager).to receive(:ephemeral_disk).
+        and_return(ephemeral_disk)
+      allow(disk_manager).to receive(:delete_vm_status_files).
         and_return(nil)
 
       allow(disk_manager2).to receive(:resource_pool=)
       allow(disk_manager2).to receive(:os_disk).
         and_return(os_disk_managed)
       allow(disk_manager2).to receive(:ephemeral_disk).
-        and_return(nil)
+        and_return(ephemeral_disk_managed)
+      allow(disk_manager2).to receive(:generate_os_disk_name).
+        and_return(os_disk_name)
+      allow(disk_manager2).to receive(:generate_ephemeral_disk_name).
+        and_return(ephemeral_disk_name)
     end
 
     context "when instance_type is not provided" do
@@ -410,7 +434,7 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         it "should delete the (possible) existing network interface and raise an error" do
-          expect(client2).to receive(:delete_network_interface).exactly(1).times
+          expect(client2).to receive(:delete_network_interface).once
           expect {
             vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
           }.to raise_error /network interface is not created/
@@ -473,7 +497,7 @@ describe Bosh::AzureCloud::VMManager do
       it "should delete nics and then raise an error" do
         expect(client2).not_to receive(:delete_virtual_machine)
 
-        expect(client2).to receive(:delete_network_interface).exactly(2).times
+        expect(client2).to receive(:delete_network_interface).twice
         expect {
           vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
         }.to raise_error /availability set is not created/
@@ -529,8 +553,6 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_storage_account_by_name).
           and_return(storage_account)
 
-        allow(disk_manager).to receive(:generate_os_disk_name).
-          and_return("fake-os-disk-name")
         allow(network_configurator).to receive(:default_dns).
           and_return("fake-dns")
         allow(disk_manager).to receive(:get_disk_uri).
@@ -538,19 +560,174 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context "when VM is not created" do
-        before do
-          allow(client2).to receive(:create_virtual_machine).
-            and_raise("virtual machine is not created")
+        context " and client2.create_virtual_machine raises an normal error" do
+          context " and no more error occurs" do
+            before do
+              allow(client2).to receive(:create_virtual_machine).
+                and_raise('virtual machine is not created')
+            end
+
+            it "should delete vm and nics and then raise an error" do
+              expect(client2).to receive(:delete_virtual_machine).once
+              expect(disk_manager).to receive(:delete_disk).with(os_disk_name).once
+              expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name).once
+              expect(disk_manager).to receive(:delete_vm_status_files).
+                with(storage_account_name, instance_id).once
+              expect(client2).to receive(:delete_network_interface).twice
+
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.to raise_error /virtual machine is not created/
+            end
+          end
+
+          context "and an error occurs when deleting nic" do
+            before do
+              allow(client2).to receive(:create_virtual_machine).
+                and_raise('virtual machine is not created')
+              allow(client2).to receive(:delete_network_interface).
+                and_raise('cannot delete nic')
+            end
+
+            it "should delete vm and nics and then raise an error" do
+              expect(client2).to receive(:delete_virtual_machine).once
+              expect(disk_manager).to receive(:delete_disk).with(os_disk_name).once
+              expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name).once
+              expect(disk_manager).to receive(:delete_vm_status_files).
+                with(storage_account_name, instance_id).once
+              expect(client2).to receive(:delete_network_interface).once
+
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.to raise_error /cannot delete nic/
+            end
+          end
         end
 
-        it "should delete vm and nics and then raise an error" do
+        context " and client2.create_virtual_machine raises an AzureAsynchronousError" do
+          context " and AzureAsynchronousError.status is not Failed" do
+            before do
+              allow(client2).to receive(:create_virtual_machine).
+                and_raise(Bosh::AzureCloud::AzureAsynchronousError)
+            end
 
-          expect(client2).to receive(:delete_virtual_machine)
-          expect(client2).to receive(:delete_network_interface).exactly(2).times
+            it "should delete vm and nics and then raise an error" do
+              expect(client2).to receive(:delete_virtual_machine).once
+              expect(disk_manager).to receive(:delete_disk).with(os_disk_name).once
+              expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name).once
+              expect(disk_manager).to receive(:delete_vm_status_files).
+                with(storage_account_name, instance_id).once
+              expect(client2).to receive(:delete_network_interface).twice
 
-          expect {
-            vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-          }.to raise_error /virtual machine is not created/
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.to raise_error
+            end
+          end
+
+          context " and AzureAsynchronousError.status is Failed" do
+            before do
+              allow(client2).to receive(:create_virtual_machine).
+                and_raise(Bosh::AzureCloud::AzureAsynchronousError.new('Failed'))
+            end
+
+            context " and use_managed_disks is false" do
+              context " and ephemeral_disk does not exist" do
+                before do
+                  allow(disk_manager).to receive(:ephemeral_disk).
+                    and_return(nil)
+                end
+
+                it "should not delete vm and then raise an error" do
+                  expect(client2).to receive(:create_virtual_machine).exactly(3).times
+                  expect(client2).to receive(:delete_virtual_machine).twice
+                  expect(disk_manager).to receive(:delete_disk).with(os_disk_name).twice
+                  expect(disk_manager).to receive(:delete_vm_status_files).
+                    with(storage_account_name, instance_id).twice
+                  expect(disk_manager).not_to receive(:delete_disk).with(ephemeral_disk_name)
+                  expect(client2).not_to receive(:delete_network_interface)
+
+                  expect {
+                    vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  }.to raise_error
+                end
+              end
+
+              context " and ephemeral_disk exists" do
+                context " and no more error occurs" do
+                  it "should not delete vm and then raise an error" do
+                    expect(client2).to receive(:create_virtual_machine).exactly(3).times
+                    expect(client2).to receive(:delete_virtual_machine).twice
+                    expect(disk_manager).to receive(:delete_disk).with(os_disk_name).twice
+                    expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name).twice
+                    expect(disk_manager).to receive(:delete_vm_status_files).
+                      with(storage_account_name, instance_id).twice
+                    expect(client2).not_to receive(:delete_network_interface)
+
+                    expect {
+                      vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                    }.to raise_error
+                  end
+                end
+
+                context "and an error occurs when deleting vm" do
+                  before do
+                    allow(client2).to receive(:delete_virtual_machine).
+                      and_raise('cannot delete the vm')
+                  end
+
+                  it "should not delete vm and then raise an error" do
+                    expect(client2).to receive(:create_virtual_machine).once
+                    expect(client2).to receive(:delete_virtual_machine).once
+                    expect(disk_manager).not_to receive(:delete_disk).with(os_disk_name)
+                    expect(disk_manager).not_to receive(:delete_disk).with(ephemeral_disk_name)
+                    expect(disk_manager).not_to receive(:delete_vm_status_files).
+                      with(storage_account_name, instance_id)
+                    expect(client2).not_to receive(:delete_network_interface)
+
+                    expect {
+                      vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                    }.to raise_error /cannot delete the vm/
+                  end
+                end
+              end
+            end
+
+            context " and use_managed_disks is true" do
+              context " and ephemeral_disk does not exist" do
+                before do
+                  allow(disk_manager2).to receive(:ephemeral_disk).
+                    and_return(nil)
+                end
+
+                it "should not delete vm and then raise an error" do
+                  expect(client2).to receive(:create_virtual_machine).exactly(3).times
+                  expect(client2).to receive(:delete_virtual_machine).twice
+                  expect(disk_manager2).to receive(:delete_disk).with(os_disk_name).twice
+                  expect(disk_manager2).not_to receive(:delete_disk).with(ephemeral_disk_name)
+                  expect(client2).not_to receive(:delete_network_interface)
+
+                  expect {
+                    vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  }.to raise_error
+                end
+              end
+
+              context " and ephemeral_disk exists" do
+                it "should not delete vm and then raise an error" do
+                  expect(client2).to receive(:create_virtual_machine).exactly(3).times
+                  expect(client2).to receive(:delete_virtual_machine).twice
+                  expect(disk_manager2).to receive(:delete_disk).with(os_disk_name).twice
+                  expect(disk_manager2).to receive(:delete_disk).with(ephemeral_disk_name).twice
+                  expect(client2).not_to receive(:delete_network_interface)
+
+                  expect {
+                    vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  }.to raise_error
+                end
+              end
+            end
+          end
         end
       end
 
@@ -588,7 +765,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              expect(client2).to receive(:create_network_interface).exactly(2).times
+              expect(client2).to receive(:create_network_interface).twice
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
               expect(vm_params[:image_uri]).to eq(stemcell_uri)
@@ -617,7 +794,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              expect(client2).to receive(:create_network_interface).exactly(2).times
+              expect(client2).to receive(:create_network_interface).twice
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
               expect(vm_params[:os_type]).to eq(os_type)
@@ -640,7 +817,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
 
-            expect(client2).to receive(:create_network_interface).exactly(2).times
+            expect(client2).to receive(:create_network_interface).twice
             vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
@@ -674,7 +851,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              expect(client2).to receive(:create_network_interface).exactly(2).times
+              expect(client2).to receive(:create_network_interface).twice
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
@@ -702,7 +879,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              expect(client2).to receive(:create_network_interface).exactly(2).times
+              expect(client2).to receive(:create_network_interface).twice
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
@@ -719,7 +896,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              expect(client2).to receive(:create_network_interface).exactly(2).times
+              expect(client2).to receive(:create_network_interface).twice
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
@@ -762,7 +939,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
             expect(client2).to receive(:create_availability_set)
 
-            expect(client2).to receive(:create_network_interface).exactly(2).times
+            expect(client2).to receive(:create_network_interface).twice
             vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
@@ -799,7 +976,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:create_availability_set).
               with(avset_params)
 
-            expect(client2).to receive(:create_network_interface).exactly(2).times
+            expect(client2).to receive(:create_network_interface).twice
             vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
@@ -841,7 +1018,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_availability_set).
                 with(avset_params)
 
-              expect(client2).to receive(:create_network_interface).exactly(2).times
+              expect(client2).to receive(:create_network_interface).twice
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
@@ -881,7 +1058,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).to receive(:create_availability_set).
                   with(avset_params)
 
-                expect(client2).to receive(:create_network_interface).exactly(2).times
+                expect(client2).to receive(:create_network_interface).twice
                 vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
                 expect(vm_params[:name]).to eq(instance_id)
               end
@@ -905,7 +1082,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).to receive(:create_availability_set).
                   with(avset_params)
 
-                expect(client2).to receive(:create_network_interface).exactly(2).times
+                expect(client2).to receive(:create_network_interface).twice
                 vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
                 expect(vm_params[:name]).to eq(instance_id)
               end
@@ -942,7 +1119,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:create_availability_set).
               with(avset_params)
 
-            expect(client2).to receive(:create_network_interface).exactly(2).times
+            expect(client2).to receive(:create_network_interface).twice
             vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
           end
@@ -985,7 +1162,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it "should update the managed property of the availability set" do
             expect(client2).to receive(:create_availability_set).with(avset_params)
-            expect(client2).to receive(:create_network_interface).exactly(2).times
+            expect(client2).to receive(:create_network_interface).twice
 
             vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(instance_id)
@@ -1070,12 +1247,8 @@ describe Bosh::AzureCloud::VMManager do
                 :ssh_username        => azure_properties_managed['ssh_user'],
                 :ssh_cert_data       => azure_properties_managed['ssh_public_key'],
                 :custom_data         => Base64.strict_encode64(JSON.dump(user_data)),
-                :os_disk             => {
-                  :disk_name    => "fake-disk-name",
-                  :disk_size    => "fake-disk-size",
-                  :disk_caching => "fake-disk-caching"
-                },
-                :ephemeral_disk      => nil,
+                :os_disk             => os_disk_managed,
+                :ephemeral_disk      => ephemeral_disk_managed,
                 :os_type             => "linux",
                 :managed             => true,
                 :image_id            => "fake-uri"
@@ -1116,12 +1289,8 @@ describe Bosh::AzureCloud::VMManager do
                 :windows_username    => uuid.delete('-')[0,20],
                 :windows_password    => 'fake-array',
                 :custom_data         => Base64.strict_encode64(JSON.dump(user_data)),
-                :os_disk             => {
-                  :disk_name    => "fake-disk-name",
-                  :disk_size    => "fake-disk-size",
-                  :disk_caching => "fake-disk-caching"
-                },
-                :ephemeral_disk      => nil,
+                :os_disk             => os_disk_managed,
+                :ephemeral_disk      => ephemeral_disk_managed,
                 :os_type             => "windows",
                 :managed             => true,
                 :image_id            => "fake-uri",
@@ -1142,6 +1311,54 @@ describe Bosh::AzureCloud::VMManager do
               expect(SecureRandom).to receive(:uuid).exactly(3).times
               expect {
                vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.not_to raise_error
+            end
+          end
+        end
+
+        context "when AzureAsynchronousError is raised once and AzureAsynchronousError.status is Failed" do
+          context " and use_managed_disks is false" do
+            it "should succeed" do
+              count = 0
+              allow(client2).to receive(:create_virtual_machine) do
+                  count += 1
+                  count == 1 ? raise(Bosh::AzureCloud::AzureAsynchronousError.new('Failed')) : nil
+              end
+
+              expect(client2).to receive(:create_virtual_machine).twice
+              expect(client2).to receive(:delete_virtual_machine).once
+              expect(disk_manager).to receive(:generate_os_disk_name).with(instance_id).once
+              expect(disk_manager).to receive(:delete_disk).with(os_disk_name).once
+              expect(disk_manager).to receive(:generate_ephemeral_disk_name).with(instance_id).once
+              expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name).once
+              expect(disk_manager).to receive(:delete_vm_status_files).
+                with(storage_account_name, instance_id).once
+              expect(client2).not_to receive(:delete_network_interface)
+
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.not_to raise_error
+            end
+          end
+
+          context " and use_managed_disks is true" do
+            it "should succeed" do
+              count = 0
+              allow(client2).to receive(:create_virtual_machine) do
+                  count += 1
+                  count == 1 ? raise(Bosh::AzureCloud::AzureAsynchronousError.new('Failed')) : nil
+              end
+
+              expect(client2).to receive(:create_virtual_machine).twice
+              expect(client2).to receive(:delete_virtual_machine).once
+              expect(disk_manager2).to receive(:generate_os_disk_name).with(instance_id).once
+              expect(disk_manager2).to receive(:delete_disk).with(os_disk_name).once
+              expect(disk_manager2).to receive(:generate_ephemeral_disk_name).with(instance_id).once
+              expect(disk_manager2).to receive(:delete_disk).with(ephemeral_disk_name).once
+              expect(client2).not_to receive(:delete_network_interface)
+
+              expect {
+                vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               }.not_to raise_error
             end
           end
@@ -1175,7 +1392,6 @@ describe Bosh::AzureCloud::VMManager do
         :tags => {}
       }
     }
-    let(:os_disk_name) { "fake-os-disk-name" }
     let(:availability_set_name) { "fake-availability-set-name" }
     let(:public_ip) { "fake-public-ip" }
 
@@ -1202,7 +1418,7 @@ describe Bosh::AzureCloud::VMManager do
 
       it "should delete the instance by id" do
         expect(client2).to receive(:delete_virtual_machine).with(instance_id)
-        expect(client2).to receive(:delete_network_interface).with("fake-nic").exactly(2).times
+        expect(client2).to receive(:delete_network_interface).with("fake-nic").twice
         expect(client2).to receive(:delete_public_ip).with(instance_id)
 
         expect(disk_manager).to receive(:delete_disk).with(os_disk_name)
@@ -1226,7 +1442,7 @@ describe Bosh::AzureCloud::VMManager do
 
       it "should delete the instance by id" do
         expect(client2).to receive(:delete_virtual_machine).with(instance_id)
-        expect(client2).to receive(:delete_network_interface).with("fake-nic").exactly(2).times
+        expect(client2).to receive(:delete_network_interface).with("fake-nic").twice
         expect(client2).to receive(:delete_public_ip).with(instance_id)
 
         expect(disk_manager2).to receive(:delete_disk).with(os_disk_name)
