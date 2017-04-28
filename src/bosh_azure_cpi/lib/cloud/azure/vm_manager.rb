@@ -83,36 +83,57 @@ module Bosh::AzureCloud
         vm_params[:custom_data]   = get_user_data(instance_id, network_configurator.default_dns, computer_name)
       end
 
-      @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
+      create_virtual_machine(vm_params, network_interfaces, availability_set)
 
       vm_params
     rescue => e
-      if vm_params # There are no other functions between defining vm_params and create_virtual_machine
-        @azure_client2.delete_virtual_machine(instance_id)
-        unless vm_params[:ephemeral_disk].nil?
-          if @use_managed_disks
-            ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(instance_id)
-            @disk_manager2.delete_disk(ephemeral_disk_name)
-          else
-            ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
-            @disk_manager.delete_disk(ephemeral_disk_name)
-          end
-        end
-      end
+      error_message = ''
+      if @keep_failed_vm
+        # Including undeleted resources in error message to ask users to delete them manually later
+        error_message = 'This VM fails in provisioning after multiple retries.\n'
+        error_message += 'You need to delete below resource manually after finishing investigation.\n'
+        error_message += "\t Virtual Machine: #{instance_id}\n"
+        if @use_managed_disks
+          os_disk_name = @disk_manager2.generate_os_disk_name(instance_id)
+          error_message += "\t Managed OS Disk: #{os_disk_name}\n"
 
-      if network_interfaces
-        network_interfaces.each do |network_interface|
-          @azure_client2.delete_network_interface(network_interface[:name])
+          unless vm_params[:ephemeral_disk].nil?
+            ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(instance_id)
+            error_message += "\t Managed Ephemeral Disk: #{ephemeral_disk_name}\n"
+          end
+        else
+          storage_account_name = get_storage_account_name_from_instance_id(instance_id)
+          os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
+          error_message += "\t OS disk blob: #{os_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name}\n"
+
+          unless vm_params[:ephemeral_disk].nil?
+            ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
+            error_message += "\t Ephemeral disk blob: #{ephemeral_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name}\n"
+          end
+
+          error_message += "\t VM status blobs: All blobs which matches the pattern /^#{instance_id}.*status$/ in the container #{DISK_CONTAINER} in the storage account #{storage_account_name}\n"
         end
       else
-        delete_possible_network_interfaces(instance_id)
+        begin
+          if network_interfaces
+            network_interfaces.each do |network_interface|
+              @azure_client2.delete_network_interface(network_interface[:name])
+            end
+          else
+            delete_possible_network_interfaces(instance_id)
+          end
+
+          dynamic_public_ip = @azure_client2.get_public_ip_by_name(instance_id)
+          @azure_client2.delete_public_ip(instance_id) unless dynamic_public_ip.nil?
+        rescue => error
+          error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
+          error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
+        end
       end
 
-      dynamic_public_ip = @azure_client2.get_public_ip_by_name(instance_id)
-      @azure_client2.delete_public_ip(instance_id) unless dynamic_public_ip.nil?
+      error_message += e.inspect
 
       # Replace vmSize with instance_type because only instance_type exists in the manifest
-      error_message = e.inspect
       error_message = error_message.gsub!('vmSize', 'instance_type') if error_message.include?('vmSize')
       raise Bosh::Clouds::VMCreationFailed.new(false), "#{error_message}\n#{e.backtrace.join("\n")}"
     end
@@ -364,6 +385,64 @@ module Bosh::AzureCloud
         end
       end
       availability_set
+    end
+
+    def create_virtual_machine(vm_params, network_interfaces, availability_set)
+      instance_id = vm_params[:name]
+      provisioning_fail_retries = 2
+      retry_count = 0
+      begin
+        @keep_failed_vm = false
+        @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
+      rescue => e
+        retry_create = false
+        if e.instance_of?(AzureAsynchronousError) && e.status == PROVISIONING_STATE_FAILED
+          if (retry_count += 1) <= provisioning_fail_retries
+            @logger.info("create_virtual_machine - Retry #{retry_count}: will retry to create the virtual machine #{instance_id} which failed in provisioning")
+            retry_create = true
+          else
+            # Keep failed VM for advanced investigation only if the VM fails in provisioning after multiple retries
+            @keep_failed_vm = true
+          end
+        end
+
+        unless @keep_failed_vm
+          begin
+            @logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{instance_id}")
+            @azure_client2.delete_virtual_machine(instance_id)
+            if @use_managed_disks
+              os_disk_name = @disk_manager2.generate_os_disk_name(instance_id)
+              @disk_manager2.delete_disk(os_disk_name)
+            else
+              os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
+              @disk_manager.delete_disk(os_disk_name)
+
+              # Cleanup invalid VM status file
+              storage_account_name = get_storage_account_name_from_instance_id(instance_id)
+              @disk_manager.delete_vm_status_files(storage_account_name, instance_id)
+            end
+
+            unless vm_params[:ephemeral_disk].nil?
+              if @use_managed_disks
+                ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(instance_id)
+                @disk_manager2.delete_disk(ephemeral_disk_name)
+              else
+                ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
+                @disk_manager.delete_disk(ephemeral_disk_name)
+              end
+            end
+          rescue => error
+            @keep_failed_vm = true
+            error_message = 'The VM fails in provisioning but an error is thrown in cleanuping VM, os disk or ephemeral disk before retry.\n'
+            error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
+            raise e, error_message
+          end
+        end
+
+        retry if retry_create
+
+        raise e
+      end
     end
   end
 end
