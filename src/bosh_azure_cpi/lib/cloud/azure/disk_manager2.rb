@@ -57,7 +57,21 @@ module Bosh::AzureCloud
 
     def delete_disk(disk_name)
       @logger.info("delete_disk(#{disk_name})")
-      @azure_client2.delete_managed_disk(disk_name) if has_disk?(disk_name)
+      retried = false
+      begin
+        @azure_client2.delete_managed_disk(disk_name) if has_disk?(disk_name)
+      rescue Bosh::AzureCloud::AzureConflictError => e
+        # Workaround: Do one retry for AzureConflictError, and give up if it still fails.
+        #             After Managed Disks add "retry-after" in the response header,
+        #             the workaround can be removed because the retry in azure_client2 will be triggered.
+        unless retried
+          @logger.debug("delete_disk: Received an AzureConflictError: `#{e.inspect}', retrying.")
+          retried = true
+          retry
+        end
+        @logger.error("delete_disk: Retry still fails due to AzureConflictError, giving up")
+        raise e
+      end
     end
 
     def has_disk?(disk_name)
