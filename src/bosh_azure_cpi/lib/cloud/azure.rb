@@ -25,6 +25,10 @@ require 'fcntl'
 require "resolv-replace.rb"
 require 'net/http'
 
+# Load Azure Libs before cloud/azure/* in case they are used by the latter
+require 'azure/storage'
+require 'azure/core/http/debug_filter'
+
 require 'common/exec'
 require 'common/thread_pool'
 require 'common/thread_formatter'
@@ -52,9 +56,6 @@ require 'cloud/azure/light_stemcell_manager'
 require 'cloud/azure/disk_manager2'
 require 'cloud/azure/stemcell_manager2'
 require 'cloud/azure/storage_account_manager'
-
-require 'azure/storage'
-require 'azure/core/http/debug_filter'
 
 module Bosh
   module Clouds

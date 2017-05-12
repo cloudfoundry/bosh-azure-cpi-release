@@ -404,12 +404,11 @@ module Bosh::AzureCloud
         use_http = @azure_properties['azure_stack']['use_http_to_access_storage_account'] if @azure_properties['environment'] == ENVIRONMENT_AZURESTACK
         @azure_storage_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob', use_http)
         @blob_service_client = @azure_storage_client.blob_client
-        @blob_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
+        @blob_service_client.with_filter(CustomizedRetryPolicyFilter.new)
         @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties) && !disable_debug_mode
         yield
       end
     end
-
   end
 
   private
@@ -461,6 +460,35 @@ module Bosh::AzureCloud
 
     def to_s
       "id: #{@id}, offset: #{@offset}, size: #{@size}"
+    end
+  end
+
+  class CustomizedRetryPolicyFilter < Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter
+    def initialize(retry_count=nil, min_retry_interval=nil, max_retry_interval=nil)
+      super(retry_count, min_retry_interval, max_retry_interval)
+    end
+
+    # Overrides the base class implementation of call to determine
+    # how the HTTP request should continue retrying
+    #
+    # retry_data - Hash. Stores stateful retry data
+    #
+    # The retry_data is a Hash which can be used to store
+    # stateful data about the request execution context (such as an
+    # incrementing counter, timestamp, etc). The retry_data object
+    # will be the same instance throughout the lifetime of the request
+    def apply_retry_policy(retry_data)
+      super(retry_data)
+
+      if retry_data[:error].is_a?(OpenSSL::SSL::SSLError) || retry_data[:error].is_a?(OpenSSL::X509::StoreError)
+        error_message = retry_data[:error].inspect
+
+        if error_message.include?(Bosh::AzureCloud::Helpers::ERROR_OPENSSL_RESET)
+          # Retry on "Connection reset by peer - SSL_connect" error (OpenSSL::SSL::SSLError, OpenSSL::X509::StoreError)
+          # https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/234
+          retry_data[:retryable] = true
+        end
+      end
     end
   end
 end
