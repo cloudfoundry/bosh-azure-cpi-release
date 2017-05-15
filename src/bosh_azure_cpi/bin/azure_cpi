@@ -11,19 +11,23 @@ require 'cloud/azure'
 
 cpi_config = YAML.load_file(ARGV.shift)
 
-cloud_config = OpenStruct.new(:logger => Logger.new(STDERR))
+cloud_config = OpenStruct.new(:logger => Bosh::Cpi::Logger.new(STDERR))
 
 Bosh::Clouds::Config.configure(cloud_config)
 
 cpi_log = StringIO.new
 
-cpi_lambda = lambda do
+cpi_lambda = lambda do |context|
   unless cpi_config.has_key?('cloud') && cpi_config['cloud'].has_key?('properties')
     raise "Could not find cloud properties in the configuration"
   end
 
   cloud_properties = cpi_config['cloud']['properties']
   cloud_properties['cpi_log'] = cpi_log
+
+  # allow azure config to be overwritten dynamically by context
+  cloud_properties['azure'].merge!(context)
+
   Bosh::Clouds::Azure.new(cloud_properties)
 end
 

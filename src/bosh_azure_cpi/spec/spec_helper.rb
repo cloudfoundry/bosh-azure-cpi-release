@@ -19,6 +19,7 @@ MOCK_AZURE_CLIENT_ID              = '62bd3eaa-e231-4e13-8baf-0e2cc8a898a1'
 MOCK_AZURE_CLIENT_SECRET          = '0e67d8fc-150e-4cc0-bbf3-087e6c4b9e2a'
 MOCK_SSH_PUBLIC_KEY               = 'bar'
 MOCK_DEFAULT_SECURITY_GROUP       = 'fake-default-nsg-name'
+MOCK_REQUEST_ID                   = '47504c59-37af-42f3-a386-22d0c2c73175'
 
 # Let us keep the least API versions here for unit tests.
 AZURE_API_VERSION = '2015-06-15'
@@ -55,7 +56,8 @@ def mock_cloud_options
         'parallel_upload_thread_num' => 16,
         'default_security_group'     => MOCK_DEFAULT_SECURITY_GROUP,
         'debug_mode'                 => false,
-        'use_managed_disks'          => false
+        'use_managed_disks'          => false,
+        'request_id'                 => MOCK_REQUEST_ID
       },
       'registry' => {
         'endpoint'  => 'localhost:42288',
@@ -126,5 +128,6 @@ RSpec.configure do |config|
   config.before do
     logger = Logger.new('/dev/null')
     allow(Bosh::Clouds::Config).to receive(:logger).and_return(logger)
+    allow(logger).to receive(:set_request_id).with(MOCK_REQUEST_ID)
   end
 end
