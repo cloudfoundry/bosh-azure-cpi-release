@@ -213,7 +213,7 @@ describe Bosh::AzureCloud::Cloud do
               disk_locality,
               environment
             )
-          }.to raise_error
+          }.to raise_error StandardError
         end
       end
 
@@ -232,7 +232,7 @@ describe Bosh::AzureCloud::Cloud do
               disk_locality,
               environment
             )
-          }.to raise_error
+          }.to raise_error StandardError
         end
       end
 

@@ -49,7 +49,7 @@ describe Bosh::AzureCloud::VMManager do
     }
     let(:security_group) {
       {
-        :name => "fake-default-nsg-name",
+        :name => MOCK_DEFAULT_SECURITY_GROUP,
         :id   => "fake-nsg-id"
       }
     }
@@ -123,7 +123,7 @@ describe Bosh::AzureCloud::VMManager do
         with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
         and_return(subnet)
       allow(client2).to receive(:get_network_security_group_by_name).
-        with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+        with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
         and_return(security_group)
       allow(client2).to receive(:get_public_ip_by_name).
         with(instance_id).
@@ -263,7 +263,7 @@ describe Bosh::AzureCloud::VMManager do
               :ip_address => "public-ip"
             }])
           allow(client2).to receive(:get_network_security_group_by_name).
-            with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+            with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
             and_return(nil)
         end
 
@@ -278,7 +278,7 @@ describe Bosh::AzureCloud::VMManager do
     context "when the resource group name is specified in the network spec" do
       before do
         allow(client2).to receive(:get_network_security_group_by_name).
-          with("fake-resource-group-name", "fake-default-nsg-name").
+          with("fake-resource-group-name", MOCK_DEFAULT_SECURITY_GROUP).
           and_return(security_group)
         allow(manual_network).to receive(:resource_group_name).
           and_return("fake-resource-group-name")
@@ -311,10 +311,10 @@ describe Bosh::AzureCloud::VMManager do
             with(instance_id).
             and_return([])
           allow(client2).to receive(:get_network_security_group_by_name).
-            with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+            with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
             and_return(nil)
           allow(client2).to receive(:get_network_security_group_by_name).
-            with("fake-resource-group-name", "fake-default-nsg-name").
+            with("fake-resource-group-name", MOCK_DEFAULT_SECURITY_GROUP).
             and_return(nil)
         end
 
@@ -592,7 +592,10 @@ describe Bosh::AzureCloud::VMManager do
 
               expect {
                 vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              }.to raise_error
+              }.to raise_error { |error|
+                expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
+                expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
+              }
             end
           end
 
@@ -620,7 +623,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect {
                     vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-                  }.to raise_error
+                  }.to raise_error { |error|
+                    expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
+                    expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
+                  }
                 end
               end
 
@@ -637,7 +643,10 @@ describe Bosh::AzureCloud::VMManager do
 
                     expect {
                       vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-                    }.to raise_error
+                    }.to raise_error { |error|
+                      expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
+                      expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
+                    }
                   end
                 end
 
@@ -680,7 +689,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect {
                     vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-                  }.to raise_error
+                  }.to raise_error { |error|
+                    expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
+                    expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
+                  }
                 end
               end
 
@@ -694,7 +706,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect {
                     vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-                  }.to raise_error
+                  }.to raise_error { |error|
+                    expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
+                    expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
+                  }
                 end
               end
             end
@@ -722,7 +737,7 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
                 and_return(nil)
               allow(client2).to receive(:get_network_security_group_by_name).
                 with(MOCK_RESOURCE_GROUP_NAME, "fake-nsg-name").
@@ -755,7 +770,7 @@ describe Bosh::AzureCloud::VMManager do
 
               before do
                 allow(client2).to receive(:get_network_security_group_by_name).
-                  with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                  with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
                   and_return(nil)
                 allow(client2).to receive(:get_network_security_group_by_name).
                   with(MOCK_RESOURCE_GROUP_NAME, "fake-nsg-name").
@@ -774,13 +789,21 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context "with the network security group provided in network spec" do
+            let(:nsg_name) { "fake-nsg-name-specified-in-network-spec" }
+            let(:security_group) {
+              {
+                :name => nsg_name 
+              }
+            }
+
             before do
+              allow(manual_network).to receive(:security_group).and_return(nsg_name)
+              allow(dynamic_network).to receive(:security_group).and_return(nsg_name)
               allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
-                with("fake-default-nsg-name").
+                with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
                 and_return(nil)
               allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, "fake-network-nsg-name").
+                with(MOCK_RESOURCE_GROUP_NAME, nsg_name).
                 and_return(security_group)
             end
 
@@ -788,7 +811,8 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              expect(client2).to receive(:create_network_interface).twice
+              expect(client2).to receive(:create_network_interface).
+                with(hash_including(:security_group => security_group), any_args).twice
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
@@ -814,7 +838,7 @@ describe Bosh::AzureCloud::VMManager do
             context "when network security group is found in the default resource group" do
               before do
                 allow(client2).to receive(:get_network_security_group_by_name).
-                  with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                  with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
                   and_return(security_group)
               end
 
@@ -838,10 +862,10 @@ describe Bosh::AzureCloud::VMManager do
             context "when network security group is not found in the specified resource group and found in the default resource group" do
               before do
                 allow(client2).to receive(:get_network_security_group_by_name).
-                  with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                  with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
                   and_return(security_group)
                 allow(client2).to receive(:get_network_security_group_by_name).
-                  with("fake-resource-group-name", "fake-default-nsg-name").
+                  with("fake-resource-group-name", MOCK_DEFAULT_SECURITY_GROUP).
                   and_return(nil)
               end
 
@@ -857,7 +881,7 @@ describe Bosh::AzureCloud::VMManager do
             context "when network security group is found in the specified resource group" do
               before do
                 allow(client2).to receive(:get_network_security_group_by_name).
-                  with("fake-resource-group-name", "fake-default-nsg-name").
+                  with("fake-resource-group-name", MOCK_DEFAULT_SECURITY_GROUP).
                   and_return(security_group)
               end
 

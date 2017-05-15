@@ -177,7 +177,7 @@ describe Bosh::AzureCloud::StemcellManager do
               'PartitionKey' => stemcell_name,
               'RowKey'       => storage_account_name,
               'Status'       => 'pending',
-              'Timestamp'    => Time.now - 19 * 60
+              'Timestamp'    => Time.now - ( 20 * 60 - 1 )  # The default timeout of copying stemcell is 20 * 60 seconds
             }
           ]
         }
@@ -198,7 +198,7 @@ describe Bosh::AzureCloud::StemcellManager do
 
           expect{
             stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-          }.to raise_error
+          }.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
         end
       end
 
