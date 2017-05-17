@@ -17,6 +17,8 @@ set -e
 : ${BAT_NETWORK_GATEWAY:?}
 : ${BOSH_DIRECTOR_USERNAME:?}
 : ${BOSH_DIRECTOR_PASSWORD:?}
+: ${BOSH_DIRECTOR_SSL_CERT:?}
+: ${BOSH_DIRECTOR_SSL_KEY:?}
 : ${BOSH_INIT_LOG_LEVEL:?}
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
@@ -407,6 +409,13 @@ cloud_provider:
     ntp: *ntp
 EOF
 fi
+
+# Add the director ssl cert and key
+echo -e "${BOSH_DIRECTOR_SSL_CERT}" > /tmp/director_ssl_cert
+echo -e "${BOSH_DIRECTOR_SSL_KEY}" > /tmp/director_ssl_key
+ruby -r yaml -e 'data = YAML::load(STDIN.read); data["jobs"][0]["properties"]["director"]["ssl"] = {"cert" => File.read("/tmp/director_ssl_cert").strip, "key" => File.read("/tmp/director_ssl_key").strip}; puts data.to_yaml' \
+  < "${output_dir}/${manifest_filename}" > "${output_dir}/${manifest_filename}.tmp"
+mv "${output_dir}/${manifest_filename}.tmp" "${output_dir}/${manifest_filename}"
 
 function finish {
   echo "Final state of director deployment:"

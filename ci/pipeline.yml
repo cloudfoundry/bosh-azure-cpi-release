@@ -138,6 +138,8 @@ jobs:
         BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
         BOSH_DIRECTOR_USERNAME:         {{bosh_director_username}}
         BOSH_DIRECTOR_PASSWORD:         {{bosh_director_password}}
+        BOSH_DIRECTOR_SSL_CERT:         {{bosh_director_ssl_cert}}
+        BOSH_DIRECTOR_SSL_KEY:          {{bosh_director_ssl_key}}
         SSH_PUBLIC_KEY:                 {{ssh_public_key}}
         SSH_PRIVATE_KEY:                {{ssh_private_key}}
 
@@ -232,6 +234,8 @@ jobs:
         BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
         BOSH_DIRECTOR_USERNAME:         {{bosh_director_username}}
         BOSH_DIRECTOR_PASSWORD:         {{bosh_director_password}}
+        BOSH_DIRECTOR_SSL_CERT:         {{bosh_director_ssl_cert}}
+        BOSH_DIRECTOR_SSL_KEY:          {{bosh_director_ssl_key}}
         SSH_PUBLIC_KEY:                 {{ssh_public_key}}
         SSH_PRIVATE_KEY:                {{ssh_private_key}}
 
