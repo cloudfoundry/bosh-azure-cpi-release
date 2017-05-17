@@ -51,6 +51,7 @@ done
 
 set -e
 
+# Create the virtual networks, subnets, and the security groups
 resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
 for resource_group_name in ${resource_group_names}
 do
@@ -79,6 +80,23 @@ do
   }
 EOF
   azure group deployment create ${resource_group_name} --template-file ./bosh-cpi-src/ci/assets/azure/network.json --parameters-file ./network-parameters.json
+done
+
+# Create the Public IPs
+resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+for resource_group_name in ${resource_group_names}
+do
+  echo azure network public-ip create --resource-group ${resource_group_name} --name AzureCPICI-cf-lifecycle --location ${AZURE_REGION_SHORT_NAME} --allocation-method Static
+  azure network public-ip create --resource-group ${resource_group_name} --name AzureCPICI-cf-lifecycle --location ${AZURE_REGION_SHORT_NAME} --allocation-method Static
+done
+
+resource_group_names="${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+for resource_group_name in ${resource_group_names}
+do
+  echo azure network public-ip create --resource-group ${resource_group_name} --name AzureCPICI-bosh --location ${AZURE_REGION_SHORT_NAME} --allocation-method Static
+  azure network public-ip create --resource-group ${resource_group_name} --name AzureCPICI-bosh --location ${AZURE_REGION_SHORT_NAME} --allocation-method Static
+  echo azure network public-ip create --resource-group ${resource_group_name} --name AzureCPICI-cf-bats --location ${AZURE_REGION_SHORT_NAME} --allocation-method Static
+  azure network public-ip create --resource-group ${resource_group_name} --name AzureCPICI-cf-bats --location ${AZURE_REGION_SHORT_NAME} --allocation-method Static
 done
 
 # Setup the storage account
