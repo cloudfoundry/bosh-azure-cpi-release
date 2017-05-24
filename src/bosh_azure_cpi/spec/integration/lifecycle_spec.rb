@@ -26,6 +26,8 @@ describe Bosh::AzureCloud::Cloud do
   let(:subnet_name)          { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
   let(:second_subnet_name)   { ENV.fetch('BOSH_AZURE_SECOND_SUBNET_NAME', 'BOSH2') }
   let(:instance_type)        { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
+  let(:external_lb)          { ENV.fetch('BOSH_AZURE_EXTERNAL_LB_NAME', 'eLB') }
+  let(:internal_lb)          { ENV.fetch('BOSH_AZURE_INTERNAL_LB_NAME', 'iLB') }
   let(:vm_metadata)          { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
   let(:network_spec)         { {} }
   let(:resource_pool)        { { 'instance_type' => instance_type } }
@@ -367,6 +369,77 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
+  context 'when load_balancer is specified in resource_pool' do
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'dynamic',
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        }
+      }
+    }
+    let(:resource_pool) {
+      {
+        'instance_type' => instance_type,
+        'availability_set' => SecureRandom.uuid,
+        'load_balancer' => external_lb
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      vm_lifecycle
+    end
+  end
+
+  # Note: you should prepare load balancers in the same resource group with networks
+  context 'when load_balancers is specified in resource_pool and networks are in a different resource group' do
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'dynamic',
+          'default' => ['dns', 'gateway'],
+          'cloud_properties' => {
+            'resource_group_name' => @resource_group_name_for_network,
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        },
+        'network_b' => {
+          'type' => 'manual',
+          'ip' => "10.0.1.#{Random.rand(10..99)}",
+          'cloud_properties' => {
+            'resource_group_name' => @resource_group_name_for_network,
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => second_subnet_name
+          }
+        }
+      }
+    }
+    let(:resource_pool) {
+      {
+        'instance_type'  => 'Standard_D2_v2',
+        'availability_set' => SecureRandom.uuid,
+        'load_balancers' => [
+          {
+            'name' => external_lb,
+            'network_name' => 'network_a'
+          },
+          {
+            'name'=> internal_lb,
+            'network_name' => 'network_b'
+          }
+        ]
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      vm_lifecycle
+    end
+  end
+
   def vm_lifecycle(nums = 1)
     instance_id_pool = Array.new
     for i in 1..nums
@@ -394,5 +467,4 @@ describe Bosh::AzureCloud::Cloud do
       cpi.delete_vm(instance_id) unless instance_id.nil?
     end
   end
-
 end

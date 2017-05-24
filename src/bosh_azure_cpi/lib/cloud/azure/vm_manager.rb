@@ -266,20 +266,63 @@ module Bosh::AzureCloud
       public_ip
     end
 
-    def get_load_balancer(resource_pool)
-      load_balancer = nil
-      unless resource_pool['load_balancer'].nil?
-        load_balancer_name = resource_pool['load_balancer']
-        load_balancer = @azure_client2.get_load_balancer_by_name(load_balancer_name)
-        cloud_error("Cannot find the load balancer `#{load_balancer_name}'") if load_balancer.nil?
+    #
+    # Get load balancers for a VM
+    # @param [Hash] resource_pool
+    # @param [Array] network_names
+    # @return [Hash] load_balancers
+    #
+    # You can only specify only one of load_balancer (String) OR load_balancers (Array) in `resource_pool'
+    # 1. `load_balancer' is used for backward compatibility. It will have the only one load balancer bound to the primary NIC. Example:
+    #   resource_pool:
+    #     cloud_properties:
+    #       load_balancer: haproxylb
+    #
+    # 2. `load_balancers' is used when you need multiple load balancers bound to different NICs. Example:
+    #   resource_pool:
+    #     cloud_properties:
+    #       load_balancers:
+    #       - {name: external_lb, network_name: first_net}
+    #       - {name: internal_lb1, network_name: second_net}
+    #       - {name: internal_lb2, network_name: third_net}
+    #
+    def get_load_balancers(resource_pool, network_configurator)
+      if !resource_pool['load_balancer'].nil? && !resource_pool['load_balancers'].nil?
+        cloud_error("Only one of `load_balancer' and `load_balancers' can be configured in the same resource_pool.")
       end
-      load_balancer
+
+      load_balancers      = {}
+
+      if !resource_pool['load_balancer'].nil?
+        # If `load_balancer' is specified, the load balancer will be bound to the primary network which is the 1st item in `network_configurator.networks'
+        network_name        = network_configurator.networks[0].name
+        load_balancer_name  = resource_pool['load_balancer']
+        load_balancer       = @azure_client2.get_load_balancer_by_name(load_balancer_name)
+        cloud_error("Cannot find the load balancer `#{load_balancer_name}'") if load_balancer.nil?
+        load_balancers[network_name] = load_balancer
+      elsif !resource_pool['load_balancers'].nil?
+        resource_pool['load_balancers'].each do |lb_spec|
+          network_name = lb_spec['network_name']
+          network = network_configurator.networks.find {|network| network.name == network_name}
+          cloud_error("Cannot find the network #{network_name} for load balancer `#{lb_spec}'") if network.nil?
+
+          load_balancer_name  = lb_spec['name']
+          load_balancers_for_network = @azure_client2.list_load_balancers(network.resource_group_name)
+          load_balancer = load_balancers_for_network.find { |lb| lb[:name] == load_balancer_name }
+          if load_balancer.nil?
+            cloud_error("Cannot find the load balancer `#{load_balancer_name}' in the resource group #{network.resource_group_name} for the network #{network.name}")
+          end
+          load_balancers[network_name] = load_balancer
+        end
+      end
+
+      load_balancers
     end
 
     def create_network_interfaces(instance_id, location, resource_pool, network_configurator)
       network_interfaces = []
-      load_balancer = get_load_balancer(resource_pool)
-      public_ip = get_public_ip(network_configurator.vip_network)
+      load_balancers     = get_load_balancers(resource_pool, network_configurator)
+      public_ip          = get_public_ip(network_configurator.vip_network)
       if public_ip.nil? && resource_pool['assign_dynamic_public_ip'] == true
         # create dynamic public ip
         idle_timeout_in_minutes = @azure_properties.fetch('pip_idle_timeout_in_minutes', 4)
@@ -297,11 +340,11 @@ module Bosh::AzureCloud
           :private_ip          => (network.is_a? ManualNetwork) ? network.private_ip : nil,
           :public_ip           => index == 0 ? public_ip : nil,
           :security_group      => security_group,
-          :ipconfig_name       => "ipconfig#{index}"
+          :ipconfig_name       => "ipconfig0"
         }
 
         subnet = get_network_subnet(network)
-        @azure_client2.create_network_interface(nic_params, subnet, AZURE_TAGS, load_balancer)
+        @azure_client2.create_network_interface(nic_params, subnet, AZURE_TAGS, load_balancers[network.name])
         network_interfaces.push(@azure_client2.get_network_interface_by_name(nic_name))
       end
       network_interfaces

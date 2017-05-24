@@ -78,13 +78,30 @@
       "metadata": {
         "description": "the CIDR block of the second subnet for CloudFoundy"
       }
+    },
+    "externalLoadBalancerName": {
+      "type": "string",
+      "defaultValue": "eLB",
+      "metadata": {
+        "description": "name of the external load balancer"
+      }
+    },
+    "internalLoadBalancerName": {
+      "type": "string",
+      "defaultValue": "iLB",
+      "metadata": {
+        "description": "name of the internal load balancer"
+      }
     }
   },
   "variables": {
     "apiVersion": "2015-06-15",
     "location": "[resourceGroup().location]",
     "pubIPBaseName": "AzureCPICI",
-    "boshNetworkSecurityGroup": "nsg-cpi"
+    "boshNetworkSecurityGroup": "nsg-cpi",
+    "vnetIDForLifecycle": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkNameForLifecycle'))]",
+    "subnetRefOfSecondSubnetForBosh": "[concat(variables('vnetIDForLifecycle'),'/subnets/', parameters('secondSubnetNameForBosh'))]",
+    "publicIPAddressNameForLB": "[concat(variables('pubIPBaseName'), '-elb')]"
   },
   "resources": [
     {
@@ -256,6 +273,129 @@
       "location": "[variables('location')]",
       "properties": {
         "publicIPAllocationMethod": "static"
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[variables('publicIPAddressNameForLB')]",
+      "location": "[variables('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "dynamic"
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "name": "[parameters('externalLoadBalancerName')]",
+      "type": "Microsoft.Network/loadBalancers",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressNameForLB'))]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "loadBalancerFrontEnd",
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('publicIPAddressNameForLB'))]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "loadBalancerBackEnd"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('externalLoadBalancerName')), '/frontendIpConfigurations/loadBalancerFrontEnd')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('externalLoadBalancerName')), '/backendAddressPools/loadBalancerBackEnd')]"
+              },
+              "probe": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('externalLoadBalancerName')), '/probes/lbprobe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 443,
+              "backendPort": 443,
+              "idleTimeoutInMinutes": 15
+            },
+            "name": "lbrule"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 443,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",
+      "name": "[parameters('internalLoadBalancerName')]",
+      "type": "Microsoft.Network/loadBalancers",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkNameForLifecycle'))]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "name": "loadBalancerFrontEnd",
+            "properties": {
+              "subnet": {
+                "id": "[variables('subnetRefOfSecondSubnetForBosh')]"
+              }
+            }
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "loadBalancerBackEnd"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('internalLoadBalancerName')), '/frontendIpConfigurations/loadBalancerFrontEnd')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('internalLoadBalancerName')), '/backendAddressPools/loadBalancerBackEnd')]"
+              },
+              "probe": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('internalLoadBalancerName')), '/probes/lbprobe')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 443,
+              "backendPort": 443,
+              "idleTimeoutInMinutes": 15
+            },
+            "name": "lbrule"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 443,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "lbprobe"
+          }
+        ]
       }
     }
   ]

@@ -101,7 +101,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           }
         }]
       }
-    }.to_json
+    }
   }
   let(:fake_load_balancer) {
     {
@@ -354,7 +354,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       it "should return the resource if response body is not null" do
         stub_request(:get, load_balancer_uri).to_return(
           :status => 200,
-          :body => load_balancer_response_body,
+          :body => load_balancer_response_body.to_json,
           :headers => {})
         stub_request(:get, public_ip_uri).to_return(
           :status => 200,
@@ -363,6 +363,66 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(
           azure_client2.get_load_balancer_by_name(load_balancer_name)
         ).to eq(fake_load_balancer)
+      end
+    end
+  end
+
+  describe "#list_load_balancers" do
+    let(:list_load_balancers_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/loadBalancers?api-version=#{api_version}" }
+    let(:list_load_balancers_resource_body) {
+      {
+        "value" => [load_balancer_response_body]
+      }
+    }
+    let(:fake_load_balancer_no_recursive) {
+      {
+        :id => "fake-id",
+        :name => "fake-name",
+        :location => "fake-location",
+        :tags => "fake-tags",
+        :provisioning_state => "fake-state",
+        :frontend_ip_configurations => [
+          {
+            :id => "fake-id",
+            :name => "fake-name",
+            :provisioning_state => "fake-state",
+            :private_ip_allocation_method => "bar",
+            :public_ip => {
+              "id" => public_ip_id
+            },
+            :inbound_nat_rules => []
+          }
+        ],
+        :backend_address_pools => [
+          {
+            :name => "fake-name",
+            :id => "fake-id",
+            :provisioning_state => "fake-state",
+            :backend_ip_configurations => []
+          }
+        ]
+      }
+    }
+
+    context "when token is valid, getting response succeeds" do
+      it "should return empty array if response body is null" do
+        stub_request(:get, list_load_balancers_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+        expect(
+          azure_client2.list_load_balancers(resource_group_name)
+        ).to eq([])
+      end
+
+      it "should return the resource if response body is not null" do
+        stub_request(:get, list_load_balancers_uri).to_return(
+          :status => 200,
+          :body => list_load_balancers_resource_body.to_json,
+          :headers => {})
+        expect(
+          azure_client2.list_load_balancers(resource_group_name)
+        ).to eq([fake_load_balancer_no_recursive])
       end
     end
   end
@@ -386,7 +446,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
         stub_request(:get, load_balancer_uri).to_return(
           :status => 200,
-          :body => load_balancer_response_body,
+          :body => load_balancer_response_body.to_json,
           :headers => {})
         stub_request(:get, nic_uri).to_return(
           :status => 200,
@@ -968,7 +1028,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
           stub_request(:get, load_balancer_uri).to_return(
             :status => 200,
-            :body => load_balancer_response_body,
+            :body => load_balancer_response_body.to_json,
             :headers => {})
           stub_request(:get, nic_uri).to_return(
             :status => 200,
@@ -1066,7 +1126,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
           stub_request(:get, load_balancer_uri).to_return(
             :status => 200,
-            :body => load_balancer_response_body,
+            :body => load_balancer_response_body.to_json,
             :headers => {})
           stub_request(:get, nic_uri).to_return(
             :status => 200,

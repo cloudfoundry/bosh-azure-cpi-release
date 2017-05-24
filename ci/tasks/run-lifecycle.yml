@@ -25,3 +25,6 @@ params:
   AZURE_DEFAULT_SECURITY_GROUP:               ""
   AZURE_USE_MANAGED_DISKS:                    false
   SSH_PUBLIC_KEY:                             ""
+  AZURE_BOSH_EXTERNAL_LB_NAME:                ""
+  AZURE_BOSH_INTERNAL_LB_NAME:                ""
+

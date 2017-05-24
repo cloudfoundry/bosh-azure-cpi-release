@@ -21,13 +21,15 @@ set -e
 : ${AZURE_BOSH_SECOND_SUBNET_NAME:?}
 : ${AZURE_CF_SUBNET_NAME:?}
 : ${AZURE_CF_SECOND_SUBNET_NAME:?}
+: ${AZURE_BOSH_EXTERNAL_LB_NAME:?}
+: ${AZURE_BOSH_INTERNAL_LB_NAME:?}
 
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
 
 set +e
 
-resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS}" # ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
 for resource_group_name in ${resource_group_names}
 do
   # Check if the resource group already exists
@@ -51,7 +53,7 @@ done
 
 set -e
 
-resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS}" # ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
 for resource_group_name in ${resource_group_names}
 do
   echo azure group create ${resource_group_name} ${AZURE_REGION_SHORT_NAME}
@@ -75,6 +77,12 @@ do
     },
     "secondSubnetNameForCloudFoundry": {
       "value": "${AZURE_CF_SECOND_SUBNET_NAME}"
+    },
+    "externalLoadBalancerName": {
+      "value": "${AZURE_BOSH_EXTERNAL_LB_NAME}"
+    },
+    "internalLoadBalancerName": {
+      "value": "${AZURE_BOSH_INTERNAL_LB_NAME}"
     }
   }
 EOF

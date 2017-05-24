@@ -153,6 +153,8 @@ describe Bosh::AzureCloud::VMManager do
         and_return("fake-subnet-name")
       allow(manual_network).to receive(:private_ip).
         and_return('private-ip')
+      allow(manual_network).to receive(:name).
+        and_return('manual')
 
       allow(dynamic_network).to receive(:resource_group_name).
         and_return(MOCK_RESOURCE_GROUP_NAME)
@@ -162,6 +164,8 @@ describe Bosh::AzureCloud::VMManager do
         and_return("fake-virtual-network-name")
       allow(dynamic_network).to receive(:subnet_name).
         and_return("fake-subnet-name")
+      allow(dynamic_network).to receive(:name).
+        and_return('dynamic')
 
       allow(disk_manager).to receive(:delete_disk).
         and_return(nil)
@@ -194,7 +198,9 @@ describe Bosh::AzureCloud::VMManager do
       it "should raise an error" do
         expect(client2).not_to receive(:delete_virtual_machine)
         expect(client2).not_to receive(:delete_network_interface)
-        expect(client2).to receive(:list_network_interfaces_by_instance_id).with(instance_id).and_return([])
+        expect(client2).to receive(:list_network_interfaces_by_instance_id).
+          with(instance_id).
+          and_return([])
         expect(client2).to receive(:get_public_ip_by_name).
           with(instance_id).
           and_return({ :ip_address => "public-ip" })
@@ -359,23 +365,55 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context "when load balancer can not be found" do
-      before do
-        allow(client2).to receive(:list_network_interfaces_by_instance_id).
-          with(instance_id).
-          and_return([])
+      context "when load_balancer is specified" do
+        before do
+          allow(client2).to receive(:list_network_interfaces_by_instance_id).
+            with(instance_id).
+            and_return([])
+        end
+
+        it "should raise an error" do
+          allow(client2).to receive(:get_load_balancer_by_name).
+            with(resource_pool['load_balancer']).
+            and_return(nil)
+
+          expect(client2).not_to receive(:delete_virtual_machine)
+          expect(client2).not_to receive(:delete_network_interface)
+
+          expect {
+            vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+          }.to raise_error /Cannot find the load balancer/
+        end
       end
 
-      it "should raise an error" do
-        allow(client2).to receive(:get_load_balancer_by_name).
-          with(resource_pool['load_balancer']).
-          and_return(nil)
+      context "when load_balancers is specified" do
+        let(:lb_name) { "lb0" }
+        let(:resource_pool) {
+          {
+            'instance_type'  => 'Standard_D1',
+            'load_balancers' => [
+              {
+                "name" => lb_name,
+                "network_name" => "manual"
+              }
+            ]
+          }
+        }
 
-        expect(client2).not_to receive(:delete_virtual_machine)
-        expect(client2).not_to receive(:delete_network_interface)
+        before do
+          allow(client2).to receive(:list_network_interfaces_by_instance_id).
+            with(instance_id).
+            and_return([])
+          allow(client2).to receive(:list_load_balancers).
+            and_return([])
+        end
 
-        expect {
-          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-        }.to raise_error /Cannot find the load balancer/
+        it "should raise an error" do
+          expect(client2).not_to receive(:get_load_balancer_by_name)
+          expect {
+            vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+          }.to raise_error /Cannot find the load balancer `#{lb_name}' in the resource group/
+        end
       end
     end
 
@@ -501,6 +539,70 @@ describe Bosh::AzureCloud::VMManager do
         expect {
           vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
         }.to raise_error /availability set is not created/
+      end
+    end
+
+    context "when both of `load_balancer' and `load_balancers' are specified in the same resource_pool" do
+      let(:resource_pool) {
+        {
+          'instance_type'                => 'Standard_D1',
+          'load_balancer'                => 'fake-lb-name',
+          'load_balancers'               => 'fake-load-balancers'
+        }
+      }
+      let(:load_balancer) {
+        {
+          :name => "lb-name"
+        }
+      }
+
+      before do
+        allow(client2).to receive(:get_load_balancer_by_name).
+          and_return(load_balancer)
+        allow(network_configurator).to receive(:networks).
+          and_return([manual_network])
+        allow(network_configurator).to receive(:vip_network).
+          and_return(nil)
+        allow(client2).to receive(:list_network_interfaces_by_instance_id).
+          with(instance_id).
+          and_return([])
+      end
+
+      it "should raise an error" do
+        expect {
+          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+        }.to raise_error /Only one of `load_balancer' and `load_balancers' can be configured in the same resource_pool/
+      end
+    end
+
+    context "when `load_balancers' is specified but corresponding network is not found" do
+      let(:lb_network_name) { "not-exist" }
+      let(:resource_pool) {
+        {
+          'instance_type'  => 'Standard_D1',
+          'load_balancers' => [
+            {
+              "name" => "lb0",
+              "network_name" => lb_network_name
+            }
+          ]
+        }
+      }
+      let(:elb) { {:name => "lb0"} }
+
+      before do
+        allow(client2).to receive(:list_network_interfaces_by_instance_id).
+          with(instance_id).
+          and_return([])
+        allow(client2).to receive(:list_load_balancers).
+          and_return([elb])
+      end
+
+      it "should raise an error" do
+        expect(client2).not_to receive(:get_load_balancer_by_name)
+        expect {
+          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+        }.to raise_error /Cannot find the network #{lb_network_name} for load balancer/
       end
     end
 
@@ -1360,6 +1462,101 @@ describe Bosh::AzureCloud::VMManager do
               expect {
                 vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               }.not_to raise_error
+            end
+          end
+        end
+
+        context "with load balancers" do
+          before do
+            allow(network_configurator).to receive(:vip_network).
+              and_return(nil)
+          end
+
+          context "when load_balancer is specifed" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'Standard_D1',
+                'load_balancer' => 'fake-lb-name'
+              }
+            }
+            let(:tags) { {'user-agent' => 'bosh'} }
+
+            it "should bind the LB to the first NIC" do
+              expect(client2).to receive(:get_load_balancer_by_name).
+                with('fake-lb-name').
+                and_return(load_balancer)
+              expect(client2).to receive(:create_network_interface).
+                with(hash_including(:name => "#{instance_id}-0"), subnet, tags, load_balancer)
+              expect(client2).to receive(:create_network_interface).
+                with(hash_including(:name => "#{instance_id}-1"), subnet, tags, nil)
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.not_to raise_error
+            end
+          end
+
+          context "when load_balancers is specifed" do
+            let(:tags) { {'user-agent' => 'bosh'} }
+            let(:elb) { {:name => "lb0"} }
+            let(:ilb) { {:name => "lb1"} }
+
+            before do
+              allow(client2).to receive(:list_load_balancers).
+                and_return([elb, ilb])
+            end
+
+            context "when load balancers are specified for all networks" do
+              let(:resource_pool) {
+                {
+                  'instance_type'  => 'Standard_D2',
+                  'load_balancers' => [
+                    {
+                      "name" => "lb0",
+                      "network_name" => "manual"
+                    },
+                    {
+                      "name" => "lb1",
+                      "network_name" => "dynamic"
+                    }
+                  ]
+                }
+              }
+
+              it "should bind the NICs to LBs correctly" do
+                expect(client2).not_to receive(:get_load_balancer_by_name)
+                expect(client2).to receive(:create_network_interface).
+                  with(hash_including(:name => "#{instance_id}-0"), subnet, tags, elb)
+                expect(client2).to receive(:create_network_interface).
+                  with(hash_including(:name => "#{instance_id}-1"), subnet, tags, ilb)
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.not_to raise_error
+              end
+            end
+
+            context "when load balancer is specified for the second network only" do
+              let(:resource_pool) {
+                {
+                  'instance_type'  => 'Standard_D1',
+                  'load_balancers' => [
+                    {
+                      "name" => "lb1",
+                      "network_name" => "dynamic"
+                    }
+                  ]
+                }
+              }
+
+              it "should bind the NICs to LBs correctly" do
+                expect(client2).not_to receive(:get_load_balancer_by_name)
+                expect(client2).to receive(:create_network_interface).
+                  with(hash_including(:name => "#{instance_id}-0"), subnet, tags, nil)
+                expect(client2).to receive(:create_network_interface).
+                  with(hash_including(:name => "#{instance_id}-1"), subnet, tags, ilb)
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.not_to raise_error
+              end
             end
           end
         end

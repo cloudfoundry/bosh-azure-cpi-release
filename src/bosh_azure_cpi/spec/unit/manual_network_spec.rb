@@ -24,6 +24,7 @@ describe Bosh::AzureCloud::ManualNetwork do
 
       expect(sn.private_ip).to eq("fake-ip")
       expect(sn.resource_group_name).to eq("fake_resource_group")
+      expect(sn.name).to eq("default")
       expect(sn.virtual_network_name).to eq("foo")
       expect(sn.subnet_name).to eq("bar")
       expect(sn.security_group).to eq("fake_sg")

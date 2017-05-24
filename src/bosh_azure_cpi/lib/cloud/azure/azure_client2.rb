@@ -1124,42 +1124,27 @@ module Bosh::AzureCloud
     def get_load_balancer(url)
       load_balancer = nil
       result = get_resource_by_id(url)
-      unless result.nil?
-        load_balancer = {}
-        load_balancer[:id] = result['id']
-        load_balancer[:name] = result['name']
-        load_balancer[:location] = result['location']
-        load_balancer[:tags] = result['tags']
+      parse_load_balancer(result)
+    end
 
-        properties = result['properties']
-        load_balancer[:provisioning_state] = properties['provisioningState']
-
-        frontend = properties['frontendIPConfigurations']
-        load_balancer[:frontend_ip_configurations] = []
-        frontend.each do |frontend_ip|
-          ip = {}
-          ip[:name]                         = frontend_ip['name']
-          ip[:id]                           = frontend_ip['id']
-          ip[:provisioning_state]           = frontend_ip['properties']['provisioningState']
-          ip[:private_ip_allocation_method] = frontend_ip['properties']['privateIPAllocationMethod']
-          ip[:private_ip]                   = frontend_ip['properties']['privateIPAddress'] unless frontend_ip['properties']['privateIPAddress'].nil?
-          ip[:public_ip]                    = get_public_ip(frontend_ip['properties']['publicIPAddress']['id']) unless frontend_ip['properties']['publicIPAddress'].nil?
-          ip[:inbound_nat_rules]            = frontend_ip['properties']['inboundNatRules']
-          load_balancer[:frontend_ip_configurations].push(ip)
-        end
-
-        backend = properties['backendAddressPools']
-        load_balancer[:backend_address_pools] = []
-        backend.each do |backend_ip|
-          ip = {}
-          ip[:name]                         = backend_ip['name']
-          ip[:id]                           = backend_ip['id']
-          ip[:provisioning_state]           = backend_ip['properties']['provisioningState']
-          ip[:backend_ip_configurations]    = backend_ip['properties']['backendIPConfigurations']
-          load_balancer[:backend_address_pools].push(ip)
+    # List all load balancers within a specified resource group
+    # @param [String] resource_group_name - Name of resource group.
+    #
+    # @return [Array]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/network/loadbalancers
+    #
+    def list_load_balancers(resource_group_name)
+      load_balancers = []
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, resource_group_name: resource_group_name)
+      result = get_resource_by_id(url)
+      unless result.nil? || result['value'].nil?
+        result['value'].each do |ret|
+          load_balancer = parse_load_balancer(ret, recursive: false)
+          load_balancers.push(load_balancer)
         end
       end
-      load_balancer
+      load_balancers
     end
 
     # Delete a load balancer
@@ -1719,6 +1704,50 @@ module Bosh::AzureCloud
         end
       end
       ip_address
+    end
+
+    def parse_load_balancer(result, recursive: true)
+      load_balancer = nil
+      unless result.nil?
+        load_balancer = {}
+        load_balancer[:id] = result['id']
+        load_balancer[:name] = result['name']
+        load_balancer[:location] = result['location']
+        load_balancer[:tags] = result['tags']
+
+        properties = result['properties']
+        load_balancer[:provisioning_state] = properties['provisioningState']
+
+        frontend = properties['frontendIPConfigurations']
+        load_balancer[:frontend_ip_configurations] = []
+        frontend.each do |frontend_ip|
+          ip = {}
+          ip[:name]                         = frontend_ip['name']
+          ip[:id]                           = frontend_ip['id']
+          ip[:provisioning_state]           = frontend_ip['properties']['provisioningState']
+          ip[:private_ip_allocation_method] = frontend_ip['properties']['privateIPAllocationMethod']
+          ip[:private_ip]                   = frontend_ip['properties']['privateIPAddress'] unless frontend_ip['properties']['privateIPAddress'].nil?
+          if recursive
+            ip[:public_ip]                  = get_public_ip(frontend_ip['properties']['publicIPAddress']['id']) unless frontend_ip['properties']['publicIPAddress'].nil?
+          else
+            ip[:public_ip]                  = frontend_ip['properties']['publicIPAddress'] unless frontend_ip['properties']['publicIPAddress'].nil?
+          end
+          ip[:inbound_nat_rules]            = frontend_ip['properties']['inboundNatRules']
+          load_balancer[:frontend_ip_configurations].push(ip)
+        end
+
+        backend = properties['backendAddressPools']
+        load_balancer[:backend_address_pools] = []
+        backend.each do |backend_ip|
+          ip = {}
+          ip[:name]                         = backend_ip['name']
+          ip[:id]                           = backend_ip['id']
+          ip[:provisioning_state]           = backend_ip['properties']['provisioningState']
+          ip[:backend_ip_configurations]    = backend_ip['properties']['backendIPConfigurations']
+          load_balancer[:backend_address_pools].push(ip)
+        end
+      end
+      load_balancer
     end
 
     def filter_credential_in_logs(uri)
