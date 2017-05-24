@@ -34,6 +34,8 @@ params:
   BAT_NETWORK_GATEWAY:          ""
   BOSH_DIRECTOR_USERNAME:       ""
   BOSH_DIRECTOR_PASSWORD:       ""
+  BOSH_DIRECTOR_SSL_CERT:       ""
+  BOSH_DIRECTOR_SSL_KEY:        ""
   SSH_PUBLIC_KEY:               ""
   SSH_PRIVATE_KEY:              ""
   BOSH_INIT_LOG_LEVEL:          debug

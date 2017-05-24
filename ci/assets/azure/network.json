@@ -83,7 +83,6 @@
   "variables": {
     "apiVersion": "2015-06-15",
     "location": "[resourceGroup().location]",
-    "pubIPBaseName": "AzureCPICI",
     "boshNetworkSecurityGroup": "nsg-cpi"
   },
   "resources": [
@@ -229,33 +228,6 @@
             }
           }
         ]
-      }
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[concat(variables('pubIPBaseName'),'-bosh')]",
-      "location": "[variables('location')]",
-      "properties": {
-        "publicIPAllocationMethod": "static"
-      }
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[concat(variables('pubIPBaseName'), '-cf-lifecycle')]",
-      "location": "[variables('location')]",
-      "properties": {
-        "publicIPAllocationMethod": "static"
-      }
-    },
-    {
-      "apiVersion": "[variables('apiVersion')]",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[concat(variables('pubIPBaseName'), '-cf-bats')]",
-      "location": "[variables('location')]",
-      "properties": {
-        "publicIPAllocationMethod": "static"
       }
     }
   ]

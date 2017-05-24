@@ -71,7 +71,19 @@ do
     fi
   done
   
-  public_ips="AzureCPICI-bosh AzureCPICI-cf-lifecycle AzureCPICI-cf-bats"
+  public_ip="AzureCPICI-cf-lifecycle"
+  echo "azure network public-ip show --resource-group ${resource_group_name} --name ${public_ip} --json | jq '.name' -r"
+  public_ip_actual=$(azure network public-ip show --resource-group ${resource_group_name} --name ${public_ip} --json | jq '.name' -r)
+  if [ "${public_ip_actual}" != "${public_ip}" ]; then
+    echo "The task failed because the public IP ${public_ip} does not exist in resource group ${resource_group_name}"
+    exit_if_error
+  fi
+done
+
+resource_group_names="${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+for resource_group_name in ${resource_group_names}
+do
+  public_ips="AzureCPICI-bosh AzureCPICI-cf-bats"
   for public_ip in ${public_ips}
   do
     echo "azure network public-ip show --resource-group ${resource_group_name} --name ${public_ip} --json | jq '.name' -r"
