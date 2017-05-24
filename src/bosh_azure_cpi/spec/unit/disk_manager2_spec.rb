@@ -36,7 +36,9 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     it "creates the disk with the specified caching and storage account type" do
       expect(client2).to receive(:create_empty_managed_disk).with(disk_params)
-      disk_manager2.create_disk(location, size, storage_account_type, caching)
+      expect {
+        disk_manager2.create_disk(location, size, storage_account_type, caching)
+      }.not_to raise_error
     end
   end  
 
@@ -64,7 +66,9 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     it "creates the managed disk from the blob uri" do
       expect(client2).to receive(:create_managed_disk_from_blob).with(disk_params)
-      disk_manager2.create_disk_from_blob(disk_name, blob_uri, location, storage_account_type)
+      expect {
+        disk_manager2.create_disk_from_blob(disk_name, blob_uri, location, storage_account_type)
+      }.not_to raise_error
     end
   end  
 
@@ -76,11 +80,43 @@ describe Bosh::AzureCloud::DiskManager2 do
           and_return({})
       end
 
-      it "deletes the disk" do
-        expect(client2).to receive(:delete_managed_disk).
-          with(disk_name)
+      context "when AzureConflictError is not thrown" do
+        it "deletes the disk" do
+          expect(client2).to receive(:delete_managed_disk).
+            with(disk_name).once
 
-        disk_manager2.delete_disk(disk_name)
+          expect {
+            disk_manager2.delete_disk(disk_name)
+          }.not_to raise_error
+        end
+      end
+
+      context "when AzureConflictError is thrown only one time" do
+        it "do one retry and deletes the disk" do
+          expect(client2).to receive(:delete_managed_disk).
+            with(disk_name).
+            and_raise(Bosh::AzureCloud::AzureConflictError)
+          expect(client2).to receive(:delete_managed_disk).
+            with(disk_name).once
+
+          expect {
+            disk_manager2.delete_disk(disk_name)
+          }.not_to raise_error
+        end
+      end
+
+      context "when AzureConflictError is thrown every time" do
+        before do
+          allow(client2).to receive(:delete_managed_disk).
+            with(disk_name).
+            and_raise(Bosh::AzureCloud::AzureConflictError)
+        end
+
+        it "raise an error because the retry still fails" do
+          expect {
+            disk_manager2.delete_disk(disk_name)
+          }.to raise_error Bosh::AzureCloud::AzureConflictError
+        end
       end
     end
 
@@ -95,7 +131,9 @@ describe Bosh::AzureCloud::DiskManager2 do
         expect(client2).not_to receive(:delete_managed_disk).
           with(disk_name)
 
-        disk_manager2.delete_disk(disk_name)
+        expect {
+          disk_manager2.delete_disk(disk_name)
+        }.not_to raise_error
       end
     end
   end  
@@ -158,7 +196,9 @@ describe Bosh::AzureCloud::DiskManager2 do
     it "creates the managed snapshot" do
       expect(client2).to receive(:create_managed_snapshot).with(snapshot_params)
 
-      disk_manager2.snapshot_disk(disk_name, metadata)
+      expect {
+        disk_manager2.snapshot_disk(disk_name, metadata)
+      }.not_to raise_error
     end
   end  
 
