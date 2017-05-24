@@ -11,7 +11,7 @@ describe Bosh::AzureCloud::BlobManager do
 
   let(:azure_client) { instance_double(Azure::Storage::Client) }
   let(:blob_service) { instance_double(Azure::Storage::Blob::BlobService) }
-  let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
+  let(:customized_retry) { instance_double(Bosh::AzureCloud::CustomizedRetryPolicyFilter) }
   let(:blob_host) { "fake-blob-endpoint" }
   let(:storage_account) {
     {
@@ -46,9 +46,9 @@ describe Bosh::AzureCloud::BlobManager do
     allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
     allow(azure_client).to receive(:blob_client).
       and_return(blob_service)
-    allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).
-      and_return(exponential_retry)
-    allow(blob_service).to receive(:with_filter).with(exponential_retry)
+    allow(Bosh::AzureCloud::CustomizedRetryPolicyFilter).to receive(:new).
+      and_return(customized_retry)
+    allow(blob_service).to receive(:with_filter).with(customized_retry)
     allow(SecureRandom).to receive(:uuid).and_return(request_id)
   end
 
@@ -669,6 +669,89 @@ describe Bosh::AzureCloud::BlobManager do
         expect(blob_service).not_to receive(:set_container_acl)
 
         blob_manager.prepare(another_storage_account_name, containers: [container_name])
+      end
+    end
+  end
+end
+
+describe Bosh::AzureCloud::CustomizedRetryPolicyFilter do
+  let(:customized_retry_policy_filter) { Bosh::AzureCloud::CustomizedRetryPolicyFilter.new }
+  describe "#apply_retry_policy" do
+    context "when there is no error" do
+      let(:retry_data) { {} }
+
+      it "should not set the retryable" do
+        customized_retry_policy_filter.apply_retry_policy(retry_data)
+        expect(retry_data[:retryable]).to be(nil)
+      end
+    end
+
+    context "when the error is neither OpenSSL::SSL::SSLError nor OpenSSL::X509::StoreError" do
+      let(:retry_data) {
+        {
+          :error => StandardError
+        }
+      }
+
+      it "should not set the retryable" do
+        customized_retry_policy_filter.apply_retry_policy(retry_data)
+        expect(retry_data[:retryable]).to be(nil)
+      end
+    end
+
+    context "when the error is OpenSSL::SSL::SSLError" do
+      context "when the error message is related to connection reset" do
+        let(:retry_data) {
+          {
+            :error => OpenSSL::SSL::SSLError.new("Connection reset by peer - SSL_connect")
+          }
+        }
+
+        it "should set the retryable to true" do
+          customized_retry_policy_filter.apply_retry_policy(retry_data)
+          expect(retry_data[:retryable]).to be(true)
+        end
+      end
+
+      context "when the error message is not related to connection reset" do
+        let(:retry_data) {
+          {
+            :error => OpenSSL::SSL::SSLError.new("Some other error")
+          }
+        }
+
+        it "should not set the retryable" do
+          customized_retry_policy_filter.apply_retry_policy(retry_data)
+          expect(retry_data[:retryable]).to be(nil)
+        end
+      end
+    end
+
+    context "when the error is OpenSSL::X509::StoreError" do
+      context "when the error message is related to connection reset" do
+        let(:retry_data) {
+          {
+            :error => OpenSSL::X509::StoreError.new("Connection reset by peer - SSL_connect")
+          }
+        }
+
+        it "should set the retryable to true" do
+          customized_retry_policy_filter.apply_retry_policy(retry_data)
+          expect(retry_data[:retryable]).to be(true)
+        end
+      end
+
+      context "when the error message is not related to connection reset" do
+        let(:retry_data) {
+          {
+            :error => OpenSSL::X509::StoreError.new("Some other error")
+          }
+        }
+
+        it "should not set the retryable" do
+          customized_retry_policy_filter.apply_retry_policy(retry_data)
+          expect(retry_data[:retryable]).to be(nil)
+        end
       end
     end
   end
