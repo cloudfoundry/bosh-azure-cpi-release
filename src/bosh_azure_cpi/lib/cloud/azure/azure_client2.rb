@@ -364,21 +364,35 @@ module Bosh::AzureCloud
     end
 
     # Attach a specified disk to a virtual machine
-    # @param [String] name      - Name of virtual machine.
-    # @param [String] disk_name - Disk name.
-    # @param [String] disk_uri  - URI of disk (managed: false) or ID of managed disk (managed: true)
-    # @param [String] caching   - Caching option: None, ReadOnly or ReadWrite
-    # @param [Boolean] managed  - Needs to be true to attach disk to a managed disk VM.
+    #
+    # ==== Attributes
+    #
+    # @param [String] vm_name     - Name of virtual machine.
+    # @param [Hash]   disk_params - Parameters of disk.
+    #
+    # ==== disk_params
+    #
+    # Accepted key/value pairs are:
+    # * +:disk_name+              - String.  Disk name.
+    # * +:caching+                - String.  Caching option: None, ReadOnly or ReadWrite.
+    # * +:managed+                - Boolean. Needs to be true to attach disk to a managed disk VM.
+    #
+    #   When managed is true, below parameters are required
+    # * +:disk_id+                - String.  ID of a managed disk.
+    #
+    #   When managed is false or nil, below parameters are required
+    # * +:disk_uri+               - String.  URI of an unmanaged disk.
+    # * +:disk_size+              - Integer. Size of disk. Needs to be specified when attaching an unmanaged disk.
     #
     # @return [Hash]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
-    def attach_disk_to_virtual_machine(name, disk_name, disk_uri, caching, managed = false)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: name)
+    def attach_disk_to_virtual_machine(vm_name, disk_params)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, name: vm_name)
       vm = get_resource_by_id(url)
       if vm.nil?
-        raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{name}'"
+        raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{vm_name}'"
       end
 
       vm = remove_resources_from_vm(vm)
@@ -394,8 +408,15 @@ module Bosh::AzureCloud
         end
       end
 
+      disk_name = disk_params[:disk_name]
+      caching = disk_params[:caching]
+      managed = disk_params[:managed]
+      disk_id = disk_params[:disk_id]
+      disk_uri = disk_params[:disk_uri]
+      disk_size = disk_params[:disk_size]
+
       if lun.nil?
-        raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine `#{name}' for the new disk `#{disk_name}'"
+        raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine `#{vm_name}' for the new disk `#{disk_name}'"
       end
 
       new_disk = {
@@ -405,13 +426,14 @@ module Bosh::AzureCloud
         'caching'      => caching
       }
       if managed
-        new_disk['managedDisk'] = { 'id' => disk_uri }
+        new_disk['managedDisk'] = { 'id' => disk_id }
       else
         new_disk['vhd'] = { 'uri' => disk_uri }
+        new_disk['diskSizeGb'] = disk_size
       end
 
       vm['properties']['storageProfile']['dataDisks'].push(new_disk)
-      @logger.info("attach_disk_to_virtual_machine - attach disk `#{disk_name}' to lun `#{lun}' of the virtual machine `#{name}', managed: `#{managed}'")
+      @logger.info("attach_disk_to_virtual_machine - attach disk `#{disk_name}' to lun `#{lun}' of the virtual machine `#{vm_name}', managed: `#{managed}'")
       http_put(url, vm)
 
       disk = {
@@ -421,9 +443,10 @@ module Bosh::AzureCloud
         :caching       => caching
       }
       if managed
-        disk[:managed_disk] = { :id => disk_uri }
+        disk[:managed_disk] = { :id => disk_id }
       else
         disk[:vhd] = { :uri => disk_uri }
+        disk[:disk_size_gb] = disk_size
       end
       disk
     end

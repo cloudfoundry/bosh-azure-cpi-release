@@ -36,6 +36,13 @@ module Bosh::AzureCloud
       end
     end
 
+    def get_blob_size_in_bytes(storage_account_name, container_name, blob_name)
+      @logger.info("get_blob_size_in_bytes(#{storage_account_name}, #{container_name}, #{blob_name})")
+      initialize_blob_client(storage_account_name) do
+        @blob_service_client.get_blob_properties(container_name, blob_name).properties[:content_length]
+      end
+    end
+
     def delete_blob_snapshot(storage_account_name, container_name, blob_name, snapshot_time)
       @logger.info("delete_blob_snapshot(#{storage_account_name}, #{container_name}, #{blob_name}, #{snapshot_time})")
       initialize_blob_client(storage_account_name) do

@@ -87,6 +87,12 @@ module Bosh::AzureCloud
       caching
     end
 
+    def get_disk_size_in_gb(disk_name)
+      @logger.info("get_disk_size_in_gb(#{disk_name})")
+      storage_account_name = get_storage_account_name(disk_name)
+      @blob_manager.get_blob_size_in_bytes(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd") / 1024 / 1024 / 1024
+    end
+
     # bosh-os-STORAGEACCOUNTNAME-AGENTID
     def generate_os_disk_name(instance_id)
       "#{OS_DISK_PREFIX}-#{instance_id}"
