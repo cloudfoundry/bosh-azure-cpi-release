@@ -93,8 +93,6 @@ By default there is one Standard Tier storage account created for each resource 
 
   If the new storage account does not exist and you expect Azure CPI to create it automatically, you need to specify storage_account_type. It can be either `Standard_LRS`, `Standard_ZRS`, `Standard_GRS`, `Standard_RAGRS` or `Premium_LRS`. You can click [**HERE**](http://azure.microsoft.com/en-us/pricing/details/storage/) to learn more about the type of Azure storage account.
 
-  You also can specify the location for the new storage account. If it is not set, the location of the default resource group will be used. For more information, see [List all of the available geo-locations](http://azure.microsoft.com/en-us/regions/). For `AzureChinaCloud`, you should only use the regions in China, `chinanorth` or `chinaeast`.
-
 1. For best disk performance, you should use DS-series, DSv2-series, Fs-series and GS-series VMs which can use premium storage. For more information, see [Sizes for virtual machines in Azure](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/).
 
   ```
@@ -115,11 +113,12 @@ By default there is one Standard Tier storage account created for each resource 
       instance_type: Standard_DS1_v2
       storage_account_name: <new-storage-account>
       storage_account_type: Premium_LRS
-      storage_account_location: eastus2
   ```
 
 1. Please use Azure CPI v7 or later version. The new storage accounts which are specified in the `resource_pools` section will be created by Azure CPI automatically if they do not exist.
 
 1. Deploy your Cloud Foundry with the updated manifest. You can configure multiple storage accounts for the first deployment, or for on going deployments.
+
+>**NOTE:** If you manually create storage accounts for VMs, you must create storage accounts in the same location as VMs' VNET. If you specify a storage account which does not exist for VMs, CPI (v25+) will create it automatically in the same location as VMs' VNET.
 
 Click [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/blob/master/src/bosh_azure_cpi/README.md) to learn more about the configuration of availability sets and multiple storage accounts.

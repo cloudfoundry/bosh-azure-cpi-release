@@ -14,7 +14,7 @@ module Bosh::AzureCloud
       @default_storage_account = nil
     end
 
-    def create_storage_account(storage_account_name, storage_account_type, storage_account_location = nil, tags = {}, is_default_storage_account = false)
+    def create_storage_account(storage_account_name, storage_account_type, storage_account_location, tags = {}, is_default_storage_account = false)
       @logger.debug("create_storage_account(#{storage_account_name}, #{storage_account_type}, #{storage_account_location}, #{tags})")
 
       created = false
@@ -36,15 +36,7 @@ module Bosh::AzureCloud
         end
       end
       begin
-        unless created
-          unless storage_account_location.nil?
-            location = storage_account_location
-          else
-            resource_group = @azure_client2.get_resource_group()
-            location = resource_group[:location]
-          end
-          created = @azure_client2.create_storage_account(storage_account_name, location, storage_account_type, tags)
-        end
+        created = @azure_client2.create_storage_account(storage_account_name, storage_account_location, storage_account_type, tags) unless created
         @blob_manager.prepare(storage_account_name, is_default_storage_account: is_default_storage_account)
         true
       rescue => e
@@ -60,8 +52,8 @@ module Bosh::AzureCloud
       end
     end
 
-    def get_storage_account_from_resource_pool(resource_pool)
-      @logger.debug("get_storage_account_from_resource_pool(#{resource_pool})")
+    def get_storage_account_from_resource_pool(resource_pool, location)
+      @logger.debug("get_storage_account_from_resource_pool(#{resource_pool}, #{location})")
 
       # If storage_account_name is not specified in resource_pool, use the default storage account in global configurations
       storage_account_name = default_storage_account_name
@@ -108,7 +100,7 @@ module Bosh::AzureCloud
           if storage_account.nil?
             storage_account_type = resource_pool['storage_account_type']
             cloud_error("missing required cloud property `storage_account_type' in the resource pool.") if storage_account_type.nil?
-            create_storage_account(storage_account_name, storage_account_type, resource_pool['storage_account_location'])
+            create_storage_account(storage_account_name, storage_account_type, location)
           end
         end
       end

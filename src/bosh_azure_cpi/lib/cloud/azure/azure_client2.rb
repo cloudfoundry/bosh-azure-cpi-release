@@ -1306,6 +1306,48 @@ module Bosh::AzureCloud
       http_delete(url)
     end
 
+    # Network/Virtual Network
+
+    # Get a virtual network's information
+    # @param [String] resource_group_name - Name of resource group.
+    # @param [String] vnet_name           - Name of network.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/network/virtualnetwork/get-information-about-a-virtual-network
+    #
+    def get_virtual_network_by_name(resource_group_name, vnet_name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_VNETS, resource_group_name: resource_group_name, name: vnet_name)
+      get_virtual_network(url)
+    end
+
+    # Get a virutal network's information
+    # @param [String] url - URL of virtual network.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/network/virtualnetwork/get-information-about-a-virtual-network
+    #
+    def get_virtual_network(url)
+      vnet = nil
+      result = get_resource_by_id(url)
+      unless result.nil?
+        vnet = {}
+        vnet[:id]   = result['id']
+        vnet[:name] = result['name']
+        vnet[:location] = result['location']
+
+        properties = result['properties']
+        vnet[:provisioning_state] = properties['provisioningState']
+        vnet[:address_space]     = properties['addressSpace']
+        vnet[:subnets] = []
+        properties['subnets'].each do |subnet|
+          vnet[:subnets].push(parse_subnet(subnet))
+        end
+      end
+      vnet
+    end
+
     # Network/Subnet
 
     # Get a network subnet's information
@@ -1330,18 +1372,8 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-subnet
     #
     def get_network_subnet(url)
-      subnet = nil
       result = get_resource_by_id(url)
-      unless result.nil?
-        subnet = {}
-        subnet[:id]   = result['id']
-        subnet[:name] = result['name']
-
-        properties = result['properties']
-        subnet[:provisioning_state] = properties['provisioningState']
-        subnet[:address_prefix]     = properties['addressPrefix']
-      end
-      subnet
+      parse_subnet(result)
     end
 
     # Network/Network Security Group
@@ -1693,6 +1725,20 @@ module Bosh::AzureCloud
         end
       end
       interface
+    end
+
+    def parse_subnet(result)
+      subnet = nil
+      unless result.nil?
+        subnet = {}
+        subnet[:id]   = result['id']
+        subnet[:name] = result['name']
+
+        properties = result['properties']
+        subnet[:provisioning_state] = properties['provisioningState']
+        subnet[:address_prefix]     = properties['addressPrefix']
+      end
+      subnet
     end
 
     def parse_public_ip(result)
