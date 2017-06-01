@@ -1472,7 +1472,7 @@ describe Bosh::AzureCloud::VMManager do
   describe "#attach_disk" do
     let(:caching) { "None" }
     let(:disk_name) { "fake-disk-name-#{caching}" }
-    let(:disk) { {:lun => 1} }
+    let(:lun) { 1 }
 
     context "When the disk is unmanaged disk" do
       let(:instance_id) { "#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}-e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
@@ -1501,8 +1501,8 @@ describe Bosh::AzureCloud::VMManager do
       it "attaches the disk to an instance" do
         expect(client2).to receive(:attach_disk_to_virtual_machine).
           with(instance_id, disk_params).
-          and_return(disk)
-        expect(vm_manager.attach_disk(instance_id, disk_name)).to eq("1")
+          and_return(lun)
+        expect(vm_manager.attach_disk(instance_id, disk_name)).to eq("#{lun}")
       end
     end
 
@@ -1531,8 +1531,8 @@ describe Bosh::AzureCloud::VMManager do
       it "attaches the disk to an instance" do
         expect(client2).to receive(:attach_disk_to_virtual_machine).
           with(instance_id, disk_params).
-          and_return(disk)
-        expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("1")
+          and_return(lun)
+        expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("#{lun}")
       end
     end
 
@@ -1563,8 +1563,8 @@ describe Bosh::AzureCloud::VMManager do
       it "attaches the disk to an instance" do
         expect(client2).to receive(:attach_disk_to_virtual_machine).
           with(instance_id, disk_params).
-          and_return(disk)
-        expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("1")
+          and_return(lun)
+        expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("#{lun}")
       end
     end
   end

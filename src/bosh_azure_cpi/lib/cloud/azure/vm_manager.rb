@@ -202,7 +202,6 @@ module Bosh::AzureCloud
           :disk_id   => @azure_client2.get_managed_disk_by_name(disk_name)[:id],
           :managed   => true
         }
-        disk = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_params)
       else
         disk_params = {
           :disk_name => disk_name,
@@ -211,9 +210,9 @@ module Bosh::AzureCloud
           :disk_size => @disk_manager.get_disk_size_in_gb(disk_name),
           :managed   => false
         }
-        disk = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_params)
       end
-      "#{disk[:lun]}"
+      lun = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_params)
+      "#{lun}"
     end
 
     def detach_disk(instance_id, disk_name)

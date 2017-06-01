@@ -384,7 +384,7 @@ module Bosh::AzureCloud
     # * +:disk_uri+               - String.  URI of an unmanaged disk.
     # * +:disk_size+              - Integer. Size of disk. Needs to be specified when attaching an unmanaged disk.
     #
-    # @return [Hash]
+    # @return [Integer]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
@@ -436,19 +436,7 @@ module Bosh::AzureCloud
       @logger.info("attach_disk_to_virtual_machine - attach disk `#{disk_name}' to lun `#{lun}' of the virtual machine `#{vm_name}', managed: `#{managed}'")
       http_put(url, vm)
 
-      disk = {
-        :name          => disk_name,
-        :lun           => lun,
-        :create_option => 'Attach',
-        :caching       => caching
-      }
-      if managed
-        disk[:managed_disk] = { :id => disk_id }
-      else
-        disk[:vhd] = { :uri => disk_uri }
-        disk[:disk_size_gb] = disk_size
-      end
-      disk
+      lun
     end
 
     # Detach a specified disk from a virtual machine
