@@ -12,11 +12,11 @@ GEM
       faraday_middleware (~> 0.10)
       nokogiri (~> 1.7, < 1.8)
     bit-struct (0.15.0)
-    bosh_common (1.3262.4.0)
+    bosh_common (1.3262.24.0)
       logging (~> 1.8.2)
       semi_semantic (~> 1.2.0)
-    bosh_cpi (1.3262.4.0)
-      bosh_common (~> 1.3262.4.0)
+    bosh_cpi (2.1.1)
+      httpclient (~> 2.8.3)
       logging (~> 1.8.2)
       membrane (~> 1.1.0)
     crack (0.4.3)
@@ -28,7 +28,7 @@ GEM
     faraday_middleware (0.11.0.1)
       faraday (>= 0.7.4, < 1.0)
     hashdiff (0.3.0)
-    httpclient (2.4.0)
+    httpclient (2.8.3)
     json (1.8.3)
     little-plugger (1.1.4)
     logging (1.8.2)
@@ -72,9 +72,8 @@ PLATFORMS
 
 DEPENDENCIES
   azure-storage (= 0.12.1.preview)
-  bosh_common
-  bosh_cpi
-  httpclient (= 2.4.0)
+  bosh_common (= 1.3262.24.0)
+  bosh_cpi (= 2.1.1)
   rake (~> 10.3.2)
   rspec (~> 3.0.0)
   simplecov

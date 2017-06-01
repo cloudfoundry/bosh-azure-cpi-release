@@ -17,6 +17,11 @@ module Bosh::AzureCloud
 
       @logger = Bosh::Clouds::Config.logger
 
+      request_id = options['azure']['request_id']
+      if request_id
+        @logger.set_request_id(request_id)
+      end
+
       @use_managed_disks = azure_properties['use_managed_disks']
 
       init_registry
