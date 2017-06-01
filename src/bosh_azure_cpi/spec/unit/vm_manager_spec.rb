@@ -29,30 +29,7 @@ describe Bosh::AzureCloud::VMManager do
   let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_properties_managed, registry_endpoint, disk_manager, disk_manager2, client2) }
 
   describe "#create" do
-    # Parameters
-    let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
-    let(:stemcell_uri) { "fake-uri" }
-    let(:os_type) { "fake-os-type" }
-    let(:disk_size) { nil }
-    let(:resource_pool) {
-      {
-        'instance_type'                => 'Standard_D1',
-        'storage_account_name'         => 'dfe03ad623f34d42999e93ca',
-        'caching'                      => 'ReadWrite',
-        'availability_set'             => 'fake-avset',
-        'platform_update_domain_count' => 5,
-        'platform_fault_domain_count'  => 3,
-        'load_balancer'                => 'fake-lb-name'
-      }
-    }
-    let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
-    let(:security_group) {
-      {
-        :name => "fake-default-nsg-name",
-        :id => "fake-nsg-id"
-      }
-    }
-    let(:subnet) { double("subnet") }
+    # Stroage Account
     let(:storage_account) {
       {
         :id                 => "foo",
@@ -63,8 +40,23 @@ describe Bosh::AzureCloud::VMManager do
         :primary_endpoints  => "bar"
       }
     }
+
+    # Network
+    let(:load_balancer) {
+      {
+        :name => "fake-lb-name"
+      }
+    }
+    let(:security_group) {
+      {
+        :name => "fake-default-nsg-name",
+        :id   => "fake-nsg-id"
+      }
+    }
+    let(:subnet) { double("subnet") }
+
+    # Disk
     let(:disk_id) { double("fake-disk-id") }
-    let(:env) { {} }
     let(:os_disk) {
       {
         :disk_name    => "fake-disk-name",
@@ -95,17 +87,23 @@ describe Bosh::AzureCloud::VMManager do
         :disk_caching => 'fake-disk-caching'
       }
     }
-    let(:load_balancer) {
+
+    # Stemcell
+    let(:stemcell_uri) { "fake-uri" }
+    let(:os_type) { "fake-os-type" }
+
+    # Parameters of create_vm
+    let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
+    let(:resource_pool) {
       {
-        :name => "fake-lb-name"
+        'instance_type'                => 'Standard_D1',
+        'storage_account_name'         => 'dfe03ad623f34d42999e93ca',
+        'caching'                      => 'ReadWrite',
+        'load_balancer'                => 'fake-lb-name'
       }
     }
-    let(:availability_set) {
-      {
-        :name => "fake-avset",
-        :virtual_machines => []
-      }
-    }
+    let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
+    let(:env) { {} }
 
     before do
       allow(stemcell_info).to receive(:uri).
@@ -115,7 +113,7 @@ describe Bosh::AzureCloud::VMManager do
       allow(stemcell_info).to receive(:is_windows?).
         and_return(false)
       allow(stemcell_info).to receive(:disk_size).
-        and_return(disk_size)
+        and_return(nil)
       allow(stemcell_info).to receive(:is_light_stemcell?).
         and_return(false)
 
@@ -202,7 +200,28 @@ describe Bosh::AzureCloud::VMManager do
 
         expect {
           vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-        }.to raise_error /missing required cloud property `instance_type'./
+        }.to raise_error /missing required cloud property `instance_type'/
+      end
+    end
+
+    context "when an error is thrown during cleanup" do
+      let(:resource_pool) { {} }
+
+      before do
+        allow(client2).to receive(:get_public_ip_by_name).
+          with(instance_id).
+          and_return({ :ip_address => "public-ip" })
+        allow(client2).to receive(:delete_public_ip).with(instance_id).and_raise("Error during cleanup")
+      end
+
+      it "should raise an error" do
+        expect(client2).not_to receive(:delete_virtual_machine)
+        expect(client2).not_to receive(:delete_network_interface)
+        expect(client2).to receive(:list_network_interfaces_by_instance_id).with(instance_id).and_return([])
+
+        expect {
+          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+        }.to raise_error /Error during cleanup/
       end
     end
 
@@ -223,6 +242,7 @@ describe Bosh::AzureCloud::VMManager do
             with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
             and_return(nil)
         end
+
         it "should raise an error" do
           expect {
             vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
@@ -246,6 +266,7 @@ describe Bosh::AzureCloud::VMManager do
             with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
             and_return(nil)
         end
+
         it "should raise an error" do
           expect {
             vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
@@ -410,7 +431,7 @@ describe Bosh::AzureCloud::VMManager do
         end
       end
 
-      context "when one network interface is create and the another one is not" do
+      context "when one network interface is created and the another one is not" do
         let(:network_interface) {
           {
             :id   => "/subscriptions/fake-subscription/resourceGroups/fake-resource-group/providers/Microsoft.Network/networkInterfaces/#{instance_id}-x",
@@ -462,48 +483,6 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
-    context "when availability set is not created" do
-      let(:network_interface) {
-        {
-          :id   => "/subscriptions/fake-subscription/resourceGroups/fake-resource-group/providers/Microsoft.Network/networkInterfaces/#{instance_id}-x",
-          :name => "#{instance_id}-x"
-        }
-      }
-
-      before do
-        allow(client2).to receive(:get_network_subnet_by_name).
-          and_return(subnet)
-        allow(client2).to receive(:get_load_balancer_by_name).
-          with(resource_pool['load_balancer']).
-          and_return(load_balancer)
-         allow(client2).to receive(:list_public_ips).
-          and_return([{
-            :ip_address => "public-ip"
-          }])
-        allow(client2).to receive(:create_network_interface)
-        allow(client2).to receive(:get_network_interface_by_name).
-          with("#{instance_id}-0").
-          and_return(network_interface)
-        allow(client2).to receive(:get_network_interface_by_name).
-          with("#{instance_id}-1").
-          and_return(network_interface)
-        allow(client2).to receive(:get_availability_set_by_name).
-          with(resource_pool['availability_set']).
-          and_return(nil)
-        allow(client2).to receive(:create_availability_set).
-          and_raise("availability set is not created")
-      end
-
-      it "should delete nics and then raise an error" do
-        expect(client2).not_to receive(:delete_virtual_machine)
-
-        expect(client2).to receive(:delete_network_interface).twice
-        expect {
-          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-        }.to raise_error /availability set is not created/
-      end
-    end
-
     context "when creating virtual machine" do
       let(:load_balancer) {
         {
@@ -513,12 +492,6 @@ describe Bosh::AzureCloud::VMManager do
       let(:network_interface) {
         {
           :name => "foo"
-        }
-      }
-      let(:availability_set) {
-        {
-          :name => "fake-avset",
-          :virtual_machines => []
         }
       }
       let(:storage_account) {
@@ -547,9 +520,7 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_network_interface_by_name).
           and_return(network_interface)
         allow(client2).to receive(:get_availability_set_by_name).
-          with(resource_pool['availability_set']).
-          and_return(availability_set)
-        allow(client2).to receive(:create_availability_set)
+          and_return(nil)
         allow(client2).to receive(:get_storage_account_by_name).
           and_return(storage_account)
 
@@ -737,142 +708,80 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         # Network Security Group
-        context "with the network security group provided in resource_pool" do
-          let(:resource_pool) {
-            {
-              'instance_type'                 => 'Standard_D1',
-              'storage_account_name'          => 'dfe03ad623f34d42999e93ca',
-              'caching'                       => 'ReadWrite',
-              'availability_set'              => 'fake-avset',
-              'platform_update_domain_count'  => 5,
-              'platform_fault_domain_count'   => 3,
-              'load_balancer'                 => 'fake-lb-name',
-              'security_group'                => 'fake-nsg-name'
-            }
-          }
-
-          before do
-            allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
-              and_return(nil)
-            allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-nsg-name").
-              and_return(security_group)
-          end
-
-          context "and a heavy stemcell is used" do
-            it "should succeed" do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-
-              expect(client2).to receive(:create_network_interface).twice
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(instance_id)
-              expect(vm_params[:image_uri]).to eq(stemcell_uri)
-              expect(vm_params[:os_type]).to eq(os_type)
-            end
-          end
-
-          context "and a light stemcell is used" do
-            let(:platform_image) {
+        context "#network_security_group" do
+          context "with the network security group provided in resource_pool" do
+            let(:resource_pool) {
               {
-                'publisher' => 'fake-publisher',
-                'offer'     => 'fake-offer',
-                'sku'       => 'fake-sku',
-                'version'   => 'fake-version'
+                'instance_type'                 => 'Standard_D1',
+                'storage_account_name'          => 'dfe03ad623f34d42999e93ca',
+                'caching'                       => 'ReadWrite',
+                'load_balancer'                 => 'fake-lb-name',
+                'security_group'                => 'fake-nsg-name'
               }
             }
 
             before do
-              allow(stemcell_info).to receive(:is_light_stemcell?).
-                and_return(true)
-              allow(stemcell_info).to receive(:image_reference).
-                and_return(platform_image)
-            end
-
-            it "should succeed" do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-
-              expect(client2).to receive(:create_network_interface).twice
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(instance_id)
-              expect(vm_params[:os_type]).to eq(os_type)
-            end
-          end
-        end
-
-        context "with the network security group provided in network spec" do
-          before do
-            allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
-              with("fake-default-nsg-name").
-              and_return(nil)
-            allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-network-nsg-name").
-              and_return(security_group)
-          end
-
-          it "should succeed" do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
-
-            expect(client2).to receive(:create_network_interface).twice
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
-          end
-        end
-
-        context "with the default network security group" do
-          it "should succeed" do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
-
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
-          end
-        end
-
-        context "with the resource group name not provided in the network spec" do
-          before do
-            allow(client2).to receive(:get_network_subnet_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
-              and_return(subnet)
-          end
-
-          context "when network security group is found in the default resource group" do
-            before do
               allow(client2).to receive(:get_network_security_group_by_name).
                 with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
-                and_return(security_group)
-            end
-
-            it "should succeed" do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-
-              expect(client2).to receive(:create_network_interface).twice
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(instance_id)
-            end
-          end
-        end
-
-        context "with the resource group name provided in the network spec" do
-          before do
-            allow(client2).to receive(:get_network_subnet_by_name).
-              with("fake-resource-group-name", "fake-virtual-network-name", "fake-subnet-name").
-              and_return(subnet)
-          end
-
-          context "when network security group is not found in the specified resource group and found in the default resource group" do
-            before do
-              allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
-                and_return(security_group)
-              allow(client2).to receive(:get_network_security_group_by_name).
-                with("fake-resource-group-name", "fake-default-nsg-name").
                 and_return(nil)
+              allow(client2).to receive(:get_network_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, "fake-nsg-name").
+                and_return(security_group)
+            end
+
+            context "and a heavy stemcell is used" do
+              it "should succeed" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+
+                expect(client2).to receive(:create_network_interface).twice
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+                expect(vm_params[:image_uri]).to eq(stemcell_uri)
+                expect(vm_params[:os_type]).to eq(os_type)
+              end
+            end
+
+            context "and a light stemcell is used" do
+              let(:platform_image) {
+                {
+                  'instance_type'                 => 'Standard_D1',
+                  'storage_account_name'          => 'dfe03ad623f34d42999e93ca',
+                  'caching'                       => 'ReadWrite',
+                  'load_balancer'                 => 'fake-lb-name',
+                  'security_group'                => 'fake-nsg-name'
+                }
+              }
+
+              before do
+                allow(client2).to receive(:get_network_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                  and_return(nil)
+                allow(client2).to receive(:get_network_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, "fake-nsg-name").
+                  and_return(security_group)
+              end
+
+              it "should succeed" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+
+                expect(client2).to receive(:create_network_interface).twice
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+          end
+
+          context "with the network security group provided in network spec" do
+            before do
+              allow(client2).to receive(:get_network_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                with("fake-default-nsg-name").
+                and_return(nil)
+              allow(client2).to receive(:get_network_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, "fake-network-nsg-name").
+                and_return(security_group)
             end
 
             it "should succeed" do
@@ -885,114 +794,178 @@ describe Bosh::AzureCloud::VMManager do
             end
           end
 
-          context "when network security group is found in the specified resource group" do
-            before do
-              allow(client2).to receive(:get_network_security_group_by_name).
-                with("fake-resource-group-name", "fake-default-nsg-name").
-                and_return(security_group)
-            end
-
+          context "with the default network security group" do
             it "should succeed" do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
 
-              expect(client2).to receive(:create_network_interface).twice
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
+            end
+          end
+
+          context "with the resource group name not provided in the network spec" do
+            before do
+              allow(client2).to receive(:get_network_subnet_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
+                and_return(subnet)
+            end
+
+            context "when network security group is found in the default resource group" do
+              before do
+                allow(client2).to receive(:get_network_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                  and_return(security_group)
+              end
+
+              it "should succeed" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:create_network_interface).twice
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+          end
+
+          context "with the resource group name provided in the network spec" do
+            before do
+              allow(client2).to receive(:get_network_subnet_by_name).
+                with("fake-resource-group-name", "fake-virtual-network-name", "fake-subnet-name").
+                and_return(subnet)
+            end
+
+            context "when network security group is not found in the specified resource group and found in the default resource group" do
+              before do
+                allow(client2).to receive(:get_network_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, "fake-default-nsg-name").
+                  and_return(security_group)
+                allow(client2).to receive(:get_network_security_group_by_name).
+                  with("fake-resource-group-name", "fake-default-nsg-name").
+                  and_return(nil)
+              end
+
+              it "should succeed" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:create_network_interface).exactly(2).times
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+
+            context "when network security group is found in the specified resource group" do
+              before do
+                allow(client2).to receive(:get_network_security_group_by_name).
+                  with("fake-resource-group-name", "fake-default-nsg-name").
+                  and_return(security_group)
+              end
+
+              it "should succeed" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:create_network_interface).twice
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+          end
+        end
+
+        # Stemcell
+        context "#stemcell" do
+          context "with the network security group provided in resource_pool" do
+            let(:resource_pool) {
+              {
+                'instance_type'                 => 'Standard_D1',
+                'storage_account_name'          => 'dfe03ad623f34d42999e93ca',
+                'caching'                       => 'ReadWrite',
+                'load_balancer'                 => 'fake-lb-name'
+              }
+            }
+
+            context "and a heavy stemcell is used" do
+              it "should succeed" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+
+                expect(client2).to receive(:create_network_interface).exactly(2).times
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+                expect(vm_params[:image_uri]).to eq(stemcell_uri)
+                expect(vm_params[:os_type]).to eq(os_type)
+              end
+            end
+
+            context "and a light stemcell is used" do
+              let(:platform_image) {
+                {
+                  'publisher' => 'fake-publisher',
+                  'offer'     => 'fake-offer',
+                  'sku'       => 'fake-sku',
+                  'version'   => 'fake-version'
+                }
+              }
+
+              before do
+                allow(stemcell_info).to receive(:is_light_stemcell?).
+                  and_return(true)
+                allow(stemcell_info).to receive(:image_reference).
+                  and_return(platform_image)
+              end
+
+              it "should succeed" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+
+                expect(client2).to receive(:create_network_interface).twice
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+                expect(vm_params[:os_type]).to eq(os_type)
+              end
             end
           end
         end
 
         # Availability Set
-        context "when another process is creating the same availability set" do
-          let(:env) { nil }
-          let(:resource_pool) {
-            {
-              'instance_type' => 'Standard_D1',
-              'availability_set' => 'fake-avset',
-              'platform_update_domain_count' => 5,
-              'platform_fault_domain_count' => 3,
-            }
-          }
-          let(:avset_params) {
-            {
-              :name                         => resource_pool['availability_set'],
-              :location                     => location,
-              :tags                         => {'user-agent' => 'bosh'},
-              :platform_update_domain_count => resource_pool['platform_update_domain_count'],
-              :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'],
-              :managed                      => false
-            }
-          }
-
-          before do
-            allow(client2).to receive(:get_availability_set_by_name).
-              with(resource_pool['availability_set']).
-              and_return(nil, {:name => 'fake-avset'})
-            allow(client2).to receive(:create_availability_set).
-              with(avset_params).
-              and_raise(Bosh::AzureCloud::AzureConflictError)
-          end
-
-          it "should succeed" do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).to receive(:create_availability_set)
-
-            expect(client2).to receive(:create_network_interface).twice
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
-          end
-        end
-
-        context "with env is nil and availability_set is specified in resource_pool" do
-          let(:env) { nil }
-          let(:resource_pool) {
-            {
-              'instance_type' => 'Standard_D1',
-              'availability_set' => 'fake-avset',
-              'platform_update_domain_count' => 5,
-              'platform_fault_domain_count' => 3,
-            }
-          }
-          let(:avset_params) {
-            {
-              :name                         => resource_pool['availability_set'],
-              :location                     => location,
-              :tags                         => {'user-agent' => 'bosh'},
-              :platform_update_domain_count => resource_pool['platform_update_domain_count'],
-              :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'],
-              :managed                      => false
-            }
-          }
-
-          before do
-            allow(client2).to receive(:get_availability_set_by_name).
-              with(resource_pool['availability_set']).
-              and_return(nil)
-          end
-
-          it "should create availability set and use value of availability_set as its name" do
-            expect(client2).to receive(:create_availability_set).
-              with(avset_params)
-
-            expect(client2).to receive(:create_network_interface).twice
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
-          end
-        end
-
-        context "with bosh.group specified in env" do
-          context "when availability_set is specified in resource_pool" do
-            let(:env) {
+        context "#availability_set" do
+          context "when availability set is not created" do
+            let(:env) { nil }
+            let(:availability_set_name) { "#{SecureRandom.uuid}" }
+            let(:resource_pool) {
               {
-                'bosh' => {'group' => 'fake-group'}
+                'instance_type' => 'Standard_D1',
+                'availability_set' => availability_set_name,
+                'platform_update_domain_count' => 5,
+                'platform_fault_domain_count' => 3,
               }
             }
+
+            before do
+              allow(client2).to receive(:get_availability_set_by_name).
+                with(availability_set_name).
+                and_return(nil)
+              allow(client2).to receive(:create_availability_set).
+                and_raise("availability set is not created")
+            end
+
+            it "should delete nics and then raise an error" do
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).to receive(:delete_network_interface).exactly(2).times
+
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.to raise_error /availability set is not created/
+            end
+          end
+
+          context "with env is nil and availability_set is specified in resource_pool" do
+            let(:env) { nil }
+            let(:availability_set_name) { "#{SecureRandom.uuid}" }
             let(:resource_pool) {
               {
                 'instance_type'                => 'Standard_D1',
-                'availability_set'             => 'fake-avset',
+                'availability_set'             => availability_set_name,
                 'platform_update_domain_count' => 5,
                 'platform_fault_domain_count'  => 3,
               }
@@ -1017,21 +990,308 @@ describe Bosh::AzureCloud::VMManager do
             it "should create availability set and use value of availability_set as its name" do
               expect(client2).to receive(:create_availability_set).
                 with(avset_params)
-
               expect(client2).to receive(:create_network_interface).twice
+
               vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(vm_params[:name]).to eq(instance_id)
             end
           end
 
-          context "when availability_set is not specified in resource_pool" do
-            let(:resource_pool) {
+          context "with bosh.group specified in env" do
+            context "when availability_set is specified in resource_pool" do
+              let(:env) {
+                {
+                  'bosh' => {
+                    'group' => "bosh-group-#{SecureRandom.uuid}"
+                  }
+                }
+              }
+              let(:availability_set_name) { "#{SecureRandom.uuid}" }
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'Standard_D1',
+                  'availability_set' => availability_set_name,
+                  'platform_update_domain_count' => 5,
+                  'platform_fault_domain_count' => 3,
+                }
+              }
+              let(:avset_params) {
+                {
+                  :name                         => resource_pool['availability_set'],
+                  :location                     => location,
+                  :tags                         => {'user-agent' => 'bosh'},
+                  :platform_update_domain_count => resource_pool['platform_update_domain_count'],
+                  :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'],
+                  :managed                      => false
+                }
+              }
+
+              before do
+                allow(client2).to receive(:get_availability_set_by_name).
+                  with(resource_pool['availability_set']).
+                  and_return(nil)
+              end
+
+              it "should create availability set and use value of availability_set as its name" do
+                expect(client2).to receive(:create_availability_set).
+                  with(avset_params)
+
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+
+            context "when availability_set is not specified in resource_pool" do
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'Standard_D1'
+                }
+              }
+              let(:avset_params) {
+                {
+                  :location                     => location,
+                  :tags                         => {'user-agent' => 'bosh'},
+                  :platform_update_domain_count => 5,
+                  :platform_fault_domain_count  => 3,
+                  :managed                      => false
+                }
+              }
+
+              context "when the length of availability_set name equals to 80" do
+                let(:env) {
+                  {
+                    'bosh' => {'group' => 'group' * 16}
+                  }
+                }
+
+                before do
+                  avset_params[:name] = env['bosh']['group']
+                  allow(client2).to receive(:get_availability_set_by_name).
+                    with(env['bosh']['group']).
+                    and_return(nil)
+                end
+
+                it "should create availability set and use value of env.bosh.group as its name" do
+                  expect(client2).to receive(:create_availability_set).
+                    with(avset_params)
+
+                  vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  expect(vm_params[:name]).to eq(instance_id)
+                end
+              end
+
+              context "when the length of availability_set name is greater than 80" do
+                let(:env) {
+                  {
+                    'bosh' => {'group' => 'a' * 80 + 'group' * 8}
+                  }
+                }
+
+                before do
+                  # 21d9858fb04d8ba39cdacdc926c5415e is MD5 of the availability_set name ('a' * 80 + 'group' * 8)
+                  avset_params[:name] = "az-21d9858fb04d8ba39cdacdc926c5415e-#{'group' * 8}"
+                  allow(client2).to receive(:get_availability_set_by_name).
+                    and_return(nil)
+                end
+
+                it "should create availability set with a truncated value of env.bosh.group as its name" do
+                  expect(client2).to receive(:create_availability_set).with(avset_params)
+
+                  vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  expect(vm_params[:name]).to eq(instance_id)
+                end
+              end
+            end
+          end
+
+          context "When the availability set exists, and doesn't need to update the managed property" do
+            let(:env) { nil }
+            let(:availability_set_name) { "#{SecureRandom.uuid}" }
+            let(:availability_set) {
               {
-                'instance_type' => 'Standard_D1'
+                :name => availability_set_name,
+                :virtual_machines => [
+                  "fake-vm-id-1",
+                  "fake-vm-id-2"
+                ]
               }
             }
-            let(:avset_params) {
+            let(:resource_pool) {
               {
+                'instance_type' => 'Standard_D1',
+                'availability_set' => availability_set_name,
+                'platform_update_domain_count' => 5,
+                'platform_fault_domain_count' => 3,
+              }
+            }
+
+            before do
+              allow(client2).to receive(:get_availability_set_by_name).
+                with(resource_pool['availability_set']).
+                and_return(availability_set)
+            end
+
+            it "should not create availability set" do
+              expect(client2).not_to receive(:create_availability_set)
+
+              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              expect(vm_params[:name]).to eq(instance_id)
+            end
+          end
+
+          context "when the availability set doesn't exist" do
+            let(:availability_set_name) { "#{SecureRandom.uuid}" }
+
+            context "when the availability is unmanaged" do
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'Standard_D1',
+                  'availability_set' => availability_set_name
+                }
+              }
+
+              let(:avset_params) {
+                {
+                  :name                         => resource_pool['availability_set'],
+                  :location                     => location,
+                  :tags                         => {'user-agent' => 'bosh'},
+                  :platform_update_domain_count => 5,
+                  :platform_fault_domain_count  => 3,
+                  :managed                      => false
+                }
+              }
+
+              before do
+                allow(client2).to receive(:get_availability_set_by_name).
+                  with(resource_pool['availability_set']).
+                  and_return(nil)
+              end
+
+              it "should create the unmanaged availability set" do
+                expect(client2).to receive(:create_availability_set).with(avset_params)
+                expect(client2).to receive(:create_network_interface).twice
+
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+
+            context "when the availability is managed" do
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'Standard_D1',
+                  'availability_set' => availability_set_name
+                }
+              }
+
+              let(:avset_params) {
+                {
+                  :name                         => resource_pool['availability_set'],
+                  :location                     => location,
+                  :tags                         => {'user-agent' => 'bosh'},
+                  :platform_update_domain_count => 5,
+                  :platform_fault_domain_count  => 2,
+                  :managed                      => true
+                }
+              }
+
+              before do
+                allow(client2).to receive(:get_availability_set_by_name).
+                  with(resource_pool['availability_set']).
+                  and_return(nil)
+              end
+
+              it "should create the managed availability set" do
+                expect(client2).to receive(:create_availability_set).with(avset_params)
+                expect(client2).to receive(:create_network_interface).twice
+
+                vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+
+            context "when platform_update_domain_count and platform_fault_domain_count are not set" do
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'Standard_D1',
+                  'availability_set' => availability_set_name
+                }
+              }
+
+              let(:avset_params) {
+                {
+                  :name                         => resource_pool['availability_set'],
+                  :location                     => location,
+                  :tags                         => {'user-agent' => 'bosh'},
+                  :platform_update_domain_count => 5,
+                  :platform_fault_domain_count  => 2, # The default value of fault domains in managed availability set is 2
+                  :managed                      => true
+                }
+              }
+
+              before do
+                allow(client2).to receive(:get_availability_set_by_name).
+                  with(resource_pool['availability_set']).
+                  and_return(nil)
+              end
+
+              it "should create the availability set with the default values" do
+                expect(client2).to receive(:create_availability_set).with(avset_params)
+
+                vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+
+            context "when platform_update_domain_count and platform_fault_domain_count are set" do
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'Standard_D1',
+                  'availability_set' => availability_set_name,
+                  'platform_update_domain_count' => 4,
+                  'platform_fault_domain_count' => 1
+                }
+              }
+
+              let(:avset_params) {
+                {
+                  :name                         => resource_pool['availability_set'],
+                  :location                     => location,
+                  :tags                         => {'user-agent' => 'bosh'},
+                  :platform_update_domain_count => 4,
+                  :platform_fault_domain_count  => 1,
+                  :managed                      => true # It does NOT matter whether it is managed or not for this case
+                }
+              }
+
+              before do
+                allow(client2).to receive(:get_availability_set_by_name).
+                  with(resource_pool['availability_set']).
+                  and_return(nil)
+              end
+
+              it "should create the availability set with the specified values" do
+                expect(client2).to receive(:create_availability_set).with(avset_params)
+                expect(client2).to receive(:create_network_interface).twice
+
+                vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(instance_id)
+              end
+            end
+          end
+
+          context "when the availability set exists and the managed property is not aligned with @use_managed_disks" do
+            let(:availability_set_name) { "#{SecureRandom.uuid}" }
+            let(:resource_pool) {
+              {
+                'instance_type' => 'Standard_D1',
+                'availability_set' => availability_set_name,
+              }
+            }
+
+            let(:existing_avset) {
+              {
+                :name                         => resource_pool['availability_set'],
                 :location                     => location,
                 :tags                         => {'user-agent' => 'bosh'},
                 :platform_update_domain_count => 5,
@@ -1039,133 +1299,30 @@ describe Bosh::AzureCloud::VMManager do
                 :managed                      => false
               }
             }
-
-            context "when the length of availability_set name equals to 80" do
-              let(:env) {
-                {
-                  'bosh' => {'group' => 'group' * 16}
-                }
+            let(:avset_params) {
+              {
+                :name                         => existing_avset[:name],
+                :location                     => existing_avset[:location],
+                :tags                         => existing_avset[:tags],
+                :platform_update_domain_count => existing_avset[:platform_update_domain_count],
+                :platform_fault_domain_count  => existing_avset[:platform_fault_domain_count],
+                :managed                      => true
               }
+            }
 
-              before do
-                avset_params[:name] = env['bosh']['group']
-                allow(client2).to receive(:get_availability_set_by_name).
-                  with(env['bosh']['group']).
-                  and_return(nil)
-              end
-
-              it "should create availability set and use value of env.bosh.group as its name" do
-                expect(client2).to receive(:create_availability_set).
-                  with(avset_params)
-
-                expect(client2).to receive(:create_network_interface).twice
-                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-                expect(vm_params[:name]).to eq(instance_id)
-              end
+            before do
+              allow(client2).to receive(:get_availability_set_by_name).
+                with(resource_pool['availability_set']).
+                and_return(existing_avset)
             end
 
-            context "when the length of availability_set name is greater than 80" do
-              let(:env) {
-                {
-                  'bosh' => {'group' => 'a' * 80 + 'group' * 8}
-                }
-              }
+            it "should update the managed property of the availability set" do
+              expect(client2).to receive(:create_availability_set).with(avset_params)
+              expect(client2).to receive(:create_network_interface).twice
 
-              before do
-                # 21d9858fb04d8ba39cdacdc926c5415e is MD5 of the availability_set name ('a' * 80 + 'group' * 8)
-                avset_params[:name] = "az-21d9858fb04d8ba39cdacdc926c5415e-#{'group' * 8}"
-                allow(client2).to receive(:get_availability_set_by_name).
-                  and_return(nil)
-              end
-
-              it "should create availability set with a truncated value of env.bosh.group as its name" do
-                expect(client2).to receive(:create_availability_set).
-                  with(avset_params)
-
-                expect(client2).to receive(:create_network_interface).twice
-                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-                expect(vm_params[:name]).to eq(instance_id)
-              end
+              vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              expect(vm_params[:name]).to eq(instance_id)
             end
-          end
-        end
-
-        context "when the availability set intends to host managed VMs" do
-          let(:resource_pool) {
-            {
-              'instance_type' => 'Standard_D1',
-              'availability_set' => 'fake-avset'
-            }
-          }
-
-          let(:avset_params) {
-            {
-              :name                         => resource_pool['availability_set'],
-              :location                     => location,
-              :tags                         => {'user-agent' => 'bosh'},
-              :platform_update_domain_count => 5,
-              :platform_fault_domain_count  => 2, # For managed disks, the default value is 2 instead of 3
-              :managed                      => true
-            }
-          }
-
-          before do
-            allow(client2).to receive(:get_availability_set_by_name).
-              with(resource_pool['availability_set']).
-              and_return(nil)
-          end
-
-          it "should create availability set and set managed true" do
-            expect(client2).to receive(:create_availability_set).
-              with(avset_params)
-
-            expect(client2).to receive(:create_network_interface).twice
-            vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
-          end
-        end
-
-        context "when the availability set exists and the managed property is not aligned with @use_managed_disks" do
-          let(:resource_pool) {
-            {
-              'instance_type' => 'Standard_D1',
-              'availability_set' => 'fake-avset'
-            }
-          }
-
-          let(:existing_avset) {
-            {
-              :name                         => resource_pool['availability_set'],
-              :location                     => location,
-              :tags                         => {'user-agent' => 'bosh'},
-              :platform_update_domain_count => 5,
-              :platform_fault_domain_count  => 3,
-              :managed                      => false
-            }
-          }
-          let(:avset_params) {
-            {
-              :name                         => existing_avset[:name],
-              :location                     => existing_avset[:location],
-              :tags                         => existing_avset[:tags],
-              :platform_update_domain_count => existing_avset[:platform_update_domain_count],
-              :platform_fault_domain_count  => existing_avset[:platform_fault_domain_count],
-              :managed                      => true
-            }
-          }
-
-          before do
-            allow(client2).to receive(:get_availability_set_by_name).
-              with(resource_pool['availability_set']).
-              and_return(existing_avset)
-          end
-
-          it "should update the managed property of the availability set" do
-            expect(client2).to receive(:create_availability_set).with(avset_params)
-            expect(client2).to receive(:create_network_interface).twice
-
-            vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(instance_id)
           end
         end
 
@@ -1223,6 +1380,8 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         context "with use_managed_disks enabled" do
+          let(:availability_set_name) { "#{SecureRandom.uuid}" }
+
           let(:network_interfaces) {
             [
               {:name => "foo"},
@@ -1263,7 +1422,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
               expect(client2).to receive(:create_virtual_machine).
-                with(vm_params, network_interfaces, availability_set)
+                with(vm_params, network_interfaces, nil)
               result = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               expect(result[:name]).to eq(instance_id)
             end
@@ -1307,7 +1466,7 @@ describe Bosh::AzureCloud::VMManager do
 
             it "should succeed" do
               expect(client2).to receive(:create_virtual_machine).
-                with(vm_params, network_interfaces, availability_set)
+                with(vm_params, network_interfaces, nil)
               expect(SecureRandom).to receive(:uuid).exactly(3).times
               expect {
                vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
@@ -1375,29 +1534,16 @@ describe Bosh::AzureCloud::VMManager do
   end
 
   describe "#delete" do
-    let(:vm) {
-      {
-         :availability_set => {
-            :name => "fake-avset"
-          },
-         :network_interfaces => [
-           {:name => "fake-nic"},
-           {:name => "fake-nic"}
-         ]
-      }
-    }
     let(:load_balancer) { double("load_balancer") }
     let(:network_interface) {
       {
         :tags => {}
       }
     }
-    let(:availability_set_name) { "fake-availability-set-name" }
+    let(:os_disk_name) { "fake-os-disk-name" }
     let(:public_ip) { "fake-public-ip" }
 
     before do
-      allow(client2).to receive(:get_virtual_machine_by_name).
-        with(instance_id).and_return(vm)
       allow(client2).to receive(:get_load_balancer_by_name).
         with(instance_id).and_return(load_balancer)
       allow(client2).to receive(:get_network_interface_by_name).
@@ -1406,32 +1552,86 @@ describe Bosh::AzureCloud::VMManager do
         with(instance_id).and_return(public_ip)
     end
 
-    context "When use_managed_disk is false" do
+    context "When vm is not nil" do
+      let(:availability_set_name) { "#{SecureRandom.uuid}" }
+      let(:availability_set) {
+        {
+          :name => availability_set_name,
+          :virtual_machines => [
+            "fake-vm-id-1",
+            "fake-vm-id-2"
+          ]
+        }
+      }
+      let(:vm) {
+        {
+           :availability_set => availability_set,
+           :network_interfaces => [
+             {:name => "fake-nic-1"},
+             {:name => "fake-nic-2"}
+           ]
+        }
+      }
+
       before do
-        allow(disk_manager).to receive(:generate_os_disk_name).
-          with(instance_id).
-          and_return(os_disk_name)
-        allow(disk_manager).to receive(:generate_ephemeral_disk_name).
-          with(instance_id).
-          and_return(ephemeral_disk_name)
+        allow(client2).to receive(:get_virtual_machine_by_name).
+          with(instance_id).and_return(vm)
+        allow(client2).to receive(:get_availability_set_by_name).
+          with(availability_set_name).
+          and_return(availability_set)
       end
 
-      it "should delete the instance by id" do
-        expect(client2).to receive(:delete_virtual_machine).with(instance_id)
-        expect(client2).to receive(:delete_network_interface).with("fake-nic").twice
-        expect(client2).to receive(:delete_public_ip).with(instance_id)
+      context "When use_managed_disks is false" do
+        before do
+          allow(disk_manager).to receive(:generate_os_disk_name).
+            with(instance_id).
+            and_return(os_disk_name)
+          allow(disk_manager).to receive(:generate_ephemeral_disk_name).
+            with(instance_id).
+            and_return(ephemeral_disk_name)
+        end
 
-        expect(disk_manager).to receive(:delete_disk).with(os_disk_name)
-        expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name)
-        expect(disk_manager).to receive(:delete_vm_status_files).
-          with(storage_account_name, instance_id)
+        it "should delete the instance by id" do
+          expect(client2).to receive(:delete_virtual_machine).with(instance_id)
+          expect(client2).to receive(:delete_network_interface).with("fake-nic-1")
+          expect(client2).to receive(:delete_network_interface).with("fake-nic-2")
+          expect(client2).to receive(:delete_public_ip).with(instance_id)
+          expect(disk_manager).to receive(:delete_disk).with(os_disk_name)
+          expect(disk_manager).to receive(:delete_disk).with(ephemeral_disk_name)
+          expect(disk_manager).to receive(:delete_vm_status_files).
+            with(storage_account_name, instance_id)
 
-        vm_manager.delete(instance_id)
+          vm_manager.delete(instance_id)
+        end
+      end
+
+      context "When use_managed_disks is true" do
+        before do
+          allow(disk_manager2).to receive(:generate_os_disk_name).
+            with(instance_id).
+            and_return(os_disk_name)
+          allow(disk_manager2).to receive(:generate_ephemeral_disk_name).
+            with(instance_id).
+            and_return(ephemeral_disk_name)
+        end
+
+        it "should delete the instance by id" do
+          expect(client2).to receive(:delete_virtual_machine).with(instance_id)
+          expect(client2).to receive(:delete_network_interface).with("fake-nic-1")
+          expect(client2).to receive(:delete_network_interface).with("fake-nic-2")
+          expect(client2).to receive(:delete_public_ip).with(instance_id)
+
+          expect(disk_manager2).to receive(:delete_disk).with(os_disk_name)
+          expect(disk_manager2).to receive(:delete_disk).with(ephemeral_disk_name)
+
+          vm_manager2.delete(instance_id)
+        end
       end
     end
 
-    context "When use_managed_disk is true" do
+    context "When vm is nil" do
       before do
+        # It does NOT matter whether use_managed_disks is enabled for this case
         allow(disk_manager2).to receive(:generate_os_disk_name).
           with(instance_id).
           and_return(os_disk_name)
@@ -1440,18 +1640,40 @@ describe Bosh::AzureCloud::VMManager do
           and_return(ephemeral_disk_name)
       end
 
-      it "should delete the instance by id" do
-        expect(client2).to receive(:delete_virtual_machine).with(instance_id)
-        expect(client2).to receive(:delete_network_interface).with("fake-nic").twice
-        expect(client2).to receive(:delete_public_ip).with(instance_id)
+      context "When the tags of network interfaces don't include availability set name" do
+        let(:network_interfaces) {
+          [
+            {
+              :name => "fake-possible-nic-1",
+              :tags => {}
+            },
+            {
+              :name => "fake-possible-nic-2",
+              :tags => {}
+            }
+          ]
+        }
 
-        expect(disk_manager2).to receive(:delete_disk).with(os_disk_name)
-        expect(disk_manager2).to receive(:delete_disk).with(ephemeral_disk_name)
+        before do
+          allow(client2).to receive(:get_virtual_machine_by_name).
+            with(instance_id).and_return(nil)
+          allow(client2).to receive(:list_network_interfaces_by_instance_id).
+            with(instance_id).and_return(network_interfaces)
+        end
 
-        vm_manager2.delete(instance_id)
+        it "should delete other resources but not delete the vm and the availability set" do
+          expect(client2).not_to receive(:delete_virtual_machine).with(instance_id)
+          expect(client2).to receive(:delete_network_interface).with("fake-possible-nic-1")
+          expect(client2).to receive(:delete_network_interface).with("fake-possible-nic-2")
+          expect(client2).to receive(:delete_public_ip).with(instance_id)
+
+          expect(disk_manager2).to receive(:delete_disk).with(os_disk_name)
+          expect(disk_manager2).to receive(:delete_disk).with(ephemeral_disk_name)
+
+          vm_manager2.delete(instance_id)
+        end
       end
     end
-
   end
 
   describe "#reboot" do

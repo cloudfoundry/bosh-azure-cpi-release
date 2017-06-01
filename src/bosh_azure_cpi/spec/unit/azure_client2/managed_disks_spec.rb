@@ -183,4 +183,28 @@ describe Bosh::AzureCloud::AzureClient2 do
       ).to eq(disk)
     end
   end
+
+  describe "#delete_managed_disk" do
+    let(:disk_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    
+    context "when token is valid, delete operation is accepted and completed" do
+      it "should delete the managed disk without error" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:delete, disk_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+
+        expect {
+          azure_client2.delete_managed_disk(disk_name)
+        }.not_to raise_error
+      end
+    end
+  end
 end

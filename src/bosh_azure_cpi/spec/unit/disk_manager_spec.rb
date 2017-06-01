@@ -130,14 +130,84 @@ describe Bosh::AzureCloud::DiskManager do
     end
   end
 
-  describe "#get_disk_uri" do
-    it "returns the right disk uri" do
-      expect(blob_manager).to receive(:get_blob_uri).
-        with(storage_account_name, disk_container, "#{disk_name}.vhd")
+  describe "#is_migrated?" do
+    context "when the disk does not exist" do
+      before do
+        allow(blob_manager).to receive(:get_blob_properties).
+          and_return(nil)
+      end
 
-      expect {
-        disk_manager.get_disk_uri(disk_name)
-      }.not_to raise_error
+      it "should return false" do
+        expect(disk_manager.is_migrated?(disk_name)).to be(false)
+      end
+    end
+
+    context "when the disk exists" do
+      before do
+        allow(blob_manager).to receive(:get_blob_properties).
+          and_return({})
+      end
+
+      context "when the disk has the metadata" do
+        let(:metadata) {
+          {
+            "user_agent" => "bosh",
+            "migrated" => "true"
+          }
+        }
+        before do
+          allow(blob_manager).to receive(:get_blob_metadata).
+            and_return(metadata)
+        end
+
+        it "should return true" do
+          expect(disk_manager.is_migrated?(disk_name)).to be(true)
+        end
+      end
+
+      context "when the disk doesn't have the metadata" do
+        let(:metadata) { {} }
+        before do
+          allow(blob_manager).to receive(:get_blob_metadata).
+            and_return(metadata)
+        end
+
+        it "should return false" do
+          expect(disk_manager.is_migrated?(disk_name)).to be(false)
+        end
+      end
+    end
+  end
+
+  describe "#get_disk_uri" do
+    context "when the disk name is invalid" do
+      let(:disk_name) { "invalid-disk-name" }
+
+      it "raises an error" do
+        expect {
+          disk_manager.get_disk_uri(disk_name)
+        }.to raise_error /Invalid disk name #{disk_name}/
+      end
+    end
+
+    context "when the disk is a data disk" do
+      it "returns the right disk uri" do
+        expect(blob_manager).to receive(:get_blob_uri).
+          with(storage_account_name, disk_container, "#{disk_name}.vhd").
+          and_return("fake-uri")
+        expect(disk_manager.get_disk_uri(disk_name)).to eq("fake-uri")
+      end
+    end
+
+    context "when the disk is an OS disk" do
+      let(:disk_name) { "bosh-os-#{storage_account_name}-#{SecureRandom.uuid}-None" }
+
+      it "returns the right disk uri" do
+        expect(blob_manager).to receive(:get_blob_uri).
+          with(storage_account_name, disk_container, "#{disk_name}.vhd").
+          and_return("fake-uri")
+        expect(disk_manager.get_disk_uri(disk_name)).to eq("fake-uri")
+      end
     end
   end
 
@@ -567,6 +637,20 @@ describe Bosh::AzureCloud::DiskManager do
               }
             }
             
+            it "should return correct values" do
+              disk_manager.resource_pool = resource_pool
+
+              expect(
+                disk_manager.ephemeral_disk(instance_id)
+              ).to eq(
+                {
+                  :disk_name    => disk_name,
+                  :disk_uri     => disk_uri,
+                  :disk_size    => 30,
+                  :disk_caching => 'ReadWrite'
+                }
+              )
+            end
           end
 
           context "when the size is not an integer" do

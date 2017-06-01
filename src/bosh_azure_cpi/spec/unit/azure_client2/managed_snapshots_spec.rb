@@ -101,4 +101,27 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
   end
 
+  describe "#delete_managed_snapshot" do
+    let(:snapshot_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
+    
+    context "when token is valid, delete operation is accepted and completed" do
+      it "should delete the managed snapshot without error" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token"=>valid_access_token,
+            "expires_on"=>expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:delete, snapshot_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+
+        expect {
+          azure_client2.delete_managed_snapshot(snapshot_name)
+        }.not_to raise_error
+      end
+    end
+  end
 end

@@ -20,16 +20,16 @@ describe Bosh::AzureCloud::ManualNetwork do
     }
 
     it "should return properties with right values" do
-      sn = Bosh::AzureCloud::ManualNetwork.new(azure_properties, "default", network_spec)
+      network = Bosh::AzureCloud::ManualNetwork.new(azure_properties, "default", network_spec)
 
-      expect(sn.private_ip).to eq("fake-ip")
-      expect(sn.resource_group_name).to eq("fake_resource_group")
-      expect(sn.virtual_network_name).to eq("foo")
-      expect(sn.subnet_name).to eq("bar")
-      expect(sn.security_group).to eq("fake_sg")
-      expect(sn.dns).to eq("8.8.8.8")
-      expect(sn.has_default_dns?).to be true
-      expect(sn.has_default_gateway?).to be true
+      expect(network.private_ip).to eq("fake-ip")
+      expect(network.resource_group_name).to eq("fake_resource_group")
+      expect(network.virtual_network_name).to eq("foo")
+      expect(network.subnet_name).to eq("bar")
+      expect(network.security_group).to eq("fake_sg")
+      expect(network.dns).to eq("8.8.8.8")
+      expect(network.has_default_dns?).to be true
+      expect(network.has_default_gateway?).to be true
     end
   end
 
@@ -130,8 +130,8 @@ describe Bosh::AzureCloud::ManualNetwork do
       }
 
       it "should return nil for security_group" do
-        sn = Bosh::AzureCloud::ManualNetwork.new(azure_properties, "default", network_spec)
-        expect(sn.security_group).to be_nil
+        network = Bosh::AzureCloud::ManualNetwork.new(azure_properties, "default", network_spec)
+        expect(network.security_group).to be_nil
       end
     end
 
@@ -147,8 +147,8 @@ describe Bosh::AzureCloud::ManualNetwork do
       }
 
       it "should return resource_group_name from global azure properties" do
-        sn = Bosh::AzureCloud::ManualNetwork.new(azure_properties, "default", network_spec)
-        expect(sn.resource_group_name).to eq(azure_properties["resource_group_name"])
+        network = Bosh::AzureCloud::ManualNetwork.new(azure_properties, "default", network_spec)
+        expect(network.resource_group_name).to eq(azure_properties["resource_group_name"])
       end
     end
 
@@ -164,10 +164,10 @@ describe Bosh::AzureCloud::ManualNetwork do
       }
 
       it "should return nil for :dns, return false for :has_default_dns?, return false for :has_default_gateway?" do
-        sn = Bosh::AzureCloud::ManualNetwork.new(azure_properties, "default", network_spec)
-        expect(sn.dns).to be_nil
-        expect(sn.has_default_dns?).to be false
-        expect(sn.has_default_dns?).to be false
+        network = Bosh::AzureCloud::ManualNetwork.new(azure_properties, "default", network_spec)
+        expect(network.dns).to be_nil
+        expect(network.has_default_dns?).to be false
+        expect(network.has_default_dns?).to be false
       end
     end
   end
