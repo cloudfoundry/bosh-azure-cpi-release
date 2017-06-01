@@ -22,7 +22,9 @@ describe Bosh::AzureCloud::DiskManager do
         expect(blob_manager).to receive(:delete_blob).
           with(storage_account_name, disk_container, "#{disk_name}.vhd")
 
-        disk_manager.delete_disk(disk_name)
+        expect {
+          disk_manager.delete_disk(disk_name)
+        }.not_to raise_error
       end
     end
 
@@ -35,7 +37,9 @@ describe Bosh::AzureCloud::DiskManager do
       it "does not delete the disk" do
         expect(blob_manager).not_to receive(:delete_blob)
 
-        disk_manager.delete_disk(disk_name)
+        expect {
+          disk_manager.delete_disk(disk_name)
+        }.not_to raise_error
       end
     end
   end  
@@ -54,7 +58,9 @@ describe Bosh::AzureCloud::DiskManager do
       expect(blob_manager).to receive(:delete_blob).
         with(storage_account_name, "bosh", "b.status")
 
-      disk_manager.delete_vm_status_files(storage_account_name, "")
+      expect {
+        disk_manager.delete_vm_status_files(storage_account_name, "")
+      }.not_to raise_error
     end
   end  
 
@@ -81,7 +87,9 @@ describe Bosh::AzureCloud::DiskManager do
       expect(blob_manager).to receive(:delete_blob_snapshot).
         with(storage_account_name, disk_container, "#{disk_name}.vhd", snapshot_time)
 
-      disk_manager.delete_snapshot(snapshot_id)
+      expect {
+        disk_manager.delete_snapshot(snapshot_id)
+      }.not_to raise_error
     end
   end  
 
@@ -127,13 +135,29 @@ describe Bosh::AzureCloud::DiskManager do
       expect(blob_manager).to receive(:get_blob_uri).
         with(storage_account_name, disk_container, "#{disk_name}.vhd")
 
-      disk_manager.get_disk_uri(disk_name)
+      expect {
+        disk_manager.get_disk_uri(disk_name)
+      }.not_to raise_error
     end
   end
 
   describe "#get_data_disk_caching" do
     it "returns the right caching" do
       expect(disk_manager.get_data_disk_caching(disk_name)).to eq("None")
+    end
+  end
+
+  describe "#get_disk_size_in_gb" do
+    let(:disk_size) { 42 * 1024 * 1024 * 1024 }
+
+    before do
+      expect(blob_manager).to receive(:get_blob_size_in_bytes).
+        with(storage_account_name, disk_container, "#{disk_name}.vhd").
+        and_return(disk_size)
+    end
+
+    it "returns the disk size" do
+      expect(disk_manager.get_disk_size_in_gb(disk_name)).to eq(42)
     end
   end
 

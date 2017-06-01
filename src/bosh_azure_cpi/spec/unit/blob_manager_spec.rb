@@ -60,7 +60,9 @@ describe Bosh::AzureCloud::BlobManager do
           :request_id => request_id
         })
 
-      blob_manager.delete_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+      expect {
+        blob_manager.delete_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+      }.not_to raise_error
     end
   end
 
@@ -82,7 +84,26 @@ describe Bosh::AzureCloud::BlobManager do
           :request_id => request_id
         })
 
-      blob_manager.delete_blob_snapshot(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, snapshot_time)
+      expect {
+        blob_manager.delete_blob_snapshot(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, snapshot_time)
+      }.not_to raise_error
+    end
+  end  
+
+  describe "#get_blob_size_in_bytes" do
+    let(:blob) { instance_double("Blob") }
+
+    before do
+      allow(blob_service).to receive(:get_blob_properties).
+        with(container_name, blob_name).
+        and_return(blob) 
+      allow(blob).to receive(:properties).and_return({:content_length => 1024})
+    end
+
+    it "gets the size of the blob" do
+      expect(
+        blob_manager.get_blob_size_in_bytes(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+      ).to eq(1024)
     end
   end  
 
@@ -307,7 +328,10 @@ describe Bosh::AzureCloud::BlobManager do
     it "should get metadata of the blob" do
       expect(blob_service).to receive(:set_blob_metadata).
         with(container_name, blob_name, encoded_metadata, options)
-      blob_manager.set_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, metadata)
+
+      expect {
+        blob_manager.set_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, metadata)
+      }.not_to raise_error
     end
   end
 
@@ -657,7 +681,9 @@ describe Bosh::AzureCloud::BlobManager do
           and_return(true)
         expect(blob_service).to receive(:set_container_acl).with('stemcell', 'blob', options)
 
-        blob_manager.prepare(another_storage_account_name, containers: [container_name], is_default_storage_account: true)
+        expect {
+          blob_manager.prepare(another_storage_account_name, containers: [container_name], is_default_storage_account: true)
+        }.not_to raise_error
       end
     end
 
@@ -668,7 +694,9 @@ describe Bosh::AzureCloud::BlobManager do
           and_return(true)
         expect(blob_service).not_to receive(:set_container_acl)
 
-        blob_manager.prepare(another_storage_account_name, containers: [container_name])
+        expect {
+          blob_manager.prepare(another_storage_account_name, containers: [container_name])
+        }.not_to raise_error
       end
     end
   end

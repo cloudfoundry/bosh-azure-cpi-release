@@ -1472,24 +1472,37 @@ describe Bosh::AzureCloud::VMManager do
   describe "#attach_disk" do
     let(:caching) { "None" }
     let(:disk_name) { "fake-disk-name-#{caching}" }
-    let(:disk) { {:lun => 1} }
+    let(:lun) { 1 }
 
     context "When the disk is unmanaged disk" do
       let(:instance_id) { "#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}-e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
       let(:disk_uri) { "fake-disk-uri" }
+      let(:disk_size) { 42 }
+      let(:disk_params) {
+        {
+          :disk_name => disk_name,
+          :caching   => caching,
+          :disk_uri  => disk_uri,
+          :disk_size => disk_size,
+          :managed   => false
+        }
+      }
+
       before do
         allow(disk_manager).to receive(:get_disk_uri).
           with(disk_name).and_return(disk_uri)
+        allow(disk_manager).to receive(:get_data_disk_caching).
+          with(disk_name).
+          and_return(caching)
+        allow(disk_manager).to receive(:get_disk_size_in_gb).
+          with(disk_name).and_return(disk_size)
       end
 
       it "attaches the disk to an instance" do
-        expect(disk_manager).to receive(:get_data_disk_caching).
-          with(disk_name).
-          and_return(caching)
         expect(client2).to receive(:attach_disk_to_virtual_machine).
-          with(instance_id, disk_name, disk_uri, caching).
-          and_return(disk)
-        expect(vm_manager.attach_disk(instance_id, disk_name)).to eq("1")
+          with(instance_id, disk_params).
+          and_return(lun)
+        expect(vm_manager.attach_disk(instance_id, disk_name)).to eq("#{lun}")
       end
     end
 
@@ -1497,39 +1510,61 @@ describe Bosh::AzureCloud::VMManager do
       let(:instance_id) { "e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
       let(:managed_disk_id) { "fake-id" }
       let(:managed_disk) { {:id => managed_disk_id} }
+      let(:disk_params) {
+        {
+          :disk_name => disk_name,
+          :caching   => caching,
+          :disk_id   => managed_disk_id,
+          :managed   => true
+        }
+      }
+
       before do
         allow(client2).to receive(:get_managed_disk_by_name).
           with(disk_name).
           and_return(managed_disk)
+        allow(disk_manager2).to receive(:get_data_disk_caching).
+          with(disk_name).
+          and_return(caching)
       end
 
       it "attaches the disk to an instance" do
-        expect(disk_manager2).to receive(:get_data_disk_caching).
-          with(disk_name).
-          and_return(caching)
         expect(client2).to receive(:attach_disk_to_virtual_machine).
-          with(instance_id, disk_name, managed_disk_id, caching, true).
-          and_return(disk)
-        expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("1")
+          with(instance_id, disk_params).
+          and_return(lun)
+        expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("#{lun}")
       end
     end
 
     context "When the vm is unmanaged vm and use_managed_disks is true" do
       let(:instance_id) { "#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}-e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
       let(:disk_uri) { "fake-disk-uri" }
+      let(:disk_size) { 42 }
+      let(:disk_params) {
+        {
+          :disk_name => disk_name,
+          :caching   => caching,
+          :disk_uri  => disk_uri,
+          :disk_size => disk_size,
+          :managed   => false
+        }
+      }
+
       before do
         allow(disk_manager).to receive(:get_disk_uri).
           with(disk_name).and_return(disk_uri)
+        allow(disk_manager).to receive(:get_data_disk_caching).
+          with(disk_name).
+          and_return(caching)
+        allow(disk_manager).to receive(:get_disk_size_in_gb).
+          with(disk_name).and_return(disk_size)
       end
 
       it "attaches the disk to an instance" do
-        expect(disk_manager).to receive(:get_data_disk_caching).
-          with(disk_name).
-          and_return(caching)
         expect(client2).to receive(:attach_disk_to_virtual_machine).
-          with(instance_id, disk_name, disk_uri, caching).
-          and_return(disk)
-        expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("1")
+          with(instance_id, disk_params).
+          and_return(lun)
+        expect(vm_manager2.attach_disk(instance_id, disk_name)).to eq("#{lun}")
       end
     end
   end
