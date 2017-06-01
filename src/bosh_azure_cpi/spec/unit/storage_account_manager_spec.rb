@@ -104,36 +104,6 @@ describe Bosh::AzureCloud::StorageAccountManager do
       end
     end
 
-    context 'when storage_account_location is not specified' do
-      let(:storage_account_location) { nil }
-      let(:result) {
-        {
-          :available => true
-        }
-      }
-      let(:resource_group_location) { "fake-resource-group-location" }
-      let(:resource_group) {
-        {
-          :name => "fake-rg-name",
-          :location => resource_group_location
-        }
-      }
-
-      before do
-        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name).and_return(result)
-        allow(client2).to receive(:get_resource_group).and_return(resource_group)
-      end
-
-      it 'should create the storage account in the location of the resource group' do
-        expect(client2).to receive(:create_storage_account).with(storage_account_name, resource_group_location, storage_account_type, tags)
-        expect(blob_manager).to receive(:prepare).with(storage_account_name, {:is_default_storage_account=>false})
-
-        expect(
-          storage_account_manager.create_storage_account(storage_account_name, storage_account_type, storage_account_location, tags)
-        ).to be(true)
-      end
-    end
-
     context 'when the same storage account is being created by others' do
       let(:result) {
         {
@@ -240,6 +210,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
   end
 
   describe '#get_storage_account_from_resource_pool' do
+    let(:location) { 'fake-location' }
     let(:default_storage_account) {
       {
         :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME
@@ -267,7 +238,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         storage_account_manager.default_storage_account_name()
 
         expect(
-          storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+          storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
         ).to be(default_storage_account)
       end
     end
@@ -291,7 +262,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
             storage_account_manager.default_storage_account_name()
 
             expect(
-              storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+              storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
             ).to be(storage_account)
           end
         end
@@ -307,7 +278,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
               storage_account_manager.default_storage_account_name()
 
               expect {
-                storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
               }.to raise_error(/missing required cloud property `storage_account_type'/)
             end
           end
@@ -378,7 +349,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks).with('patten')
                 expect(disk_manager).not_to receive(:list_disks).with('foo')
 
-                storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
               end
             end
 
@@ -403,7 +374,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks).with('foo')
 
                 expect(
-                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
                 ).to eq(
                   {
                     :name => '4pattern4',
@@ -427,7 +398,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect {
-                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
                 }.to raise_error(/get_storage_account_from_resource_pool - Cannot find an available storage account./)
               end
             end
@@ -444,7 +415,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(client2).not_to receive(:create_storage_account)
 
                 expect {
-                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
                 }.to raise_error(/get_storage_account_from_resource_pool - Cannot find an available storage account./)
               end
             end
@@ -467,7 +438,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect {
-                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
                 }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
               end
             end
@@ -487,7 +458,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect {
-                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
                 }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
               end
             end
@@ -508,7 +479,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect {
-                storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
               }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
             end
           end
@@ -528,7 +499,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect {
-                storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
               }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
             end
           end
@@ -548,7 +519,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect {
-                storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
+                storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
               }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
             end
           end

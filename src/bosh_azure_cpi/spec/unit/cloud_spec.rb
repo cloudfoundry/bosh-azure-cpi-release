@@ -165,9 +165,50 @@ describe Bosh::AzureCloud::Cloud do
     let(:networks_spec) { {} }
     let(:disk_locality) { double("disk locality") }
     let(:environment) { double("environment") }
+    let(:resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
+    let(:virtual_network_name) { "fake-virual-network-name" }
+    let(:location) { "fake-location" }
+    let(:vnet) { {:location => location} }
 
-    let(:network_configurator) { double("network configurator") }
+    let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
+    let(:network) { instance_double(Bosh::AzureCloud::ManualNetwork) }
     let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
+
+    before do
+      allow(network_configurator).to receive(:networks).
+        and_return([network])
+      allow(network).to receive(:resource_group_name).
+        and_return(resource_group_name)
+      allow(network).to receive(:virtual_network_name).
+        and_return(virtual_network_name)
+      allow(client2).to receive(:get_virtual_network_by_name).
+        with(resource_group_name, virtual_network_name).
+        and_return(vnet)
+    end
+
+    context 'when vnet is not found' do
+      before do
+        allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
+          with(azure_properties, networks_spec).
+          and_return(network_configurator)
+        allow(client2).to receive(:get_virtual_network_by_name).
+          with(resource_group_name, virtual_network_name).
+          and_return(nil)
+      end
+
+      it 'should raise an error' do
+        expect {
+          cloud.create_vm(
+            agent_id,
+            stemcell_id,
+            resource_pool,
+            networks_spec,
+            disk_locality,
+            environment
+          )
+        }.to raise_error(/Cannot find the virtual network/)
+      end
+    end
 
     context 'when use_managed_disks is not set' do
       # The return value of create_vm
@@ -179,7 +220,6 @@ describe Bosh::AzureCloud::Cloud do
       }
 
       let(:storage_account_name) { MOCK_DEFAULT_STORAGE_ACCOUNT_NAME }
-      let(:location) { "fake-location" }
       let(:storage_account) {
         {
           :id => "foo",
@@ -194,7 +234,7 @@ describe Bosh::AzureCloud::Cloud do
 
       before do
         allow(storage_account_manager).to receive(:get_storage_account_from_resource_pool).
-          with(resource_pool).
+          with(resource_pool, location).
           and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?).
           with(storage_account_name, stemcell_id).
@@ -267,15 +307,16 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       context 'when it failed to get the user image info' do
-        let(:cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'use_managed_disks' => true}})) }
         before do
-          allow(client2).to receive(:get_resource_group).and_return({:location => 'fake-location'})
+          allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
+            with(azure_properties_managed, networks_spec).
+            and_return(network_configurator)
           allow(stemcell_manager2).to receive(:get_user_image_info).and_raise(StandardError)
         end
 
         it 'should raise an error' do
           expect {
-            cloud.create_vm(
+            managed_cloud.create_vm(
               agent_id,
               stemcell_id,
               resource_pool,
@@ -379,16 +420,7 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
 
-      let(:location) { "fake-location" }
-      let(:resource_group) {
-        {
-          :location => location
-        }
-      }
-
       before do
-        allow(client2).to receive(:get_resource_group).
-          and_return(resource_group)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
           with(azure_properties_managed, networks_spec).
           and_return(network_configurator)

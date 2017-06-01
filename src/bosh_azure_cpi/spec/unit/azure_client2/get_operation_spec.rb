@@ -181,6 +181,48 @@ describe Bosh::AzureCloud::AzureClient2 do
     }
   }
 
+  # Virtual Network
+  let(:vnet_name) { "fake-vnet-name" }
+  let(:vnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}?api-version=#{api_version}" }
+  let(:vnet_response_body) {
+    {
+      "id" => "fake-vnet-id",
+      "name" => "fake-vnet-name",
+      "location" => "fake-location",
+      "properties" => {
+        "provisioningState" => "fake-vnet-state",
+        "addressSpace" => "fake-address-space",
+        "subnets" => [
+          {
+            "name" => "fake-subnet-name",
+            "id" => "fake-subnet-id",
+            "properties" => {
+              "provisioningState" => "fake-subnet-state",
+              "addressPrefix" => "fake-address-prefix"
+            }
+          }
+        ]
+      }
+    }.to_json
+  }
+  let(:fake_vnet) {
+    {
+      :id => "fake-vnet-id",
+      :name => "fake-vnet-name",
+      :location => "fake-location",
+      :provisioning_state => "fake-vnet-state",
+      :address_space => "fake-address-space",
+      :subnets => [
+        {
+          :id => "fake-subnet-id",
+          :name => "fake-subnet-name",
+          :provisioning_state => "fake-subnet-state",
+          :address_prefix => "fake-address-prefix"
+        }
+      ]
+    }
+  }
+
   # Subnet
   let(:vnet_name) { "fake-name" }
   let(:subnet_name) { "bar" }
@@ -395,6 +437,31 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(
           azure_client2.get_network_interface_by_name(nic_name)
         ).to eq(fake_nic)
+      end
+    end
+  end
+
+  describe "#get_virtual_network_by_name" do
+    context "when token is valid, getting response succeeds" do
+      it "should return null if response body is null" do
+        stub_request(:get, vnet_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+        expect(
+          azure_client2.get_virtual_network_by_name(resource_group_name, vnet_name)
+        ).to be_nil
+      end
+
+      it "should return the resource if response body is not null" do
+        stub_request(:get, vnet_uri).to_return(
+          :status => 200,
+          :body => vnet_response_body,
+          :headers => {})
+        expect(
+          azure_client2.get_virtual_network_by_name(resource_group_name, vnet_name)
+        ).to eq(fake_vnet)
+
       end
     end
   end

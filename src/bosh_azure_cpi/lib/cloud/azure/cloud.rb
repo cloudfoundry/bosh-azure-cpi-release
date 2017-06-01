@@ -128,15 +128,17 @@ module Bosh::AzureCloud
       # env may contain credentials so we must not log it
       @logger.info("create_vm(#{agent_id}, #{stemcell_id}, #{resource_pool}, #{networks}, #{disk_locality}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
+        # These resources should be in the same location for a VM: VM, NIC, disk(storage account or managed disk).
+        # And NIC must be in the same location with VNET, so CPI will use VNET's location as default location for the resources related to the VM.
+        network_configurator = NetworkConfigurator.new(azure_properties, networks)
+        network = network_configurator.networks[0]
+        vnet = @azure_client2.get_virtual_network_by_name(network.resource_group_name, network.virtual_network_name)
+        cloud_error("Cannot find the virtual network `#{network.virtual_network_name}' under resource group `#{network.resource_group_name}'") if vnet.nil?
+        location = vnet[:location]
         if @use_managed_disks
           instance_id = agent_id
           storage_account_type = resource_pool['storage_account_type']
           storage_account_type = get_storage_account_type_by_instance_type(resource_pool['instance_type']) if storage_account_type.nil?
-          if !resource_pool['storage_account_location'].nil?
-            location = resource_pool['storage_account_location'] 
-          else
-            location = @azure_client2.get_resource_group()[:location]
-          end
 
           if is_light_stemcell_id?(stemcell_id)
             raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
@@ -150,8 +152,7 @@ module Bosh::AzureCloud
             end
           end
         else
-          storage_account = @storage_account_manager.get_storage_account_from_resource_pool(resource_pool)
-          location = storage_account[:location]
+          storage_account = @storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
 
           if is_light_stemcell_id?(stemcell_id)
             raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
@@ -171,7 +172,7 @@ module Bosh::AzureCloud
           location,
           stemcell_info,
           resource_pool,
-          NetworkConfigurator.new(azure_properties, networks),
+          network_configurator,
           env)
 
         @logger.info("Created new vm `#{instance_id}'")
