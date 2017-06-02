@@ -101,7 +101,7 @@ jobs:
   templates:
   - {name: powerdns, release: bosh}
   - {name: nats, release: bosh}
-  - {name: postgres, release: bosh}
+  - {name: postgres-9.4, release: bosh}
   - {name: blobstore, release: bosh}
   - {name: director, release: bosh}
   - {name: health_monitor, release: bosh}
@@ -279,7 +279,7 @@ jobs:
   templates:
   - {name: powerdns, release: bosh}
   - {name: nats, release: bosh}
-  - {name: postgres, release: bosh}
+  - {name: postgres-9.4, release: bosh}
   - {name: blobstore, release: bosh}
   - {name: director, release: bosh}
   - {name: health_monitor, release: bosh}
