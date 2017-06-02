@@ -721,7 +721,6 @@ describe Bosh::AzureCloud::Helpers do
         mutex = Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, 5)
         unlock = Thread.new{
           sleep(2)
-          logger.info('The lock is released')
           File.delete(file_path)
         }
         expect {
