@@ -92,13 +92,13 @@ describe Bosh::AzureCloud::TableManager do
     context "when the status code is not 404" do
       before do
         allow(table_service).to receive(:get_table).
-          and_raise("error")
+          and_raise("Not-404-Error")
       end
 
       it "should raise an error" do
         expect{
           table_manager.has_table?(table_name)
-        }.to raise_error
+        }.to raise_error /Not-404-Error/
       end
     end
   end
@@ -168,13 +168,13 @@ describe Bosh::AzureCloud::TableManager do
     context "when the status code is not 409" do
       before do
         allow(table_service).to receive(:insert_entity).
-          and_raise("error")
+          and_raise("Not-409-Error")
       end
 
       it "should raise an error" do
         expect{
           table_manager.insert_entity(table_name, entity)
-        }.to raise_error
+        }.to raise_error /Not-409-Error/
       end
     end
   end
@@ -212,13 +212,13 @@ describe Bosh::AzureCloud::TableManager do
     context "when the status code is not 404" do
       before do
         allow(table_service).to receive(:delete_entity).
-          and_raise("error")
+          and_raise("Not-404-Error")
       end
 
       it "should raise an error" do
         expect{
           table_manager.delete_entity(table_name, partition_key, row_key)
-        }.to raise_error
+        }.to raise_error /Not-404-Error/
       end
     end
   end

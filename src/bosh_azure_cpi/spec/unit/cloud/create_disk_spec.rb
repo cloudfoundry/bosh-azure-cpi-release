@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::Cloud do
             cloud.create_disk(disk_size, cloud_properties, instance_id)
           }.to raise_error(
             ArgumentError,
-            'disk size needs to be an integer'
+            "The disk size needs to be an integer. The current value is `#{disk_size}'."
           )
         end
       end

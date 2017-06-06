@@ -154,7 +154,7 @@ module Bosh::AzureCloud
           @logger.info("The timestamp of the record is #{start_time}, current time is #{current_time}")
           @table_manager.delete_entity(STEMCELL_TABLE, name, storage_account_name)
           @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
-          cloud_error("Wait that the stemcell #{name} is copied to the storage account #{storage_account_name} until timeout.")
+          cloud_error("The operation of copying the stemcell #{name} to the storage account #{storage_account_name} timeouts")
         end
         sleep(15)
       end
