@@ -115,6 +115,11 @@ module Bosh::AzureCloud
     # Lock
     BOSH_LOCK_EXCEPTION_TIMEOUT        = 'timeout'
     BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND = 'lock_not_found'
+    BOSH_LOCK_DIR                      = '/tmp'
+    BOSH_LOCK_CREATE_STORAGE_ACCOUNT   = "#{BOSH_LOCK_DIR}/bosh-lock-create-storage-account"
+    BOSH_LOCK_COPY_STEMCELL            = "#{BOSH_LOCK_DIR}/bosh-lock-copy-stemcell"
+    BOSH_LOCK_COPY_STEMCELL_TIMEOUT    = 180 # seconds
+    BOSH_LOCK_CREATE_USER_IMAGE        = "#{BOSH_LOCK_DIR}/bosh-lock-create-user-image"
 
     # REST Connection Errors
     ERROR_OPENSSL_RESET           = 'SSL_connect'
@@ -434,98 +439,98 @@ module Bosh::AzureCloud
     #
     # Example codes:
     #
-    # expired = 60
-    # mutex = FileMutex('/tmp/bosh-lock-example', logger, expired)
+    # expired = 60 # seconds
+    # mutex = FileMutex.new('/tmp/bosh-lock-example', logger, expired)
     #
-    # # If your work can finish before it timeouts.
     # begin
-    #   mutex.synchronize do
-    #     do_something()
+    #   if mutex.lock
+    #     # When any exception occurs in do_something(),
+    #     #   other processes will timeout, if the mutex is not unlocked;
+    #     #   other processes will end mutex.wait and continue to use the shared resource, if the mutex is unlocked.
+    #     # If your work is a long-running task,
+    #     #   you need to call mutex.update() in do_something() to update the lock before it timeouts (60s in the example).
+    #     do_something() 
+    #     mutex.unlock
+    #   else
+    #     mutex.wait
     #   end
     # rescue => e
-    #   raise 'what action fails because of timeout' if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
-    #   raise e.inspect
+    #   if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+    #     raise 'what action fails because of timeout'
+    #   end
+    #   raise e
     # end
     #
-    # # If your work is a long-running task, you need to update the lock before it timeouts.
-    # begin
-    #   mutex.synchronize do
-    #     loop do
-    #       do_something() # MUST be finished in 60 seconds. Otherwise, you need to change your loop.
-    #       mutex.update()
-    #     end
-    #   end
-    # rescue => e
-    #   raise 'what action fails because of timeout' if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
-    #   raise e.inspect
-    # end
     class FileMutex
+      attr_reader :expired
+
       def initialize(file_path, logger, expired = 60)
         @file_path = file_path
         @logger = logger
         @expired = expired
+        @is_locked = false
       end
-
-      def synchronize
-        if lock
-          yield
-          unlock
-        else
-          raise BOSH_LOCK_EXCEPTION_TIMEOUT unless wait
-        end
-      end
-
-      def update()
-        File.open(@file_path, 'wb') { |f|
-          f.write("#{Process.pid}")
-        }
-        @logger.debug("The lock `#{@file_path}' is updated by the process `#{Process.pid}'")
-      rescue => e
-        raise BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND, e
-      end
-
-      private
 
       def lock()
-        if File.exists?(@file_path)
-          if Time.new() - File.mtime(@file_path) > @expired
-            File.delete(@file_path)
-            @logger.debug("The lock `#{@file_path}' exists, but timeouts.")
-            raise BOSH_LOCK_EXCEPTION_TIMEOUT
-          else
-            @logger.debug("The lock `#{@file_path}' exists")
-            return false
-          end
-        else
+        begin
+          mtime = File.mtime(@file_path)
+        rescue Errno::ENOENT => e
+          # lock file does not exist so we can try to lock
           begin
-            fd = IO::sysopen(@file_path, Fcntl::O_WRONLY | Fcntl::O_EXCL | Fcntl::O_CREAT) # Using O_EXCL, creation fails if the file exists
+            fd = IO.sysopen(@file_path, Fcntl::O_WRONLY | Fcntl::O_EXCL | Fcntl::O_CREAT) # Using O_EXCL, creation fails if the file exists
             f = IO.open(fd)
             f.syswrite("#{Process.pid}")
             @logger.debug("The lock `#{@file_path}' is created by the process `#{Process.pid}'")
+            @is_locked = true
           rescue Errno::EEXIST => e
-            @logger.info("Failed to create the lock file `#{@file_path}' because it already exists.")
+            @logger.info("Failed to create the lock file `#{@file_path}' because it has been created by another process.")
             return false
           ensure
             f.close unless f.nil?
           end
           return true
         end
+
+        if Time.new() - mtime > @expired
+          @logger.debug("The lock `#{@file_path}' exists, but timeouts.")
+          raise BOSH_LOCK_EXCEPTION_TIMEOUT
+        end
+
+        @logger.debug("The lock `#{@file_path}' exists")
+        false
       end
 
       def wait()
         loop do
-          return true unless File.exists?(@file_path)
-          break if Time.new() - File.mtime(@file_path) > @expired
-          sleep(1)
+          begin
+            mtime = File.mtime(@file_path)
+          rescue Errno::ENOENT => e
+            @logger.debug("The lock `#{@file_path}' does not exist")
+            return true
+          end
+          raise BOSH_LOCK_EXCEPTION_TIMEOUT if Time.new() - mtime > @expired
+          sleep(1) # second
         end
-        return false
       end
 
       def unlock()
-        @logger.debug("The lock `#{@file_path}' is deleted by the process `#{Process.pid}'")
         File.delete(@file_path)
+        @logger.debug("The lock `#{@file_path}' is deleted by the process `#{Process.pid}'")
+        @is_locked = false
       rescue => e
-        raise BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND, e
+        raise BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND
+      end
+
+      def update()
+        raise "The lock is not owned by the process `#{Process.pid}'" unless @is_locked
+        begin
+          File.open(@file_path, 'wb') { |f|
+            f.write("#{Process.pid}")
+          }
+          @logger.debug("The lock `#{@file_path}' is updated by the process `#{Process.pid}'")
+        rescue => e
+          raise BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND
+        end
       end
     end
 
