@@ -103,29 +103,37 @@ module Bosh::AzureCloud
       "#{OS_DISK_PREFIX}-#{instance_id}-#{EPHEMERAL_DISK_POSTFIX}"
     end
 
-    def os_disk(instance_id, minimum_disk_size)
+    def os_disk(instance_id, stemcell_info)
       disk_name = generate_os_disk_name(instance_id)
       disk_uri = get_disk_uri(disk_name)
+      disk_caching = @resource_pool.fetch('caching', 'ReadWrite')
+      validate_disk_caching(disk_caching)
 
       disk_size = nil
+      minimum_disk_size = stemcell_info.disk_size
       root_disk = @resource_pool.fetch('root_disk', {})
       size = root_disk.fetch('size', nil)
       unless size.nil?
         validate_disk_size_type(size)
-        cloud_error("root_disk.size `#{size}' is smaller than the default OS disk size `#{minimum_disk_size}' MiB") if size < minimum_disk_size
+        if size < minimum_disk_size
+          @logger.warn("root_disk.size `#{size}' MiB is smaller than the default OS disk size `#{minimum_disk_size}' MiB. root_disk.size is ignored and use `#{minimum_disk_size}' MiB as root disk size.")
+          size = minimum_disk_size
+        end
         disk_size = (size/1024.0).ceil
         validate_disk_size(disk_size*1024)
       end
 
-      disk_caching = @resource_pool.fetch('caching', 'ReadWrite')
-      validate_disk_caching(disk_caching)
-
-      # The default OS disk size depends on the size of the VHD in the stemcell which is 3 GiB for now.
+      # The default OS disk size depends on the size of the VHD in the stemcell.
       # When using OS disk to store the ephemeral data and root_disk.size is not set,
-      # resize it to the minimum disk size if the minimum disk size is larger than 30 GiB;
-      # resize it to 30 GiB if the minimum disk size is smaller than 30 GiB.
+      # For Linux, the size of the VHD in the stemcell is 3 GiB. Need more spaces to store the ephemeral data. So,
+      #   resize it to the minimum disk size if the minimum disk size is larger than 30 GiB;
+      #   resize it to 30 GiB if the minimum disk size is smaller than 30 GiB.
+      # For Windows, the size of the VHD in the stemcell is 128 GiB. Most of the spaces are not used. 128 GiB should be enough to store the ephemeral data. So,
+      #   resize it to the minimum disk size if the minimum disk size is larger than 128 GiB;
+      #   resize it to 128 GiB if the minimum disk size is smaller than 128 GiB.
       if disk_size.nil? && ephemeral_disk(instance_id).nil?
-        disk_size = (minimum_disk_size/1024.0).ceil < 30 ? 30 : (minimum_disk_size/1024.0).ceil
+        minimum_required_disk_size = stemcell_info.is_windows? ? MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS : MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_LINUX
+        disk_size = (minimum_disk_size/1024.0).ceil < minimum_required_disk_size ? minimum_required_disk_size : (minimum_disk_size/1024.0).ceil
       end
 
       return {

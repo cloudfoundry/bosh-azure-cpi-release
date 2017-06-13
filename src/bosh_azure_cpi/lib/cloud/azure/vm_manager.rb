@@ -27,10 +27,10 @@ module Bosh::AzureCloud
 
       # Raise errors if the properties are not valid before doing others.
       if @use_managed_disks
-        os_disk = @disk_manager2.os_disk(instance_id, stemcell_info.disk_size)
+        os_disk = @disk_manager2.os_disk(instance_id, stemcell_info)
         ephemeral_disk = @disk_manager2.ephemeral_disk(instance_id)
       else
-        os_disk = @disk_manager.os_disk(instance_id, stemcell_info.disk_size)
+        os_disk = @disk_manager.os_disk(instance_id, stemcell_info)
         ephemeral_disk = @disk_manager.ephemeral_disk(instance_id)
       end
 

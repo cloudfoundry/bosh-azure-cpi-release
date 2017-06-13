@@ -111,6 +111,16 @@ module Bosh::AzureCloud
       "migrated" => "true"
     }
 
+    OS_TYPE_LINUX                               = 'linux'
+    OS_TYPE_WINDOWS                             = 'windows'
+    MINIMUM_DISK_SIZE_IN_MB_LINUX               = 3 * 1024
+    MINIMUM_DISK_SIZE_IN_MB_WINDOWS             = 128 * 1024
+    MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_LINUX   = 30
+    # The default size of Windows Server images in Azure will be changed from 128 GB to 30 GB.
+    # https://support.microsoft.com/en-us/help/4018933/the-default-size-of-windows-server-images-in-azure-is-changed-from-128 
+    # We need to update the size after the change is done. 
+    MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS = 128
+
     # Lock
     BOSH_LOCK_EXCEPTION_TIMEOUT        = 'timeout'
     BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND = 'lock_not_found'
@@ -395,17 +405,17 @@ module Bosh::AzureCloud
     end
 
     # Stemcell information
-    # * +:uri+      - String. uri of the blob stemcell, e.g. "https://<storage-account-name>.blob.core.windows.net/stemcell/bosh-stemcell-82817f34-ae10-4cfe-8ca8-b18d18ee5cdd.vhd"
-    #                         id of the image stemcell, e.g. "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Compute/images/bosh-stemcell-d42a792c-db7a-45a6-8132-e03c863c9f01-Standard_LRS-southeastasia"
-    # * +:os_type+  - String. os type of the stemcell, e.g. "linux"
-    # * +:name+     - String. name of the stemcell, e.g. "bosh-azure-hyperv-ubuntu-trusty-go_agent"
-    # * +:version   - String. version of the stemcell, e.g. "2972"
-    # * +:disk_size - Integer. disk size in MiB, e.g. 3072
-    # * +:image     - Hash. It is nil when the stemcell is not a light stemcell.
-    # *   +publisher+      - String. The publisher of the platform image.
-    # *   +offer+          - String. The offer from the publisher.
-    # *   +sku+            - String. The sku of the publisher's offer.
-    # *   +version+        - String. The version of the sku.
+    # * +:uri+         - String. uri of the blob stemcell, e.g. "https://<storage-account-name>.blob.core.windows.net/stemcell/bosh-stemcell-82817f34-ae10-4cfe-8ca8-b18d18ee5cdd.vhd"
+    #                            id of the image stemcell, e.g. "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Compute/images/bosh-stemcell-d42a792c-db7a-45a6-8132-e03c863c9f01-Standard_LRS-southeastasia"
+    # * +:os_type+     - String. os type of the stemcell, e.g. "linux"
+    # * +:name+        - String. name of the stemcell, e.g. "bosh-azure-hyperv-ubuntu-trusty-go_agent"
+    # * +:version      - String. version of the stemcell, e.g. "2972"
+    # * +:disk_size    - Integer. minimum size in MiB of root/OS disk. The value should be >= the size of root.vhd in the stemcell.
+    # * +:image        - Hash. It is nil when the stemcell is not a light stemcell.
+    # *   +publisher+    - String. The publisher of the platform image.
+    # *   +offer+        - String. The offer from the publisher.
+    # *   +sku+          - String. The sku of the publisher's offer.
+    # *   +version+      - String. The version of the sku.
     class StemcellInfo
       attr_reader :uri, :metadata, :os_type, :name, :version, :disk_size, :image
 
@@ -415,7 +425,11 @@ module Bosh::AzureCloud
         @os_type = @metadata['os_type'].nil? ? 'linux': @metadata['os_type'].downcase
         @name = @metadata['name']
         @version = @metadata['version']
-        @disk_size = @metadata['disk'].nil? ? 3072 : @metadata['disk'].to_i
+        if @metadata['disk'].nil?
+          @disk_size = is_windows? ? MINIMUM_DISK_SIZE_IN_MB_WINDOWS : MINIMUM_DISK_SIZE_IN_MB_LINUX
+        else
+          @disk_size = @metadata['disk'].to_i
+        end
         @image = @metadata['image']
       end
 
@@ -424,7 +438,7 @@ module Bosh::AzureCloud
       end
 
       def is_windows?
-        @os_type == 'windows'
+        @os_type == OS_TYPE_WINDOWS
       end
 
       # This will be used when creating VMs
