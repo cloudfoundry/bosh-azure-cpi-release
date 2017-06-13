@@ -116,30 +116,15 @@ module Bosh::AzureCloud
       "#{OS_DISK_PREFIX}-#{vm_name}-#{EPHEMERAL_DISK_POSTFIX}"
     end
 
-    def os_disk(storage_account_name, vm_name, minimum_disk_size)
+    def os_disk(storage_account_name, vm_name, stemcell_info)
       disk_name = generate_os_disk_name(vm_name)
       disk_uri = get_disk_uri(storage_account_name, disk_name)
-
-      disk_size = nil
-      root_disk = @resource_pool.fetch('root_disk', {})
-      size = root_disk.fetch('size', nil)
-      unless size.nil?
-        validate_disk_size_type(size)
-        cloud_error("root_disk.size `#{size}' is smaller than the default OS disk size `#{minimum_disk_size}' MiB") if size < minimum_disk_size
-        disk_size = (size/1024.0).ceil
-        validate_disk_size(disk_size*1024)
-      end
-
       disk_caching = @resource_pool.fetch('caching', 'ReadWrite')
       validate_disk_caching(disk_caching)
 
-      # The default OS disk size depends on the size of the VHD in the stemcell which is 3 GiB for now.
-      # When using OS disk to store the ephemeral data and root_disk.size is not set,
-      # resize it to the minimum disk size if the minimum disk size is larger than 30 GiB;
-      # resize it to 30 GiB if the minimum disk size is smaller than 30 GiB.
-      if disk_size.nil? && ephemeral_disk(storage_account_name, vm_name).nil?
-        disk_size = (minimum_disk_size/1024.0).ceil < 30 ? 30 : (minimum_disk_size/1024.0).ceil
-      end
+      root_disk_size = @resource_pool.fetch('root_disk', {}).fetch('size', nil)
+      use_root_disk_for_ephemeral_data = @resource_pool.fetch('ephemeral_disk', {}).fetch('use_root_disk', false)
+      disk_size = get_os_disk_size(root_disk_size, stemcell_info, use_root_disk_for_ephemeral_data)
 
       return {
         :disk_name    => disk_name,

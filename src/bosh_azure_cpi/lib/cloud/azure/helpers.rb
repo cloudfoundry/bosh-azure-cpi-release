@@ -112,6 +112,13 @@ module Bosh::AzureCloud
       "migrated" => "true"
     }
 
+    OS_TYPE_LINUX                               = 'linux'
+    OS_TYPE_WINDOWS                             = 'windows'
+    IMAGE_SIZE_IN_MB_LINUX                      = 3 * 1024
+    IMAGE_SIZE_IN_MB_WINDOWS                    = 128 * 1024
+    MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_LINUX   = 30
+    MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS = 128
+
     # Lock
     BOSH_LOCK_EXCEPTION_TIMEOUT        = 'timeout'
     BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND = 'lock_not_found'
@@ -427,19 +434,21 @@ module Bosh::AzureCloud
     end
 
     # Stemcell information
-    # * +:uri+      - String. uri of the blob stemcell, e.g. "https://<storage-account-name>.blob.core.windows.net/stemcell/bosh-stemcell-82817f34-ae10-4cfe-8ca8-b18d18ee5cdd.vhd"
-    #                         id of the image stemcell, e.g. "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Compute/images/bosh-stemcell-d42a792c-db7a-45a6-8132-e03c863c9f01-Standard_LRS-southeastasia"
-    # * +:os_type+  - String. os type of the stemcell, e.g. "linux"
-    # * +:name+     - String. name of the stemcell, e.g. "bosh-azure-hyperv-ubuntu-trusty-go_agent"
-    # * +:version   - String. version of the stemcell, e.g. "2972"
-    # * +:disk_size - Integer. disk size in MiB, e.g. 3072
-    # * +:image     - Hash. It is nil when the stemcell is not a light stemcell.
-    # *   +publisher+      - String. The publisher of the platform image.
-    # *   +offer+          - String. The offer from the publisher.
-    # *   +sku+            - String. The sku of the publisher's offer.
-    # *   +version+        - String. The version of the sku.
+    # * +:uri+         - String. uri of the blob stemcell, e.g. "https://<storage-account-name>.blob.core.windows.net/stemcell/bosh-stemcell-82817f34-ae10-4cfe-8ca8-b18d18ee5cdd.vhd"
+    #                            id of the image stemcell, e.g. "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.Compute/images/bosh-stemcell-d42a792c-db7a-45a6-8132-e03c863c9f01-Standard_LRS-southeastasia"
+    # * +:os_type+     - String. os type of the stemcell, e.g. "linux"
+    # * +:name+        - String. name of the stemcell, e.g. "bosh-azure-hyperv-ubuntu-trusty-go_agent"
+    # * +:version      - String. version of the stemcell, e.g. "2972"
+    # * +:image_size   - Integer. size in MiB of the image.
+    #                             For a normal stemcell, the value should be the size of root.vhd.
+    #                             For a light stemcell, the value should be the size of the platform image.
+    # * +:image        - Hash. It is nil when the stemcell is not a light stemcell.
+    # *   +publisher+    - String. The publisher of the platform image.
+    # *   +offer+        - String. The offer from the publisher.
+    # *   +sku+          - String. The sku of the publisher's offer.
+    # *   +version+      - String. The version of the sku.
     class StemcellInfo
-      attr_reader :uri, :metadata, :os_type, :name, :version, :disk_size, :image
+      attr_reader :uri, :metadata, :os_type, :name, :version, :image_size, :image
 
       def initialize(uri, metadata)
         @uri = uri
@@ -447,7 +456,11 @@ module Bosh::AzureCloud
         @os_type = @metadata['os_type'].nil? ? 'linux': @metadata['os_type'].downcase
         @name = @metadata['name']
         @version = @metadata['version']
-        @disk_size = @metadata['disk'].nil? ? 3072 : @metadata['disk'].to_i
+        if @metadata['disk'].nil?
+          @image_size = is_windows? ? IMAGE_SIZE_IN_MB_WINDOWS : IMAGE_SIZE_IN_MB_LINUX
+        else
+          @image_size = @metadata['disk'].to_i
+        end
         @image = @metadata['image']
       end
 
@@ -456,7 +469,7 @@ module Bosh::AzureCloud
       end
 
       def is_windows?
-        @os_type == 'windows'
+        @os_type == OS_TYPE_WINDOWS
       end
 
       # This will be used when creating VMs
@@ -471,6 +484,29 @@ module Bosh::AzureCloud
           'version'   => @image['version']
         }
       end
+    end
+
+    def get_os_disk_size(root_disk_size, stemcell_info, use_root_disk)
+      disk_size = nil
+      image_size = stemcell_info.image_size
+      unless root_disk_size.nil?
+        validate_disk_size_type(root_disk_size)
+        if root_disk_size < image_size
+          @logger.warn("root_disk.size `#{root_disk_size}' MiB is smaller than the default OS disk size `#{image_size}' MiB. root_disk.size is ignored and use `#{image_size}' MiB as root disk size.")
+          root_disk_size = image_size
+        end
+        disk_size = (root_disk_size/1024.0).ceil
+        validate_disk_size(disk_size*1024)
+      end
+
+      # When using OS disk to store the ephemeral data and root_disk.size is not set, CPI will resize the OS disk size.
+      # For Linux,   the size of the VHD in the stemcell is 3   GiB. CPI will resize it to the high value between the minimum disk size and 30  GiB;
+      # For Windows, the size of the VHD in the stemcell is 128 GiB. CPI will resize it to the high value between the minimum disk size and 128 GiB.
+      if disk_size.nil? && use_root_disk
+        minimum_required_disk_size = stemcell_info.is_windows? ? MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS : MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_LINUX
+        disk_size = (image_size/1024.0).ceil < minimum_required_disk_size ? minimum_required_disk_size : (image_size/1024.0).ceil
+      end
+      disk_size
     end
 
     # File Mutex

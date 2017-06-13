@@ -123,7 +123,7 @@ describe Bosh::AzureCloud::VMManager do
         and_return(os_type)
       allow(stemcell_info).to receive(:is_windows?).
         and_return(false)
-      allow(stemcell_info).to receive(:disk_size).
+      allow(stemcell_info).to receive(:image_size).
         and_return(nil)
       allow(stemcell_info).to receive(:is_light_stemcell?).
         and_return(false)

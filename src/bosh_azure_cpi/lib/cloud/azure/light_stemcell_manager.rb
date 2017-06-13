@@ -61,6 +61,7 @@ module Bosh::AzureCloud
       @logger.debug("list_platform_image_versions(#{location}, #{stemcell_info.image['publisher']}, #{stemcell_info.image['offer']}, #{stemcell_info.image['sku']})")
       versions = @azure_client2.list_platform_image_versions(location, stemcell_info.image['publisher'], stemcell_info.image['offer'], stemcell_info.image['sku'])
       version = versions.find{|v| v[:name] == stemcell_info.image['version'] }
+      @logger.debug("list_platform_image_versions: The version `#{stemcell_info.image['version']}' of the image is not found") if version.nil?
       !version.nil?
     end
   end
