@@ -45,22 +45,61 @@ describe Bosh::AzureCloud::DiskManager do
   end  
 
   describe "#delete_vm_status_files" do
-    it "deletes vm status files" do
-      allow(blob_manager).to receive(:list_blobs).
-        and_return([
-          double("blob", :name => "a.status"),
-          double("blob", :name => "b.status"),
-          double("blob", :name => "a.vhd"),
-          double("blob", :name => "b.vhd")
-        ])
-      expect(blob_manager).to receive(:delete_blob).
-        with(storage_account_name, "bosh", "a.status")
-      expect(blob_manager).to receive(:delete_blob).
-        with(storage_account_name, "bosh", "b.status")
+    context "when there are several vm status file" do
+      before do
+        allow(blob_manager).to receive(:list_blobs).
+          and_return([
+            double("blob", :name => "a.status"),
+            double("blob", :name => "b.status"),
+            double("blob", :name => "a.vhd"),
+            double("blob", :name => "b.vhd")
+          ])
+      end
 
-      expect {
-        disk_manager.delete_vm_status_files(storage_account_name, "")
-      }.not_to raise_error
+      it "deletes vm status files" do
+        expect(blob_manager).to receive(:delete_blob).
+          with(storage_account_name, "bosh", "a.status")
+        expect(blob_manager).to receive(:delete_blob).
+          with(storage_account_name, "bosh", "b.status")
+
+        expect {
+          disk_manager.delete_vm_status_files(storage_account_name, "")
+        }.not_to raise_error
+      end
+    end
+
+    context "when there are no vm status file" do
+      before do
+        allow(blob_manager).to receive(:list_blobs).
+          and_return([])
+      end
+
+      it "doesn't delete vm status files" do
+        expect(blob_manager).not_to receive(:delete_blob)
+
+        expect {
+          disk_manager.delete_vm_status_files(storage_account_name, "")
+        }.not_to raise_error
+      end
+    end
+
+    context "when an exception is raised when deleting the files" do
+      before do
+        allow(blob_manager).to receive(:list_blobs).
+          and_return([
+            double("blob", :name => "a.status"),
+            double("blob", :name => "b.status"),
+            double("blob", :name => "a.vhd"),
+            double("blob", :name => "b.vhd")
+          ])
+        allow(blob_manager).to receive(:delete_blob).and_raise(StandardError)
+      end
+
+      it "ignores the exception and doesn't raise error" do
+        expect {
+          disk_manager.delete_vm_status_files(storage_account_name, "")
+        }.not_to raise_error
+      end
     end
   end  
 
@@ -251,27 +290,33 @@ describe Bosh::AzureCloud::DiskManager do
     let(:disk_name) { 'fake-disk-name' }
     let(:disk_uri) { 'fake-disk-uri' }
     let(:instance_id) { 'fake-instance-id' }
-    let(:minimum_disk_size) { 3072 }
+    let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
+    let(:minimum_disk_size) { 3 * 1024 }
 
     before do
       allow(disk_manager).to receive(:generate_os_disk_name).
         and_return(disk_name)
       allow(disk_manager).to receive(:get_disk_uri).
         and_return(disk_uri)
+      allow(stemcell_info).to receive(:disk_size).
+        and_return(minimum_disk_size)
+      allow(stemcell_info).to receive(:is_windows?).
+        and_return(false)
     end
 
-    context "without root_disk nor caching" do
+    # Caching
+    context "when caching is not specified" do
       let(:resource_pool) {
         {
           'instance_type' => 'STANDARD_A1'
         }
       }
 
-      it "should return correct values" do
+      it "should return the default caching for os disk: ReadWrite" do
         disk_manager.resource_pool = resource_pool
 
         expect(
-          disk_manager.os_disk(instance_id, minimum_disk_size)
+          disk_manager.os_disk(instance_id, stemcell_info)
         ).to eq(
           {
             :disk_name    => disk_name,
@@ -283,7 +328,7 @@ describe Bosh::AzureCloud::DiskManager do
       end
     end
 
-    context "with caching" do
+    context "when caching is specified" do
       context "when caching is valid" do
         let(:disk_caching) { 'ReadOnly' }
         let(:resource_pool) {
@@ -293,11 +338,11 @@ describe Bosh::AzureCloud::DiskManager do
           }
         }
 
-        it "should return correct values" do
+        it "should return the specified caching" do
           disk_manager.resource_pool = resource_pool
 
           expect(
-            disk_manager.os_disk(instance_id, minimum_disk_size)
+            disk_manager.os_disk(instance_id, stemcell_info)
           ).to eq(
             {
               :disk_name    => disk_name,
@@ -321,14 +366,38 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect {
-            disk_manager.os_disk(instance_id, minimum_disk_size)
+            disk_manager.os_disk(instance_id, stemcell_info)
           }.to raise_error /Unknown disk caching/
         end
       end
     end
 
+    # Disk Size
+    context "without root_disk" do
+      let(:resource_pool) {
+        {
+          'instance_type' => 'STANDARD_A1'
+        }
+      }
+
+      it "should return disk_size: nil" do
+        disk_manager.resource_pool = resource_pool
+
+        expect(
+          disk_manager.os_disk(instance_id, stemcell_info)
+        ).to eq(
+          {
+            :disk_name    => disk_name,
+            :disk_uri     => disk_uri,
+            :disk_size    => nil,
+            :disk_caching => 'ReadWrite'
+          }
+        )
+      end
+    end
+
     context "with root_disk" do
-      context "without size" do
+      context "when size is not specified" do
         context "with the ephemeral disk" do
           let(:resource_pool) {
             {
@@ -341,7 +410,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(instance_id, stemcell_info)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -364,89 +433,109 @@ describe Bosh::AzureCloud::DiskManager do
             }
           }
 
-          it "should return correct values" do
-            disk_manager.resource_pool = resource_pool
+          context "when the OS is Linux" do
+            context "when the minimum_disk_size is smaller than 30 GiB" do
+              let(:minimum_disk_size) { 3 * 1024 }
+              before do
+                allow(stemcell_info).to receive(:disk_size).
+                  and_return(minimum_disk_size)
+              end
 
-            expect(
-              disk_manager.os_disk(instance_id, minimum_disk_size)
-            ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_uri     => disk_uri,
-                :disk_size    => 30,
-                :disk_caching => 'ReadWrite'
-              }
-            )
+              it "should return 30 GiB as the disk size" do
+                disk_manager.resource_pool = resource_pool
+
+                expect(
+                  disk_manager.os_disk(instance_id, stemcell_info)
+                ).to eq(
+                  {
+                    :disk_name    => disk_name,
+                    :disk_uri     => disk_uri,
+                    :disk_size    => 30,
+                    :disk_caching => 'ReadWrite'
+                  }
+                )
+              end
+            end
+
+            context "when the minimum_disk_size is larger than 30 GiB" do
+              let(:minimum_disk_size) { 50 * 1024 }
+              before do
+                allow(stemcell_info).to receive(:disk_size).
+                  and_return(minimum_disk_size)
+              end
+
+              it "should return minimum_disk_size as the disk size" do
+                disk_manager.resource_pool = resource_pool
+
+                expect(
+                  disk_manager.os_disk(instance_id, stemcell_info)
+                ).to eq(
+                  {
+                    :disk_name    => disk_name,
+                    :disk_uri     => disk_uri,
+                    :disk_size    => minimum_disk_size / 1024,
+                    :disk_caching => 'ReadWrite'
+                  }
+                )
+              end
+            end
+          end
+
+          context "when the OS is Windows" do
+            before do
+              allow(stemcell_info).to receive(:is_windows?).
+                and_return(true)
+            end
+            context "when the minimum_disk_size is smaller than 128 GiB" do
+              let(:minimum_disk_size) { (128 - 1)* 1024 }
+              before do
+                allow(stemcell_info).to receive(:disk_size).
+                  and_return(minimum_disk_size)
+              end
+
+              it "should return 128 GiB as the disk size" do
+                disk_manager.resource_pool = resource_pool
+
+                expect(
+                  disk_manager.os_disk(instance_id, stemcell_info)
+                ).to eq(
+                  {
+                    :disk_name    => disk_name,
+                    :disk_uri     => disk_uri,
+                    :disk_size    => 128,
+                    :disk_caching => 'ReadWrite'
+                  }
+                )
+              end
+            end
+
+            context "when the minimum_disk_size is larger than 128 GiB" do
+              let(:minimum_disk_size) { (128 + 1) * 1024 }
+              before do
+                allow(stemcell_info).to receive(:disk_size).
+                  and_return(minimum_disk_size)
+              end
+
+              it "should return minimum_disk_size as the disk size" do
+                disk_manager.resource_pool = resource_pool
+
+                expect(
+                  disk_manager.os_disk(instance_id, stemcell_info)
+                ).to eq(
+                  {
+                    :disk_name    => disk_name,
+                    :disk_uri     => disk_uri,
+                    :disk_size    => minimum_disk_size / 1024,
+                    :disk_caching => 'ReadWrite'
+                  }
+                )
+              end
+            end
           end
         end
       end
 
-      context "with a valid size" do
-        let(:resource_pool) {
-          {
-            'instance_type' => 'STANDARD_A1',
-            'root_disk' => {
-              'size' => 3 * 1024
-            }
-          }
-        }
-
-        it "should return correct values" do
-          disk_manager.resource_pool = resource_pool
-
-          expect(
-            disk_manager.os_disk(instance_id, minimum_disk_size)
-          ).to eq(
-            {
-              :disk_name    => disk_name,
-              :disk_uri     => disk_uri,
-              :disk_size    => 3,
-              :disk_caching => 'ReadWrite'
-            }
-          )
-        end
-      end
-
-      context "with an invalid size" do
-        context "When minimum_disk_size is not specified and the size is smaller than 3 GiB" do
-          let(:resource_pool) {
-            {
-              'instance_type' => 'STANDARD_A1',
-              'root_disk' => {
-                'size' => 2 * 1024
-              }
-            }
-          }
-
-          it "should raise an error" do
-            disk_manager.resource_pool = resource_pool
-
-            expect {
-              disk_manager.os_disk(instance_id, minimum_disk_size)
-            }.to raise_error /root_disk.size `2048' is smaller than the default OS disk size `3072' MiB/
-          end
-        end
-
-        context "When minimum_disk_size is specified and the size is smaller than minimum_disk_size" do
-          let(:resource_pool) {
-            {
-              'instance_type' => 'STANDARD_A1',
-              'root_disk' => {
-                'size' => 2 * 1024
-              }
-            }
-          }
-          let(:minimum_disk_size) { 4 * 1024 }
-
-          it "should raise an error" do
-            disk_manager.resource_pool = resource_pool
-
-            expect {
-              disk_manager.os_disk(instance_id, minimum_disk_size)
-            }.to raise_error /root_disk.size `2048' is smaller than the default OS disk size `4096' MiB/
-          end
-        end
-
+      context "when size is specified" do
         context "When the size is not an integer" do
           let(:resource_pool) {
             {
@@ -461,17 +550,73 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect {
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(instance_id, stemcell_info)
             }.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
           end
         end
 
+        context "When the size is smaller than minimum_disk_size" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'STANDARD_A1',
+              'root_disk' => {
+                'size' => 2 * 1024
+              }
+            }
+          }
+          let(:minimum_disk_size) { 4 * 1024 }
+          before do
+            allow(stemcell_info).to receive(:disk_size).
+              and_return(minimum_disk_size)
+          end
+
+          it "should use the minimum_disk_size" do
+            disk_manager.resource_pool = resource_pool
+
+            expect(
+              disk_manager.os_disk(instance_id, stemcell_info)
+            ).to eq(
+              {
+                :disk_name    => disk_name,
+                :disk_uri     => disk_uri,
+                :disk_size    => 4,
+                :disk_caching => 'ReadWrite'
+              }
+            )
+          end
+        end
+
+        context "When the size is divisible by 1024" do
+          let(:resource_pool) {
+            {
+              'instance_type' => 'STANDARD_A1',
+              'root_disk' => {
+                'size' => 5 * 1024
+              }
+            }
+          }
+
+          it "should return the correct disk_size" do
+            disk_manager.resource_pool = resource_pool
+
+            expect(
+              disk_manager.os_disk(instance_id, stemcell_info)
+            ).to eq(
+              {
+                :disk_name    => disk_name,
+                :disk_uri     => disk_uri,
+                :disk_size    => 5,
+                :disk_caching => 'ReadWrite'
+              }
+           )
+          end
+        end
         context "When the size is not divisible by 1024" do
           let(:resource_pool) {
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
-                'size' => 5*1024 + 512
+                'size' => 5 * 1024 + 512
               }
             }
           }
@@ -480,7 +625,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(instance_id, stemcell_info)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -499,6 +644,7 @@ describe Bosh::AzureCloud::DiskManager do
     let(:disk_name) { 'ephemeral-disk' }
     let(:disk_uri) { 'fake-disk-uri' }
     let(:instance_id) { 'fake-instance-id' }
+    let(:default_ephemeral_disk_size) { 70 } # The default value is default_ephemeral_disk_size for Standard_A1 
 
     before do
       allow(disk_manager).to receive(:get_disk_uri).
@@ -522,7 +668,7 @@ describe Bosh::AzureCloud::DiskManager do
             {
               :disk_name    => disk_name,
               :disk_uri     => disk_uri,
-              :disk_size    => 70,
+              :disk_size    => default_ephemeral_disk_size,
               :disk_caching => 'ReadWrite'
             }
           )
@@ -536,7 +682,7 @@ describe Bosh::AzureCloud::DiskManager do
           }
         }
 
-        it "should return correct values" do
+        it "should return 30 as the default disk size" do
           disk_manager.resource_pool = resource_pool
 
           expect(
@@ -574,7 +720,7 @@ describe Bosh::AzureCloud::DiskManager do
               {
                 :disk_name    => disk_name,
                 :disk_uri     => disk_uri,
-                :disk_size    => 70,
+                :disk_size    => default_ephemeral_disk_size,
                 :disk_caching => 'ReadWrite'
               }
             )
@@ -619,7 +765,7 @@ describe Bosh::AzureCloud::DiskManager do
               {
                 :disk_name    => disk_name,
                 :disk_uri     => disk_uri,
-                :disk_size    => 70,
+                :disk_size    => default_ephemeral_disk_size,
                 :disk_caching => 'ReadWrite'
               }
             )
@@ -637,7 +783,7 @@ describe Bosh::AzureCloud::DiskManager do
               }
             }
             
-            it "should return correct values" do
+            it "should return the specified disk size" do
               disk_manager.resource_pool = resource_pool
 
               expect(
