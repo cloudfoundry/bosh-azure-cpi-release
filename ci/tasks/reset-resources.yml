@@ -11,6 +11,7 @@ run:
   path: bosh-cpi-src/ci/tasks/reset-resources.sh
 
 params:
+  AZURE_ENVIRONMENT:                          ""
   AZURE_TENANT_ID:                            ""
   AZURE_CLIENT_ID:                            ""
   AZURE_CLIENT_SECRET:                        ""

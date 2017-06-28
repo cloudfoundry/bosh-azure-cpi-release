@@ -7,6 +7,7 @@ function exit_if_error {
   exit 1
 }
 
+: ${AZURE_ENVIRONMENT:?}
 : ${AZURE_TENANT_ID:?}
 : ${AZURE_CLIENT_ID:?}
 : ${AZURE_CLIENT_SECRET:?}
@@ -24,7 +25,7 @@ function exit_if_error {
 : ${AZURE_CF_SUBNET_NAME:?}
 : ${AZURE_CF_SECOND_SUBNET_NAME:?}
 
-azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
+azure login --environment ${AZURE_ENVIRONMENT} --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
 
 set +e
