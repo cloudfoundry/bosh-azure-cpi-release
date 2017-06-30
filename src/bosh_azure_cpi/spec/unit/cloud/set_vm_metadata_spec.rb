@@ -6,12 +6,19 @@ describe Bosh::AzureCloud::Cloud do
 
   describe '#set_vm_metadata' do
     let(:instance_id) { "e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
+    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
+
+    before do
+      allow(Bosh::AzureCloud::InstanceId).to receive(:parse).
+        with(instance_id, azure_properties).
+        and_return(instance_id_object)
+    end
 
     context "when the metadata is not encoded" do
       let(:metadata) { {"user-agent"=>"bosh"} }
 
       it 'should set the vm metadata' do
-        expect(vm_manager).to receive(:set_metadata).with(instance_id, metadata)
+        expect(vm_manager).to receive(:set_metadata).with(instance_id_object, metadata)
 
         expect {
           cloud.set_vm_metadata(instance_id, metadata)
@@ -34,7 +41,7 @@ describe Bosh::AzureCloud::Cloud do
       }
 
       it 'should set the vm metadata' do
-        expect(vm_manager).to receive(:set_metadata).with(instance_id, encoded_metadata)
+        expect(vm_manager).to receive(:set_metadata).with(instance_id_object, encoded_metadata)
 
         expect {
           cloud.set_vm_metadata(instance_id, metadata)

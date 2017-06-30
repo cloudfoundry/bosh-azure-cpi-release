@@ -6,8 +6,8 @@ set -e
 : ${AZURE_CLIENT_ID:?}
 : ${AZURE_CLIENT_SECRET:?}
 : ${AZURE_TENANT_ID:?}
-: ${AZURE_GROUP_NAME_FOR_VMS:?}
-: ${AZURE_GROUP_NAME_FOR_NETWORK:?}
+: ${AZURE_DEFAULT_GROUP_NAME:?}
+: ${AZURE_ADDITIONAL_GROUP_NAME:?}
 : ${AZURE_VNET_NAME_FOR_BATS:?}
 : ${AZURE_BOSH_SUBNET_NAME:?}
 : ${AZURE_DEFAULT_SECURITY_GROUP:?}
@@ -24,7 +24,7 @@ set -e
 azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
 
-DIRECTOR_PIP=$(azure network public-ip show ${AZURE_GROUP_NAME_FOR_NETWORK} AzureCPICI-bosh --json | jq '.ipAddress' -r)
+DIRECTOR_PIP=$(azure network public-ip show ${AZURE_ADDITIONAL_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)
 
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}
@@ -78,7 +78,7 @@ networks:
 - name: public
   type: vip
   cloud_properties:
-    resource_group_name: ${AZURE_GROUP_NAME_FOR_NETWORK}
+    resource_group_name: ${AZURE_ADDITIONAL_GROUP_NAME}
 - name: private
   type: manual
   subnets:
@@ -86,7 +86,7 @@ networks:
     gateway: 10.0.0.1
     dns: [168.63.129.16]
     cloud_properties:
-      resource_group_name: ${AZURE_GROUP_NAME_FOR_NETWORK}
+      resource_group_name: ${AZURE_ADDITIONAL_GROUP_NAME}
       virtual_network_name: ${AZURE_VNET_NAME_FOR_BATS}
       subnet_name: ${AZURE_BOSH_SUBNET_NAME}
 
@@ -96,7 +96,7 @@ resource_pools:
   stemcell:
     url: file://stemcell/stemcell.tgz
   cloud_properties:
-    instance_type: Standard_D1
+    instance_type: Standard_D1_v2
 
 disk_pools:
 - name: disks
@@ -202,7 +202,7 @@ jobs:
     azure: &azure
       environment: AzureCloud
       subscription_id: ${AZURE_SUBSCRIPTION_ID}
-      resource_group_name: ${AZURE_GROUP_NAME_FOR_VMS}
+      resource_group_name: ${AZURE_DEFAULT_GROUP_NAME}
       tenant_id: ${AZURE_TENANT_ID}
       client_id: ${AZURE_CLIENT_ID}
       client_secret: ${AZURE_CLIENT_SECRET}

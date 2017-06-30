@@ -7,6 +7,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
   let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
   let(:storage_account_manager) { Bosh::AzureCloud::StorageAccountManager.new(azure_properties, blob_manager, disk_manager, client2) }
   let(:azure_client) { instance_double(Azure::Storage::Client) }
+  let(:default_resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
 
   before do
     allow(Azure::Storage::Client).to receive(:create).
@@ -620,7 +621,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
         }
         before do
           allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-          allow(client2).to receive(:get_resource_group).and_return(resource_group)
+          allow(client2).to receive(:get_resource_group).
+            with(default_resource_group_name).
+            and_return(resource_group)
         end
 
         it 'should return the storage account' do
@@ -676,7 +679,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
             before do
               allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-              allow(client2).to receive(:get_resource_group).and_return(resource_group)
+              allow(client2).to receive(:get_resource_group).
+                with(default_resource_group_name).
+                and_return(resource_group)
               allow(client2).to receive(:get_storage_account_by_name).
                 with(targeted_storage_account[:name]).
                 and_return(targeted_storage_account)
@@ -695,7 +700,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
               azure_properties.delete('storage_account_name')
               expect(client2).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
               expect(client2).to receive(:update_tags_of_storage_account).with(targeted_storage_account[:name], tags)
-  
+
               expect(storage_account_manager.default_storage_account).to eq(targeted_storage_account)
             end
           end
@@ -718,7 +723,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
             before do
               allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-              allow(client2).to receive(:get_resource_group).and_return(resource_group)
+              allow(client2).to receive(:get_resource_group).
+                with(default_resource_group_name).
+                and_return(resource_group)
               allow(client2).to receive(:get_storage_account_by_name).
                 with(targeted_storage_account[:name]).
                 and_return(targeted_storage_account)
@@ -760,7 +767,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
           before do
             allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-            allow(client2).to receive(:get_resource_group).and_return(resource_group)
+            allow(client2).to receive(:get_resource_group).
+              with(default_resource_group_name).
+              and_return(resource_group)
             allow(client2).to receive(:get_storage_account_by_name).
               with(targeted_storage_account[:name]).
               and_return(targeted_storage_account)
@@ -808,7 +817,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
           before do
             allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-            allow(client2).to receive(:get_resource_group).and_return(resource_group)
+            allow(client2).to receive(:get_resource_group).
+              with(default_resource_group_name).
+              and_return(resource_group)
             allow(client2).to receive(:get_storage_account_by_name).
               with(targeted_storage_account[:name]).
               and_return(targeted_storage_account)
@@ -861,7 +872,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
         before do
           allow(client2).to receive(:list_storage_accounts).and_return([])
-          allow(client2).to receive(:get_resource_group).and_return(resource_group)
+          allow(client2).to receive(:get_resource_group).
+            with(default_resource_group_name).
+            and_return(resource_group)
           allow(SecureRandom).to receive(:hex).and_return(random_postfix)
           allow(client2).to receive(:check_storage_account_name_availability).with(new_storage_account_name).and_return(result)
           allow(blob_manager).to receive(:prepare).with(new_storage_account_name, {:is_default_storage_account=>true})

@@ -4,12 +4,22 @@ describe Bosh::AzureCloud::DiskManager do
   let(:azure_properties) { mock_azure_properties }
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:disk_manager) { Bosh::AzureCloud::DiskManager.new(azure_properties, blob_manager) }
+  let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
+  let(:snapshot_id) { instance_double(Bosh::AzureCloud::DiskId) }
 
-  let(:storage_account_name) { MOCK_DEFAULT_STORAGE_ACCOUNT_NAME }
+  let(:storage_account_name) { "fake_storage_account_name" }
+  let(:disk_name) { "fake-disk-name" }
+  let(:caching) { "fake-caching" }
+
   let(:disk_container) { "bosh" }
   let(:os_disk_prefix) { "bosh-os" }
   let(:data_disk_prefix) { "bosh-data" }
-  let(:disk_name) { "#{data_disk_prefix}-#{storage_account_name}-#{SecureRandom.uuid}-None" }
+
+  before do
+    allow(disk_id).to receive(:disk_name).and_return(disk_name)
+    allow(disk_id).to receive(:caching).and_return(caching)
+    allow(disk_id).to receive(:storage_account_name).and_return(storage_account_name)
+  end
 
   describe "#delete_disk" do
     context "when the disk exists" do
@@ -23,7 +33,7 @@ describe Bosh::AzureCloud::DiskManager do
           with(storage_account_name, disk_container, "#{disk_name}.vhd")
 
         expect {
-          disk_manager.delete_disk(disk_name)
+          disk_manager.delete_disk(storage_account_name, disk_name)
         }.not_to raise_error
       end
     end
@@ -38,11 +48,22 @@ describe Bosh::AzureCloud::DiskManager do
         expect(blob_manager).not_to receive(:delete_blob)
 
         expect {
-          disk_manager.delete_disk(disk_name)
+          disk_manager.delete_disk(storage_account_name, disk_name)
         }.not_to raise_error
       end
     end
-  end  
+  end
+
+  describe "#delete_data_disk" do
+    it "should delete the disk" do
+      expect(disk_manager).to receive(:delete_disk).
+        with(storage_account_name, disk_name)
+
+      expect {
+        disk_manager.delete_data_disk(disk_id)
+      }.not_to raise_error
+    end
+  end
 
   describe "#delete_vm_status_files" do
     it "deletes vm status files" do
@@ -62,7 +83,7 @@ describe Bosh::AzureCloud::DiskManager do
         disk_manager.delete_vm_status_files(storage_account_name, "")
       }.not_to raise_error
     end
-  end  
+  end
 
   describe "#snapshot_disk" do
     let(:metadata) { {} }
@@ -73,38 +94,61 @@ describe Bosh::AzureCloud::DiskManager do
         with(storage_account_name, disk_container, "#{disk_name}.vhd", metadata).
         and_return(snapshot_time)
 
-      snapshot_id = disk_manager.snapshot_disk(disk_name, metadata)
-      expect(snapshot_id).to include(disk_name)
-      expect(snapshot_id).to include(snapshot_time)
+      snapshot_name = disk_manager.snapshot_disk(storage_account_name, disk_name, metadata)
+      expect(snapshot_name).to include(disk_name)
+      expect(snapshot_name).to include(snapshot_time)
     end
-  end  
+  end
 
   describe "#delete_snapshot" do
-    let(:snapshot_time) { "fake-snapshot-time" }
-    let(:snapshot_id) { "#{disk_name}--#{snapshot_time}" }
+    context "when snapshot id is in-valid" do
+      let(:snapshot_name) { "invalide-snapshot-name" }
 
-    it "deletes the snapshot" do
-      expect(blob_manager).to receive(:delete_blob_snapshot).
-        with(storage_account_name, disk_container, "#{disk_name}.vhd", snapshot_time)
+      before do
+        allow(snapshot_id).to receive(:storage_account_name).and_return(storage_account_name)
+        allow(snapshot_id).to receive(:disk_name).and_return(snapshot_name)
+      end
 
-      expect {
-        disk_manager.delete_snapshot(snapshot_id)
-      }.not_to raise_error
+      it "should raise an error" do
+        expect {
+          disk_manager.delete_snapshot(snapshot_id)
+        }.to raise_error /Invalid snapshot id/
+      end
     end
-  end  
+
+    context "when snapshot id is valid" do
+      let(:snapshot_time) { "fake-snapshot-time" }
+      let(:snapshot_name) { "#{disk_name}--#{snapshot_time}" }
+
+      before do
+        allow(snapshot_id).to receive(:storage_account_name).and_return(storage_account_name)
+        allow(snapshot_id).to receive(:disk_name).and_return(snapshot_name)
+      end
+
+      it "deletes the snapshot" do
+        expect(blob_manager).to receive(:delete_blob_snapshot).
+          with(storage_account_name, disk_container, "#{disk_name}.vhd", snapshot_time)
+
+        expect {
+          disk_manager.delete_snapshot(snapshot_id)
+        }.not_to raise_error
+      end
+    end
+  end
 
   describe "#create_disk" do
     let(:size) { 100 }
     let(:caching) { 'ReadOnly' }
 
     it "returns the disk name with the specified caching" do
-      allow(blob_manager).to receive(:create_empty_vhd_blob)
+      expect(blob_manager).to receive(:create_empty_vhd_blob).
+        with(storage_account_name, disk_container, "#{disk_name}.vhd", size)
 
-      disk_name = disk_manager.create_disk(size, storage_account_name, caching)
-      expect(disk_name).to include(storage_account_name)
-      expect(disk_name).to include(caching)
+      expect {
+        disk_manager.create_disk(disk_id, size)
+      }.not_to raise_error
     end
-  end  
+  end
 
   describe "#has_disk?" do
     context "when the disk exists" do
@@ -114,7 +158,7 @@ describe Bosh::AzureCloud::DiskManager do
       end
 
       it "should return true" do
-        expect(disk_manager.has_disk?(disk_name)).to be(true)
+        expect(disk_manager.has_disk?(storage_account_name, disk_name)).to be(true)
       end
     end
 
@@ -125,8 +169,18 @@ describe Bosh::AzureCloud::DiskManager do
       end
 
       it "should return false" do
-        expect(disk_manager.has_disk?(disk_name)).to be(false)
+        expect(disk_manager.has_disk?(storage_account_name, disk_name)).to be(false)
       end
+    end
+  end
+
+  describe "#has_data_disk?" do
+    it "should delete the disk" do
+      expect(disk_manager).to receive(:has_disk?).
+        with(storage_account_name, disk_name).
+        and_return(true)
+
+      expect(disk_manager.has_data_disk?(disk_id)).to be(true)
     end
   end
 
@@ -138,7 +192,7 @@ describe Bosh::AzureCloud::DiskManager do
       end
 
       it "should return false" do
-        expect(disk_manager.is_migrated?(disk_name)).to be(false)
+        expect(disk_manager.is_migrated?(disk_id)).to be(false)
       end
     end
 
@@ -161,7 +215,7 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         it "should return true" do
-          expect(disk_manager.is_migrated?(disk_name)).to be(true)
+          expect(disk_manager.is_migrated?(disk_id)).to be(true)
         end
       end
 
@@ -173,47 +227,29 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         it "should return false" do
-          expect(disk_manager.is_migrated?(disk_name)).to be(false)
+          expect(disk_manager.is_migrated?(disk_id)).to be(false)
         end
       end
     end
   end
 
   describe "#get_disk_uri" do
-    context "when the disk name is invalid" do
-      let(:disk_name) { "invalid-disk-name" }
-
-      it "raises an error" do
-        expect {
-          disk_manager.get_disk_uri(disk_name)
-        }.to raise_error /Invalid disk name #{disk_name}/
-      end
-    end
-
-    context "when the disk is a data disk" do
-      it "returns the right disk uri" do
-        expect(blob_manager).to receive(:get_blob_uri).
-          with(storage_account_name, disk_container, "#{disk_name}.vhd").
-          and_return("fake-uri")
-        expect(disk_manager.get_disk_uri(disk_name)).to eq("fake-uri")
-      end
-    end
-
-    context "when the disk is an OS disk" do
-      let(:disk_name) { "bosh-os-#{storage_account_name}-#{SecureRandom.uuid}-None" }
-
-      it "returns the right disk uri" do
-        expect(blob_manager).to receive(:get_blob_uri).
-          with(storage_account_name, disk_container, "#{disk_name}.vhd").
-          and_return("fake-uri")
-        expect(disk_manager.get_disk_uri(disk_name)).to eq("fake-uri")
-      end
+    it "returns the right disk uri" do
+      expect(blob_manager).to receive(:get_blob_uri).
+        with(storage_account_name, disk_container, "#{disk_name}.vhd").
+        and_return("fake-uri")
+      expect(disk_manager.get_disk_uri(storage_account_name, disk_name)).to eq("fake-uri")
     end
   end
 
-  describe "#get_data_disk_caching" do
-    it "returns the right caching" do
-      expect(disk_manager.get_data_disk_caching(disk_name)).to eq("None")
+  describe "#get_data_disk_uri" do
+    it "should get disk uri" do
+      expect(disk_manager).to receive(:get_disk_uri).
+        with(storage_account_name, disk_name)
+
+      expect {
+        disk_manager.get_data_disk_uri(disk_id)
+      }.not_to raise_error
     end
   end
 
@@ -227,30 +263,29 @@ describe Bosh::AzureCloud::DiskManager do
     end
 
     it "returns the disk size" do
-      expect(disk_manager.get_disk_size_in_gb(disk_name)).to eq(42)
+      expect(disk_manager.get_disk_size_in_gb(disk_id)).to eq(42)
     end
   end
 
   describe "#generate_os_disk_name" do
-    let(:instance_id) { "fake-instance-id" }
+    let(:vm_name) { "fake-vm-name" }
 
     it "returns the right os disk name" do
-      expect(disk_manager.generate_os_disk_name(instance_id)).to eq("#{os_disk_prefix}-fake-instance-id")
+      expect(disk_manager.generate_os_disk_name(vm_name)).to eq("#{os_disk_prefix}-fake-vm-name")
     end
   end
 
   describe "#generate_ephemeral_disk_name" do
-    let(:instance_id) { "fake-instance-id" }
+    let(:vm_name) { "fake-vm-name" }
 
     it "returns the right ephemeral disk name" do
-      expect(disk_manager.generate_ephemeral_disk_name(instance_id)).to eq("#{os_disk_prefix}-fake-instance-id-ephemeral-disk")
+      expect(disk_manager.generate_ephemeral_disk_name(vm_name)).to eq("#{os_disk_prefix}-fake-vm-name-ephemeral-disk")
     end
   end
 
   describe "#os_disk" do
-    let(:disk_name) { 'fake-disk-name' }
     let(:disk_uri) { 'fake-disk-uri' }
-    let(:instance_id) { 'fake-instance-id' }
+    let(:vm_name) { 'fake-vm-name' }
     let(:minimum_disk_size) { 3072 }
 
     before do
@@ -271,7 +306,7 @@ describe Bosh::AzureCloud::DiskManager do
         disk_manager.resource_pool = resource_pool
 
         expect(
-          disk_manager.os_disk(instance_id, minimum_disk_size)
+          disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
         ).to eq(
           {
             :disk_name    => disk_name,
@@ -297,7 +332,7 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect(
-            disk_manager.os_disk(instance_id, minimum_disk_size)
+            disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
           ).to eq(
             {
               :disk_name    => disk_name,
@@ -321,7 +356,7 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect {
-            disk_manager.os_disk(instance_id, minimum_disk_size)
+            disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
           }.to raise_error /Unknown disk caching/
         end
       end
@@ -341,7 +376,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -368,7 +403,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -395,7 +430,7 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect(
-            disk_manager.os_disk(instance_id, minimum_disk_size)
+            disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
           ).to eq(
             {
               :disk_name    => disk_name,
@@ -422,7 +457,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect {
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
             }.to raise_error /root_disk.size `2048' is smaller than the default OS disk size `3072' MiB/
           end
         end
@@ -442,7 +477,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect {
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
             }.to raise_error /root_disk.size `2048' is smaller than the default OS disk size `4096' MiB/
           end
         end
@@ -461,7 +496,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect {
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
             }.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
           end
         end
@@ -480,7 +515,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.os_disk(instance_id, minimum_disk_size)
+              disk_manager.os_disk(storage_account_name, vm_name, minimum_disk_size)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -496,9 +531,9 @@ describe Bosh::AzureCloud::DiskManager do
   end
 
   describe "#ephemeral_disk" do
-    let(:disk_name) { 'ephemeral-disk' }
+    let(:disk_name) { 'ephemeral-disk' } #EPHEMERAL_DISK_POSTFIX
     let(:disk_uri) { 'fake-disk-uri' }
-    let(:instance_id) { 'fake-instance-id' }
+    let(:vm_name) { 'fake-vm-name' }
 
     before do
       allow(disk_manager).to receive(:get_disk_uri).
@@ -517,7 +552,7 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect(
-            disk_manager.ephemeral_disk(instance_id)
+            disk_manager.ephemeral_disk(storage_account_name, vm_name)
           ).to eq(
             {
               :disk_name    => disk_name,
@@ -540,7 +575,7 @@ describe Bosh::AzureCloud::DiskManager do
           disk_manager.resource_pool = resource_pool
 
           expect(
-            disk_manager.ephemeral_disk(instance_id)
+            disk_manager.ephemeral_disk(storage_account_name, vm_name)
           ).to eq(
             {
               :disk_name    => disk_name,
@@ -569,7 +604,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.ephemeral_disk(instance_id)
+              disk_manager.ephemeral_disk(storage_account_name, vm_name)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -595,7 +630,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.ephemeral_disk(instance_id)
+              disk_manager.ephemeral_disk(storage_account_name, vm_name)
             ).to be_nil
           end
         end
@@ -614,7 +649,7 @@ describe Bosh::AzureCloud::DiskManager do
             disk_manager.resource_pool = resource_pool
 
             expect(
-              disk_manager.ephemeral_disk(instance_id)
+              disk_manager.ephemeral_disk(storage_account_name, vm_name)
             ).to eq(
               {
                 :disk_name    => disk_name,
@@ -636,12 +671,12 @@ describe Bosh::AzureCloud::DiskManager do
                 }
               }
             }
-            
+
             it "should return correct values" do
               disk_manager.resource_pool = resource_pool
 
               expect(
-                disk_manager.ephemeral_disk(instance_id)
+                disk_manager.ephemeral_disk(storage_account_name, vm_name)
               ).to eq(
                 {
                   :disk_name    => disk_name,
@@ -667,7 +702,7 @@ describe Bosh::AzureCloud::DiskManager do
               disk_manager.resource_pool = resource_pool
 
               expect {
-                disk_manager.ephemeral_disk(instance_id)
+                disk_manager.ephemeral_disk(storage_account_name, vm_name)
               }.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
             end
           end

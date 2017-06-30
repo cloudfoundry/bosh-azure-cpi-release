@@ -28,7 +28,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   describe "#delete_load_balancer" do
     let(:load_balancer_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/loadBalancers/#{load_balancer_name}?api-version=#{api_version}" }
-    
+
     context "when token is valid, create operation is accepted and completed" do
       it "should delete a load balancer without error" do
         stub_request(:post, token_uri).to_return(

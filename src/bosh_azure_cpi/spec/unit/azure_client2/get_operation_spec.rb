@@ -14,7 +14,8 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
-  let(:resource_group_name) { mock_azure_properties['resource_group_name'] }
+  let(:default_resource_group_name) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group_name) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
@@ -70,7 +71,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   # Load Balancer
   let(:load_balancer_name) { "fake-name" }
-  let(:load_balancer_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/loadBalancers/#{load_balancer_name}" }
+  let(:load_balancer_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Network/loadBalancers/#{load_balancer_name}" }
   let(:load_balancer_uri) { "https://management.azure.com/#{load_balancer_id}?api-version=#{api_version}" }
   let(:load_balancer_response_body) {
     {
@@ -130,7 +131,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       ]
     }
   }
-    
+
   # Network Interface
   let(:nic_name) { "fake-name" }
   let(:nic_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/networkInterfaces/#{nic_name}" }
@@ -332,7 +333,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => '',
           :headers => {})
         expect(
-          azure_client2.get_public_ip_by_name(public_ip_name)
+          azure_client2.get_public_ip_by_name(resource_group_name, public_ip_name)
         ).to be_nil
       end
 
@@ -342,7 +343,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => public_ip_response_body.to_json,
           :headers => {})
         expect(
-          azure_client2.get_public_ip_by_name(public_ip_name)
+          azure_client2.get_public_ip_by_name(resource_group_name, public_ip_name)
         ).to eq(fake_public_ip)
       end
     end
@@ -417,7 +418,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => '',
           :headers => {})
         expect(
-          azure_client2.get_network_interface_by_name(nic_name)
+          azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
         ).to be_nil
       end
 
@@ -435,7 +436,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => nic_response_body,
           :headers => {})
         expect(
-          azure_client2.get_network_interface_by_name(nic_name)
+          azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
         ).to eq(fake_nic)
       end
     end
@@ -492,7 +493,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe "#get_storage_account_by_name" do
-    let(:storage_account_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}?api-version=#{api_version}" }
+    let(:storage_account_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}?api-version=#{api_version}" }
 
     context "if get operation returns retryable error code (returns 429)" do
       it "should raise error if it always returns 429" do
@@ -840,7 +841,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe "#list_storage_accounts" do
-    let(:storage_accounts_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Storage/storageAccounts?api-version=#{api_version}" }
+    let(:storage_accounts_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts?api-version=#{api_version}" }
 
     context "when token is valid, getting response succeeds" do
       context "if response body is null" do
@@ -959,7 +960,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => '',
           :headers => {})
         expect(
-          azure_client2.get_virtual_machine_by_name(vm_name)
+          azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
         ).to be_nil
       end
     end
@@ -1022,7 +1023,8 @@ describe Bosh::AzureCloud::AzureClient2 do
                :lun  => 0,
                :uri  => "foo",
                :caching => "bar",
-               :size => 1024
+               :size => 1024,
+               :disk_bosh_id => "foo"
             }],
             :network_interfaces => [fake_nic]
           }
@@ -1046,7 +1048,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :body => response_body,
             :headers => {})
           expect(
-            azure_client2.get_virtual_machine_by_name(vm_name)
+            azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1120,7 +1122,8 @@ describe Bosh::AzureCloud::AzureClient2 do
                :managed_disk => {
                  :id => "fake-disk-id",
                  :storage_account_type => "fake-storage-account-type"
-               }
+               },
+               :disk_bosh_id => "foo"
             }],
             :network_interfaces => [fake_nic]
           }
@@ -1144,7 +1147,110 @@ describe Bosh::AzureCloud::AzureClient2 do
             :body => response_body,
             :headers => {})
           expect(
-            azure_client2.get_virtual_machine_by_name(vm_name)
+            azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+          ).to eq(fake_vm)
+        end
+      end
+
+      context "when the vm has tags for bosh_disk_id" do
+        let(:response_body) {
+          {
+            "id"          => "fake-id",
+            "name"        => "fake-name",
+            "location"    => "fake-location",
+            "tags"        => {
+              "disk-id-foo" => "fake-disk-bosh-id"
+            },
+            "properties"  => {
+              "provisioningState"  => "foo",
+              "hardwareProfile" => { "vmSize" => "bar" },
+              "storageProfile" => {
+                "osDisk"  => {
+                  "name" => "foo",
+                  "caching" => "bar",
+                  "diskSizeGb" => 1024,
+                  "managedDisk" => {
+                    "id" => "fake-disk-id",
+                    "storageAccountType" => "fake-storage-account-type"
+                  }
+                },
+                "dataDisks" => [
+                  {
+                    "name" => "foo",
+                    "lun"  => 0,
+                    "caching" => "bar",
+                    "diskSizeGb" => 1024,
+                    "managedDisk" => {
+                      "id" => "fake-disk-id",
+                      "storageAccountType" => "fake-storage-account-type"
+                    }
+                  }
+                ]
+              },
+              "networkProfile" => {
+                "networkInterfaces" => [
+                  {
+                    "id" => nic_id
+                  }
+                ]
+              }
+            }
+          }.to_json
+        }
+
+        let(:fake_vm) {
+          {
+            :id          => "fake-id",
+            :name        => "fake-name",
+            :location    => "fake-location",
+            :tags        => {
+              "disk-id-foo" => "fake-disk-bosh-id"
+            },
+            :provisioning_state  => "foo",
+            :vm_size => "bar",
+            :os_disk  => {
+               :name => "foo",
+               :caching => "bar",
+               :size => 1024,
+               :managed_disk => {
+                 :id => "fake-disk-id",
+                 :storage_account_type => "fake-storage-account-type"
+               }
+            },
+            :data_disks => [{
+               :name => "foo",
+               :lun  => 0,
+               :caching => "bar",
+               :size => 1024,
+               :managed_disk => {
+                 :id => "fake-disk-id",
+                 :storage_account_type => "fake-storage-account-type"
+               },
+               :disk_bosh_id => "fake-disk-bosh-id"
+            }],
+            :network_interfaces => [fake_nic]
+          }
+        }
+
+        it "should return the resource using using tag as disk_bosh_id" do
+          stub_request(:get, public_ip_uri).to_return(
+            :status => 200,
+            :body => public_ip_response_body.to_json,
+            :headers => {})
+          stub_request(:get, load_balancer_uri).to_return(
+            :status => 200,
+            :body => load_balancer_response_body,
+            :headers => {})
+          stub_request(:get, nic_uri).to_return(
+            :status => 200,
+            :body => nic_response_body,
+            :headers => {})
+          stub_request(:get, vm_uri).to_return(
+            :status => 200,
+            :body => response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1176,7 +1282,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe "#get_storage_account_keys_by_name" do
-    let(:storage_account_list_keys_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}/listKeys?api-version=#{api_version}" }
+    let(:storage_account_list_keys_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}/listKeys?api-version=#{api_version}" }
     let(:storage_account_list_keys_response_body) {
       {
         "key1" => "fake-key-1",

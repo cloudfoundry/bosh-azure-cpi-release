@@ -15,27 +15,31 @@ module Bosh::AzureCloud
     def create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
       # network_configurator contains service principal in azure_properties so we must not log it.
       @logger.info("create(#{instance_id}, #{location}, #{stemcell_info.inspect}, #{resource_pool}, ..., ...)")
-
+      resource_group_name = instance_id.resource_group_name()
+      vm_name = instance_id.vm_name()
       vm_size = resource_pool.fetch('instance_type', nil)
       cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?
 
-      network_interfaces = create_network_interfaces(instance_id, location, resource_pool, network_configurator)
-      availability_set = create_availability_set(location, resource_pool, env)
+      check_resource_group(resource_group_name, location)
+
+      network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator)
+      availability_set = create_availability_set(resource_group_name, location, resource_pool, env)
 
       @disk_manager.resource_pool = resource_pool
       @disk_manager2.resource_pool = resource_pool
 
       # Raise errors if the properties are not valid before doing others.
       if @use_managed_disks
-        os_disk = @disk_manager2.os_disk(instance_id, stemcell_info.disk_size)
-        ephemeral_disk = @disk_manager2.ephemeral_disk(instance_id)
+        os_disk = @disk_manager2.os_disk(vm_name, stemcell_info.disk_size)
+        ephemeral_disk = @disk_manager2.ephemeral_disk(vm_name)
       else
-        os_disk = @disk_manager.os_disk(instance_id, stemcell_info.disk_size)
-        ephemeral_disk = @disk_manager.ephemeral_disk(instance_id)
+        storage_account_name = instance_id.storage_account_name()
+        os_disk = @disk_manager.os_disk(storage_account_name, vm_name, stemcell_info.disk_size)
+        ephemeral_disk = @disk_manager.ephemeral_disk(storage_account_name, vm_name)
       end
 
       vm_params = {
-        :name                => instance_id,
+        :name                => vm_name,
         :location            => location,
         :tags                => AZURE_TAGS,
         :vm_size             => vm_size,
@@ -58,7 +62,7 @@ module Bosh::AzureCloud
       when 'linux'
         vm_params[:ssh_username]  = @azure_properties['ssh_user']
         vm_params[:ssh_cert_data] = @azure_properties['ssh_public_key']
-        vm_params[:custom_data]   = get_user_data(instance_id, network_configurator.default_dns)
+        vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns)
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
         # Users do not use this credential to logon to Windows VMs
@@ -80,10 +84,10 @@ module Bosh::AzureCloud
         vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".split('').shuffle.join
         computer_name = generate_windows_computer_name()
         vm_params[:computer_name] = computer_name
-        vm_params[:custom_data]   = get_user_data(instance_id, network_configurator.default_dns, computer_name)
+        vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns, computer_name)
       end
 
-      create_virtual_machine(vm_params, network_interfaces, availability_set)
+      create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
 
       vm_params
     rescue => e
@@ -92,39 +96,40 @@ module Bosh::AzureCloud
         # Including undeleted resources in error message to ask users to delete them manually later
         error_message = 'This VM fails in provisioning after multiple retries.\n'
         error_message += 'You need to delete below resource manually after finishing investigation.\n'
-        error_message += "\t Virtual Machine: #{instance_id}\n"
+        error_message += "\t Resource Group: #{resource_group_name}\n"
+        error_message += "\t Virtual Machine: #{vm_name}\n"
         if @use_managed_disks
-          os_disk_name = @disk_manager2.generate_os_disk_name(instance_id)
+          os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
           error_message += "\t Managed OS Disk: #{os_disk_name}\n"
 
           unless vm_params[:ephemeral_disk].nil?
-            ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(instance_id)
+            ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
             error_message += "\t Managed Ephemeral Disk: #{ephemeral_disk_name}\n"
           end
         else
-          storage_account_name = get_storage_account_name_from_instance_id(instance_id)
-          os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
-          error_message += "\t OS disk blob: #{os_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name}\n"
+          storage_account_name = instance_id.storage_account_name()
+          os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
+          error_message += "\t OS disk blob: #{os_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name} in default resource group\n"
 
           unless vm_params[:ephemeral_disk].nil?
-            ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
-            error_message += "\t Ephemeral disk blob: #{ephemeral_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name}\n"
+            ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(vm_name)
+            error_message += "\t Ephemeral disk blob: #{ephemeral_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name} in default resource group\n"
           end
 
-          error_message += "\t VM status blobs: All blobs which matches the pattern /^#{instance_id}.*status$/ in the container #{DISK_CONTAINER} in the storage account #{storage_account_name}\n"
+          error_message += "\t VM status blobs: All blobs which matches the pattern /^#{vm_name}.*status$/ in the container #{DISK_CONTAINER} in the storage account #{storage_account_name} in default resource group\n"
         end
       else
         begin
           if network_interfaces
             network_interfaces.each do |network_interface|
-              @azure_client2.delete_network_interface(network_interface[:name])
+              @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
             end
           else
-            delete_possible_network_interfaces(instance_id)
+            delete_possible_network_interfaces(resource_group_name, vm_name)
           end
 
-          dynamic_public_ip = @azure_client2.get_public_ip_by_name(instance_id)
-          @azure_client2.delete_public_ip(instance_id) unless dynamic_public_ip.nil?
+          dynamic_public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
+          @azure_client2.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
         rescue => error
           error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
           error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
@@ -139,85 +144,106 @@ module Bosh::AzureCloud
     end
 
     def find(instance_id)
-      @azure_client2.get_virtual_machine_by_name(instance_id)
+      @azure_client2.get_virtual_machine_by_name(instance_id.resource_group_name(), instance_id.vm_name())
     end
 
     def delete(instance_id)
       @logger.info("delete(#{instance_id})")
 
-      vm = @azure_client2.get_virtual_machine_by_name(instance_id)
+      resource_group_name = instance_id.resource_group_name()
+      vm_name = instance_id.vm_name()
+      vm = @azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
       unless vm.nil?
-        @azure_client2.delete_virtual_machine(instance_id)
+        @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
         vm[:network_interfaces].each do |network_interface|
-          @azure_client2.delete_network_interface(network_interface[:name])
+          @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
         end
       else
-        delete_possible_network_interfaces(instance_id)
+        delete_possible_network_interfaces(resource_group_name, vm_name)
       end
 
-      dynamic_public_ip = @azure_client2.get_public_ip_by_name(instance_id)
-      @azure_client2.delete_public_ip(instance_id) unless dynamic_public_ip.nil?
+      dynamic_public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
+      @azure_client2.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
 
-      if @use_managed_disks
-        os_disk_name = @disk_manager2.generate_os_disk_name(instance_id)
-        @disk_manager2.delete_disk(os_disk_name)
+      if instance_id.use_managed_disks?()
+        os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
+        @disk_manager2.delete_disk(resource_group_name, os_disk_name)
 
-        ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(instance_id)
-        @disk_manager2.delete_disk(ephemeral_disk_name)
+        ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
+        @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
       else
-        os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
-        @disk_manager.delete_disk(os_disk_name)
+        storage_account_name = instance_id.storage_account_name()
+        os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
+        @disk_manager.delete_disk(storage_account_name, os_disk_name)
 
-        ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
-        @disk_manager.delete_disk(ephemeral_disk_name)
+        ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(vm_name)
+        @disk_manager.delete_disk(storage_account_name, ephemeral_disk_name)
 
         # Cleanup invalid VM status file
-        storage_account_name = get_storage_account_name_from_instance_id(instance_id)
-        @disk_manager.delete_vm_status_files(storage_account_name, instance_id)
+        @disk_manager.delete_vm_status_files(storage_account_name, vm_name)
       end
     end
 
     def reboot(instance_id)
       @logger.info("reboot(#{instance_id})")
-      @azure_client2.restart_virtual_machine(instance_id)
+      @azure_client2.restart_virtual_machine(
+        instance_id.resource_group_name(),
+        instance_id.vm_name()
+      )
     end
 
     def set_metadata(instance_id, metadata)
       @logger.info("set_metadata(#{instance_id}, #{metadata})")
-      @azure_client2.update_tags_of_virtual_machine(instance_id, metadata.merge(AZURE_TAGS))
+      @azure_client2.update_tags_of_virtual_machine(
+        instance_id.resource_group_name(),
+        instance_id.vm_name(),
+        metadata.merge(AZURE_TAGS)
+      )
     end
 
     ##
     # Attach a disk to the Vm
     #
-    # @param [String] instance_id Instance id
-    # @param [String] disk_name disk name
+    # @param [InstanceId] instance_id Instance id
+    # @param [DiskId] disk_id disk id
     # @return [String] lun
-    def attach_disk(instance_id, disk_name)
-      @logger.info("attach_disk(#{instance_id}, #{disk_name})")
-      if @use_managed_disks && is_managed_vm?(instance_id)
+    def attach_disk(instance_id, disk_id)
+      @logger.info("attach_disk(#{instance_id}, #{disk_id})")
+      disk_name = disk_id.disk_name()
+      disk_id_tag = {"#{DISK_ID_TAG_PREFIX}-#{disk_name}" => disk_id}
+      if instance_id.use_managed_disks?()
         disk_params = {
-          :disk_name => disk_name,
-          :caching   => @disk_manager2.get_data_disk_caching(disk_name),
-          :disk_id   => @azure_client2.get_managed_disk_by_name(disk_name)[:id],
-          :managed   => true
+          :disk_name     => disk_name,
+          :caching       => disk_id.caching(),
+          :disk_bosh_id  => disk_id.to_s,
+          :disk_id       => @azure_client2.get_managed_disk_by_name(disk_id.resource_group_name(), disk_name)[:id],
+          :managed       => true
         }
       else
         disk_params = {
-          :disk_name => disk_name,
-          :caching   => @disk_manager.get_data_disk_caching(disk_name),
-          :disk_uri  => @disk_manager.get_disk_uri(disk_name),
-          :disk_size => @disk_manager.get_disk_size_in_gb(disk_name),
-          :managed   => false
+          :disk_name     => disk_name,
+          :caching       => disk_id.caching(),
+          :disk_bosh_id  => disk_id.to_s,
+          :disk_uri      => @disk_manager.get_data_disk_uri(disk_id),
+          :disk_size     => @disk_manager.get_disk_size_in_gb(disk_id),
+          :managed       => false
         }
       end
-      lun = @azure_client2.attach_disk_to_virtual_machine(instance_id, disk_params)
+      lun = @azure_client2.attach_disk_to_virtual_machine(
+        instance_id.resource_group_name(),
+        instance_id.vm_name(),
+        disk_params
+      )
       "#{lun}"
     end
 
-    def detach_disk(instance_id, disk_name)
-      @logger.info("detach_disk(#{instance_id}, #{disk_name})")
-      @azure_client2.detach_disk_from_virtual_machine(instance_id, disk_name)
+    def detach_disk(instance_id, disk_id)
+      @logger.info("detach_disk(#{instance_id}, #{disk_id})")
+      @azure_client2.detach_disk_from_virtual_machine(
+        instance_id.resource_group_name(),
+        instance_id.vm_name(),
+        disk_id.disk_name()
+      )
     end
 
     private
@@ -225,13 +251,13 @@ module Bosh::AzureCloud
     # Example -
     # For Linux:     {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"server":{"name":"<instance-id>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
     # For Windows:   {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"instance-id":"<instance-id>","server":{"name":"<randomgeneratedname>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
-    def get_user_data(vm_name, dns, computer_name = nil)
+    def get_user_data(instance_id, dns, computer_name = nil)
       user_data = {registry: {endpoint: @registry_endpoint}}
       if computer_name
-        user_data[:'instance-id'] = vm_name
+        user_data[:'instance-id'] = instance_id
         user_data[:server] = {name: computer_name}
       else
-        user_data[:server] = {name: vm_name}
+        user_data[:server] = {name: instance_id}
       end
       user_data[:dns] = {nameserver: dns} if dns
       Base64.strict_encode64(JSON.dump(user_data))
@@ -284,7 +310,7 @@ module Bosh::AzureCloud
       load_balancer
     end
 
-    def create_network_interfaces(instance_id, location, resource_pool, network_configurator)
+    def create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator)
       network_interfaces = []
       load_balancer = get_load_balancer(resource_pool)
       public_ip = get_public_ip(network_configurator.vip_network)
@@ -292,13 +318,13 @@ module Bosh::AzureCloud
         # create dynamic public ip
         idle_timeout_in_minutes = @azure_properties.fetch('pip_idle_timeout_in_minutes', 4)
         validate_idle_timeout(idle_timeout_in_minutes)
-        @azure_client2.create_public_ip(instance_id, location, false, idle_timeout_in_minutes)
-        public_ip = @azure_client2.get_public_ip_by_name(instance_id)
+        @azure_client2.create_public_ip(resource_group_name, vm_name, location, false, idle_timeout_in_minutes)
+        public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
       end
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
         security_group = get_network_security_group(resource_pool, network)
-        nic_name = "#{instance_id}-#{index}"
+        nic_name = "#{vm_name}-#{index}"
         nic_params = {
           :name                => nic_name,
           :location            => location,
@@ -309,20 +335,20 @@ module Bosh::AzureCloud
         }
 
         subnet = get_network_subnet(network)
-        @azure_client2.create_network_interface(nic_params, subnet, AZURE_TAGS, load_balancer)
-        network_interfaces.push(@azure_client2.get_network_interface_by_name(nic_name))
+        @azure_client2.create_network_interface(resource_group_name, nic_params, subnet, AZURE_TAGS, load_balancer)
+        network_interfaces.push(@azure_client2.get_network_interface_by_name(resource_group_name, nic_name))
       end
       network_interfaces
     end
 
-    def delete_possible_network_interfaces(instance_id)
-      network_interfaces = @azure_client2.list_network_interfaces_by_instance_id(instance_id)
+    def delete_possible_network_interfaces(resource_group_name, vm_name)
+      network_interfaces = @azure_client2.list_network_interfaces_by_keyword(resource_group_name, vm_name)
       network_interfaces.each do |network_interface|
-        @azure_client2.delete_network_interface(network_interface[:name])
+        @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
       end
     end
 
-    def create_availability_set(location, resource_pool, env)
+    def create_availability_set(resource_group_name, location, resource_pool, env)
       availability_set = nil
 
       availability_set_name = resource_pool.fetch('availability_set', nil)
@@ -343,7 +369,7 @@ module Bosh::AzureCloud
       end
 
       unless availability_set_name.nil?
-        availability_set = @azure_client2.get_availability_set_by_name(availability_set_name)
+        availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
         if availability_set.nil?
           # In some regions, the max fault domain count of a managed availability set is 2
           avset_params = {
@@ -356,13 +382,13 @@ module Bosh::AzureCloud
           }
           begin
             @logger.debug("create_availability_set - Creating an availability set `#{avset_params[:name]}'")
-            @azure_client2.create_availability_set(avset_params)
-            availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
+            @azure_client2.create_availability_set(resource_group_name, avset_params)
+            availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, avset_params[:name])
           rescue AzureConflictError => e
             @logger.debug("create_availability_set - Another process is creating the same availability set `#{avset_params[:name]}'")
             loop do
               # TODO: has to sleep to avoid throttling
-              availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
+              availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, avset_params[:name])
               break unless availability_set.nil?
             end
           end
@@ -379,13 +405,13 @@ module Bosh::AzureCloud
             }
             begin
               @logger.debug("create_availability_set - Updating the availability set `#{avset_params[:name]}' to a managed one")
-              @azure_client2.create_availability_set(avset_params)
-              availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
+              @azure_client2.create_availability_set(resource_group_name, avset_params)
+              availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, avset_params[:name])
             rescue AzureConflictError => e
               @logger.debug("create_availability_set - Another process is updating the same availability set `#{avset_params[:name]}'")
               loop do
                 # TODO: has to sleep to avoid throttling
-                availability_set = @azure_client2.get_availability_set_by_name(avset_params[:name])
+                availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, avset_params[:name])
                 break unless availability_set[:managed] == @use_managed_disks
               end
             end
@@ -395,18 +421,19 @@ module Bosh::AzureCloud
       availability_set
     end
 
-    def create_virtual_machine(vm_params, network_interfaces, availability_set)
-      instance_id = vm_params[:name]
+    def create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
+      resource_group_name = instance_id.resource_group_name()
+      vm_name = instance_id.vm_name()
       provisioning_fail_retries = 2
       retry_count = 0
       begin
         @keep_failed_vm = false
-        @azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
+        @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
       rescue => e
         retry_create = false
         if e.instance_of?(AzureAsynchronousError) && e.status == PROVISIONING_STATE_FAILED
           if (retry_count += 1) <= provisioning_fail_retries
-            @logger.info("create_virtual_machine - Retry #{retry_count}: will retry to create the virtual machine #{instance_id} which failed in provisioning")
+            @logger.info("create_virtual_machine - Retry #{retry_count}: will retry to create the virtual machine #{vm_name} which failed in provisioning")
             retry_create = true
           else
             # Keep failed VM for advanced investigation only if the VM fails in provisioning after multiple retries
@@ -416,27 +443,27 @@ module Bosh::AzureCloud
 
         unless @keep_failed_vm
           begin
-            @logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{instance_id}")
-            @azure_client2.delete_virtual_machine(instance_id)
+            @logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{vm_name} from resource group #{resource_group_name}")
+            @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
             if @use_managed_disks
-              os_disk_name = @disk_manager2.generate_os_disk_name(instance_id)
-              @disk_manager2.delete_disk(os_disk_name)
+              os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
+              @disk_manager2.delete_disk(resource_group_name, os_disk_name)
             else
-              os_disk_name = @disk_manager.generate_os_disk_name(instance_id)
-              @disk_manager.delete_disk(os_disk_name)
+              storage_account_name = instance_id.storage_account_name()
+              os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
+              @disk_manager.delete_disk(storage_account_name, os_disk_name)
 
               # Cleanup invalid VM status file
-              storage_account_name = get_storage_account_name_from_instance_id(instance_id)
-              @disk_manager.delete_vm_status_files(storage_account_name, instance_id)
+              @disk_manager.delete_vm_status_files(storage_account_name, vm_name)
             end
 
             unless vm_params[:ephemeral_disk].nil?
               if @use_managed_disks
-                ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(instance_id)
-                @disk_manager2.delete_disk(ephemeral_disk_name)
+                ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
+                @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
               else
-                ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(instance_id)
-                @disk_manager.delete_disk(ephemeral_disk_name)
+                ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(vm_name)
+                @disk_manager.delete_disk(storage_account_name, ephemeral_disk_name)
               end
             end
           rescue => error
@@ -451,6 +478,13 @@ module Bosh::AzureCloud
 
         raise e
       end
+    end
+
+    def check_resource_group(resource_group_name, location)
+      resource_group = @azure_client2.get_resource_group(resource_group_name)
+      return true unless resource_group.nil?
+      # If resource group does not exist, create it
+      @azure_client2.create_resource_group(resource_group_name, location)
     end
   end
 end

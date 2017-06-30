@@ -5,10 +5,19 @@ describe Bosh::AzureCloud::Cloud do
   include_context "shared stuff"
 
   describe "#detach_disk" do
-    let(:instance_id) { "e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
+    let(:instance_id) { "fake-instance-id" }
     let(:disk_id) { "fake-disk-id" }
     let(:host_device_id) { 'fake-host-device-id' }
-  
+    let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
+    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
+
+    before do
+      allow(Bosh::AzureCloud::DiskId).to receive(:parse).
+        and_return(disk_id_object)
+      allow(Bosh::AzureCloud::InstanceId).to receive(:parse).
+        and_return(instance_id_object)
+    end
+
     it 'detaches the disk from the vm' do
       old_settings = {
         "foo" => "bar",
@@ -47,7 +56,7 @@ describe Bosh::AzureCloud::Cloud do
       expect(registry).to receive(:update_settings).
         with(instance_id, new_settings)
 
-      expect(vm_manager).to receive(:detach_disk).with(instance_id, disk_id)
+      expect(vm_manager).to receive(:detach_disk).with(instance_id_object, disk_id_object)
 
       expect {
         cloud.detach_disk(instance_id, disk_id)

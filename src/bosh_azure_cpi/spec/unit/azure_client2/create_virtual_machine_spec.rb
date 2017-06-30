@@ -15,7 +15,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
-  let(:resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
@@ -188,7 +188,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :headers => {})
 
             expect {
-              azure_client2.create_virtual_machine(vm_params, network_interfaces)
+              azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
             }.not_to raise_error
           end
         end
@@ -307,7 +307,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :headers => {})
 
             expect {
-              azure_client2.create_virtual_machine(vm_params_managed, network_interfaces)
+              azure_client2.create_virtual_machine(resource_group, vm_params_managed, network_interfaces)
             }.not_to raise_error
           end
         end
@@ -434,7 +434,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -544,7 +544,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -681,7 +681,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces, availability_set)
+            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces, availability_set)
           }.not_to raise_error
         end
       end
@@ -822,7 +822,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -935,7 +935,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :headers => {})
 
             expect {
-              azure_client2.create_virtual_machine(vm_params, network_interfaces)
+              azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
             }.not_to raise_error
 
             logs = logger_strio.string
@@ -973,7 +973,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :headers => {})
 
             expect {
-              azure_client2.create_virtual_machine(vm_params, network_interfaces)
+              azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
             }.not_to raise_error
 
             logs = logger_strio.string
@@ -1008,7 +1008,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         it "should reaise error" do
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
           }.to raise_error /Unsupported os type/
         end
       end
@@ -1136,7 +1136,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -1150,7 +1150,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
         }.to raise_error /get_token - http code: 404/
       end
 
@@ -1161,7 +1161,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
         }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
       end
 
@@ -1179,7 +1179,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
         }.to raise_error /Azure authentication failed: Token is invalid./
       end
     end
@@ -1213,7 +1213,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         it "should not raise an error" do
 
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
           }.not_to raise_error
         end
       end
@@ -1240,7 +1240,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         it "should raise an error if authentication retry fails" do
           expect {
-            azure_client2.create_virtual_machine(vm_params, network_interfaces)
+            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
           }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
         end
       end
@@ -1261,7 +1261,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
         }.to raise_error Bosh::AzureCloud::AzureConflictError
       end
     end
@@ -1281,7 +1281,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
         }.to raise_error /The number of network interfaces for virtual machine xxx exceeds the maximum/
       end
     end
@@ -1307,7 +1307,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
         }.to raise_error { |error| expect(error.error).to match(/check_completion - http code: 404/) }
       end
 
@@ -1331,7 +1331,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
         }.to raise_error { |error| expect(error.status).to eq('Cancelled') }
       end
     end
@@ -1357,7 +1357,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.create_virtual_machine(vm_params, network_interfaces)
+          azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
         }.not_to raise_error
       end
     end

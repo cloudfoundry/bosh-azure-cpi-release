@@ -14,7 +14,8 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
-  let(:resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:default_resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
@@ -50,7 +51,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         resource_type,
         name: name,
         others: others)
-      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/a/b/c/d")
+      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group}/providers/a/b/c/d")
     end
 
     it "returns the right url if name is not provided" do
@@ -85,7 +86,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       expect(azure_client2.rest_api_url(
         resource_provider,
         resource_type)
-      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/a/b")
+      ).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group}/providers/a/b")
     end
   end
 
@@ -523,8 +524,8 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   describe "#get_resource_group" do
     let(:url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}" }
-    let(:api_version_1) { AZURE_RESOURCE_PROVIDER_GROUP }
-    let(:resource_uri) { "https://management.azure.com/#{url}?api-version=#{api_version_1}" }
+    let(:group_api_version) { AZURE_RESOURCE_PROVIDER_GROUP }
+    let(:resource_uri) { "https://management.azure.com/#{url}?api-version=#{group_api_version}" }
     let(:response_body) {
       {
         "id" => "fake-id",
@@ -560,7 +561,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => '',
           :headers => {})
         expect(
-          azure_client2.get_resource_group()
+          azure_client2.get_resource_group(resource_group)
         ).to be_nil
       end
 
@@ -577,13 +578,13 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => response_body,
           :headers => {})
         expect(
-          azure_client2.get_resource_group()
+          azure_client2.get_resource_group(resource_group)
         ).to eq(fake_resource_group)
       end
     end
   end
 
-  describe "#list_network_interfaces_by_instance_id" do
+  describe "#list_network_interfaces_by_keyword" do
     let(:network_interfaces_url) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces?api-version=#{api_version}" }
     let(:instance_id) { "fake-instance-id" }
     let(:result) {
@@ -661,7 +662,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           })
 
         expect(
-          azure_client2.list_network_interfaces_by_instance_id(instance_id)
+          azure_client2.list_network_interfaces_by_keyword(resource_group, instance_id)
         ).to eq([network_interface])
       end
     end

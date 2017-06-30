@@ -137,7 +137,7 @@ module Bosh::AzureCloud
 
       @logger.debug("The default storage account is not specified in global settings.")
       storage_accounts = @azure_client2.list_storage_accounts()
-      location = @azure_client2.get_resource_group()[:location]
+      location = @azure_client2.get_resource_group(@azure_properties['resource_group_name'])[:location]
       @logger.debug("Will look for an existing storage account with the tags `#{STEMCELL_STORAGE_ACCOUNT_TAGS}' in the location `#{location}'")
       storage_account = storage_accounts.find{ |s|
         s[:location] == location && is_stemcell_storage_account?(s[:tags])

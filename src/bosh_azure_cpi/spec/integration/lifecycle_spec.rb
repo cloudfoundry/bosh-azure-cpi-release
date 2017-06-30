@@ -13,8 +13,8 @@ describe Bosh::AzureCloud::Cloud do
     @stemcell_id                     = ENV['BOSH_AZURE_STEMCELL_ID']                     || raise("Missing BOSH_AZURE_STEMCELL_ID")
     @ssh_public_key                  = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']                  || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
     @default_security_group          = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']          || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
-    @resource_group_name_for_vms     = ENV['BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_VMS']     || raise("Missing BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_VMS")
-    @resource_group_name_for_network = ENV['BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_NETWORK'] || raise("Missing BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_NETWORK")
+    @default_resource_group_name     = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME']     || raise("Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME")
+    @additional_resource_group_name  = ENV['BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME']  || raise("Missing BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME")
     @primary_public_ip               = ENV['BOSH_AZURE_PRIMARY_PUBLIC_IP']               || raise("Missing BOSH_AZURE_PRIMARY_PUBLIC_IP")
     @secondary_public_ip             = ENV['BOSH_AZURE_SECONDARY_PUBLIC_IP']             || raise("Missing BOSH_AZURE_SECONDARY_PUBLIC_IP")
   end
@@ -35,7 +35,7 @@ describe Bosh::AzureCloud::Cloud do
       'azure' => {
         'environment' => azure_environment,
         'subscription_id' => @subscription_id,
-        'resource_group_name' => @resource_group_name_for_vms,
+        'resource_group_name' => @default_resource_group_name,
         'tenant_id' => @tenant_id,
         'client_id' => @client_id,
         'client_secret' => @client_secret,
@@ -215,7 +215,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   context 'multiple nics' do
-    let(:instance_type) { 'Standard_D2' }
+    let(:instance_type) { 'Standard_D2_v2' }
     let(:network_spec) {
       {
         'network_a' => {
@@ -305,7 +305,7 @@ describe Bosh::AzureCloud::Cloud do
         'network_a' => {
           'type' => 'dynamic',
           'cloud_properties' => {
-            'resource_group_name' => @resource_group_name_for_network,
+            'resource_group_name' => @additional_resource_group_name,
             'virtual_network_name' => vnet_name,
             'subnet_name' => subnet_name
           }
@@ -332,7 +332,7 @@ describe Bosh::AzureCloud::Cloud do
           'type' => 'vip',
           'ip' => @secondary_public_ip,
           'cloud_properties' => {
-            'resource_group_name' => @resource_group_name_for_network
+            'resource_group_name' => @additional_resource_group_name
           }
         }
       }
@@ -341,6 +341,61 @@ describe Bosh::AzureCloud::Cloud do
     it 'should exercise the vm lifecycle' do
       vm_lifecycle
     end
+  end
+
+  context 'When the resource group name is specified for the vm' do
+    let(:resource_pool) {
+      {
+        'instance_type' => instance_type,
+        'resource_group_name' => @additional_resource_group_name,
+        'availability_set' => SecureRandom.uuid,
+        'ephemeral_disk' => {
+          'size' => 20480
+        }
+      }
+    }
+
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'dynamic',
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        }
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      vm_lifecycle(2) do |instance_id|
+        disk_id = cpi.create_disk(2048, {}, instance_id)
+        expect(disk_id).not_to be_nil
+        @disk_id_pool.push(disk_id)
+
+        cpi.attach_disk(instance_id, disk_id)
+
+        snapshot_metadata = vm_metadata.merge(
+          bosh_data: 'bosh data',
+          instance_id: 'instance',
+          agent_id: 'agent',
+          director_name: 'Director',
+          director_uuid: SecureRandom.uuid
+        )
+
+        snapshot_id = cpi.snapshot_disk(disk_id, snapshot_metadata)
+        expect(snapshot_id).not_to be_nil
+
+        cpi.delete_snapshot(snapshot_id)
+        Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
+          cpi.detach_disk(instance_id, disk_id)
+          true
+        end
+        cpi.delete_disk(disk_id)
+        @disk_id_pool.delete(disk_id)
+      end
+    end
+
   end
 
   context 'when assigning dynamic public IP to VM' do

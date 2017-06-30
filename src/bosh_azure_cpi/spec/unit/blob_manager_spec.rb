@@ -72,7 +72,7 @@ describe Bosh::AzureCloud::BlobManager do
         blob_manager.get_blob_uri(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
       ).to eq("#{blob_host}/#{container_name}/#{blob_name}")
     end
-  end  
+  end
 
   describe "#delete_blob_snapshot" do
     it "delete the blob snapshot" do
@@ -88,7 +88,7 @@ describe Bosh::AzureCloud::BlobManager do
         blob_manager.delete_blob_snapshot(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, snapshot_time)
       }.not_to raise_error
     end
-  end  
+  end
 
   describe "#get_blob_size_in_bytes" do
     let(:blob) { instance_double("Blob") }
@@ -96,7 +96,7 @@ describe Bosh::AzureCloud::BlobManager do
     before do
       allow(blob_service).to receive(:get_blob_properties).
         with(container_name, blob_name).
-        and_return(blob) 
+        and_return(blob)
       allow(blob).to receive(:properties).and_return({:content_length => 1024})
     end
 
@@ -105,7 +105,7 @@ describe Bosh::AzureCloud::BlobManager do
         blob_manager.get_blob_size_in_bytes(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
       ).to eq(1024)
     end
-  end  
+  end
 
   describe "#create_page_blob" do
     let(:metadata) {
@@ -156,7 +156,7 @@ describe Bosh::AzureCloud::BlobManager do
         }.to raise_error /Failed to upload page blob/
       end
     end
-  end  
+  end
 
   describe "#create_empty_page_blob" do
     let(:metadata) {
@@ -194,7 +194,7 @@ describe Bosh::AzureCloud::BlobManager do
         }.to raise_error /Failed to create empty page blob/
       end
     end
-  end  
+  end
 
   describe "#create_empty_vhd_blob" do
     context "when creating empty vhd blob succeeds" do
@@ -205,7 +205,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       it "raise no error" do
         expect {
-          blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)    
+          blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)
         }.not_to raise_error
       end
     end
@@ -220,7 +220,7 @@ describe Bosh::AzureCloud::BlobManager do
           expect(blob_service).not_to receive(:delete_blob)
 
           expect {
-            blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)    
+            blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)
           }.to raise_error /Failed to create empty vhd blob/
         end
       end
@@ -240,7 +240,7 @@ describe Bosh::AzureCloud::BlobManager do
         end
       end
     end
-  end  
+  end
 
   describe "#get_blob_properties" do
     context "when blob exists" do
@@ -362,7 +362,7 @@ describe Bosh::AzureCloud::BlobManager do
 
     context "when the container is not empty" do
       context "without continuation_token" do
-        let(:tmp_blobs) { 
+        let(:tmp_blobs) {
           Azure::Service::EnumerationResults.new(
             [
               'fake-blob'
@@ -411,7 +411,7 @@ describe Bosh::AzureCloud::BlobManager do
       end
     end
 
-  end  
+  end
 
   describe "#snapshot_blob" do
     it "snapshots the blob" do

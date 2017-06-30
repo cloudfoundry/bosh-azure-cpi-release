@@ -109,7 +109,7 @@ describe Bosh::AzureCloud::LightStemcellManager do
         light_stemcell_manager.delete_stemcell(stemcell_name)
       end
     end
-  end  
+  end
 
   describe "#create_stemcell" do
     context "when the platform image exists" do
@@ -157,7 +157,7 @@ describe Bosh::AzureCloud::LightStemcellManager do
         }.to raise_error /Cannot find the light stemcell/
       end
     end
-  end  
+  end
 
   describe "#has_stemcell?" do
     context "when the blob does not exist in the default storage account" do
