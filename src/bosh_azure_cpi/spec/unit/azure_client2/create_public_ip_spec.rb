@@ -14,7 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
-  let(:resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
@@ -27,7 +27,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   describe "#create_public_ip" do
     let(:public_ip_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}?api-version=#{api_version}" }
-    
+
     let(:location) { "fake-location" }
 
     context "when token is valid, create operation is accepted and completed" do
@@ -52,12 +52,12 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         is_static = true
         expect {
-          azure_client2.create_public_ip(public_ip_name, location, is_static)
+          azure_client2.create_public_ip(resource_group, public_ip_name, location, is_static)
         }.not_to raise_error
 
         is_static = false
         expect {
-          azure_client2.create_public_ip(public_ip_name, location, is_static)
+          azure_client2.create_public_ip(resource_group, public_ip_name, location, is_static)
         }.not_to raise_error
       end
     end

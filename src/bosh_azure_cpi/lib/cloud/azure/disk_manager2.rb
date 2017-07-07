@@ -13,15 +13,17 @@ module Bosh::AzureCloud
     ##
     # Creates a disk (possibly lazily) that will be attached later to a VM.
     #
+    # @param [string]  disk_id               instance of DiskId
     # @param [string]  location              location of the disk
     # @param [Integer] size                  disk size in GiB
     # @param [string]  storage_account_type  the storage account type. Possible values: Standard_LRS or Premium_LRS.
-    # @param [string]  caching               the disk caching type. Possible values: None, ReadOnly or ReadWrite.
     #
-    # @return [String] disk name
-    def create_disk(location, size, storage_account_type, caching)
-      @logger.info("create_disk(#{location}, #{size}, #{storage_account_type}, #{caching}")
-      disk_name = generate_data_disk_name(caching)
+    # @return [void]
+    def create_disk(disk_id, location, size, storage_account_type)
+      @logger.info("create_disk(#{disk_id}, #{location}, #{size}, #{storage_account_type})")
+      resource_group_name = disk_id.resource_group_name()
+      disk_name = disk_id.disk_name()
+      caching = disk_id.caching()
       tags = AZURE_TAGS.merge({
         "caching" => caching
       })
@@ -32,13 +34,15 @@ module Bosh::AzureCloud
         :disk_size => size,
         :account_type => storage_account_type
       }
-      @logger.info("Start to create an empty managed disk `#{disk_name}'")
-      @azure_client2.create_empty_managed_disk(disk_params)
-      disk_name
+      @logger.info("Start to create an empty managed disk `#{disk_name}' in resource group `#{resource_group_name}'")
+      @azure_client2.create_empty_managed_disk(resource_group_name, disk_params)
     end
 
-    def create_disk_from_blob(disk_name, blob_uri, location, storage_account_type)
-      caching = get_data_disk_caching(disk_name)
+    def create_disk_from_blob(disk_id, blob_uri, location, storage_account_type)
+      @logger.info("create_disk_from_blob(#{disk_id}, #{blob_uri}, #{location}, #{storage_account_type})")
+      resource_group_name = disk_id.resource_group_name()
+      disk_name = disk_id.disk_name()
+      caching = disk_id.caching()
       tags = AZURE_TAGS.merge({
         "caching" => caching,
         "original_blob" => blob_uri
@@ -50,16 +54,15 @@ module Bosh::AzureCloud
         :source_uri => blob_uri,
         :account_type => storage_account_type
       }
-      @logger.info("Start to create a managed disk `#{disk_name}' from the source uri `#{blob_uri}'")
-      @azure_client2.create_managed_disk_from_blob(disk_params)
-      disk_name
+      @logger.info("Start to create a managed disk `#{disk_name}' in resource group `#{resource_group_name}' from the source uri `#{blob_uri}'")
+      @azure_client2.create_managed_disk_from_blob(resource_group_name, disk_params)
     end
 
-    def delete_disk(disk_name)
-      @logger.info("delete_disk(#{disk_name})")
+    def delete_disk(resource_group_name, disk_name)
+      @logger.info("delete_disk(#{resource_group_name}, #{disk_name})")
       retried = false
       begin
-        @azure_client2.delete_managed_disk(disk_name) if has_disk?(disk_name)
+        @azure_client2.delete_managed_disk(resource_group_name, disk_name) if has_disk?(resource_group_name, disk_name)
       rescue Bosh::AzureCloud::AzureConflictError => e
         # Workaround: Do one retry for AzureConflictError, and give up if it still fails.
         #             After Managed Disks add "retry-after" in the response header,
@@ -74,21 +77,42 @@ module Bosh::AzureCloud
       end
     end
 
-    def has_disk?(disk_name)
-      @logger.info("has_disk?(#{disk_name})")
-      disk = get_disk(disk_name)
+    def delete_data_disk(disk_id)
+      @logger.info("delete_data_disk(#{disk_id})")
+      resource_group_name = disk_id.resource_group_name()
+      disk_name = disk_id.disk_name()
+      delete_disk(resource_group_name, disk_name)
+    end
+
+    def has_disk?(resource_group_name, disk_name)
+      @logger.info("has_disk?(#{resource_group_name}, #{disk_name})")
+      disk = get_disk(resource_group_name, disk_name)
       !disk.nil?
     end
 
-    def get_disk(disk_name)
-      @logger.info("get_disk(#{disk_name})")
-      disk = @azure_client2.get_managed_disk_by_name(disk_name)
+    def has_data_disk?(disk_id)
+      @logger.info("has_data_disk?(#{disk_id})")
+      resource_group_name = disk_id.resource_group_name()
+      disk_name = disk_id.disk_name()
+      has_disk?(resource_group_name, disk_name)
     end
 
-    def snapshot_disk(disk_name, metadata)
-      @logger.info("snapshot_disk(#{disk_name}, #{metadata})")
-      caching = get_data_disk_caching(disk_name)
-      snapshot_name = generate_data_disk_name(caching)
+    def get_disk(resource_group_name, disk_name)
+      @logger.info("get_disk(#{resource_group_name}, #{disk_name})")
+      disk = @azure_client2.get_managed_disk_by_name(resource_group_name, disk_name)
+    end
+
+    def get_data_disk(disk_id)
+      @logger.info("get_data_disk(#{disk_id})")
+      resource_group_name = disk_id.resource_group_name()
+      disk_name = disk_id.disk_name()
+      get_disk(resource_group_name, disk_name)
+    end
+
+    def snapshot_disk(snapshot_id, disk_name, metadata)
+      @logger.info("snapshot_disk(#{snapshot_id}, #{disk_name}, #{metadata})")
+      resource_group_name = snapshot_id.resource_group_name()
+      snapshot_name = snapshot_id.disk_name()
       snapshot_params = {
         :name => snapshot_name,
         :tags => metadata.merge({
@@ -97,26 +121,27 @@ module Bosh::AzureCloud
         :disk_name => disk_name
       }
       @logger.info("Start to create a snapshot `#{snapshot_name}' from a managed disk `#{disk_name}'")
-      @azure_client2.create_managed_snapshot(snapshot_params)
-      snapshot_name
+      @azure_client2.create_managed_snapshot(resource_group_name, snapshot_params)
     end
 
     def delete_snapshot(snapshot_id)
       @logger.info("delete_snapshot(#{snapshot_id})")
-      @azure_client2.delete_managed_snapshot(snapshot_id)
+      resource_group_name = snapshot_id.resource_group_name()
+      snapshot_name = snapshot_id.disk_name()
+      @azure_client2.delete_managed_snapshot(resource_group_name, snapshot_name)
     end
 
-    # bosh-disk-os-INSTANCEID
-    def generate_os_disk_name(instance_id)
-      "#{MANAGED_OS_DISK_PREFIX}-#{instance_id}"
+    # bosh-disk-os-[VM-NAME]
+    def generate_os_disk_name(vm_name)
+      "#{MANAGED_OS_DISK_PREFIX}-#{vm_name}"
     end
 
-    # bosh-disk-os-INSTANCEID-ephemeral
-    def generate_ephemeral_disk_name(instance_id)
-      "#{MANAGED_OS_DISK_PREFIX}-#{instance_id}-#{EPHEMERAL_DISK_POSTFIX}"
+    # bosh-disk-os-[VM-NAME]-ephemeral
+    def generate_ephemeral_disk_name(vm_name)
+      "#{MANAGED_OS_DISK_PREFIX}-#{vm_name}-#{EPHEMERAL_DISK_POSTFIX}"
     end
 
-    def os_disk(instance_id, minimum_disk_size)
+    def os_disk(vm_name, minimum_disk_size)
       disk_size = nil
       root_disk = @resource_pool.fetch('root_disk', {})
       size = root_disk.fetch('size', nil)
@@ -134,18 +159,18 @@ module Bosh::AzureCloud
       # When using OS disk to store the ephemeral data and root_disk.size is not set,
       # resize it to the minimum disk size if the minimum disk size is larger than 30 GiB;
       # resize it to 30 GiB if the minimum disk size is smaller than 30 GiB.
-      if disk_size.nil? && ephemeral_disk(instance_id).nil?
+      if disk_size.nil? && ephemeral_disk(vm_name).nil?
         disk_size = (minimum_disk_size/1024.0).ceil < 30 ? 30 : (minimum_disk_size/1024.0).ceil
       end
 
       return {
-        :disk_name    => generate_os_disk_name(instance_id),
+        :disk_name    => generate_os_disk_name(vm_name),
         :disk_size    => disk_size,
         :disk_caching => disk_caching
       }
     end
 
-    def ephemeral_disk(instance_id)
+    def ephemeral_disk(vm_name)
       ephemeral_disk = @resource_pool.fetch('ephemeral_disk', {})
       use_root_disk = ephemeral_disk.fetch('use_root_disk', false)
       return nil if use_root_disk
@@ -159,24 +184,10 @@ module Bosh::AzureCloud
       end
 
       return {
-        :disk_name    => generate_ephemeral_disk_name(instance_id),
+        :disk_name    => generate_ephemeral_disk_name(vm_name),
         :disk_size    => disk_size,
         :disk_caching => 'ReadWrite'
       }
-    end
-
-    def get_data_disk_caching(disk_name)
-      @logger.info("get_data_disk_caching(#{disk_name})")
-      caching = disk_name.split('-')[-1]
-      validate_disk_caching(caching)
-      caching
-    end
-
-    private
-
-    # bosh-disk-data-INSTANCEID-caching
-    def generate_data_disk_name(caching)
-      "#{MANAGED_DATA_DISK_PREFIX}-#{SecureRandom.uuid}-#{caching}"
     end
   end
 end

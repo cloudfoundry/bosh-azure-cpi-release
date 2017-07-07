@@ -10,12 +10,12 @@ function exit_if_error {
 : ${AZURE_TENANT_ID:?}
 : ${AZURE_CLIENT_ID:?}
 : ${AZURE_CLIENT_SECRET:?}
-: ${AZURE_GROUP_NAME_FOR_VMS:?}
-: ${AZURE_GROUP_NAME_FOR_NETWORK:?}
-: ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS:?}
-: ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS:?}
-: ${AZURE_GROUP_NAME_FOR_VMS_CENTOS:?}
-: ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS:?}
+: ${AZURE_DEFAULT_GROUP_NAME:?}
+: ${AZURE_ADDITIONAL_GROUP_NAME:?}
+: ${AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS:?}
+: ${AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS:?}
+: ${AZURE_DEFAULT_GROUP_NAME_CENTOS:?}
+: ${AZURE_ADDITIONAL_GROUP_NAME_CENTOS:?}
 : ${AZURE_STORAGE_ACCOUNT_NAME:?}
 : ${AZURE_VNET_NAME_FOR_BATS:?}
 : ${AZURE_VNET_NAME_FOR_LIFECYCLE:?}
@@ -29,7 +29,7 @@ azure config mode arm
 
 set +e
 
-resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+resource_group_names="${AZURE_DEFAULT_GROUP_NAME} ${AZURE_ADDITIONAL_GROUP_NAME} ${AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS} ${AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS} ${AZURE_DEFAULT_GROUP_NAME_CENTOS} ${AZURE_ADDITIONAL_GROUP_NAME_CENTOS}"
 for resource_group_name in ${resource_group_names}
 do
   echo "Check if the resource group exists"
@@ -46,7 +46,7 @@ set -e
 
 echo "Check if the needed resources exist"
 
-resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+resource_group_names="${AZURE_DEFAULT_GROUP_NAME} ${AZURE_ADDITIONAL_GROUP_NAME} ${AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS} ${AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS} ${AZURE_DEFAULT_GROUP_NAME_CENTOS} ${AZURE_ADDITIONAL_GROUP_NAME_CENTOS}"
 for resource_group_name in ${resource_group_names}
 do
   vnets="${AZURE_VNET_NAME_FOR_BATS} ${AZURE_VNET_NAME_FOR_LIFECYCLE}"
@@ -80,7 +80,7 @@ do
   fi
 done
 
-resource_group_names="${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+resource_group_names="${AZURE_ADDITIONAL_GROUP_NAME} ${AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS} ${AZURE_ADDITIONAL_GROUP_NAME_CENTOS}"
 for resource_group_name in ${resource_group_names}
 do
   public_ips="AzureCPICI-bosh AzureCPICI-cf-bats"
@@ -97,30 +97,30 @@ done
 
 set +e
 
-echo "azure storage account show --resource-group ${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_STORAGE_ACCOUNT_NAME}"
-azure storage account show --resource-group ${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_STORAGE_ACCOUNT_NAME}
+echo "azure storage account show --resource-group ${AZURE_DEFAULT_GROUP_NAME} ${AZURE_STORAGE_ACCOUNT_NAME}"
+azure storage account show --resource-group ${AZURE_DEFAULT_GROUP_NAME} ${AZURE_STORAGE_ACCOUNT_NAME}
 
 if [ $? -eq 1 ]; then
-  echo "The task failed because the storage account ${AZURE_STORAGE_ACCOUNT_NAME} does not exist in resource group ${AZURE_GROUP_NAME_FOR_VMS}"
+  echo "The task failed because the storage account ${AZURE_STORAGE_ACCOUNT_NAME} does not exist in resource group ${AZURE_DEFAULT_GROUP_NAME}"
   exit_if_error
 fi
 
 set -e
 
-AZURE_ACCOUNT_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} --resource-group ${AZURE_GROUP_NAME_FOR_VMS} --json | jq '.[0].value' -r)
+AZURE_ACCOUNT_KEY=$(azure storage account keys list ${AZURE_STORAGE_ACCOUNT_NAME} --resource-group ${AZURE_DEFAULT_GROUP_NAME} --json | jq '.[0].value' -r)
 containers="bosh stemcell"
 for container in ${containers}
 do
   container_actual=$(azure storage container show --account-name ${AZURE_STORAGE_ACCOUNT_NAME} --account-key ${AZURE_ACCOUNT_KEY} --container ${container} --json | jq '.name' -r)
   if [ "${container_actual}" != "${container}" ]; then
-    echo "The task failed because the container ${container} does not exist in resource group ${AZURE_GROUP_NAME_FOR_VMS}"
+    echo "The task failed because the container ${container} does not exist in resource group ${AZURE_DEFAULT_GROUP_NAME}"
     exit_if_error
   fi
 done
 
 echo "Deleting the unneeded resources"
 
-resource_group_names="${AZURE_GROUP_NAME_FOR_VMS} ${AZURE_GROUP_NAME_FOR_NETWORK} ${AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS} ${AZURE_GROUP_NAME_FOR_VMS_CENTOS} ${AZURE_GROUP_NAME_FOR_NETWORK_CENTOS}"
+resource_group_names="${AZURE_DEFAULT_GROUP_NAME} ${AZURE_ADDITIONAL_GROUP_NAME} ${AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS} ${AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS} ${AZURE_DEFAULT_GROUP_NAME_CENTOS} ${AZURE_ADDITIONAL_GROUP_NAME_CENTOS}"
 for resource_group_name in ${resource_group_names}
 do
   vms=$(azure vm list --resource-group ${resource_group_name} --json | jq '.[].name' -r)

@@ -7,6 +7,20 @@ describe Bosh::AzureCloud::Cloud do
   describe '#create_disk' do
     let(:cloud_properties) { {} }
     let(:instance_id) { "e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
+    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
+    let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
+    let(:default_resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
+    let(:resource_group_name) { "fake-resource-group-name" }
+    let(:vm_name) { "fake-vm-name" }
+
+    before do
+      allow(Bosh::AzureCloud::InstanceId).to receive(:parse).
+        and_return(instance_id_object)
+      allow(instance_id_object).to receive(:resource_group_name).
+        and_return(resource_group_name)
+      allow(instance_id_object).to receive(:vm_name).
+        and_return(vm_name)
+    end
 
     context 'validating disk size' do
       context 'when disk size is not an integer' do
@@ -84,7 +98,11 @@ describe Bosh::AzureCloud::Cloud do
         end
 
         it "should create a managed disk with the default location and storage account type" do
-          expect(disk_manager2).to receive(:create_disk).with(rg_location, disk_size_in_gib, "Standard_LRS", caching)
+          expect(Bosh::AzureCloud::DiskId).to receive(:create).
+            with(caching, true, resource_group_name:default_resource_group_name).
+            and_return(disk_id_object)
+          expect(disk_manager2).to receive(:create_disk).
+            with(disk_id_object, rg_location, disk_size_in_gib, "Standard_LRS")
 
           expect {
             managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
@@ -94,17 +112,19 @@ describe Bosh::AzureCloud::Cloud do
 
       context "when instance_id is not nil" do
         context "when the instance is an unmanaged vm" do
-          let(:instance_id) { "fake-instance-id" }
+          before do
+            allow(instance_id_object).to receive(:use_managed_disks?).
+              and_return(false)
+          end
 
           it "can't create a managed disk for a VM with unmanaged disks" do
             expect {
               managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
-            }.to raise_error /Cannot create a managed disk for a VM with unmanaged disks/ 
+            }.to raise_error /Cannot create a managed disk for a VM with unmanaged disks/
           end
         end
 
         context "when the instance is a managed vm" do
-          let(:instance_id) { "e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
           let(:vm_location) { "fake-vm-location" }
           let(:vm) {
             {
@@ -114,12 +134,20 @@ describe Bosh::AzureCloud::Cloud do
           }
 
           before do
-            allow(client2).to receive(:get_virtual_machine_by_name).with(instance_id).and_return(vm)
+            allow(instance_id_object).to receive(:use_managed_disks?).
+              and_return(true)
+            allow(client2).to receive(:get_virtual_machine_by_name).
+              with(resource_group_name, vm_name).
+              and_return(vm)
           end
 
           context "when storage_account_type is not specified" do
             it "should create a managed disk in the same location with the vm and use the default storage account type" do
-              expect(disk_manager2).to receive(:create_disk).with(vm_location, disk_size_in_gib, "Premium_LRS", caching)
+              expect(Bosh::AzureCloud::DiskId).to receive(:create).
+                with(caching, true, resource_group_name:resource_group_name).
+                and_return(disk_id_object)
+              expect(disk_manager2).to receive(:create_disk).
+                with(disk_id_object, vm_location, disk_size_in_gib, "Premium_LRS")
 
               expect {
                 managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
@@ -135,7 +163,11 @@ describe Bosh::AzureCloud::Cloud do
               }
             }
             it "should create a managed disk in the same location with the vm and use the specified storage account type" do
-              expect(disk_manager2).to receive(:create_disk).with(vm_location, disk_size_in_gib, "Standard_LRS", caching)
+              expect(Bosh::AzureCloud::DiskId).to receive(:create).
+                with(caching, true, resource_group_name:resource_group_name).
+                and_return(disk_id_object)
+              expect(disk_manager2).to receive(:create_disk).
+                with(disk_id_object, vm_location, disk_size_in_gib, "Standard_LRS")
 
               expect {
                 managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
@@ -159,10 +191,18 @@ describe Bosh::AzureCloud::Cloud do
 
       context "when instance_id is not nil" do
         let(:vm_storage_account_name) { "vmstorageaccountname" }
-        let(:instance_id)  { "#{vm_storage_account_name}-guid" }
+
+        before do
+          allow(instance_id_object).to receive(:storage_account_name).
+            and_return(vm_storage_account_name)
+        end
 
         it "should create an unmanaged disk in the same storage account of the vm" do
-          expect(disk_manager).to receive(:create_disk).with(disk_size_in_gib, vm_storage_account_name, caching)
+          expect(Bosh::AzureCloud::DiskId).to receive(:create).
+            with(caching, false, storage_account_name:vm_storage_account_name).
+            and_return(disk_id_object)
+          expect(disk_manager).to receive(:create_disk).
+            with(disk_id_object, disk_size_in_gib)
 
           expect {
             cloud.create_disk(disk_size, cloud_properties, instance_id)
@@ -174,7 +214,11 @@ describe Bosh::AzureCloud::Cloud do
         let(:instance_id) { nil }
 
         it "should create an unmanaged disk in the default storage account of global configuration" do
-          expect(disk_manager).to receive(:create_disk).with(disk_size_in_gib, MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, caching)
+          expect(Bosh::AzureCloud::DiskId).to receive(:create).
+            with(caching, false, storage_account_name:MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
+            and_return(disk_id_object)
+          expect(disk_manager).to receive(:create_disk).
+            with(disk_id_object, disk_size_in_gib)
 
           expect {
             cloud.create_disk(disk_size, cloud_properties, instance_id)

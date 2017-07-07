@@ -14,7 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
-  let(:resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
@@ -28,7 +28,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   describe "#delete_network_interface" do
     let(:network_interface_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces/#{nic_name}?api-version=#{api_version}" }
-    
+
     context "when token is valid, delete operation is accepted and completed" do
       it "should delete a network interface without error" do
         stub_request(:post, token_uri).to_return(
@@ -45,7 +45,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           })
 
         expect {
-          azure_client2.delete_network_interface(nic_name)
+          azure_client2.delete_network_interface(resource_group, nic_name)
         }.not_to raise_error
       end
     end

@@ -7,7 +7,7 @@ describe 'the azure_cpi executable' do
 
   before(:all) do
     @subscription_id        = ENV['BOSH_AZURE_SUBSCRIPTION_ID']             || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
-    @resource_group_name    = ENV['BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_VMS'] || raise("Missing BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_VMS")
+    @resource_group_name    = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME'] || raise("Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME")
     @tenant_id              = ENV['BOSH_AZURE_TENANT_ID']                   || raise("Missing BOSH_AZURE_TENANT_ID")
     @client_id              = ENV['BOSH_AZURE_CLIENT_ID']                   || raise("Missing BOSH_AZURE_CLIENT_ID")
     @client_secret          = ENV['BOSH_AZURE_CLIENT_SECRET']               || raise("Missing BOSH_AZURE_CLIENT_SECRET")
@@ -192,7 +192,7 @@ describe 'the azure_cpi executable' do
       }
     }
     it 'merges the context into the cloud_properties' do
-      result = run_cpi({'method'=>'has_vm', 'arguments'=>['fake-instance-id'], 'context'=> context})
+      result = run_cpi({'method'=>'has_vm', 'arguments'=>["#{SecureRandom.uuid}"], 'context'=> context})
 
       expect(result.keys).to eq(%w(result error log))
 

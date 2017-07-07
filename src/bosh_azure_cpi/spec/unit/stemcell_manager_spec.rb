@@ -62,7 +62,7 @@ describe Bosh::AzureCloud::StemcellManager do
         stemcell_manager.delete_stemcell(stemcell_name)
       end
     end
-  end  
+  end
 
   describe "#create_stemcell" do
     before do
@@ -74,7 +74,7 @@ describe Bosh::AzureCloud::StemcellManager do
 
       expect(stemcell_manager.create_stemcell("",{})).not_to be_empty
     end
-  end  
+  end
 
   describe "#has_stemcell?" do
     context "when the storage account is the default one" do

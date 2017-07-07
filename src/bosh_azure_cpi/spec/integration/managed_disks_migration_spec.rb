@@ -13,7 +13,8 @@ describe Bosh::AzureCloud::Cloud do
     @stemcell_id                     = ENV['BOSH_AZURE_STEMCELL_ID']                     || raise("Missing BOSH_AZURE_STEMCELL_ID")
     @ssh_public_key                  = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']                  || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
     @default_security_group          = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']          || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
-    @resource_group_name_for_vms     = ENV['BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_VMS']     || raise("Missing BOSH_AZURE_RESOURCE_GROUP_NAME_FOR_VMS")
+    @default_resource_group_name     = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME']     || raise("Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME")
+    @additional_resource_group_name  = ENV['BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME']  || raise("Missing BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME")
   end
 
   let(:azure_environment)    { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
@@ -23,7 +24,12 @@ describe Bosh::AzureCloud::Cloud do
   let(:instance_type)        { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
   let(:vm_metadata)          { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
   let(:network_spec)         { {} }
-  let(:resource_pool)        { { 'instance_type' => instance_type } }
+  let(:resource_pool)        {
+    {
+      'instance_type' => instance_type,
+      'resource_group_name' => @additional_resource_group_name
+    }
+  }
   let(:snapshot_metadata)    {
     vm_metadata.merge(
       bosh_data: 'bosh data',
@@ -39,7 +45,7 @@ describe Bosh::AzureCloud::Cloud do
       'azure' => {
         'environment' => azure_environment,
         'subscription_id' => @subscription_id,
-        'resource_group_name' => @resource_group_name_for_vms,
+        'resource_group_name' => @default_resource_group_name,
         'storage_account_name' => storage_account_name,
         'tenant_id' => @tenant_id,
         'client_id' => @client_id,
@@ -174,6 +180,7 @@ describe Bosh::AzureCloud::Cloud do
         {
           'instance_type' => instance_type,
           'availability_set' => SecureRandom.uuid,
+          'platform_fault_domain_count' => 2,
           'ephemeral_disk' => {
             'size' => 20480
           }

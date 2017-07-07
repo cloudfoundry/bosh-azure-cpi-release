@@ -12,14 +12,14 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
-  let(:resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
   let(:vm_name) { "fake-vm-name" }
-  let(:tags) { 'fake-tags' }
+  let(:tags) { { 'fake-key' => 'fake-value' } }
 
   let(:valid_access_token) { "valid-access-token" }
 
@@ -47,7 +47,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             "id" => "fake-id",
             "name" => "fake-name",
             "location" => "fake-location",
-            "tags" => "",
+            "tags" => {},
             "properties" => {
               "provisioningState" => "fake-state"
             }
@@ -78,7 +78,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.update_tags_of_virtual_machine(vm_name, tags)
+            azure_client2.update_tags_of_virtual_machine(resource_group, vm_name, tags)
           }.not_to raise_error
         end
       end
@@ -89,7 +89,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             "id" => "fake-id",
             "name" => "fake-name",
             "location" => "fake-location",
-            "tags" => "",
+            "tags" => {},
             "properties" => {
               "provisioningState" => "fake-state"
             },
@@ -129,7 +129,75 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.update_tags_of_virtual_machine(vm_name, tags)
+            azure_client2.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+          }.not_to raise_error
+        end
+      end
+
+      context "when VM's information contains tags of disk_bosh_id" do
+        let(:disk_bosh_id_tag) {
+          {
+            "disk-id-1" => "fake-disk-bosh-id-1",
+            "disk-id-2" => "fake-disk-bosh-id-2"
+          }
+        }
+        let(:request_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => tags.merge(disk_bosh_id_tag),
+            "properties" => {
+              "provisioningState" => "fake-state"
+            }
+          }
+        }
+        let(:response_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => disk_bosh_id_tag,
+            "properties" => {
+              "provisioningState" => "fake-state"
+            },
+            "resources" => [
+              {
+                "properties": {},
+                "id": "fake-id",
+                "name": "fake-name",
+                "type": "fake-type",
+                "location": "fake-location"
+              }
+            ]
+          }.to_json
+        }
+
+        it "should keep tags of disk_bosh_id" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, vm_uri).to_return(
+            :status => 200,
+            :body => response_body,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.update_tags_of_virtual_machine(resource_group, vm_name, tags)
           }.not_to raise_error
         end
       end
@@ -160,7 +228,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.update_tags_of_virtual_machine(vm_name, tags)
+          azure_client2.update_tags_of_virtual_machine(resource_group, vm_name, tags)
         }.to raise_error /update_tags_of_virtual_machine - cannot find the virtual machine by name/
       end
     end

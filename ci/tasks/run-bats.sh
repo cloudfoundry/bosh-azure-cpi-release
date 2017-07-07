@@ -123,6 +123,7 @@ resource_pools:
       version: '<%= properties.stemcell.version %>'
     cloud_properties:
       instance_type: Standard_D3_v2
+      resource_group_name: ${AZURE_GROUP_NAME}
       <% if properties.key_name %>
       key_name: <%= properties.key_name %>
       <% end %>

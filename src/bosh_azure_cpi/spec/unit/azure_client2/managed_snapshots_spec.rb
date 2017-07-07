@@ -15,7 +15,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
-  let(:resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
@@ -96,14 +96,14 @@ describe Bosh::AzureCloud::AzureClient2 do
         :headers => {})
 
       expect {
-        azure_client2.create_managed_snapshot(snapshot_params)
+        azure_client2.create_managed_snapshot(resource_group, snapshot_params)
       }.not_to raise_error
     end
   end
 
   describe "#delete_managed_snapshot" do
     let(:snapshot_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
-    
+
     context "when token is valid, delete operation is accepted and completed" do
       it "should delete the managed snapshot without error" do
         stub_request(:post, token_uri).to_return(
@@ -119,7 +119,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.delete_managed_snapshot(snapshot_name)
+          azure_client2.delete_managed_snapshot(resource_group, snapshot_name)
         }.not_to raise_error
       end
     end

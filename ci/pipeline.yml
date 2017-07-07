@@ -23,12 +23,12 @@ jobs:
       AZURE_CLIENT_ID:                            {{azure_client_id}}
       AZURE_CLIENT_SECRET:                        {{azure_client_secret}}
       AZURE_TENANT_ID:                            {{azure_tenant_id}}
-      AZURE_GROUP_NAME_FOR_VMS:                   {{azure_group_name_for_vms}}
-      AZURE_GROUP_NAME_FOR_NETWORK:               {{azure_group_name_for_network}}
-      AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS:     {{azure_group_name_for_vms_managed_disks}}
-      AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS: {{azure_group_name_for_network_managed_disks}}
-      AZURE_GROUP_NAME_FOR_VMS_CENTOS:            {{azure_group_name_for_vms_centos}}
-      AZURE_GROUP_NAME_FOR_NETWORK_CENTOS:        {{azure_group_name_for_network_centos}}
+      AZURE_DEFAULT_GROUP_NAME:                   {{azure_default_group_name}}
+      AZURE_ADDITIONAL_GROUP_NAME:                {{azure_additional_group_name}}
+      AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS:     {{azure_default_group_name_managed_disks}}
+      AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS:  {{azure_additional_group_name_managed_disks}}
+      AZURE_DEFAULT_GROUP_NAME_CENTOS:            {{azure_default_group_name_centos}}
+      AZURE_ADDITIONAL_GROUP_NAME_CENTOS:         {{azure_additional_group_name_centos}}
       AZURE_REGION_NAME:                          {{azure_region_name}}
       AZURE_VNET_NAME_FOR_BATS:                   {{azure_vnet_name_for_bats}}
       AZURE_VNET_NAME_FOR_LIFECYCLE:              {{azure_vnet_name_for_lifecycle}}
@@ -52,12 +52,12 @@ jobs:
       AZURE_TENANT_ID:                            {{azure_tenant_id}}
       AZURE_CLIENT_ID:                            {{azure_client_id}}
       AZURE_CLIENT_SECRET:                        {{azure_client_secret}}
-      AZURE_GROUP_NAME_FOR_VMS:                   {{azure_group_name_for_vms}}
-      AZURE_GROUP_NAME_FOR_NETWORK:               {{azure_group_name_for_network}}
-      AZURE_GROUP_NAME_FOR_VMS_MANAGED_DISKS:     {{azure_group_name_for_vms_managed_disks}}
-      AZURE_GROUP_NAME_FOR_NETWORK_MANAGED_DISKS: {{azure_group_name_for_network_managed_disks}}
-      AZURE_GROUP_NAME_FOR_VMS_CENTOS:            {{azure_group_name_for_vms_centos}}
-      AZURE_GROUP_NAME_FOR_NETWORK_CENTOS:        {{azure_group_name_for_network_centos}}
+      AZURE_DEFAULT_GROUP_NAME:                   {{azure_default_group_name}}
+      AZURE_ADDITIONAL_GROUP_NAME:                {{azure_additional_group_name}}
+      AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS:     {{azure_default_group_name_managed_disks}}
+      AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS:  {{azure_additional_group_name_managed_disks}}
+      AZURE_DEFAULT_GROUP_NAME_CENTOS:            {{azure_default_group_name_centos}}
+      AZURE_ADDITIONAL_GROUP_NAME_CENTOS:         {{azure_additional_group_name_centos}}
       AZURE_STORAGE_ACCOUNT_NAME:                 {{azure_storage_account_name}}
       AZURE_VNET_NAME_FOR_BATS:                   {{azure_vnet_name_for_bats}}
       AZURE_VNET_NAME_FOR_LIFECYCLE:              {{azure_vnet_name_for_lifecycle}}
@@ -97,8 +97,8 @@ jobs:
       AZURE_CLIENT_ID:                {{azure_client_id}}
       AZURE_CLIENT_SECRET:            {{azure_client_secret}}
       AZURE_TENANT_ID:                {{azure_tenant_id}}
-      AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms}}
-      AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network}}
+      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name}}
+      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name}}
       AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
       AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
       AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
@@ -127,8 +127,8 @@ jobs:
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
         AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms}}
-        AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network}}
+        AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name}}
+        AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
         AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
         AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
@@ -149,7 +149,7 @@ jobs:
         AZURE_CLIENT_ID:                    {{azure_client_id}}
         AZURE_CLIENT_SECRET:                {{azure_client_secret}}
         AZURE_TENANT_ID:                    {{azure_tenant_id}}
-        AZURE_GROUP_NAME:                   {{azure_group_name_for_network}}
+        AZURE_GROUP_NAME:                   {{azure_additional_group_name}}
         AZURE_VNET_NAME_FOR_BATS:           {{azure_vnet_name_for_bats}}
         AZURE_CF_SUBNET_NAME:               {{azure_cf_subnet_name}}
         AZURE_CF_SECOND_SUBNET_NAME:        {{azure_cf_second_subnet_name}}
@@ -192,10 +192,10 @@ jobs:
       AZURE_CLIENT_ID:               {{azure_client_id}}
       AZURE_CLIENT_SECRET:           {{azure_client_secret}}
       AZURE_TENANT_ID:               {{azure_tenant_id}}
-      AZURE_GROUP_NAME_FOR_VMS:      {{azure_group_name_for_vms}}
-      AZURE_GROUP_NAME_FOR_NETWORK:  {{azure_group_name_for_network}}
-      AZURE_GROUP_NAME_FOR_VMS:      {{azure_group_name_for_vms_managed_disks}}
-      AZURE_GROUP_NAME_FOR_NETWORK:  {{azure_group_name_for_network_managed_disks}}
+      AZURE_DEFAULT_GROUP_NAME:      {{azure_default_group_name}}
+      AZURE_ADDITIONAL_GROUP_NAME:   {{azure_additional_group_name}}
+      AZURE_DEFAULT_GROUP_NAME:      {{azure_default_group_name_managed_disks}}
+      AZURE_ADDITIONAL_GROUP_NAME:   {{azure_additional_group_name_managed_disks}}
       AZURE_STORAGE_ACCOUNT_NAME:    {{azure_storage_account_name_managed_disks}}
       AZURE_VNET_NAME_FOR_LIFECYCLE: {{azure_vnet_name_for_lifecycle}}
       AZURE_BOSH_SUBNET_NAME:        {{azure_bosh_subnet_name}}
@@ -224,8 +224,8 @@ jobs:
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
         AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms_managed_disks}}
-        AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network_managed_disks}}
+        AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_managed_disks}}
+        AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_managed_disks}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
         AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
         AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
@@ -245,7 +245,7 @@ jobs:
         AZURE_CLIENT_ID:                    {{azure_client_id}}
         AZURE_CLIENT_SECRET:                {{azure_client_secret}}
         AZURE_TENANT_ID:                    {{azure_tenant_id}}
-        AZURE_GROUP_NAME:                   {{azure_group_name_for_network_managed_disks}}
+        AZURE_GROUP_NAME:                   {{azure_additional_group_name_managed_disks}}
         AZURE_VNET_NAME_FOR_BATS:           {{azure_vnet_name_for_bats}}
         AZURE_CF_SUBNET_NAME:               {{azure_cf_subnet_name}}
         AZURE_CF_SECOND_SUBNET_NAME:        {{azure_cf_second_subnet_name}}
@@ -293,8 +293,8 @@ jobs:
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
         AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_GROUP_NAME_FOR_VMS:       {{azure_group_name_for_vms_centos}}
-        AZURE_GROUP_NAME_FOR_NETWORK:   {{azure_group_name_for_network_centos}}
+        AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_centos}}
+        AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_centos}}
         AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
         AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
         AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
@@ -312,7 +312,7 @@ jobs:
         AZURE_CLIENT_ID:                    {{azure_client_id}}
         AZURE_CLIENT_SECRET:                {{azure_client_secret}}
         AZURE_TENANT_ID:                    {{azure_tenant_id}}
-        AZURE_GROUP_NAME:                   {{azure_group_name_for_network_centos}}
+        AZURE_GROUP_NAME:                   {{azure_additional_group_name_centos}}
         AZURE_VNET_NAME_FOR_BATS:           {{azure_vnet_name_for_bats}}
         AZURE_CF_SUBNET_NAME:               {{azure_cf_subnet_name}}
         AZURE_CF_SECOND_SUBNET_NAME:        {{azure_cf_second_subnet_name}}

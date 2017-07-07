@@ -69,7 +69,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
       stemcell_manager2.delete_stemcell(stemcell_name)
     end
-  end  
+  end
 
   describe "#has_stemcell?" do
     context "when the storage account has the stemcell" do

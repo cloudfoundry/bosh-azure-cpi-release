@@ -15,7 +15,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
-  let(:resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
@@ -50,7 +50,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.not_to raise_error
       end
 
@@ -82,7 +82,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.not_to raise_error
       end
     end
@@ -95,7 +95,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error /get_token - http code: 404/
       end
 
@@ -106,7 +106,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
       end
 
@@ -124,7 +124,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error /Azure authentication failed: Token is invalid./
       end
     end
@@ -144,7 +144,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error Bosh::AzureCloud::AzureNotFoundError
       end
     end
@@ -170,7 +170,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error { |error| expect(error.error).to match(/check_completion - http code: 404/) }
       end
 
@@ -194,7 +194,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error { |error| expect(error.status).to eq('Cancelled') }
       end
 
@@ -231,7 +231,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         it "should not raise an error" do
           expect {
-            azure_client2.restart_virtual_machine(vm_name)
+            azure_client2.restart_virtual_machine(resource_group, vm_name)
           }.not_to raise_error
         end
       end
@@ -258,7 +258,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         it "should raise an error" do
           expect {
-            azure_client2.restart_virtual_machine(vm_name)
+            azure_client2.restart_virtual_machine(resource_group, vm_name)
           }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
         end
       end
@@ -282,7 +282,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error Bosh::AzureCloud::AzureInternalError
       end
 
@@ -314,7 +314,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
 
         expect {
-          azure_client2.restart_virtual_machine(vm_name)
+          azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.not_to raise_error
       end
     end

@@ -57,6 +57,9 @@ require 'cloud/azure/disk_manager2'
 require 'cloud/azure/stemcell_manager2'
 require 'cloud/azure/storage_account_manager'
 
+require 'cloud/azure/instance_id'
+require 'cloud/azure/disk_id'
+
 module Bosh
   module Clouds
     Azure = Bosh::AzureCloud::Cloud

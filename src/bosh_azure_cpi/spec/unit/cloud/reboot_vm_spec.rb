@@ -6,9 +6,16 @@ describe Bosh::AzureCloud::Cloud do
 
   describe "#reboot_vm" do
     let(:instance_id) { "e55144a3-0c06-4240-8f15-9a7bc7b35d1f" }
+    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
+
+    before do
+      allow(Bosh::AzureCloud::InstanceId).to receive(:parse).
+        with(instance_id, azure_properties).
+        and_return(instance_id_object)
+    end
 
     it 'reboot an instance' do
-      expect(vm_manager).to receive(:reboot).with(instance_id)
+      expect(vm_manager).to receive(:reboot).with(instance_id_object)
 
       expect {
         cloud.reboot_vm(instance_id)

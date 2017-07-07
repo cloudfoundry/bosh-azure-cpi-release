@@ -104,6 +104,7 @@ module Bosh::AzureCloud
     EPHEMERAL_DISK_POSTFIX          = 'ephemeral-disk'
     STEMCELL_PREFIX                 = 'bosh-stemcell'
     LIGHT_STEMCELL_PREFIX           = 'bosh-light-stemcell'
+    DISK_ID_TAG_PREFIX              = 'disk-id'
     LIGHT_STEMCELL_PROPERTY         = 'image'
     AZURE_SCSI_HOST_DEVICE_ID       = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
     METADATA_FOR_MIGRATED_BLOB_DISK = {
@@ -148,18 +149,6 @@ module Bosh::AzureCloud
         ret[key] = value.to_s
       end
       ret
-    end
-
-    def get_storage_account_name_from_instance_id(instance_id)
-      ret = instance_id.match('^([^-]*)-(.*)$')
-      cloud_error("Invalid instance id #{instance_id}") if ret.nil?
-      return ret[1]
-    end
-
-    def get_storage_account_name_from_disk_id(disk_id)
-      ret = disk_id.match('^bosh-data-([^-]*)-(.*)$')
-      cloud_error("Invalid disk id #{disk_id}") if ret.nil?
-      return ret[1]
     end
 
     def validate_disk_caching(caching)
@@ -547,11 +536,6 @@ module Bosh::AzureCloud
         storage_account_type = STORAGE_ACCOUNT_TYPE_PREMIUM_LRS
       end
       storage_account_type
-    end
-
-    def is_managed_vm?(instance_id)
-      # The instance id of a Managed VM is GUID whose length is 36
-      instance_id.length == UUID_LENGTH
     end
 
     def is_stemcell_storage_account?(tags)
