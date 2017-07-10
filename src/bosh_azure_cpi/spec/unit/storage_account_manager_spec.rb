@@ -15,6 +15,45 @@ describe Bosh::AzureCloud::StorageAccountManager do
     allow(azure_client).to receive(:storage_table_host)
   end
 
+  describe "#generate_storage_account_name" do
+    context "when the first generated name is available" do
+      let(:storage_account_name) { "386ebba59c883c7d15b419b3" }
+      before do
+        allow(SecureRandom).to receive(:hex).with(12).and_return(storage_account_name)
+        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name).
+          and_return({
+            :available => true
+          })
+      end
+
+      it "should return the available storage account name" do
+        expect(client2).to receive(:check_storage_account_name_availability).once
+        expect(storage_account_manager.generate_storage_account_name()).to eq(storage_account_name)
+      end
+    end
+
+    context "when the first generated name is not available, and the second one is available" do
+      let(:storage_account_name_unavailable) { "386ebba59c883c7d15b419b3" }
+      let(:storage_account_name_available)   { "db49daf2fbbf100575a3af9c" }
+      before do
+        allow(SecureRandom).to receive(:hex).with(12).and_return(storage_account_name_unavailable, storage_account_name_available)
+        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name_unavailable).
+          and_return({
+            :available => false
+          })
+        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name_available).
+          and_return({
+            :available => true
+          })
+      end
+
+      it "should return the available storage account name" do
+        expect(client2).to receive(:check_storage_account_name_availability).twice
+        expect(storage_account_manager.generate_storage_account_name()).to eq(storage_account_name_available)
+      end
+    end
+  end
+
   describe '#create_storage_account' do
     # Parameters
     let(:storage_account_name) { "fake-storage-account-name" }

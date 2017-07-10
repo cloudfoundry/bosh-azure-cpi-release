@@ -3,12 +3,6 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    BOSH_LOCK_CREATE_STORAGE_ACCOUNT = '/tmp/bosh-lock-create-storage-account'
-    BOSH_LOCK_COPY_STEMCELL = '/tmp/bosh-lock-copy-stemcell'
-    BOSH_LOCK_COPY_STEMCELL_TIMEOUT = 180
-    BOSH_LOCK_CREATE_USER_IMAGE = '/tmp/bosh-lock-create-user-image'
-    BOSH_LOCK_EXCEPTION_TIMEOUT = 'timeout'
-
     def initialize(blob_manager, table_manager, storage_account_manager, azure_client2)
       super(blob_manager, table_manager, storage_account_manager)
       @azure_client2 = azure_client2
@@ -76,30 +70,35 @@ module Bosh::AzureCloud
       if location == default_storage_account[:location]
         storage_account_name = default_storage_account_name
       else
-        storage_account = @azure_client2.list_storage_accounts().find{ |s|
-          s[:location] == location && is_stemcell_storage_account?(s[:tags])
-        }
-        if storage_account.nil?
-          storage_account_name = "#{SecureRandom.hex(12)}"
-          @logger.debug("get_user_image: Creating a storage account `#{storage_account_name}' with the tags `#{STEMCELL_STORAGE_ACCOUNT_TAGS}' in the location `#{location}'")
-          mutex = FileMutex.new(BOSH_LOCK_CREATE_STORAGE_ACCOUNT, @logger)
-          begin
-            mutex.synchronize do
+        mutex = FileMutex.new("#{BOSH_LOCK_CREATE_STORAGE_ACCOUNT}-#{location}", @logger)
+        begin
+          if mutex.lock
+            storage_account = @azure_client2.list_storage_accounts().find{ |s|
+              s[:location] == location && is_stemcell_storage_account?(s[:tags])
+            }
+            if storage_account.nil?
+              storage_account_name = @storage_account_manager.generate_storage_account_name()
+              @logger.info("get_user_image: Creating a storage account `#{storage_account_name}' with the tags `#{STEMCELL_STORAGE_ACCOUNT_TAGS}' in the location `#{location}'")
               @storage_account_manager.create_storage_account(storage_account_name, storage_account_type, location, STEMCELL_STORAGE_ACCOUNT_TAGS)
             end
-          rescue => e
-            if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
-              cloud_error("Failed to finish the creation of the storage account `#{storage_account_name}', `#{storage_account_type}' in location `#{location}' in 60 seconds.")
-            end
-            raise e
+            mutex.unlock
+          else
+            mutex.wait
           end
-        else
+          storage_account = @azure_client2.list_storage_accounts().find{ |s|
+            s[:location] == location && is_stemcell_storage_account?(s[:tags])
+          }
           storage_account_name = storage_account[:name]
+        rescue => e
+          if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+            cloud_error("get_user_image: Failed to finish the creation of the storage account `#{storage_account_name}', `#{storage_account_type}' in location `#{location}' in #{mutex.expired} seconds.")
+          end
+          raise e
         end
 
-        mutex = FileMutex.new(BOSH_LOCK_COPY_STEMCELL, @logger, BOSH_LOCK_COPY_STEMCELL_TIMEOUT)
+        mutex = FileMutex.new("#{BOSH_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", @logger, BOSH_LOCK_COPY_STEMCELL_TIMEOUT)
         begin
-          mutex.synchronize do
+          if mutex.lock
             unless has_stemcell?(storage_account_name, stemcell_name)
               @logger.info("get_user_image: Copying the stemcell from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}'")
               stemcell_source_blob_uri = @blob_manager.get_blob_uri(default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
@@ -107,10 +106,13 @@ module Bosh::AzureCloud
                 mutex.update()
               end
             end
+            mutex.unlock
+          else
+            mutex.wait
           end
         rescue => e
           if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
-            cloud_error("Failed to finish the copying process of the stemcell `#{stemcell_name}' from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}' in `#{BOSH_LOCK_COPY_STEMCELL_TIMEOUT}' seconds.")
+            cloud_error("get_user_image: Failed to finish the copying process of the stemcell `#{stemcell_name}' from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}' in `#{mutex.expired}' seconds.")
           end
           raise e
         end
@@ -126,25 +128,22 @@ module Bosh::AzureCloud
         :account_type        => storage_account_type
       }
       begin
-        mutex = FileMutex.new(BOSH_LOCK_CREATE_USER_IMAGE, @logger)
-        mutex.synchronize do
+        mutex = FileMutex.new("#{BOSH_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", @logger)
+        if mutex.lock
           @azure_client2.create_user_image(user_image_params)
+          mutex.unlock
+        else
+          mutex.wait
         end
       rescue => e
-        cloud_error("get_user_image: #{e.inspect}\n#{e.backtrace.join("\n")}")
+        if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
+          cloud_error("get_user_image: Failed to create the user image `#{user_image_name}' in #{mutex.expired} seconds.")
+        end
+        raise e
       end
 
-      loop do
-        user_image = @azure_client2.get_user_image_by_name(user_image_name)
-        cloud_error("get_user_image: Can not find a user image with the name `#{user_image_name}'") if user_image.nil?
-        provisioning_state = user_image[:provisioning_state]
-        if provisioning_state == PROVISIONING_STATE_SUCCEEDED
-          break
-        elsif provisioning_state == PROVISIONING_STATE_FAILED || provisioning_state == PROVISIONING_STATE_CANCELED
-          cloud_error("get_user_image: Failed to create a user image `#{user_image_name}' whose provisioning state is `#{provisioning_state}'.")
-        end
-        sleep(5)
-      end
+      user_image = @azure_client2.get_user_image_by_name(user_image_name)
+      cloud_error("get_user_image: Can not find a user image with the name `#{user_image_name}'") if user_image.nil?
       user_image
     end
   end

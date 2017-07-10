@@ -342,7 +342,6 @@ describe Bosh::AzureCloud::Helpers do
   end
 
   describe "#initialize_azure_storage_client" do
-    let(:azure_client2) { instance_double('Bosh::AzureCloud::AzureClient2') }
     let(:azure_client) { instance_double(Azure::Storage::Client) }
     let(:storage_account_name) { "fake-storage-account-name" }
     let(:storage_access_key) { "fake-storage-access-key" }
@@ -672,61 +671,184 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
-  describe "FileMutex" do
+  describe "#FileMutex" do
     let(:logger) { Logger.new('/dev/null') }
-    let(:file_path) { "/tmp/lock#{SecureRandom.uuid}" }
+    let(:lock_dir) { '/tmp' }
+    let(:file_path) { "#{lock_dir}/fake-file-name" }
+    let(:expired) { 5 }
+    let(:mtime) { 100 } # The value doesn't matter
+    let(:mutex) { Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, expired) }
 
-    context "when the lock does not exist" do
-      it "should get the lock" do
-        mutex = Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, 5)
-        expect {
-          mutex.synchronize do
-            sleep(1)
+    context "#lock" do
+      context "when the lock file does not exist" do
+        before do
+          allow(File).to receive(:mtime).with(file_path).and_raise(Errno::ENOENT)
+        end
+
+        context "when it creates the lock file successfully" do
+          let(:file_handler) { double("file_handler") }
+          before do
+            allow(IO).to receive(:sysopen)
+            allow(IO).to receive(:open).and_return(file_handler)
+            allow(file_handler).to receive(:syswrite)
+            allow(file_handler).to receive(:close)
           end
-        }.not_to raise_error
+
+          it "should get the lock" do
+            expect(mutex.lock).to eq(true)
+            expect(mutex.instance_variable_get(:@is_locked)).to be(true)
+          end
+        end
+
+        context "when it fails to create the lock file" do
+          before do
+            allow(IO).to receive(:sysopen).and_raise(Errno::EEXIST)
+          end
+
+          it "should not get the lock" do
+            expect(mutex.lock).to eq(false)
+            expect(mutex.instance_variable_get(:@is_locked)).to be(false)
+          end
+        end
+      end
+
+      context "when the lock file exists" do
+        before do
+          allow(File).to receive(:mtime).with(file_path).and_return(mtime)
+        end
+
+        context "when the lock doesn't timeout" do
+          before do
+            allow(File).to receive(:mtime).with(file_path).and_return(mtime)
+            allow(Time).to receive(:new).and_return(mtime + expired - 1)
+          end
+
+          it "should not get the lock" do
+            expect(IO).not_to receive(:sysopen)
+            expect(mutex.lock).to eq(false)
+            expect(mutex.instance_variable_get(:@is_locked)).to be(false)
+          end
+        end
+
+        context "when the lock timeouts" do
+          before do
+            allow(File).to receive(:mtime).with(file_path).and_return(mtime)
+            allow(Time).to receive(:new).and_return(mtime + expired + 1)
+          end
+
+          it "should raise a timeout exception" do
+            expect(IO).not_to receive(:sysopen)
+            expect {
+              mutex.lock
+            }.to raise_error("timeout")
+            expect(mutex.instance_variable_get(:@is_locked)).to be(false)
+          end
+        end
       end
     end
 
-    context "when the lock exists and timeouts" do
-      before do
-        File.open(file_path, "w") {|f| f.write("test") }
+    context "#wait" do
+      context "when the lock has been acquired" do
+        before do
+          allow(File).to receive(:mtime).with(file_path).and_raise(Errno::ENOENT)
+        end
+
+        it "should return true" do
+          expect(mutex.wait).to eq(true)
+        end
       end
 
-      after do
-        File.delete(file_path)
-      end
-
-      it "should timeout" do
-        mutex = Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, 5)
-        expect {
-          mutex.synchronize do
-            sleep(1)
+      context "when the lock has been acquired by other process initially, and released later" do
+        before do
+          allow(Time).to receive(:new).and_return(mtime + expired - 1)
+          count = 0
+          allow(File).to receive(:mtime) do
+            count += 1
+            count == 1 ? mtime : raise(Errno::ENOENT)
           end
-        }.to raise_error(/timeout/)
+        end
+
+        it "should return true" do
+          expect(File).to receive(:mtime).with(file_path).twice
+          expect(mutex.wait).to eq(true)
+        end
+      end
+
+      context "when the lock has been acquired initially, and it timeouts" do
+        before do
+          allow(File).to receive(:mtime).with(file_path).and_return(mtime)
+          allow(Time).to receive(:new).and_return(mtime + expired + 1)
+        end
+
+        it "should return true" do
+          expect {
+            mutex.wait
+          }.to raise_error("timeout")
+        end
       end
     end
 
-    context "when the lock exists initially and is released before timeout" do
-      before do
-        File.open(file_path, "w") {|f| f.write("test") }
+    context "#unlock" do
+      context "when it deletes the lock file successfully" do
+        it "should release the lock" do
+          expect(File).to receive(:delete).with(file_path)
+          expect {
+            mutex.unlock
+          }.not_to raise_error
+          expect(mutex.instance_variable_get(:@is_locked)).to be(false)
+        end
       end
 
-      after do
-        File.delete(file_path) if File.exists?(file_path)
+      context "when it fails to delete the lock file" do
+        before do
+          allow(File).to receive(:delete).and_raise(StandardError)
+        end
+
+        it "should raise an error" do
+          expect {
+            mutex.unlock
+          }.to raise_error("lock_not_found")
+        end
+      end
+    end
+
+    context "#update" do
+      context "when the lock file is not owned by the process" do
+        before do
+          mutex.instance_variable_set(:@is_locked, false)
+        end
+
+        it "should raise an error" do
+          expect {
+            mutex.update
+          }.to raise_error /The lock is not owned by the process/
+        end
       end
 
-      it "should not timeout and continue" do
-        mutex = Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, 5)
-        unlock = Thread.new{
-          sleep(2)
-          File.delete(file_path)
-        }
-        expect {
-          mutex.synchronize do
-            sleep(1)
+      context "when the lock file is owned by the process" do
+        before do
+          mutex.instance_variable_set(:@is_locked, true)
+        end
+
+        context "when the lock file is updated successfully" do
+          it "should not raise an error" do
+            expect {
+              mutex.update
+            }.not_to raise_error
           end
-        }.not_to raise_error
-        unlock.join()
+        end
+
+        context "when the lock file is not updated" do
+          before do
+            allow(File).to receive(:open).and_raise(StandardError)
+          end
+
+          it "should raise an error" do
+            expect {
+              mutex.update
+            }.to raise_error("lock_not_found")
+          end
+        end
       end
     end
   end
@@ -779,11 +901,11 @@ describe Bosh::AzureCloud::Helpers do
         expect(
           helpers_tester.is_light_stemcell_id?(stemcell_id)
         ).to be(false)
-       end
-     end
-   end
+      end
+    end
+  end
 
-   describe "#generate_windows_computer_name" do
+  describe "#generate_windows_computer_name" do
     let(:process) { class_double(Process).as_stubbed_const }
 
     context "when generated raw string is shorter than expect length" do

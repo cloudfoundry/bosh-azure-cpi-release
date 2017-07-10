@@ -14,6 +14,20 @@ module Bosh::AzureCloud
       @default_storage_account = nil
     end
 
+    def generate_storage_account_name()
+      available = false
+      until available do
+        # The length of the random storage account name is 24, twice of 12.
+        storage_account_name = "#{SecureRandom.hex(12)}"
+        @logger.debug("generate_storage_account_name - generating a new storage account name")
+        result = @azure_client2.check_storage_account_name_availability(storage_account_name)
+        available = result[:available]
+        @logger.debug("generate_storage_account_name - The generated storage account name is not available") unless available
+      end
+      @logger.debug("generate_storage_account_name - The storage account name `#{storage_account_name}' is available")
+      storage_account_name
+    end
+
     def create_storage_account(storage_account_name, storage_account_type, storage_account_location, tags = {}, is_default_storage_account = false)
       @logger.debug("create_storage_account(#{storage_account_name}, #{storage_account_type}, #{storage_account_location}, #{tags})")
 
@@ -171,7 +185,7 @@ module Bosh::AzureCloud
       end
 
       @logger.debug("Cannot find any valid storage account in the location `#{location}'")
-      storage_account_name = "#{SecureRandom.hex(12)}"
+      storage_account_name = generate_storage_account_name()
       @logger.debug("Creating a storage account `#{storage_account_name}' with the tags `#{STEMCELL_STORAGE_ACCOUNT_TAGS}' in the location `#{location}'")
       create_storage_account(storage_account_name, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, STEMCELL_STORAGE_ACCOUNT_TAGS, true)
       @logger.debug("The default storage account is `#{storage_account_name}'")
