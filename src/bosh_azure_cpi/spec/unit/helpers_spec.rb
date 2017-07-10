@@ -455,13 +455,13 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
 
-    context "disk size is larger than 1023 GiB" do
-      let(:disk_size) { 1024 * 1024 }
+    context "disk size is larger than 4095 GiB" do
+      let(:disk_size) { 4096 * 1024 }
 
       it "should raise an error" do
         expect {
           helpers_tester.validate_disk_size(disk_size)
-        }.to raise_error "Azure CPI maximum disk size is 1023 GiB"
+        }.to raise_error "Azure CPI maximum disk size is 4095 GiB"
       end
     end
 
@@ -554,7 +554,7 @@ describe Bosh::AzureCloud::Helpers do
 
   describe "DiskInfo" do
     context "when instance_type is STANDARD_A0" do
-      context "when instance_type is lowercase" do
+      context "when instance_type is uppercase" do
         it "should return correct values" do
           disk_info = Bosh::AzureCloud::Helpers::DiskInfo.for('STANDARD_A0')
 
@@ -563,7 +563,7 @@ describe Bosh::AzureCloud::Helpers do
         end
       end
 
-      context "when instance_type is uppercase" do
+      context "when instance_type is lowercase" do
         it "should return correct values" do
           disk_info = Bosh::AzureCloud::Helpers::DiskInfo.for('standard_a0')
 
@@ -573,11 +573,12 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
 
-    context "when instance_type is STANDARD_D15_V2" do
+    context "when instance_type is a known VM size" do
       it "should return correct values" do
+        # No matter which VM size is used
         disk_info = Bosh::AzureCloud::Helpers::DiskInfo.for('STANDARD_D15_V2')
 
-        expect(disk_info.size).to eq(1023)
+        expect(disk_info.size).to eq(1000)
         expect(disk_info.count).to eq(40)
       end
     end
