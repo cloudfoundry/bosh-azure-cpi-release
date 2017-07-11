@@ -229,6 +229,15 @@
           }
         ]
       }
+    },
+    {
+      "apiVersion": "[variables('apiVersion')]",		
+      "type": "Microsoft.Network/publicIPAddresses",		
+      "name": "AzureCPICI-cf-lifecycle",
+      "location": "[variables('location')]",		
+      "properties": {		
+        "publicIPAllocationMethod": "static"		
+      }		
     }
   ]
 }
