@@ -13,6 +13,7 @@ run:
   path: bosh-cpi-src/ci/tasks/run-bats.sh
 
 params:
+  AZURE_ENVIRONMENT:                  ""
   AZURE_CLIENT_ID:                    ""
   AZURE_CLIENT_SECRET:                ""
   AZURE_TENANT_ID:                    ""

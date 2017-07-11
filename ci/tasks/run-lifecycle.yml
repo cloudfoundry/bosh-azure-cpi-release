@@ -12,6 +12,7 @@ run:
   path: bosh-cpi-src/ci/tasks/run-lifecycle.sh
 
 params:
+  AZURE_ENVIRONMENT:                          ""
   AZURE_SUBSCRIPTION_ID:                      ""
   AZURE_CLIENT_ID:                            ""
   AZURE_CLIENT_SECRET:                        ""

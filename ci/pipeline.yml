@@ -20,6 +20,7 @@ jobs:
   - task: azure-provision
     file: bosh-cpi-src/ci/tasks/azure-provision.yml
     params:
+      AZURE_ENVIRONMENT:                          {{azure_environment}}
       AZURE_CLIENT_ID:                            {{azure_client_id}}
       AZURE_CLIENT_SECRET:                        {{azure_client_secret}}
       AZURE_TENANT_ID:                            {{azure_tenant_id}}
@@ -49,6 +50,7 @@ jobs:
   - task: reset-resources
     file: bosh-cpi-src/ci/tasks/reset-resources.yml
     params:
+      AZURE_ENVIRONMENT:                          {{azure_environment}}
       AZURE_TENANT_ID:                            {{azure_tenant_id}}
       AZURE_CLIENT_ID:                            {{azure_client_id}}
       AZURE_CLIENT_SECRET:                        {{azure_client_secret}}
@@ -93,6 +95,7 @@ jobs:
   - task: test
     file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
     params:
+      AZURE_ENVIRONMENT:              {{azure_environment}}
       AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
       AZURE_CLIENT_ID:                {{azure_client_id}}
       AZURE_CLIENT_SECRET:            {{azure_client_secret}}
@@ -123,6 +126,7 @@ jobs:
     - task: setup-director
       file: bosh-cpi-src/ci/tasks/setup-director.yml
       params:
+        AZURE_ENVIRONMENT:              {{azure_environment}}
         AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
@@ -146,6 +150,7 @@ jobs:
     - task: run-bats
       file: bosh-cpi-src/ci/tasks/run-bats.yml
       params:
+        AZURE_ENVIRONMENT:                  {{azure_environment}}
         AZURE_CLIENT_ID:                    {{azure_client_id}}
         AZURE_CLIENT_SECRET:                {{azure_client_secret}}
         AZURE_TENANT_ID:                    {{azure_tenant_id}}
@@ -188,6 +193,7 @@ jobs:
   - task: test
     file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
     params:
+      AZURE_ENVIRONMENT:             {{azure_environment}}
       AZURE_SUBSCRIPTION_ID:         {{azure_subscription_id}}
       AZURE_CLIENT_ID:               {{azure_client_id}}
       AZURE_CLIENT_SECRET:           {{azure_client_secret}}
@@ -220,6 +226,7 @@ jobs:
     - task: setup-director
       file: bosh-cpi-src/ci/tasks/setup-director.yml
       params:
+        AZURE_ENVIRONMENT:              {{azure_environment}}
         AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
@@ -242,6 +249,7 @@ jobs:
     - task: run-bats
       file: bosh-cpi-src/ci/tasks/run-bats.yml
       params:
+        AZURE_ENVIRONMENT:                  {{azure_environment}}
         AZURE_CLIENT_ID:                    {{azure_client_id}}
         AZURE_CLIENT_SECRET:                {{azure_client_secret}}
         AZURE_TENANT_ID:                    {{azure_tenant_id}}
@@ -289,6 +297,7 @@ jobs:
     - task: setup-director
       file: bosh-cpi-src/ci/tasks/setup-director.yml
       params:
+        AZURE_ENVIRONMENT:              {{azure_environment}}
         AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
         AZURE_CLIENT_ID:                {{azure_client_id}}
         AZURE_CLIENT_SECRET:            {{azure_client_secret}}
@@ -309,6 +318,7 @@ jobs:
     - task: run-bats
       file: bosh-cpi-src/ci/tasks/run-bats.yml
       params:
+        AZURE_ENVIRONMENT:                  {{azure_environment}}
         AZURE_CLIENT_ID:                    {{azure_client_id}}
         AZURE_CLIENT_SECRET:                {{azure_client_secret}}
         AZURE_TENANT_ID:                    {{azure_tenant_id}}

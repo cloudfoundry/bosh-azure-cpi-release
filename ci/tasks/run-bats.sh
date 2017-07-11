@@ -2,6 +2,7 @@
 
 set -e
 
+: ${AZURE_ENVIRONMENT:?}
 : ${AZURE_CLIENT_ID:?}
 : ${AZURE_CLIENT_SECRET:?}
 : ${AZURE_TENANT_ID:?}
@@ -27,7 +28,7 @@ set -e
 : ${BOSH_DIRECTOR_PASSWORD:?}
 : ${SSH_PRIVATE_KEY:?}
 
-azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
+azure login --environment ${AZURE_ENVIRONMENT} --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
 
 DIRECTOR_PIP=$(azure network public-ip show ${AZURE_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)

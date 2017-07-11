@@ -2,6 +2,7 @@
 
 set -e
 
+: ${AZURE_ENVIRONMENT:?}
 : ${AZURE_SUBSCRIPTION_ID:?}
 : ${AZURE_CLIENT_ID:?}
 : ${AZURE_CLIENT_SECRET:?}
@@ -21,7 +22,7 @@ set -e
 : ${BOSH_DIRECTOR_SSL_KEY:?}
 : ${BOSH_INIT_LOG_LEVEL:?}
 
-azure login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
+azure login --environment ${AZURE_ENVIRONMENT} --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 azure config mode arm
 
 DIRECTOR_PIP=$(azure network public-ip show ${AZURE_ADDITIONAL_GROUP_NAME} AzureCPICI-bosh --json | jq '.ipAddress' -r)
@@ -200,7 +201,7 @@ jobs:
       director_account: {user: ${BOSH_DIRECTOR_USERNAME}, password: ${BOSH_DIRECTOR_PASSWORD}}
 
     azure: &azure
-      environment: AzureCloud
+      environment: ${AZURE_ENVIRONMENT}
       subscription_id: ${AZURE_SUBSCRIPTION_ID}
       resource_group_name: ${AZURE_DEFAULT_GROUP_NAME}
       tenant_id: ${AZURE_TENANT_ID}
