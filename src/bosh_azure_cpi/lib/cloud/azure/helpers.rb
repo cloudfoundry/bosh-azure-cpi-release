@@ -257,7 +257,7 @@ module Bosh::AzureCloud
       validate_disk_size_type(size)
 
       cloud_error('Azure CPI minimum disk size is 1 GiB') if size < 1024
-      cloud_error('Azure CPI maximum disk size is 1023 GiB') if size > 1023 * 1024
+      cloud_error('Azure CPI maximum disk size is 4095 GiB') if size > 4095 * 1024
     end
 
     def validate_disk_size_type(size)
@@ -279,7 +279,7 @@ module Bosh::AzureCloud
     # size: The default ephemeral disk size for the instance type
     #   Reference Azure temporary disk size as the ephemeral disk size
     #   If the size is less than 30 GiB, CPI uses 30 GiB because the space may not be enough. You can find the temporary disk size in the comment if it is less than 30 GiB
-    #   If the size is larger than 1,023 GiB, CPI uses 1,023 GiB because max data disk size is 1,023 GiB on Azure. You can find the temporary disk size in the comment if it is larger than 1,023 GiB
+    #   If the size is larger than 1,000 GiB, CPI uses 1,000 GiB because it is not expected to use such a large ephemeral disk in CF currently. You can find the temporary disk size in the comment if it is larger than 1,000 GiB
     # count: The maximum number of data disks for the instance type
     #   The maximum number of data disks on Azure for now is 64. Set it to 64 if instance_type cannot be found in case a new instance type is supported in future
     class DiskInfo
@@ -297,6 +297,15 @@ module Bosh::AzureCloud
         'STANDARD_A9'  => [382, 16],
         'STANDARD_A10' => [382, 16],
         'STANDARD_A11' => [382, 16],
+
+        # Av2-series
+        'STANDARD_A1_V2'   => [30, 2], #10 GiB
+        'STANDARD_A2_V2'   => [30, 4], #20 GiB
+        'STANDARD_A4_V2'   => [40, 8],
+        'STANDARD_A8_V2'   => [80, 16],
+        'STANDARD_A2M_V2'  => [30, 4], #20 GiB
+        'STANDARD_A4M_V2'  => [40, 8],
+        'STANDARD_A8M_V2'  => [80, 16],
 
         # D-series
         'STANDARD_D1'  => [50, 2],
@@ -318,7 +327,7 @@ module Bosh::AzureCloud
         'STANDARD_D12_V2' => [200, 8],
         'STANDARD_D13_V2' => [400, 16],
         'STANDARD_D14_V2' => [800, 32],
-        'STANDARD_D15_V2' => [1023, 40], # 1024 GiB
+        'STANDARD_D15_V2' => [1000, 40],
 
         # DS-series
         'STANDARD_DS1'  => [30, 2], # 7 GiB
@@ -359,16 +368,45 @@ module Bosh::AzureCloud
         # G-series
         'STANDARD_G1'  => [384, 4],
         'STANDARD_G2'  => [768, 8],
-        'STANDARD_G3'  => [1023, 16], # 1,536 GiB
-        'STANDARD_G4'  => [1023, 32], # 3,072 GiB
-        'STANDARD_G5'  => [1023, 64], # 6,144 GiB
+        'STANDARD_G3'  => [1000, 16], # 1536 GiB
+        'STANDARD_G4'  => [1000, 32], # 3072 GiB
+        'STANDARD_G5'  => [1000, 64], # 6144 GiB
 
         # Gs-series
         'STANDARD_GS1'  => [56, 4],
         'STANDARD_GS2'  => [112, 8],
         'STANDARD_GS3'  => [224, 16],
         'STANDARD_GS4'  => [448, 32],
-        'STANDARD_GS5'  => [896, 64]
+        'STANDARD_GS5'  => [896, 64],
+
+        #Ls-series
+        'STANDARD_L4S'  => [678, 8],
+        'STANDARD_L8S'  => [1000, 16], # 1388 GiB
+        'STANDARD_L16S' => [1000, 32], # 2807 GiB
+        'STANDARD_L32S' => [1000, 64], # 5630 GiB
+
+        #M-series
+        'STANDARD_M64MS' => [1000, 32], # 2048 GiB
+        'STANDARD_M128S' => [1000, 64], # 4096 GiB
+
+        #NV-series
+        'STANDARD_NV6'  => [380, 8],
+        'STANDARD_NV12' => [680, 16],
+        'STANDARD_NV24' => [1000, 32], # 1440 GiB
+
+        #NC-series
+        'STANDARD_NC6'   => [380, 8],
+        'STANDARD_NC12'  => [680, 16],
+        'STANDARD_NC24'  => [1000, 32], # 1440 GiB
+        'STANDARD_NC24R' => [1000, 32], # 1440 GiB
+
+        #H-series
+        'STANDARD_8'    => [1000, 16],
+        'STANDARD_16'   => [1000, 32], # 2000 GiB
+        'STANDARD_8M'   => [1000, 16],
+        'STANDARD_16M'  => [1000, 32], # 2000 GiB
+        'STANDARD_16R'  => [1000, 32], # 2000 GiB
+        'STANDARD_16MR' => [1000, 32]  # 2000 GiB
       }
 
       attr_reader :size, :count
