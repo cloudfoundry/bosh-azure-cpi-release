@@ -601,14 +601,8 @@ describe Bosh::AzureCloud::Helpers do
           {
             "name" => "fake-name",
             "version" => "fake-version",
-            "infrastructure" => "azure",
-            "hypervisor" => "hyperv",
             "disk" => "3072",
-            "disk_format" => "vhd",
-            "container_format" => "bare",
             "os_type" => "linux",
-            "os_distro" => "ubuntu",
-            "architecture" => "x86_64",
           }
         }
 
@@ -618,7 +612,7 @@ describe Bosh::AzureCloud::Helpers do
           expect(stemcell_info.os_type).to eq("linux")
           expect(stemcell_info.name).to eq("fake-name")
           expect(stemcell_info.version).to eq("fake-version")
-          expect(stemcell_info.disk_size).to eq(3072)
+          expect(stemcell_info.image_size).to eq(3072)
           expect(stemcell_info.is_light_stemcell?).to be(false)
           expect(stemcell_info.image_reference).to be(nil)
         end
@@ -630,14 +624,8 @@ describe Bosh::AzureCloud::Helpers do
           {
             "name" => "fake-name",
             "version" => "fake-version",
-            "infrastructure" => "azure",
-            "hypervisor" => "hyperv",
             "disk" => "3072",
-            "disk_format" => "vhd",
-            "container_format" => "bare",
             "os_type" => "linux",
-            "os_distro" => "ubuntu",
-            "architecture" => "x86_64",
             "image" => {"publisher"=>"bosh", "offer"=>"UbuntuServer", "sku"=>"trusty", "version"=>"fake-version"}
           }
         }
@@ -648,12 +636,86 @@ describe Bosh::AzureCloud::Helpers do
           expect(stemcell_info.os_type).to eq("linux")
           expect(stemcell_info.name).to eq("fake-name")
           expect(stemcell_info.version).to eq("fake-version")
-          expect(stemcell_info.disk_size).to eq(3072)
+          expect(stemcell_info.image_size).to eq(3072)
           expect(stemcell_info.is_light_stemcell?).to be(true)
           expect(stemcell_info.image_reference['publisher']).to eq('bosh')
           expect(stemcell_info.image_reference['offer']).to eq('UbuntuServer')
           expect(stemcell_info.image_reference['sku']).to eq('trusty')
           expect(stemcell_info.image_reference['version']).to eq('fake-version')
+        end
+      end
+
+      context "when os_type is linux" do
+        context "when disk is not specified" do
+          let(:uri) { "fake-uri" }
+          let(:metadata) {
+            {
+              "name" => "fake-name",
+              "version" => "fake-version",
+              "os_type" => "linux",
+            }
+          }
+
+          it "should return the default image size" do
+            stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+            expect(stemcell_info.os_type).to eq("linux")
+            expect(stemcell_info.image_size).to eq(3 * 1024)
+          end
+        end
+
+        context "when disk is specified" do
+          let(:uri) { "fake-uri" }
+          let(:metadata) {
+            {
+              "name" => "fake-name",
+              "version" => "fake-version",
+              "disk" => "12345",
+              "os_type" => "linux",
+            }
+          }
+
+          it "should return the image size specified in the stemcell properties" do
+            stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+            expect(stemcell_info.os_type).to eq("linux")
+            expect(stemcell_info.image_size).to eq(12345)
+          end
+        end
+      end
+
+      context "when os_type is windows" do
+        context "when disk is not specified" do
+          let(:uri) { "fake-uri" }
+          let(:metadata) {
+            {
+              "name" => "fake-name",
+              "version" => "fake-version",
+              "os_type" => "windows",
+            }
+          }
+
+          it "should return the default image size" do
+            stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+            expect(stemcell_info.os_type).to eq("windows")
+            expect(stemcell_info.image_size).to eq(128 * 1024)
+          end
+        end
+
+        context "when disk is specified" do
+          let(:uri) { "fake-uri" }
+          let(:metadata) {
+            {
+              "name" => "fake-name",
+              "version" => "fake-version",
+              "disk" => "12345",
+              "os_type" => "windows",
+            }
+          }
+
+          it "should return the image size specified in the stemcell properties" do
+            stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
+            expect(stemcell_info.os_type).to eq("windows")
+            expect(stemcell_info.image_size).to eq(12345)
+          end
         end
       end
     end
@@ -667,7 +729,7 @@ describe Bosh::AzureCloud::Helpers do
         expect(stemcell_info.os_type).to eq('linux')
         expect(stemcell_info.name).to be(nil)
         expect(stemcell_info.version).to be(nil)
-        expect(stemcell_info.disk_size).to eq(3072)
+        expect(stemcell_info.image_size).to eq(3072)
       end
     end
   end
