@@ -207,6 +207,8 @@ module Bosh::AzureCloud
     # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Possible values: None, ReadOnly or ReadWrite.
     # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
     #
+    #   When debug_mode is on, CPI will use below parameter for boot diagnostics
+    # * +:diag_storage_uri      - String. Diagnostics storage account URI.
     #
     # @return [Boolean]
     #
@@ -343,6 +345,15 @@ module Bosh::AzureCloud
       unless availability_set.nil?
         vm['properties']['availabilitySet'] = {
           'id' => availability_set[:id]
+        }
+      end
+
+      unless vm_params[:diag_storage_uri].nil?
+        vm['properties']['diagnosticsProfile'] = {
+          'bootDiagnostics' => {
+            'enabled' => true,
+            'storageUri' => vm_params[:diag_storage_uri]
+          }
         }
       end
 
@@ -589,6 +600,9 @@ module Bosh::AzureCloud
             vm[:network_interfaces].push(network_interface)
           end
         end
+
+        boot_diagnostics = properties.fetch('diagnosticsProfile', {}).fetch('bootDiagnostics', {})
+        vm[:diag_storage_uri] = boot_diagnostics['storageUri'] if boot_diagnostics['enabled']
       end
       vm
     end

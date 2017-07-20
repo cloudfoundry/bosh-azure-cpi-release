@@ -2,12 +2,13 @@ module Bosh::AzureCloud
   class VMManager
     include Helpers
 
-    def initialize(azure_properties, registry_endpoint, disk_manager, disk_manager2, azure_client2)
+    def initialize(azure_properties, registry_endpoint, disk_manager, disk_manager2, azure_client2, storage_account_manager)
       @azure_properties = azure_properties
       @registry_endpoint = registry_endpoint
       @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
       @azure_client2 = azure_client2
+      @storage_account_manager = storage_account_manager
       @use_managed_disks = @azure_properties['use_managed_disks']
       @logger = Bosh::Clouds::Config.logger
     end
@@ -85,6 +86,15 @@ module Bosh::AzureCloud
         computer_name = generate_windows_computer_name()
         vm_params[:computer_name] = computer_name
         vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns, computer_name)
+      end
+
+      if is_debug_mode(@azure_properties)
+        default_storage_account = @storage_account_manager.default_storage_account
+        if default_storage_account[:location] == location
+          vm_params[:diag_storage_uri] = default_storage_account[:storage_blob_host]
+        else
+          @logger.warn("Default storage account `#{default_storage_account[:name]}' is in different region `#{default_storage_account[:location]}', ignore boot diagnostics.")
+        end
       end
 
       create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
