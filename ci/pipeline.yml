@@ -3,13 +3,15 @@ groups:
   - name: bosh-azure-cpi-release
     jobs:
       - recreate-infrastructure-primary
-      - reset-resources
       - build-candidate
       - lifecycle-unmanaged-disks
       - bats-ubuntu-unmanaged-disks
       - lifecycle-managed-disks
       - bats-ubuntu-managed-disks
+      - lifecycle-windows-unmanaged-disks
+      - lifecycle-windows-managed-disks
       - promote-candidate
+
 jobs:
 - name: recreate-infrastructure-primary
   serial: true
@@ -20,53 +22,32 @@ jobs:
   - task: azure-provision
     file: bosh-cpi-src/ci/tasks/azure-provision.yml
     params:
-      AZURE_ENVIRONMENT:                          {{azure_environment}}
-      AZURE_CLIENT_ID:                            {{azure_client_id}}
-      AZURE_CLIENT_SECRET:                        {{azure_client_secret}}
-      AZURE_TENANT_ID:                            {{azure_tenant_id}}
-      AZURE_DEFAULT_GROUP_NAME:                   {{azure_default_group_name}}
-      AZURE_ADDITIONAL_GROUP_NAME:                {{azure_additional_group_name}}
-      AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS:     {{azure_default_group_name_managed_disks}}
-      AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS:  {{azure_additional_group_name_managed_disks}}
-      AZURE_DEFAULT_GROUP_NAME_CENTOS:            {{azure_default_group_name_centos}}
-      AZURE_ADDITIONAL_GROUP_NAME_CENTOS:         {{azure_additional_group_name_centos}}
-      AZURE_REGION_NAME:                          {{azure_region_name}}
-      AZURE_VNET_NAME_FOR_BATS:                   {{azure_vnet_name_for_bats}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE:              {{azure_vnet_name_for_lifecycle}}
-      AZURE_REGION_SHORT_NAME:                    {{azure_region_short_name}}
-      AZURE_STORAGE_ACCOUNT_NAME:                 {{azure_storage_account_name}}
-      AZURE_STORAGE_ACCOUNT_NAME_MANAGED_DISKS:   {{azure_storage_account_name_managed_disks}}
-      AZURE_BOSH_SUBNET_NAME:                     {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME:              {{azure_bosh_second_subnet_name}}
-      AZURE_CF_SUBNET_NAME:                       {{azure_cf_subnet_name}}
-      AZURE_CF_SECOND_SUBNET_NAME:                {{azure_cf_second_subnet_name}}
-
-- name: reset-resources
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in}
-
-  - task: reset-resources
-    file: bosh-cpi-src/ci/tasks/reset-resources.yml
-    params:
-      AZURE_ENVIRONMENT:                          {{azure_environment}}
-      AZURE_TENANT_ID:                            {{azure_tenant_id}}
-      AZURE_CLIENT_ID:                            {{azure_client_id}}
-      AZURE_CLIENT_SECRET:                        {{azure_client_secret}}
-      AZURE_DEFAULT_GROUP_NAME:                   {{azure_default_group_name}}
-      AZURE_ADDITIONAL_GROUP_NAME:                {{azure_additional_group_name}}
-      AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS:     {{azure_default_group_name_managed_disks}}
-      AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS:  {{azure_additional_group_name_managed_disks}}
-      AZURE_DEFAULT_GROUP_NAME_CENTOS:            {{azure_default_group_name_centos}}
-      AZURE_ADDITIONAL_GROUP_NAME_CENTOS:         {{azure_additional_group_name_centos}}
-      AZURE_STORAGE_ACCOUNT_NAME:                 {{azure_storage_account_name}}
-      AZURE_VNET_NAME_FOR_BATS:                   {{azure_vnet_name_for_bats}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE:              {{azure_vnet_name_for_lifecycle}}
-      AZURE_BOSH_SUBNET_NAME:                     {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME:              {{azure_bosh_second_subnet_name}}
-      AZURE_CF_SUBNET_NAME:                       {{azure_cf_subnet_name}}
-      AZURE_CF_SECOND_SUBNET_NAME:                {{azure_cf_second_subnet_name}}
+      AZURE_ENVIRONMENT:                                 {{azure_environment}}
+      AZURE_CLIENT_ID:                                   {{azure_client_id}}
+      AZURE_CLIENT_SECRET:                               {{azure_client_secret}}
+      AZURE_TENANT_ID:                                   {{azure_tenant_id}}
+      AZURE_DEFAULT_GROUP_NAME:                          {{azure_default_group_name}}
+      AZURE_ADDITIONAL_GROUP_NAME:                       {{azure_additional_group_name}}
+      AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS:            {{azure_default_group_name_managed_disks}}
+      AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS:         {{azure_additional_group_name_managed_disks}}
+      AZURE_DEFAULT_GROUP_NAME_CENTOS:                   {{azure_default_group_name_centos}}
+      AZURE_ADDITIONAL_GROUP_NAME_CENTOS:                {{azure_additional_group_name_centos}}
+      AZURE_DEFAULT_GROUP_NAME_WINDOWS:                  {{azure_default_group_name_windows}}
+      AZURE_ADDITIONAL_GROUP_NAME_WINDOWS:               {{azure_additional_group_name_windows}}
+      AZURE_DEFAULT_GROUP_NAME_WINDOWS_MANAGED_DISKS:    {{azure_default_group_name_windows_managed_disks}}
+      AZURE_ADDITIONAL_GROUP_NAME_WINDOWS_MANAGED_DISKS: {{azure_additional_group_name_windows_managed_disks}}
+      AZURE_REGION_NAME:                                 {{azure_region_name}}
+      AZURE_VNET_NAME_FOR_BATS:                          {{azure_vnet_name_for_bats}}
+      AZURE_VNET_NAME_FOR_LIFECYCLE:                     {{azure_vnet_name_for_lifecycle}}
+      AZURE_REGION_SHORT_NAME:                           {{azure_region_short_name}}
+      AZURE_STORAGE_ACCOUNT_NAME:                        {{azure_storage_account_name}}
+      AZURE_STORAGE_ACCOUNT_NAME_MANAGED_DISKS:          {{azure_storage_account_name_managed_disks}}
+      AZURE_STORAGE_ACCOUNT_NAME_WINDOWS:                {{azure_storage_account_name_windows}}
+      AZURE_STORAGE_ACCOUNT_NAME_WINDOWS_MANAGED_DISKS:  {{azure_storage_account_name_windows_managed_disks}}
+      AZURE_BOSH_SUBNET_NAME:                            {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME:                     {{azure_bosh_second_subnet_name}}
+      AZURE_CF_SUBNET_NAME:                              {{azure_cf_subnet_name}}
+      AZURE_CF_SECOND_SUBNET_NAME:                       {{azure_cf_second_subnet_name}}
 
 - name: build-candidate
   serial: true
@@ -350,10 +331,63 @@ jobs:
         - task: teardown-director
           file: bosh-cpi-src/ci/tasks/teardown-director.yml
 
+- name: lifecycle-windows-unmanaged-disks
+  serial: true
+  plan:
+  - aggregate:
+    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
+    - {trigger: false,                            get: stemcell, resource: azure-windows-stemcell}
+
+  - task: test
+    file: bosh-cpi-src/ci/tasks/run-lifecycle-windows.yml
+    params:
+      AZURE_ENVIRONMENT:              {{azure_environment}}
+      AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
+      AZURE_CLIENT_ID:                {{azure_client_id}}
+      AZURE_CLIENT_SECRET:            {{azure_client_secret}}
+      AZURE_TENANT_ID:                {{azure_tenant_id}}
+      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_windows}}
+      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_windows}}
+      AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name_windows}}
+      AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
+      AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
+      AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
+      AZURE_USE_MANAGED_DISKS:        false
+      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+
+- name: lifecycle-windows-managed-disks
+  serial: true
+  plan:
+  - aggregate:
+    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
+    - {trigger: false,                            get: stemcell, resource: azure-windows-stemcell}
+
+  - task: test
+    file: bosh-cpi-src/ci/tasks/run-lifecycle-windows.yml
+    params:
+      AZURE_ENVIRONMENT:             {{azure_environment}}
+      AZURE_SUBSCRIPTION_ID:         {{azure_subscription_id}}
+      AZURE_CLIENT_ID:               {{azure_client_id}}
+      AZURE_CLIENT_SECRET:           {{azure_client_secret}}
+      AZURE_TENANT_ID:               {{azure_tenant_id}}
+      AZURE_DEFAULT_GROUP_NAME:      {{azure_default_group_name_windows_managed_disks}}
+      AZURE_ADDITIONAL_GROUP_NAME:   {{azure_additional_group_name_windows_managed_disks}}
+      AZURE_STORAGE_ACCOUNT_NAME:    {{azure_storage_account_name_windows_managed_disks}}
+      AZURE_VNET_NAME_FOR_LIFECYCLE: {{azure_vnet_name_for_lifecycle}}
+      AZURE_BOSH_SUBNET_NAME:        {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME: {{azure_bosh_second_subnet_name}}
+      AZURE_DEFAULT_SECURITY_GROUP:  {{azure_default_security_group}}
+      AZURE_USE_MANAGED_DISKS:       true
+      SSH_PUBLIC_KEY:                {{ssh_public_key}}
+
+
 - name: promote-candidate
   plan:
   - aggregate:
-    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [lifecycle-unmanaged-disks, bats-ubuntu-unmanaged-disks, lifecycle-managed-disks, bats-ubuntu-managed-disks]}
+    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [lifecycle-unmanaged-disks, bats-ubuntu-unmanaged-disks, lifecycle-managed-disks, bats-ubuntu-managed-disks, lifecycle-windows-unmanaged-disks, lifecycle-windows-managed-disks]}
     - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
     - {trigger: false, get: release-version-semver, params: {bump: major}}
 
@@ -440,3 +474,8 @@ resources:
   type: bosh-io-stemcell
   source:
     name: bosh-azure-hyperv-centos-7-go_agent
+
+- name: azure-windows-stemcell
+  type: bosh-io-stemcell
+  source:
+    name: bosh-azure-hyperv-windows2012R2-go_agent
