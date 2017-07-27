@@ -20,7 +20,7 @@
   ```
   cf login -a https://api.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io --skip-ssl-validation -u admin -p c1oudc0w
   cf create-space azure
-  cf target -o "REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io_ORGANIZATION" -s "azure"
+  cf target -o ORGANIZATION -s "azure" ( run command to show organizations "cf orgs" or create "cf create-org my-org-name" )
   ```
 
   NOTE: **If you do not use the default password `c1oudc0w`, you should use your password to login your deployment.**
