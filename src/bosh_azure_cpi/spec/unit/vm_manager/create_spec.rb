@@ -17,10 +17,11 @@ describe Bosh::AzureCloud::VMManager do
   let(:disk_manager) { instance_double(Bosh::AzureCloud::DiskManager) }
   let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
   let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
+  let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
 
   # VM manager for unmanaged disks
   let(:azure_properties) { mock_azure_properties }
-  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties, registry_endpoint, disk_manager, disk_manager2, client2) }
+  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
 
   # VM manager for managed disks
   let(:azure_properties_managed) {
@@ -28,7 +29,7 @@ describe Bosh::AzureCloud::VMManager do
       'use_managed_disks' => true
     })
   }
-  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_properties_managed, registry_endpoint, disk_manager, disk_manager2, client2) }
+  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_properties_managed, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
 
   describe "#create" do
     # Stroage Account
@@ -1415,7 +1416,7 @@ describe Bosh::AzureCloud::VMManager do
             let(:vm_manager_for_pip) { Bosh::AzureCloud::VMManager.new(
               mock_azure_properties_merge({
                 'pip_idle_timeout_in_minutes' => 20
-              }), registry_endpoint, disk_manager, disk_manager2, client2)
+              }), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager)
             }
 
             it "creates a public IP and assigns it to the NIC" do
@@ -1582,6 +1583,56 @@ describe Bosh::AzureCloud::VMManager do
               expect {
                 vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               }.not_to raise_error
+            end
+          end
+        end
+
+        context "when debug mode is on" do
+          let(:azure_properties_debug) {
+            mock_azure_properties_merge({
+              'debug_mode' => true
+            })
+          }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+
+          context 'when vm and default storage account are in different locations' do
+            let(:vm_location) { 'fake-vm-location' }
+            let(:default_storage_account) {
+              {
+                :location          => 'fake-storage-account-location',
+                :storage_blob_host => 'fake-storage-blob-host'
+              }
+            }
+
+            before do
+              allow(storage_account_manager).to receive(:default_storage_account).
+                and_return(default_storage_account)
+            end
+
+            it "should not enable diagnostics" do
+              vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, resource_pool, network_configurator, env)
+              expect(vm_params[:diag_storage_uri]).to be(nil)
+            end
+          end
+
+          context 'when vm and default storage account are in same location' do
+            let(:vm_location) { location }
+            let(:diag_storage_uri) { 'fake-diag-storage-uri' }
+            let(:default_storage_account) {
+              {
+                :location          => location,
+                :storage_blob_host => diag_storage_uri
+              }
+            }
+
+            before do
+              allow(storage_account_manager).to receive(:default_storage_account).
+                and_return(default_storage_account)
+            end
+
+            it "should enable diagnostics" do
+              vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, resource_pool, network_configurator, env)
+              expect(vm_params[:diag_storage_uri]).to eq(diag_storage_uri)
             end
           end
         end
