@@ -58,7 +58,7 @@ module Bosh::AzureCloud
     REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
 
     # Please add the key into this list if you want to redact its value in request body.
-    CREDENTIAL_KEYWORD_LIST = ['adminPassword', 'client_secret']
+    CREDENTIAL_KEYWORD_LIST = ['adminPassword', 'client_secret', 'customData']
 
     def initialize(azure_properties, logger)
       @logger = logger
@@ -1868,6 +1868,12 @@ module Bosh::AzureCloud
     def redact_credentials_in_request_body(body)
       is_debug_mode(@azure_properties) ? body.to_json : redact_credentials(CREDENTIAL_KEYWORD_LIST, body).to_json
     end
+    
+    def redact_credentials_in_response_body(body)
+      is_debug_mode(@azure_properties) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body)).to_json
+    rescue => e
+      body
+    end
 
     def http(uri)
       http = Net::HTTP.new(uri.host, uri.port)
@@ -1931,11 +1937,18 @@ module Bosh::AzureCloud
           raise e
         rescue => e
           # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
-          if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME) && retry_count < AZURE_MAX_RETRY_COUNT
-            @logger.warn("get_token - Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
-            retry_count += 1
-            sleep(retry_after)
-            retry
+          if retry_count < AZURE_MAX_RETRY_COUNT
+            if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME)
+              @logger.warn("get_token - Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
+              retry_count += 1
+              sleep(retry_after)
+              retry
+            elsif e.inspect.include?(ERROR_CONNECTION_REFUSED)
+              @logger.warn("get_token - Fail for a connection refused error. Will retry after #{retry_after} seconds.")
+              retry_count += 1
+              sleep(retry_after)
+              retry
+            end
           end
           cloud_error("get_token - #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
@@ -1997,7 +2010,7 @@ module Bosh::AzureCloud
         else
           message = "http_get_response - #{retry_count}: #{status_code}\n"
           message += get_http_common_headers(response)
-          message += "responsey.body: #{response.body}"
+          message += "response.body: #{redact_credentials_in_response_body(response.body)}"
           @logger.debug(message)
         end
 
@@ -2035,11 +2048,18 @@ module Bosh::AzureCloud
         raise e
       rescue => e
         # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
-        if (e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME) || e.inspect.include?(ERROR_CONNECTION_REFUSED)) && retry_count < AZURE_MAX_RETRY_COUNT
-          @logger.warn("http_get_response - Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
-          retry_count += 1
-          sleep(retry_after)
-          retry
+        if retry_count < AZURE_MAX_RETRY_COUNT
+          if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME)
+            @logger.warn("http_get_response - Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
+            retry_count += 1
+            sleep(retry_after)
+            retry
+          elsif e.inspect.include?(ERROR_CONNECTION_REFUSED)
+            @logger.warn("http_get_response - Fail for a connection refused error. Will retry after #{retry_after} seconds.")
+            retry_count += 1
+            sleep(retry_after)
+            retry
+          end
         end
         cloud_error("http_get_response - #{e.inspect}\n#{e.backtrace.join("\n")}")
       end

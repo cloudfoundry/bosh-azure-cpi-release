@@ -925,7 +925,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :headers => {})
             stub_request(:put, vm_uri).with(body: request_body).to_return(
               :status => 200,
-              :body => '',
+              :body => request_body.to_json.to_s,
               :headers => {
                 "azure-asyncoperation" => operation_status_link
               })
@@ -941,7 +941,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             logs = logger_strio.string
             expect(logs.include?(windows_password)).to be(false)
             expect(logs.include?(MOCK_AZURE_CLIENT_SECRET)).to be(false)
-            expect(logs.scan('<redacted>').count).to eq(2)
+            expect(logs.scan('<redacted>').count).to eq(5)
           end
         end
 
