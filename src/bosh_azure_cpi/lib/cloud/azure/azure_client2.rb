@@ -2035,7 +2035,7 @@ module Bosh::AzureCloud
         raise e
       rescue => e
         # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
-        if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME) && retry_count < AZURE_MAX_RETRY_COUNT
+        if (e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME) || e.inspect.include?(ERROR_CONNECTION_REFUSED)) && retry_count < AZURE_MAX_RETRY_COUNT
           @logger.warn("http_get_response - Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
           retry_count += 1
           sleep(retry_after)
