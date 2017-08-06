@@ -12,7 +12,8 @@ describe Bosh::AzureCloud::BlobManager do
   let(:azure_client) { instance_double(Azure::Storage::Client) }
   let(:blob_service) { instance_double(Azure::Storage::Blob::BlobService) }
   let(:customized_retry) { instance_double(Bosh::AzureCloud::CustomizedRetryPolicyFilter) }
-  let(:blob_host) { "fake-blob-endpoint" }
+  let(:storage_dns_suffix) { "fake-storage-dns-suffix" }
+  let(:blob_host) { "https://#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}.blob.#{storage_dns_suffix}" }
   let(:storage_account) {
     {
       :id => "foo",
@@ -20,8 +21,7 @@ describe Bosh::AzureCloud::BlobManager do
       :location => "bar",
       :provisioning_state => "bar",
       :account_type => "foo",
-      :storage_blob_host => "fake-blob-endpoint",
-      :storage_table_host => "fake-table-endpoint"
+      :storage_blob_host => blob_host
     }
   }
   let(:request_id) { 'fake-client-request-id' }
@@ -42,7 +42,6 @@ describe Bosh::AzureCloud::BlobManager do
     allow(azure_client2).to receive(:get_storage_account_by_name).
       with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
       and_return(storage_account)
-    allow(azure_client).to receive(:storage_blob_host=)
     allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
     allow(azure_client).to receive(:blob_client).
       and_return(blob_service)
@@ -441,8 +440,7 @@ describe Bosh::AzureCloud::BlobManager do
         :location => "bar",
         :provisioning_state => "bar",
         :account_type => "foo",
-        :storage_blob_host => "fake-blob-endpoint",
-        :storage_table_host => "fake-table-endpoint"
+        :storage_blob_host => "https://another-storage-account.blob.#{storage_dns_suffix}"
       }
     }
     let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
@@ -663,8 +661,7 @@ describe Bosh::AzureCloud::BlobManager do
         :location => "bar",
         :provisioning_state => "bar",
         :account_type => "foo",
-        :storage_blob_host => "fake-blob-endpoint",
-        :storage_table_host => "fake-table-endpoint"
+        :storage_blob_host => "https://another-storage-account.blob.#{storage_dns_suffix}"
       }
     }
 

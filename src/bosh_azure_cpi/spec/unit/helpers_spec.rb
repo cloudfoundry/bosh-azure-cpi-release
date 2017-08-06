@@ -98,6 +98,16 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
+  describe "#ignore_exception" do
+    it "should return ignore the exception" do
+      expect{
+        helpers_tester.ignore_exception do
+          raise StandardError
+        end
+      }.not_to raise_error
+    end
+  end
+
   describe "#get_arm_endpoint" do
     context "when environment is Azure" do
       let(:azure_properties) { {'environment' => 'AzureCloud'} }
@@ -344,92 +354,119 @@ describe Bosh::AzureCloud::Helpers do
   describe "#initialize_azure_storage_client" do
     let(:azure_client) { instance_double(Azure::Storage::Client) }
     let(:storage_account_name) { "fake-storage-account-name" }
-    let(:storage_access_key) { "fake-storage-access-key" }
+    let(:storage_account_key) { "fake-storage-account-key" }
+    let(:storage_dns_suffix) { "fake-storage-dns-suffix" }
     let(:storage_account) {
       {
         :name => storage_account_name,
-        :key => storage_access_key,
-        :storage_blob_host => 'https://fake-blob-host:443/',
-        :storage_table_host => 'https://fake-table-host:443/',
+        :key  => storage_account_key,
+        :storage_blob_host => "https://#{storage_account_name}.blob.#{storage_dns_suffix}"
       }
     }
-    let(:blob_host_https) { "https://fake-blob-host:443" }
-    let(:table_host_https) { "https://fake-table-host:443" }
-    let(:blob_host_http) { "http://fake-blob-host" }
-    let(:table_host_http) { "http://fake-table-host" }
 
-    before do
-      allow(Azure::Storage::Client).to receive(:create).
-        and_return(azure_client)
-      allow(azure_client).to receive(:storage_blob_host=)
-      allow(azure_client).to receive(:storage_blob_host).and_return(blob_host_https)
-      allow(azure_client).to receive(:storage_table_host=)
-      allow(azure_client).to receive(:storage_table_host).and_return(table_host_https)
-    end
+    context "when the environment is not AzureStack" do
+      let(:azure_properties) {
+        {
+          "environment" => "AzureCloud"
+        }
+      }
+      let(:options) {
+        {
+          :storage_account_name => storage_account_name,
+          :storage_access_key   => storage_account_key,
+          :storage_dns_suffix   => storage_dns_suffix,
+          :user_agent_prefix    => "BOSH-AZURE-CPI"
+        }
+      }
 
-    context "for blob" do
-      context "use https" do
-        it "should return an azure storage client with setting storage blob host (https)" do
-          client = helpers_tester.initialize_azure_storage_client(storage_account, 'blob')
-          expect(
-            client.storage_blob_host
-          ).to eq(blob_host_https)
-        end
-      end
-
-      context "use http" do
-        it "should return an azure storage client with setting storage blob host (http)" do
-          client = helpers_tester.initialize_azure_storage_client(storage_account, 'blob', true)
-          expect(
-            client.storage_blob_host
-          ).to eq(blob_host_http)
-        end
+      it "should create the storage client with the correct options" do
+        expect(Azure::Storage::Client).to receive(:create).with(options).
+          and_return(azure_client)
+        expect(
+          helpers_tester.initialize_azure_storage_client(storage_account, azure_properties)
+        ).to eq(azure_client)
       end
     end
 
-    context "for table" do
-      context "when the storage account is standard" do
-        context "use https" do
-          it "should return an azure storage client with setting table blob host (https)" do
-            client = helpers_tester.initialize_azure_storage_client(storage_account, 'table')
-            expect(
-              client.storage_table_host
-            ).to eq(table_host_https)
-          end
-        end
+    context "when the environment is AzureStack" do
+      let(:azure_stack_domain) { "fake-azure-stack-domain" }
 
-        context "use http" do
-          it "should return an azure storage client with setting table blob host (http)" do
-            client = helpers_tester.initialize_azure_storage_client(storage_account, 'table', true)
-            expect(
-              client.storage_table_host
-            ).to eq(table_host_http)
-          end
-        end
-      end
-
-      context "when the storage account is premium" do
-        let(:storage_account) {
+      context "when http is used" do
+        let(:azure_properties) {
           {
-            :name => storage_account_name,
-            :key => storage_access_key,
-            :storage_blob_host => 'https://fake-blob-host:443/',
+            "environment" => "AzureStack",
+            "azure_stack" => {
+              "domain" => azure_stack_domain,
+              "use_http_to_access_storage_account" => true
+            }
+          }
+        }
+        let(:options) {
+          {
+            :storage_account_name       => storage_account_name,
+            :storage_access_key         => storage_account_key,
+            :storage_dns_suffix         => storage_dns_suffix,
+            :default_endpoints_protocol => "http",
+            :user_agent_prefix          => "BOSH-AZURE-CPI"
           }
         }
 
-        it "should raise an error" do
-          expect {
-            helpers_tester.initialize_azure_storage_client(storage_account, 'table')
-          }.to raise_error "The storage account `#{storage_account_name}' does not support table"
+        it "should create the storage client with the correct options" do
+          expect(Azure::Storage::Client).to receive(:create).with(options).
+            and_return(azure_client)
+          expect(
+            helpers_tester.initialize_azure_storage_client(storage_account, azure_properties)
+          ).to eq(azure_client)
+        end
+      end
+
+      context "when https is used" do
+        let(:azure_properties) {
+          {
+            "environment" => "AzureStack",
+            "azure_stack" => {
+              "domain" => azure_stack_domain,
+              "use_http_to_access_storage_account" => false
+            }
+          }
+        }
+
+        let(:options) {
+          {
+            :storage_account_name       => storage_account_name,
+            :storage_access_key         => storage_account_key,
+            :storage_dns_suffix         => storage_dns_suffix,
+            :ca_file                    => "/var/vcap/jobs/azure_cpi/config/azure_stack_ca_cert.pem",
+            :user_agent_prefix          => "BOSH-AZURE-CPI"
+          }
+        }
+
+        it "should create the storage client with the correct options" do
+          expect(Azure::Storage::Client).to receive(:create).with(options).
+            and_return(azure_client)
+          expect(
+            helpers_tester.initialize_azure_storage_client(storage_account, azure_properties)
+          ).to eq(azure_client)
         end
       end
     end
+  end
 
-    context "for others" do
-      it "should raise an error" do
-        expect {
-          helpers_tester.initialize_azure_storage_client(storage_account, 'others')
-        }.to raise_error "No support for the storage service: `others'"
+  describe "#get_ca_file_path" do
+    context "when the environment variable BOSH_JOBS_DIR exists" do
+      let(:bosh_jobs_dir) { ".bosh_init/installations/a3ee66ec-6f00-4aab-632d-f6d4c5dc5f5b/jobs" }
+      before do
+        allow(ENV).to receive(:[]).with("BOSH_JOBS_DIR").and_return(bosh_jobs_dir)
+      end
+
+      it "should return a path under BOSH_JOBS_DIR" do
+        expect(helpers_tester.get_ca_file_path).to eq("#{bosh_jobs_dir}/azure_cpi/config/azure_stack_ca_cert.pem")
+      end
+    end
+
+    context "when the environment variable BOSH_JOBS_DIR doesn't exist" do
+      it "should return a path under /var/vcap/jobs" do
+        expect(helpers_tester.get_ca_file_path).to eq("/var/vcap/jobs/azure_cpi/config/azure_stack_ca_cert.pem")
       end
     end
   end

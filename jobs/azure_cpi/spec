@@ -4,6 +4,7 @@ name: azure_cpi
 templates:
   cpi.erb: bin/cpi
   cpi.json.erb: config/cpi.json
+  azure_stack_ca_cert.pem.erb: config/azure_stack_ca_cert.pem
 
 packages:
 - ruby_azure_cpi
@@ -61,6 +62,12 @@ properties:
   azure.azure_stack.use_http_to_access_storage_account:
     description: Flag for using HTTP to access storage account rather than the default HTTPS
     default: false
+  azure.azure_stack.ca_cert:
+    description: All required custom CA certificates for AzureStack
+    example:
+      -----BEGIN CERTIFICATE-----
+      MII...
+      -----END CERTIFICATE-----
 
   registry.username:
     description: User to access the Registry

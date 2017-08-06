@@ -14,7 +14,7 @@ module Bosh::AzureCloud
 
       @logger = Bosh::Clouds::Config.logger
       @blob_client_mutex = Mutex.new
-      @storage_accounts_keys = {}
+      @storage_accounts = {}
     end
 
     def delete_blob(storage_account_name, container_name, blob_name)
@@ -401,15 +401,13 @@ module Bosh::AzureCloud
 
     def initialize_blob_client(storage_account_name, disable_debug_mode = false)
       @blob_client_mutex.synchronize do
-        unless @storage_accounts_keys.has_key?(storage_account_name)
+        unless @storage_accounts.has_key?(storage_account_name)
           storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
           keys = @azure_client2.get_storage_account_keys_by_name(storage_account_name)
           storage_account[:key] = keys[0]
-          @storage_accounts_keys[storage_account_name] = storage_account
+          @storage_accounts[storage_account_name] = storage_account
         end
-        use_http = false
-        use_http = @azure_properties['azure_stack']['use_http_to_access_storage_account'] if @azure_properties['environment'] == ENVIRONMENT_AZURESTACK
-        @azure_storage_client = initialize_azure_storage_client(@storage_accounts_keys[storage_account_name], 'blob', use_http)
+        @azure_storage_client = initialize_azure_storage_client(@storage_accounts[storage_account_name], @azure_properties)
         @blob_service_client = @azure_storage_client.blob_client
         @blob_service_client.with_filter(CustomizedRetryPolicyFilter.new)
         @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties) && !disable_debug_mode

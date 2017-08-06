@@ -142,6 +142,9 @@ module Bosh::AzureCloud
     AZURESTACK_AUTHENTICATION_TYPE_AZURESTACKAD = 'AzureStackAD'
     AZURESTACK_AUTHENTICATION_TYPE_AZUREAD      = 'AzureAD'
 
+    BOSH_JOBS_DIR = '/var/vcap/jobs'
+    AZURESTACK_CA_FILE_RELATIVE_PATH = 'azure_cpi/config/azure_stack_ca_cert.pem'
+
     ##
     # Raises CloudError exception
     #
@@ -218,43 +221,30 @@ module Bosh::AzureCloud
       return url, api_version
     end
 
-    def initialize_azure_storage_client(storage_account, service = 'blob', use_http = false)
-      azure_client = Azure::Storage::Client.create(storage_account_name: storage_account[:name], storage_access_key: storage_account[:key], user_agent_prefix: USER_AGENT_FOR_REST)
+    def initialize_azure_storage_client(storage_account, azure_properties)
+      options = {
+        :storage_account_name => storage_account[:name],
+        :storage_access_key   => storage_account[:key],
+        :storage_dns_suffix   => URI.parse(storage_account[:storage_blob_host]).host.split(".")[2..-1].join("."),
+        :user_agent_prefix    => USER_AGENT_FOR_REST
+      }
 
-      case service
-        when 'blob'
-          if storage_account[:storage_blob_host].end_with?('/')
-            azure_client.storage_blob_host  = storage_account[:storage_blob_host].chop
-          else
-            azure_client.storage_blob_host  = storage_account[:storage_blob_host]
-          end
-
-          if use_http
-            azure_client.storage_blob_host.gsub!('https', 'http')
-            azure_client.storage_blob_host.gsub!(':443', '')
-          end
-          @logger.debug("initialize_azure_storage_client - storage_blob_host: #{azure_client.storage_blob_host}")
-        when 'table'
-          if storage_account[:storage_table_host].nil?
-            cloud_error("The storage account `#{storage_account[:name]}' does not support table")
-          end
-
-          if storage_account[:storage_table_host].end_with?('/')
-            azure_client.storage_table_host = storage_account[:storage_table_host].chop
-          else
-            azure_client.storage_table_host = storage_account[:storage_table_host]
-          end
-
-          if use_http
-            azure_client.storage_table_host.gsub!('https', 'http')
-            azure_client.storage_table_host.gsub!(':443', '')
-          end
-          @logger.debug("initialize_azure_storage_client - storage_table_host: #{azure_client.storage_table_host}")
+      if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
+        use_http = azure_properties['azure_stack']['use_http_to_access_storage_account']
+        if use_http
+          options[:default_endpoints_protocol] = 'http'
         else
-          cloud_error("No support for the storage service: `#{service}'")
+          options[:ca_file] = get_ca_file_path
+        end
       end
 
-      azure_client
+      Azure::Storage::Client.create(options)
+    end
+
+    def get_ca_file_path
+      # The environment variable BOSH_JOBS_DIR only exists when deploying BOSH director
+      bosh_jobs_dir = ENV['BOSH_JOBS_DIR'].nil? ? BOSH_JOBS_DIR : ENV['BOSH_JOBS_DIR']
+      "#{bosh_jobs_dir}/#{AZURESTACK_CA_FILE_RELATIVE_PATH}"
     end
 
     def get_api_version(azure_properties, resource_provider)
