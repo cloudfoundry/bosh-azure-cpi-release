@@ -712,6 +712,29 @@ describe Bosh::AzureCloud::AzureClient2 do
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
       end
+      
+      it "should not raise error if it raises 'Connection refused - connect(2) for \"xx.xxx.xxx.xx\" port 443' at the first time but returns 200 at the second time" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, storage_account_uri).
+            to_raise('Connection refused - connect(2) for \"xx.xxx.xxx.xx\" port 443').then.
+            to_return(
+              {
+                :status => 200,
+                :body => '',
+                :headers => {}
+              }
+            )
+
+        expect {
+          azure_client2.get_storage_account_by_name(storage_account_name)
+        }.not_to raise_error
+      end
     end
 
     context "when token is valid, getting response succeeds" do
