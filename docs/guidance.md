@@ -43,7 +43,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
 
 * CPI Settings
   * [Deploy Cloud Foundry using multiple storage accounts and availability sets](./advanced/deploy-cloudfoundry-for-enterprise/)
-  * [Separate network in a different resource group](./advanced/separate-network-in-a-different-resource-group/)
+  * [Configure resource groups](./advanced/configure-resource-groups/)
   * [Deploy multiple network interfaces for a Cloud Foundry instance](./advanced/deploy-multiple-network-interfaces/)
   * [Use managed disks in Cloud Foundry](./advanced/managed-disks/)
 * Cloud Foundry Scenarios
