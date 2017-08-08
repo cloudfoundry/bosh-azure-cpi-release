@@ -12,6 +12,9 @@ describe Bosh::AzureCloud::TableManager do
   let(:azure_client) { instance_double(Azure::Storage::Client) }
   let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
   let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
+  let(:storage_dns_suffix) { "fake-storage-dns-suffix" }
+  let(:blob_host) { "https://#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}.blob.#{storage_dns_suffix}" }
+  let(:table_host) { "https://#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}.table.#{storage_dns_suffix}" }
   let(:storage_account) {
     {
       :id => "foo",
@@ -19,8 +22,8 @@ describe Bosh::AzureCloud::TableManager do
       :location => "bar",
       :provisioning_state => "bar",
       :account_type => "foo",
-      :storage_blob_host => "fake-blob-endpoint",
-      :storage_table_host => "fake-table-endpoint"
+      :storage_blob_host => blob_host,
+      :storage_table_host => table_host
     }
   }
   let(:request_id) { 'fake-client-request-id' }
@@ -43,8 +46,6 @@ describe Bosh::AzureCloud::TableManager do
       with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
       and_return(storage_account)
 
-    allow(azure_client).to receive(:storage_table_host=)
-    allow(azure_client).to receive(:storage_table_host)
     allow(azure_client).to receive(:table_client).
       and_return(table_service)
     allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).

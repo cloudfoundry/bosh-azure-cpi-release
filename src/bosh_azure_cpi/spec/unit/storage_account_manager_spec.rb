@@ -683,9 +683,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
         let(:azure_client) { instance_double(Azure::Storage::Client) }
         let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
         let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
+        let(:storage_dns_suffix) { "fake-storage-dns-suffix" }
 
         before do
-          allow(azure_client).to receive(:storage_table_host=)
           allow(azure_client).to receive(:table_client).
             and_return(table_service)
           allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).
@@ -706,7 +706,8 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 :name => 'account1',
                 :location => resource_group_location,
                 :account_type => 'Standard_LRS',
-                :storage_table_host => 'fake-host'
+                :storage_blob_host => "https://account1.blob.#{storage_dns_suffix}",
+                :storage_table_host => "https://account1.table.#{storage_dns_suffix}"
               }
             }
             let(:storage_accounts) {
@@ -727,16 +728,17 @@ describe Bosh::AzureCloud::StorageAccountManager do
               allow(client2).to receive(:get_storage_account_keys_by_name).
                 with(targeted_storage_account[:name]).
                 and_return(keys)
-              allow(Azure::Storage::Client).to receive(:create).
-                with({
-                  :storage_account_name => targeted_storage_account[:name],
-                  :storage_access_key => keys[0],
-                  :user_agent_prefix=>"BOSH-AZURE-CPI"
-                }).and_return(azure_client)
             end
 
             it 'should return the storage account' do
               azure_properties.delete('storage_account_name')
+              expect(Azure::Storage::Client).to receive(:create).
+                with({
+                  :storage_account_name => targeted_storage_account[:name],
+                  :storage_access_key   => keys[0],
+                  :storage_dns_suffix   => storage_dns_suffix,
+                  :user_agent_prefix    => "BOSH-AZURE-CPI"
+                }).and_return(azure_client)
               expect(client2).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
               expect(client2).to receive(:update_tags_of_storage_account).with(targeted_storage_account[:name], tags)
 
@@ -750,7 +752,8 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 :name => 'account1',
                 :location => 'another-resource-group-location',
                 :account_type => 'Standard_LRS',
-                :storage_table_host => 'fake-host'
+                :storage_blob_host => "https://account1.blob.#{storage_dns_suffix}",
+                :storage_table_host => "https://account1.table.#{storage_dns_suffix}"
               }
             }
             let(:storage_accounts) {
@@ -771,16 +774,17 @@ describe Bosh::AzureCloud::StorageAccountManager do
               allow(client2).to receive(:get_storage_account_keys_by_name).
                 with(targeted_storage_account[:name]).
                 and_return(keys)
-              allow(Azure::Storage::Client).to receive(:create).
-                with({
-                  :storage_account_name => targeted_storage_account[:name],
-                  :storage_access_key => keys[0],
-                  :user_agent_prefix=>"BOSH-AZURE-CPI"
-                }).and_return(azure_client)
             end
 
             it 'should raise an error' do
               azure_properties.delete('storage_account_name')
+              expect(Azure::Storage::Client).to receive(:create).
+                with({
+                  :storage_account_name => targeted_storage_account[:name],
+                  :storage_access_key   => keys[0],
+                  :storage_dns_suffix   => storage_dns_suffix,
+                  :user_agent_prefix    => "BOSH-AZURE-CPI"
+                }).and_return(azure_client)
 
               expect {
                 storage_account_manager.default_storage_account
@@ -795,7 +799,8 @@ describe Bosh::AzureCloud::StorageAccountManager do
               :name => 'account1',
               :location => resource_group_location,
               :account_type => 'Premium_LRS',
-              :storage_table_host => 'fake-host'
+              :storage_blob_host => "https://account1.blob.#{storage_dns_suffix}",
+              :storage_table_host => "https://account1.table.#{storage_dns_suffix}"
             }
           }
           let(:storage_accounts) {
@@ -844,7 +849,8 @@ describe Bosh::AzureCloud::StorageAccountManager do
               :name => 'account1',
               :location => resource_group_location,
               :account_type => 'Standard_LRS',
-              :storage_table_host => 'fake-host'
+              :storage_blob_host => "https://account1.blob.#{storage_dns_suffix}",
+              :storage_table_host => "https://account1.table.#{storage_dns_suffix}"
             }
           }
           let(:storage_accounts) {
@@ -865,12 +871,6 @@ describe Bosh::AzureCloud::StorageAccountManager do
             allow(client2).to receive(:get_storage_account_keys_by_name).
               with(targeted_storage_account[:name]).
               and_return(keys)
-            allow(Azure::Storage::Client).to receive(:create).
-              with({
-                :storage_account_name => targeted_storage_account[:name],
-                :storage_access_key => keys[0],
-                :user_agent_prefix=>"BOSH-AZURE-CPI"
-              }).and_return(azure_client)
             allow(table_service).to receive(:get_table).
               and_raise("(404)") # The table stemcells is not found in the storage account
           end
@@ -891,6 +891,13 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
           it 'should create a new storage account' do
             azure_properties.delete('storage_account_name')
+            expect(Azure::Storage::Client).to receive(:create).
+              with({
+                :storage_account_name => targeted_storage_account[:name],
+                :storage_access_key   => keys[0],
+                :storage_dns_suffix   => storage_dns_suffix,
+                :user_agent_prefix    => "BOSH-AZURE-CPI"
+              }).and_return(azure_client)
             expect(client2).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
             expect(client2).to receive(:create_storage_account)
             expect(client2).to receive(:get_storage_account_by_name).with(new_storage_account_name)
