@@ -99,12 +99,29 @@ describe Bosh::AzureCloud::Helpers do
   end
 
   describe "#ignore_exception" do
-    it "should return ignore the exception" do
-      expect{
-        helpers_tester.ignore_exception do
-          raise StandardError
-        end
-      }.not_to raise_error
+    context "when no exception type is specified" do
+      it "should ignore any exception" do
+        expect{
+          helpers_tester.ignore_exception do
+            raise Exception
+          end
+        }.not_to raise_error
+      end
+    end
+
+    context "when the exception type is specified" do
+      it "should ignore the specified exception and raise other exception" do
+        expect{
+          helpers_tester.ignore_exception(Errno::EEXIST) do
+            raise Errno::EEXIST
+          end
+        }.not_to raise_error
+        expect{
+          helpers_tester.ignore_exception(Errno::EEXIST) do
+            raise Errno::ENOENT
+          end
+        }.to raise_error(Errno::ENOENT)
+      end
     end
   end
 
@@ -773,11 +790,12 @@ describe Bosh::AzureCloud::Helpers do
 
   describe "#FileMutex" do
     let(:logger) { Logger.new('/dev/null') }
-    let(:lock_dir) { '/tmp' }
-    let(:file_path) { "#{lock_dir}/fake-file-name" }
+    let(:lock_dir) { '/tmp/azure_cpi' }
+    let(:lock_name) { "fake-lock-name" }
+    let(:file_path) { "#{lock_dir}/#{lock_name}" }
     let(:expired) { 5 }
     let(:mtime) { 100 } # The value doesn't matter
-    let(:mutex) { Bosh::AzureCloud::Helpers::FileMutex.new(file_path, logger, expired) }
+    let(:mutex) { Bosh::AzureCloud::Helpers::FileMutex.new(lock_name, logger, expired) }
 
     context "#lock" do
       context "when the lock file does not exist" do
@@ -840,7 +858,7 @@ describe Bosh::AzureCloud::Helpers do
             expect(IO).not_to receive(:sysopen)
             expect {
               mutex.lock
-            }.to raise_error("timeout")
+            }.to raise_error(Bosh::AzureCloud::Helpers::LockTimeoutError)
             expect(mutex.instance_variable_get(:@is_locked)).to be(false)
           end
         end
@@ -883,7 +901,7 @@ describe Bosh::AzureCloud::Helpers do
         it "should return true" do
           expect {
             mutex.wait
-          }.to raise_error("timeout")
+          }.to raise_error(Bosh::AzureCloud::Helpers::LockTimeoutError)
         end
       end
     end
@@ -899,7 +917,19 @@ describe Bosh::AzureCloud::Helpers do
         end
       end
 
-      context "when it fails to delete the lock file" do
+      context "when the lock file is not found" do
+        before do
+          allow(File).to receive(:delete).and_raise(Errno::ENOENT)
+        end
+
+        it "should raise an error" do
+          expect {
+            mutex.unlock
+          }.to raise_error(Bosh::AzureCloud::Helpers::LockNotFoundError)
+        end
+      end
+
+      context "when it fails to delete the lock file due to other errors" do
         before do
           allow(File).to receive(:delete).and_raise(StandardError)
         end
@@ -907,7 +937,7 @@ describe Bosh::AzureCloud::Helpers do
         it "should raise an error" do
           expect {
             mutex.unlock
-          }.to raise_error("lock_not_found")
+          }.to raise_error(StandardError)
         end
       end
     end
@@ -921,7 +951,7 @@ describe Bosh::AzureCloud::Helpers do
         it "should raise an error" do
           expect {
             mutex.update
-          }.to raise_error /The lock is not owned by the process/
+          }.to raise_error(Bosh::AzureCloud::Helpers::LockNotOwnedError)
         end
       end
 
@@ -932,13 +962,26 @@ describe Bosh::AzureCloud::Helpers do
 
         context "when the lock file is updated successfully" do
           it "should not raise an error" do
+            expect(File).to receive(:open).with(file_path, 'wb')
             expect {
               mutex.update
             }.not_to raise_error
           end
         end
 
-        context "when the lock file is not updated" do
+        context "when the lock file is not found" do
+          before do
+            allow(File).to receive(:open).and_raise(Errno::ENOENT)
+          end
+
+          it "should raise an error" do
+            expect {
+              mutex.update
+            }.to raise_error(Bosh::AzureCloud::Helpers::LockNotFoundError)
+          end
+        end
+
+        context "when it fails to update the lock file due to other errors" do
           before do
             allow(File).to receive(:open).and_raise(StandardError)
           end
@@ -946,7 +989,7 @@ describe Bosh::AzureCloud::Helpers do
           it "should raise an error" do
             expect {
               mutex.update
-            }.to raise_error("lock_not_found")
+            }.to raise_error(StandardError)
           end
         end
       end
@@ -1072,6 +1115,204 @@ describe Bosh::AzureCloud::Helpers do
       it "should not raise an error" do
         expect {
           helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
+        }.not_to raise_error
+      end
+    end
+  end
+
+  describe "#ReadersWriterLock" do
+    let(:lock_name)            { "fake-readers-writer-lock-name" }
+    let(:logger)               { Logger.new('/dev/null') }
+    let(:expired)              { 5 }
+    let(:rwlock)               { Bosh::AzureCloud::Helpers::ReadersWriterLock.new(lock_name, logger, expired) }
+    let(:readers_lock_name)    { "#{lock_name}-readers" }
+    let(:writer_lock_name)     { "#{lock_name}-writer" }
+    let(:readers_mutex)        { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
+    let(:writer_mutex)         { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
+    let(:counter_file)         { "/tmp/azure_cpi/#{lock_name}-counter" }
+    let(:counter_file_handler) { instance_double(File) }
+
+    before do
+      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).
+        with(readers_lock_name, logger, expired).and_return(readers_mutex)
+      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).
+        with(writer_lock_name, logger, expired).and_return(writer_mutex)
+      allow(File).to receive(:open).and_yield(counter_file_handler)
+    end
+
+    context "#acquire_read_lock" do
+      context "when the readers mutex is locked at the first time" do
+        before do
+          allow(readers_mutex).to receive(:lock).and_return(true)
+        end
+
+        context "when the counter file doesn't exist" do
+          before do
+            allow(File).to receive(:exists?).with(counter_file).and_return(false)
+          end
+
+          it "should update the counter to 1, and lock the writer mutex" do
+            expect(readers_mutex).not_to receive(:wait)
+            expect(counter_file_handler).to receive(:write).with("1")
+            expect(writer_mutex).to receive(:lock).and_return(true)
+            expect(readers_mutex).to receive(:unlock)
+
+            expect {
+              rwlock.acquire_read_lock
+            }.not_to raise_error
+          end
+        end
+
+        context "when the counter file exists" do
+          let(:counter) { 1 }
+          before do
+            allow(File).to receive(:exists?).with(counter_file).and_return(true)
+            allow(counter_file_handler).to receive(:read).and_return("#{counter}")
+          end
+
+          it "should increase the counter, and should not lock the writer mutex" do
+            expect(readers_mutex).not_to receive(:wait)
+            expect(counter_file_handler).to receive(:write).with("#{counter+1}")
+            expect(writer_mutex).not_to receive(:lock)
+            expect(readers_mutex).to receive(:unlock)
+
+            expect {
+              rwlock.acquire_read_lock
+            }.not_to raise_error
+          end
+        end
+      end
+
+      context "when the readers mutex is locked at the second time" do
+        before do
+          allow(readers_mutex).to receive(:lock).and_return(false, true)
+          allow(File).to receive(:exists?).with(counter_file).and_return(false)
+        end
+
+        it "should update the counter to 1, and lock the writer mutex" do
+          expect(readers_mutex).to receive(:wait).and_return(true)
+          expect(counter_file_handler).to receive(:write).with("1")
+          expect(writer_mutex).to receive(:lock).and_return(true)
+          expect(readers_mutex).to receive(:unlock)
+
+          expect {
+            rwlock.acquire_read_lock
+          }.not_to raise_error
+        end
+      end
+
+      context "when the readers mutex can't be locked" do
+        before do
+          allow(readers_mutex).to receive(:lock).and_return(false)
+          allow(readers_mutex).to receive(:wait).and_raise(Bosh::AzureCloud::Helpers::LockTimeoutError)
+        end
+
+        it "should raise a timeout" do
+          expect {
+            rwlock.acquire_read_lock
+          }.to raise_error(Bosh::AzureCloud::Helpers::LockTimeoutError)
+        end
+      end
+    end
+
+    context "#release_read_lock" do
+      context "when the readers mutex is locked at the first time" do
+        before do
+          allow(readers_mutex).to receive(:lock).and_return(true)
+          allow(File).to receive(:exists?).with(counter_file).and_return(true)
+        end
+
+        context "when the counter is greater than 1" do
+          let(:counter) { 3 }
+          before do
+            allow(counter_file_handler).to receive(:read).and_return("#{counter}")
+          end
+
+          it "should decrease the counter, and should not unlock the writer mutex" do
+            expect(readers_mutex).not_to receive(:wait)
+            expect(counter_file_handler).to receive(:write).with("#{counter-1}")
+            expect(File).not_to receive(:delete)
+            expect(writer_mutex).not_to receive(:unlock)
+            expect(readers_mutex).to receive(:unlock)
+
+            expect {
+              rwlock.release_read_lock
+            }.not_to raise_error
+          end
+        end
+
+        context "when the counter is 1" do
+          before do
+            allow(counter_file_handler).to receive(:read).and_return("1")
+          end
+
+          it "should decrease the counter to 0, and should unlock the writer mutex" do
+            expect(readers_mutex).not_to receive(:wait)
+            expect(counter_file_handler).to receive(:write).with("0")
+            expect(File).to receive(:delete)
+            expect(writer_mutex).to receive(:unlock)
+            expect(readers_mutex).to receive(:unlock)
+
+            expect {
+              rwlock.release_read_lock
+            }.not_to raise_error
+          end
+        end
+      end
+
+      context "when the readers mutex is locked at the second time" do
+        let(:counter) { 3 }
+        before do
+          allow(readers_mutex).to receive(:lock).and_return(false, true)
+          allow(File).to receive(:exists?).with(counter_file).and_return(true)
+          allow(counter_file_handler).to receive(:read).and_return("#{counter}")
+        end
+
+        it "should decrease the counter, and should not unlock the writer mutex" do
+          expect(readers_mutex).to receive(:wait).and_return(true)
+          expect(counter_file_handler).to receive(:write).with("#{counter-1}")
+          expect(File).not_to receive(:delete)
+          expect(writer_mutex).not_to receive(:unlock)
+          expect(readers_mutex).to receive(:unlock)
+
+          expect {
+            rwlock.release_read_lock
+          }.not_to raise_error
+        end
+      end
+
+      context "when the readers mutex can't be locked" do
+        before do
+          allow(readers_mutex).to receive(:lock).and_return(false)
+          allow(readers_mutex).to receive(:wait).and_raise(Bosh::AzureCloud::Helpers::LockTimeoutError)
+        end
+
+        it "should raise a timeout" do
+          expect {
+            rwlock.release_read_lock
+          }.to raise_error(Bosh::AzureCloud::Helpers::LockTimeoutError)
+        end
+      end
+    end
+
+    context "#acquire_write_lock" do
+      before do
+        allow(writer_mutex).to receive(:lock).and_return(true)
+      end
+
+      it "should acquire the writer lock" do
+        expect(rwlock.acquire_write_lock).to be(true)
+      end
+    end
+
+    context "#release_write_lock" do
+      before do
+        allow(writer_mutex).to receive(:unlock)
+      end
+
+      it "should release the writer lock" do
+        expect {
+          rwlock.release_write_lock
         }.not_to raise_error
       end
     end

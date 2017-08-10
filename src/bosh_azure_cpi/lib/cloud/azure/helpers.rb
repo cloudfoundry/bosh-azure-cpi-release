@@ -120,13 +120,18 @@ module Bosh::AzureCloud
     MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS = 128
 
     # Lock
-    BOSH_LOCK_EXCEPTION_TIMEOUT        = 'timeout'
-    BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND = 'lock_not_found'
-    BOSH_LOCK_DIR                      = '/tmp'
-    BOSH_LOCK_CREATE_STORAGE_ACCOUNT   = "#{BOSH_LOCK_DIR}/bosh-lock-create-storage-account"
-    BOSH_LOCK_COPY_STEMCELL            = "#{BOSH_LOCK_DIR}/bosh-lock-copy-stemcell"
-    BOSH_LOCK_COPY_STEMCELL_TIMEOUT    = 180 # seconds
-    BOSH_LOCK_CREATE_USER_IMAGE        = "#{BOSH_LOCK_DIR}/bosh-lock-create-user-image"
+    CPI_LOCK_DIR                      = "/tmp/azure_cpi"
+    CPI_LOCK_PREFIX                   = "bosh-lock"
+    CPI_LOCK_CREATE_STORAGE_ACCOUNT   = "#{CPI_LOCK_PREFIX}-create-storage-account"
+    CPI_LOCK_COPY_STEMCELL            = "#{CPI_LOCK_PREFIX}-copy-stemcell"
+    CPI_LOCK_COPY_STEMCELL_TIMEOUT    = 180 # seconds
+    CPI_LOCK_CREATE_USER_IMAGE        = "#{CPI_LOCK_PREFIX}-create-user-image"
+    CPI_LOCK_PREFIX_AVAILABILITY_SET  = "#{CPI_LOCK_PREFIX}-availability-set"
+    CPI_LOCK_DELETE                   = "#{CPI_LOCK_DIR}/DELETING-LOCKS"
+    class LockError < Bosh::Clouds::CloudError; end
+    class LockTimeoutError < LockError; end
+    class LockNotFoundError < LockError; end
+    class LockNotOwnedError < LockError; end
 
     # REST Connection Errors
     ERROR_OPENSSL_RESET           = 'SSL_connect'
@@ -174,10 +179,10 @@ module Bosh::AzureCloud
       end
     end
 
-    def ignore_exception
+    def ignore_exception(error = Exception)
       begin
         yield
-      rescue
+      rescue error
       end
     end
 
@@ -505,13 +510,12 @@ module Bosh::AzureCloud
     # Example codes:
     #
     # expired = 60 # seconds
-    # mutex = FileMutex.new('/tmp/bosh-lock-example', logger, expired)
+    # mutex = FileMutex.new('bosh-lock-example', logger, expired)
     #
     # begin
     #   if mutex.lock
-    #     # When any exception occurs in do_something(),
-    #     #   other processes will timeout, if the mutex is not unlocked;
-    #     #   other processes will end mutex.wait and continue to use the shared resource, if the mutex is unlocked.
+    #     # When any exception occurs in do_something(), the mutex won't be unlocked, and other processes will timeout. This is by design.
+    #     # Please note, the mutex should NOT be unlocked, because other processes will end mutex.wait and continue to use the shared resource if unlocked.
     #     # If your work is a long-running task,
     #     #   you need to call mutex.update() in do_something() to update the lock before it timeouts (60s in the example).
     #     do_something() 
@@ -520,17 +524,15 @@ module Bosh::AzureCloud
     #     mutex.wait
     #   end
     # rescue => e
-    #   if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
-    #     raise 'what action fails because of timeout'
-    #   end
-    #   raise e
+    #   mark_deleting_locks
+    #   raise 'what action fails because of the lock error'
     # end
     #
     class FileMutex
       attr_reader :expired
 
-      def initialize(file_path, logger, expired = 60)
-        @file_path = file_path
+      def initialize(lock_name, logger, expired = 60)
+        @file_path = "#{CPI_LOCK_DIR}/#{lock_name}"
         @logger = logger
         @expired = expired
         @is_locked = false
@@ -558,7 +560,7 @@ module Bosh::AzureCloud
 
         if Time.new() - mtime > @expired
           @logger.debug("The lock `#{@file_path}' exists, but timeouts.")
-          raise BOSH_LOCK_EXCEPTION_TIMEOUT
+          raise LockTimeoutError
         end
 
         @logger.debug("The lock `#{@file_path}' exists")
@@ -573,7 +575,7 @@ module Bosh::AzureCloud
             @logger.debug("The lock `#{@file_path}' does not exist")
             return true
           end
-          raise BOSH_LOCK_EXCEPTION_TIMEOUT if Time.new() - mtime > @expired
+          raise LockTimeoutError if Time.new() - mtime > @expired
           sleep(1) # second
         end
       end
@@ -582,21 +584,147 @@ module Bosh::AzureCloud
         File.delete(@file_path)
         @logger.debug("The lock `#{@file_path}' is deleted by the process `#{Process.pid}'")
         @is_locked = false
-      rescue => e
-        raise BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND
+      rescue Errno::ENOENT => e
+        raise LockNotFoundError
       end
 
       def update()
-        raise "The lock is not owned by the process `#{Process.pid}'" unless @is_locked
+        raise LockNotOwnedError unless @is_locked
         begin
           File.open(@file_path, 'wb') { |f|
             f.write("#{Process.pid}")
           }
           @logger.debug("The lock `#{@file_path}' is updated by the process `#{Process.pid}'")
-        rescue => e
-          raise BOSH_LOCK_EXCEPTION_LOCK_NOT_FOUND
+        rescue Errno::ENOENT => e
+          raise LockNotFoundError
         end
       end
+    end
+
+    # Readers-Writer Lock
+    #
+    # Example codes:
+    #
+    # expired = 300 # seconds
+    # lock = ReadersWriterLock.new("availability-set-${availability_set_name}", logger, expired)
+    #
+    # Readers operations:
+    # lock.acquire_read_lock
+    # begin
+    #   data.retrieve
+    # ensure
+    #   lock.release_read_lock
+    # end
+    #
+    # Writer operations:
+    # if lock.acquire_write_lock
+    #   begin
+    #     data.modify!
+    #   ensure
+    #     lock.release_write_lock
+    #   end
+    # end
+    #
+    # The ReadersWriterLock is based on the design using two mutexes.
+    # @See https://en.wikipedia.org/wiki/Readers%E2%80%93writer_lock#Using_two_mutexes
+    #
+    class ReadersWriterLock
+      def initialize(lock_name, logger, expired = 300)
+        @counter_file_path = "#{CPI_LOCK_DIR}/#{lock_name}-counter"
+        @readers_mutex = FileMutex.new("#{lock_name}-readers", logger, expired)
+        @writer_mutex = FileMutex.new("#{lock_name}-writer", logger, expired)
+        @logger = logger
+      end
+
+      def acquire_read_lock
+        is_locked = false
+        loop do
+          is_locked = @readers_mutex.lock
+          break if is_locked
+          @readers_mutex.wait
+        end
+
+        is_counter_increased = false
+        counter = update_counter { |counter|
+          @logger.debug("The counter `#{@counter_file_path}' is updated from `#{counter}' to `#{counter + 1}'")
+          counter = counter + 1
+        }
+        is_counter_increased = true
+
+        if counter == 1
+          loop do
+            break if @writer_mutex.lock
+            @writer_mutex.wait
+          end
+        end
+      rescue => e
+        if is_counter_increased
+          counter = update_counter { |counter|
+            @logger.debug("The counter `#{@counter_file_path}' is updated from `#{counter}' to `#{counter - 1}'")
+            counter = counter - 1
+          }
+        end
+        raise e
+      ensure
+        @readers_mutex.unlock if is_locked
+      end
+
+      def release_read_lock
+        is_locked = false
+        loop do
+          is_locked = @readers_mutex.lock
+          break if is_locked
+          @readers_mutex.wait
+        end
+
+        counter = update_counter { |counter|
+          @logger.debug("The counter is `#{@counter_file_path}' updated from `#{counter}' to `#{counter - 1}'")
+          counter = counter - 1
+        }
+
+        if counter == 0
+          File.delete(@counter_file_path)
+          @writer_mutex.unlock
+        end
+      ensure
+        @readers_mutex.unlock if is_locked
+      end
+
+      def acquire_write_lock
+        @writer_mutex.lock
+      end
+
+      def release_write_lock
+        @writer_mutex.unlock
+      end
+
+      private
+
+      def update_counter
+        counter = 0
+        if File.exists?(@counter_file_path)
+          File.open(@counter_file_path, 'rb') { |f|
+            counter = f.read().to_i
+          }
+        end
+        File.open(@counter_file_path, 'wb') { |f|
+          counter = yield counter
+          f.write("#{counter}")
+        }
+        counter
+      end
+    end
+
+    def mark_deleting_locks
+      File.open(CPI_LOCK_DELETE, 'wb') { |f| f.write("Some errors happen. Will delete the locks when CPI starts next time.") }
+    end
+
+    def needs_deleting_locks?
+      File.exists?(CPI_LOCK_DELETE)
+    end
+
+    def remove_deleting_mark
+      File.delete(CPI_LOCK_DELETE)
     end
 
     def get_storage_account_type_by_instance_type(instance_type)

@@ -70,7 +70,7 @@ module Bosh::AzureCloud
       if location == default_storage_account[:location]
         storage_account_name = default_storage_account_name
       else
-        mutex = FileMutex.new("#{BOSH_LOCK_CREATE_STORAGE_ACCOUNT}-#{location}", @logger)
+        mutex = FileMutex.new("#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{location}", @logger)
         begin
           if mutex.lock
             storage_account = @azure_client2.list_storage_accounts().find{ |s|
@@ -90,13 +90,11 @@ module Bosh::AzureCloud
           }
           storage_account_name = storage_account[:name]
         rescue => e
-          if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
-            cloud_error("get_user_image: Failed to finish the creation of the storage account `#{storage_account_name}', `#{storage_account_type}' in location `#{location}' in #{mutex.expired} seconds.")
-          end
-          raise e
+          mark_deleting_locks
+          cloud_error("get_user_image: Failed to finish the creation of the storage account `#{storage_account_name}', `#{storage_account_type}' in location `#{location}': #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
 
-        mutex = FileMutex.new("#{BOSH_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", @logger, BOSH_LOCK_COPY_STEMCELL_TIMEOUT)
+        mutex = FileMutex.new("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", @logger, CPI_LOCK_COPY_STEMCELL_TIMEOUT)
         begin
           if mutex.lock
             unless has_stemcell?(storage_account_name, stemcell_name)
@@ -111,10 +109,8 @@ module Bosh::AzureCloud
             mutex.wait
           end
         rescue => e
-          if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
-            cloud_error("get_user_image: Failed to finish the copying process of the stemcell `#{stemcell_name}' from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}' in `#{mutex.expired}' seconds.")
-          end
-          raise e
+          mark_deleting_locks
+          cloud_error("get_user_image: Failed to finish the copying process of the stemcell `#{stemcell_name}' from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
 
@@ -128,7 +124,7 @@ module Bosh::AzureCloud
         :account_type        => storage_account_type
       }
       begin
-        mutex = FileMutex.new("#{BOSH_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", @logger)
+        mutex = FileMutex.new("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", @logger)
         if mutex.lock
           @azure_client2.create_user_image(user_image_params)
           mutex.unlock
@@ -136,10 +132,8 @@ module Bosh::AzureCloud
           mutex.wait
         end
       rescue => e
-        if e.message == BOSH_LOCK_EXCEPTION_TIMEOUT
-          cloud_error("get_user_image: Failed to create the user image `#{user_image_name}' in #{mutex.expired} seconds.")
-        end
-        raise e
+        mark_deleting_locks
+        cloud_error("get_user_image: Failed to create the user image `#{user_image_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
 
       user_image = @azure_client2.get_user_image_by_name(user_image_name)

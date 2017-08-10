@@ -23,9 +23,6 @@ module Bosh::AzureCloud
 
       check_resource_group(resource_group_name, location)
 
-      network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator)
-      availability_set = create_availability_set(resource_group_name, location, resource_pool, env)
-
       @disk_manager.resource_pool = resource_pool
       @disk_manager2.resource_pool = resource_pool
 
@@ -97,7 +94,19 @@ module Bosh::AzureCloud
         end
       end
 
-      create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
+      availability_set_name = get_availability_set_name(resource_pool, env)
+      # Store the availability set name in the tags of the NIC
+      primary_nic_tags = availability_set_name.nil? ? AZURE_TAGS : AZURE_TAGS.merge({'availability_set' => availability_set_name})
+      network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator, primary_nic_tags)
+      availability_set_params = {
+        :name                         => availability_set_name,
+        :location                     => location,
+        :tags                         => AZURE_TAGS,
+        :platform_update_domain_count => resource_pool['platform_update_domain_count'] || 5,
+        :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || (@use_managed_disks ? 2 : 3),
+        :managed                      => @use_managed_disks
+      }
+      create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set_params)
 
       vm_params
     rescue => e
@@ -130,14 +139,18 @@ module Bosh::AzureCloud
         end
       else
         begin
+          # Delete NICs
           if network_interfaces
             network_interfaces.each do |network_interface|
               @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
             end
           else
+            # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
+            # CPI need to cleanup these NICs.
             delete_possible_network_interfaces(resource_group_name, vm_name)
           end
 
+          # Delete the dynamic public IP
           dynamic_public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
           @azure_client2.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
         rescue => error
@@ -163,18 +176,37 @@ module Bosh::AzureCloud
       resource_group_name = instance_id.resource_group_name()
       vm_name = instance_id.vm_name()
       vm = @azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
-      unless vm.nil?
+
+      if vm
+        # Delete the VM
         @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+      
+        # Delete the empty availability set
+        delete_empty_availability_set(resource_group_name, vm[:availability_set][:name]) if vm[:availability_set]
+
+        # Delete NICs
         vm[:network_interfaces].each do |network_interface|
           @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
         end
       else
+        # If the VM is deleted but the availability sets are not deleted due to some reason, BOSH will retry and vm will be nil.
+        # CPI need to get the availability set name from NIC's tags, and delete it.
+        network_interface = @azure_client2.list_network_interfaces_by_keyword(resource_group_name, vm_name)[0]
+        unless network_interface.nil?
+          availability_set_name = network_interface[:tags]['availability_set']
+          delete_empty_availability_set(resource_group_name, availability_set_name) unless availability_set_name.nil?
+        end
+
+        # If the VM is deleted but the NICs are not deleted due to some reason, BOSH will retry and vm will be nil.
+        # CPI need to delete the possible NICs.
         delete_possible_network_interfaces(resource_group_name, vm_name)
       end
 
+      # Delete the dynamic public IP
       dynamic_public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
       @azure_client2.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
 
+      # Delete OS & ephemeral disks
       if instance_id.use_managed_disks?()
         os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
         @disk_manager2.delete_disk(resource_group_name, os_disk_name)
@@ -320,7 +352,7 @@ module Bosh::AzureCloud
       load_balancer
     end
 
-    def create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator)
+    def create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator, primary_nic_tags = AZURE_TAGS)
       network_interfaces = []
       load_balancer = get_load_balancer(resource_pool)
       public_ip = get_public_ip(network_configurator.vip_network)
@@ -343,9 +375,9 @@ module Bosh::AzureCloud
           :security_group      => security_group,
           :ipconfig_name       => "ipconfig#{index}"
         }
-
         subnet = get_network_subnet(network)
-        @azure_client2.create_network_interface(resource_group_name, nic_params, subnet, AZURE_TAGS, load_balancer)
+        tags = index == 0 ? primary_nic_tags : AZURE_TAGS
+        @azure_client2.create_network_interface(resource_group_name, nic_params, subnet, tags, load_balancer)
         network_interfaces.push(@azure_client2.get_network_interface_by_name(resource_group_name, nic_name))
       end
       network_interfaces
@@ -358,9 +390,7 @@ module Bosh::AzureCloud
       end
     end
 
-    def create_availability_set(resource_group_name, location, resource_pool, env)
-      availability_set = nil
-
+    def get_availability_set_name(resource_pool, env)
       availability_set_name = resource_pool.fetch('availability_set', nil)
       if availability_set_name.nil?
         unless env.nil? || env['bosh'].nil? || env['bosh']['group'].nil?
@@ -378,68 +408,105 @@ module Bosh::AzureCloud
         end
       end
 
-      unless availability_set_name.nil?
-        availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
-        if availability_set.nil?
-          # In some regions, the max fault domain count of a managed availability set is 2
-          avset_params = {
-            :name                         => availability_set_name,
-            :location                     => location,
-            :tags                         => AZURE_TAGS,
-            :platform_update_domain_count => resource_pool['platform_update_domain_count'] || 5,
-            :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || (@use_managed_disks ? 2 : 3),
-            :managed                      => @use_managed_disks
-          }
-          begin
-            @logger.debug("create_availability_set - Creating an availability set `#{avset_params[:name]}'")
-            @azure_client2.create_availability_set(resource_group_name, avset_params)
-            availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, avset_params[:name])
-          rescue AzureConflictError => e
-            @logger.debug("create_availability_set - Another process is creating the same availability set `#{avset_params[:name]}'")
-            loop do
-              # TODO: has to sleep to avoid throttling
-              availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, avset_params[:name])
-              break unless availability_set.nil?
-            end
-          end
+      availability_set_name
+    end
+
+    def create_availability_set(resource_group_name, availability_set_params)
+      availability_set_name = availability_set_params[:name]
+      availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
+
+      if availability_set.nil?
+        @logger.info("create_availability_set - the availability set `#{availability_set_name}' doesn't exist. Will create a new one.")
+      else
+        # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
+        if availability_set[:location].downcase != availability_set_params[:location].downcase
+          cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists, but in a different location `#{availability_set[:location].downcase}' instead of `#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
         else
-          # Update the availability set to a managed one
-          if @use_managed_disks && !availability_set[:managed]
-            avset_params = {
-              :name                         => availability_set[:name],
-              :location                     => availability_set[:location],
-              :tags                         => AZURE_TAGS,
+          if !@use_managed_disks && availability_set[:managed]
+            cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
+          elsif @use_managed_disks && !availability_set[:managed]
+            @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
+            availability_set_params.merge!({
               :platform_update_domain_count => availability_set[:platform_update_domain_count],
               :platform_fault_domain_count  => availability_set[:platform_fault_domain_count],
               :managed                      => true
-            }
-            begin
-              @logger.debug("create_availability_set - Updating the availability set `#{avset_params[:name]}' to a managed one")
-              @azure_client2.create_availability_set(resource_group_name, avset_params)
-              availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, avset_params[:name])
-            rescue AzureConflictError => e
-              @logger.debug("create_availability_set - Another process is updating the same availability set `#{avset_params[:name]}'")
-              loop do
-                # TODO: has to sleep to avoid throttling
-                availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, avset_params[:name])
-                break unless availability_set[:managed] == @use_managed_disks
-              end
-            end
+            })
+          else
+            @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists. No need to update.")
+            return availability_set
           end
         end
       end
-      availability_set
+
+      mutex = FileMutex.new("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-create-#{availability_set_name}", @logger)
+      begin
+        if mutex.lock
+          @azure_client2.create_availability_set(resource_group_name, availability_set_params)
+          mutex.unlock
+        else
+          mutex.wait
+        end
+      rescue => e
+        mark_deleting_locks
+        cloud_error("Failed to create the availability set `#{availability_set_name}' in the resource group `#{resource_group_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
+      end
+
+      @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
     end
 
-    def create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
+    def delete_empty_availability_set(resource_group_name, name)
+      availability_set_rw_lock = ReadersWriterLock.new("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{name}", @logger)
+      if availability_set_rw_lock.acquire_write_lock
+        begin
+          availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, name)
+          @azure_client2.delete_availability_set(resource_group_name, name) if availability_set && availability_set[:virtual_machines].empty?
+          # CPI will release the write lock only when the availability set is deleted successfully.
+          # If any error is raised above, the lock should NOT be released so that other tasks can't acquire the read lock.
+          availability_set_rw_lock.release_write_lock
+        rescue => e
+          mark_deleting_locks
+          cloud_error("Failed to delete of the availability set `#{name}' in the resource group `#{resource_group_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
+        end
+      end
+    end
+
+    def create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set_params)
       resource_group_name = instance_id.resource_group_name()
       vm_name = instance_id.vm_name()
       provisioning_fail_retries = 2
       retry_count = 0
       begin
         @keep_failed_vm = false
-        @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
+        is_vm_created = false
+        availability_set = nil
+        availability_set_name = availability_set_params[:name]
+        if !availability_set_name.nil?
+          # The RW lock allows concurrent access for creating VMs in the availability set, while deleting the availability set requires exclusive access.
+          # This means that multiple tasks can create VMs in the availability set in parallel but an exclusive lock is needed for deleting the availability set.
+          # When a task is deleting the availability set, all other tasks will be blocked until the task is finished deleting.
+          # If a task acquires the readers lock, it can:
+          #   1. create/update the availability set if needed. When multiple tasks acquire the readers lock, an additional file mutex is needed to make sure
+          #      that only one task is creating/updating the availability set.
+          #   2. create the VM in the availability set. Before releasing the lock, CPI needs to make sure the VM is added into the availability set.
+          # If a task acquires the writer lock, it can delete the availability set if no VMs are in it.
+          availability_set_rw_lock = ReadersWriterLock.new("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", @logger)
+          availability_set_rw_lock.acquire_read_lock
+          begin
+            availability_set = create_availability_set(resource_group_name, availability_set_params)
+            @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
+            is_vm_created = true
+          ensure
+            availability_set_rw_lock.release_read_lock
+          end
+        else
+          @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
+        end
       rescue => e
+        if e.is_a?(LockError)
+          mark_deleting_locks
+          cloud_error("create_virtual_machine - Lock error: #{e.inspect}\n#{e.backtrace.join("\n")}") unless is_vm_created
+        end
+
         retry_create = false
         if e.instance_of?(AzureAsynchronousError) && e.status == PROVISIONING_STATE_FAILED
           if (retry_count += 1) <= provisioning_fail_retries
@@ -455,6 +522,10 @@ module Bosh::AzureCloud
           begin
             @logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{vm_name} from resource group #{resource_group_name}")
             @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+
+            # Delete the empty availability set
+            delete_empty_availability_set(resource_group_name, availability_set[:name]) if availability_set
+
             if @use_managed_disks
               os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
               @disk_manager2.delete_disk(resource_group_name, os_disk_name)

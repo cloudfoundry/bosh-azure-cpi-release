@@ -270,32 +270,38 @@ describe Bosh::AzureCloud::Cloud do
     }
 
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(2) do |instance_id|
-        disk_id = cpi.create_disk(2048, {}, instance_id)
-        expect(disk_id).not_to be_nil
-        @disk_id_pool.push(disk_id)
+      lifecycles = []
+      2.times do |i|
+        lifecycles[i] = Thread.new {
+          vm_lifecycle do |instance_id|
+            disk_id = cpi.create_disk(2048, {}, instance_id)
+            expect(disk_id).not_to be_nil
+            @disk_id_pool.push(disk_id)
 
-        cpi.attach_disk(instance_id, disk_id)
+            cpi.attach_disk(instance_id, disk_id)
 
-        snapshot_metadata = vm_metadata.merge(
-          bosh_data: 'bosh data',
-          instance_id: 'instance',
-          agent_id: 'agent',
-          director_name: 'Director',
-          director_uuid: SecureRandom.uuid
-        )
+            snapshot_metadata = vm_metadata.merge(
+              bosh_data: 'bosh data',
+              instance_id: 'instance',
+              agent_id: 'agent',
+              director_name: 'Director',
+              director_uuid: SecureRandom.uuid
+            )
 
-        snapshot_id = cpi.snapshot_disk(disk_id, snapshot_metadata)
-        expect(snapshot_id).not_to be_nil
+            snapshot_id = cpi.snapshot_disk(disk_id, snapshot_metadata)
+            expect(snapshot_id).not_to be_nil
 
-        cpi.delete_snapshot(snapshot_id)
-        Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
-          cpi.detach_disk(instance_id, disk_id)
-          true
-        end
-        cpi.delete_disk(disk_id)
-        @disk_id_pool.delete(disk_id)
+            cpi.delete_snapshot(snapshot_id)
+            Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
+              cpi.detach_disk(instance_id, disk_id)
+              true
+            end
+            cpi.delete_disk(disk_id)
+            @disk_id_pool.delete(disk_id)
+          end
+        }
       end
+      lifecycles.each { |t| t.join; }
     end
   end
 
@@ -368,7 +374,7 @@ describe Bosh::AzureCloud::Cloud do
     }
 
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(2) do |instance_id|
+      vm_lifecycle do |instance_id|
         disk_id = cpi.create_disk(2048, {}, instance_id)
         expect(disk_id).not_to be_nil
         @disk_id_pool.push(disk_id)
@@ -395,7 +401,6 @@ describe Bosh::AzureCloud::Cloud do
         @disk_id_pool.delete(disk_id)
       end
     end
-
   end
 
   context 'when assigning dynamic public IP to VM' do
@@ -422,32 +427,25 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
-  def vm_lifecycle(nums = 1)
-    instance_id_pool = Array.new
-    for i in 1..nums
-      logger.info("Creating VM with stemcell_id=`#{@stemcell_id}'")
-      instance_id = cpi.create_vm(
-        SecureRandom.uuid,
-        @stemcell_id,
-        resource_pool,
-        network_spec)
-      expect(instance_id).to be
+  def vm_lifecycle
+    logger.info("Creating VM with stemcell_id=`#{@stemcell_id}'")
+    instance_id = cpi.create_vm(
+      SecureRandom.uuid,
+      @stemcell_id,
+      resource_pool,
+      network_spec)
+    expect(instance_id).to be
 
-      logger.info("Checking VM existence instance_id=`#{instance_id}'")
-      expect(cpi.has_vm?(instance_id)).to be(true)
-      instance_id_pool.push(instance_id)
+    logger.info("Checking VM existence instance_id=`#{instance_id}'")
+    expect(cpi.has_vm?(instance_id)).to be(true)
 
-      logger.info("Setting VM metadata instance_id=`#{instance_id}'")
-      cpi.set_vm_metadata(instance_id, vm_metadata)
+    logger.info("Setting VM metadata instance_id=`#{instance_id}'")
+    cpi.set_vm_metadata(instance_id, vm_metadata)
 
-      cpi.reboot_vm(instance_id)
+    cpi.reboot_vm(instance_id)
 
-      yield(instance_id) if block_given?
-    end
+    yield(instance_id) if block_given?
   ensure
-    instance_id_pool.each do |instance_id|
-      cpi.delete_vm(instance_id) unless instance_id.nil?
-    end
+    cpi.delete_vm(instance_id) unless instance_id.nil?
   end
-
 end
