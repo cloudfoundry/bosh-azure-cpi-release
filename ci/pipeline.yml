@@ -129,6 +129,33 @@ shared:
     params:
       <<: *azure-environment-params
 
+  - &create-bats-standard-public-ip
+    task: create-bats-standard-public-ip
+    file: bosh-cpi-src/ci/tasks/create-bats-standard-public-ip.yml
+    params:
+      <<: *azure-environment-params
+      AZURE_LOCATION:                        {{azure_location}}
+      AZURE_BATS_STANDARD_PUBLIC_IP_NAME:    {{azure_bats_standard_public_ip_name}}
+
+  - &delete-bats-standard-public-ip
+    task: delete-bats-standard-public-ip
+    file: bosh-cpi-src/ci/tasks/delete-bats-standard-public-ip.yml
+    params:
+      <<: *azure-environment-params
+      AZURE_BATS_STANDARD_PUBLIC_IP_NAME:    {{azure_bats_standard_public_ip_name}}
+
+  - &run-az-bats
+    task: run-az-bats
+    file: bosh-cpi-src/ci/tasks/run-az-bats.yml
+    params: &run-az-bats-params
+      INFRASTRUCTURE:                     azure
+      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-trusty-go_agent
+      BAT_INFRASTRUCTURE:                 azure
+      BAT_NETWORKING:                     manual
+      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
+      AZURE_BATS_STANDARD_PUBLIC_IP_NAME: {{azure_bats_standard_public_ip_name}}
+      AZURE_BATS_ZONE:                    {{azure_bats_zone}}
+
 jobs:
   - name: build-candidate
     serial: true
@@ -273,6 +300,7 @@ jobs:
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
       - <<: *create-bats-environment
+      - <<: *create-bats-standard-public-ip
       - <<: *prepare-director
         params:
           <<: *prepare-director-params
@@ -281,9 +309,10 @@ jobs:
             -o bosh-deployment/external-ip-with-registry-not-recommended.yml
             -o bosh-deployment/azure/use-managed-disks.yml
       - <<: *deploy-director
-      - <<: *run-bats
+      - <<: *run-az-bats
       - do:
         - <<: *teardown
+        - <<: *delete-bats-standard-public-ip
         - <<: *destroy-bats-environment
         ensure:
           do:

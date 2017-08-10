@@ -32,34 +32,141 @@ describe Bosh::AzureCloud::AzureClient2 do
     let(:location) { "fake-location" }
 
     context "when token is valid, create operation is accepted and completed" do
-      it "should create a public ip without error" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:put, public_ip_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
-        stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+      context "when creating static public ip" do
+        let(:public_ip_params) {
+          {
+            :name => public_ip_name,
+            :location => location,
+            :idle_timeout_in_minutes => 4,
+            :is_static => true
+          }
+        }
+        let(:fake_public_ip_request_body) {
+          {
+            'name' => public_ip_name,
+            'location' => location,
+            'properties' => {
+              'idleTimeoutInMinutes' => 4,
+              'publicIPAllocationMethod' => 'Static'
+            }
+          }
+        }
 
-        is_static = true
-        expect {
-          azure_client2.create_public_ip(resource_group, public_ip_name, location, is_static)
-        }.not_to raise_error
+        it "should create a public ip without error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:put, public_ip_uri).with(body: fake_public_ip_request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
 
-        is_static = false
-        expect {
-          azure_client2.create_public_ip(resource_group, public_ip_name, location, is_static)
-        }.not_to raise_error
+          expect {
+            azure_client2.create_public_ip(resource_group, public_ip_params)
+          }.not_to raise_error
+        end
+      end
+
+      context "when creating dynamic public ip" do
+        let(:public_ip_params) {
+          {
+            :name => public_ip_name,
+            :location => location,
+            :idle_timeout_in_minutes => 4,
+            :is_static => false
+          }
+        }
+        let(:fake_public_ip_request_body) {
+          {
+            'name' => public_ip_name,
+            'location' => location,
+            'properties' => {
+              'idleTimeoutInMinutes' => 4,
+              'publicIPAllocationMethod' => 'Dynamic'
+            }
+          }
+        }
+
+        it "should create a public ip without error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:put, public_ip_uri).with(body: fake_public_ip_request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.create_public_ip(resource_group, public_ip_params)
+          }.not_to raise_error
+        end
+      end
+
+      context "when creating public ip in a zone" do
+        let(:public_ip_params) {
+          {
+            :name => public_ip_name,
+            :location => location,
+            :idle_timeout_in_minutes => 4,
+            :is_static => false,
+            :zone => 'fake-zone'
+          }
+        }
+        let(:fake_public_ip_request_body) {
+          {
+            'name' => public_ip_name,
+            'location' => location,
+            'properties' => {
+              'idleTimeoutInMinutes' => 4,
+              'publicIPAllocationMethod' => 'Dynamic'
+            },
+            'zones' => ['fake-zone']
+          }
+        }
+
+        it "should create a public ip without error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:put, public_ip_uri).with(body: fake_public_ip_request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.create_public_ip(resource_group, public_ip_params)
+          }.not_to raise_error
+        end
       end
     end
   end

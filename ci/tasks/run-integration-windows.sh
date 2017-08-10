@@ -76,6 +76,8 @@ pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
   if [ "${AZURE_USE_MANAGED_DISKS}" == "true" ]; then
     tags+=" --tag ~unmanaged_disks"
+  else
+    tags+=" --tag ~availability_zone"
   fi
   bundle exec rspec spec/integration/lifecycle_spec.rb ${tags}
 popd > /dev/null

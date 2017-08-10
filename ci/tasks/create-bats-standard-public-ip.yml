@@ -1,0 +1,24 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source: {repository: boshcpi/azure-cpi-release}
+
+inputs:
+  - name: environment
+  - name: bosh-cpi-src
+
+outputs:
+  - name: ipaddrs
+
+run:
+  path: bosh-cpi-src/ci/tasks/create-bats-standard-public-ip.sh
+
+params:
+  AZURE_ENVIRONMENT:                                 ""
+  AZURE_SUBSCRIPTION_ID:                             ""
+  AZURE_CLIENT_ID:                                   ""
+  AZURE_CLIENT_SECRET:                               ""
+  AZURE_TENANT_ID:                                   ""
+  AZURE_LOCATION:                                    ""
+  AZURE_BATS_STANDARD_PUBLIC_IP_NAME:                ""

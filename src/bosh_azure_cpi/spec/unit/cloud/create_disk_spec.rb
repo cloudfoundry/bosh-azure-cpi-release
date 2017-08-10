@@ -82,6 +82,7 @@ describe Bosh::AzureCloud::Cloud do
             :location => rg_location
           }
         }
+        let(:zone) { nil }
 
         before do
           allow(client2).to receive(:get_resource_group).and_return(resource_group)
@@ -92,7 +93,7 @@ describe Bosh::AzureCloud::Cloud do
             with(caching, true, resource_group_name:default_resource_group_name).
             and_return(disk_id_object)
           expect(disk_manager2).to receive(:create_disk).
-            with(disk_id_object, rg_location, disk_size_in_gib, "Standard_LRS")
+            with(disk_id_object, rg_location, disk_size_in_gib, "Standard_LRS", zone)
 
           expect {
             managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
@@ -116,10 +117,12 @@ describe Bosh::AzureCloud::Cloud do
 
         context "when the instance is a managed vm" do
           let(:vm_location) { "fake-vm-location" }
+          let(:vm_zone) { "fake-zone" }
           let(:vm) {
             {
               :location => vm_location,
-              :vm_size => "Standard_F1s"
+              :vm_size => "Standard_F1s",
+              :zone => vm_zone
             }
           }
 
@@ -137,7 +140,7 @@ describe Bosh::AzureCloud::Cloud do
                 with(caching, true, resource_group_name:resource_group_name).
                 and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk).
-                with(disk_id_object, vm_location, disk_size_in_gib, "Premium_LRS")
+                with(disk_id_object, vm_location, disk_size_in_gib, "Premium_LRS", vm_zone)
 
               expect {
                 managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
@@ -157,7 +160,7 @@ describe Bosh::AzureCloud::Cloud do
                 with(caching, true, resource_group_name:resource_group_name).
                 and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk).
-                with(disk_id_object, vm_location, disk_size_in_gib, "Standard_LRS")
+                with(disk_id_object, vm_location, disk_size_in_gib, "Standard_LRS", vm_zone)
 
               expect {
                 managed_cloud.create_disk(disk_size, cloud_properties, instance_id)

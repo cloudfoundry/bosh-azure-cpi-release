@@ -17,10 +17,12 @@ module Bosh::AzureCloud
     # @param [string]  location              location of the disk
     # @param [Integer] size                  disk size in GiB
     # @param [string]  storage_account_type  the storage account type. Possible values: Standard_LRS or Premium_LRS.
+    # When disk is in an availability zone
+    # @param [String] zone                   Zone number in string. Possible values: "1", "2" or "3".
     #
     # @return [void]
-    def create_disk(disk_id, location, size, storage_account_type)
-      @logger.info("create_disk(#{disk_id}, #{location}, #{size}, #{storage_account_type})")
+    def create_disk(disk_id, location, size, storage_account_type, zone = nil)
+      @logger.info("create_disk(#{disk_id}, #{location}, #{size}, #{storage_account_type}, #{zone})")
       resource_group_name = disk_id.resource_group_name()
       disk_name = disk_id.disk_name()
       caching = disk_id.caching()
@@ -34,12 +36,15 @@ module Bosh::AzureCloud
         :disk_size => size,
         :account_type => storage_account_type
       }
+
+      disk_params[:zone] = zone unless zone.nil?
+
       @logger.info("Start to create an empty managed disk `#{disk_name}' in resource group `#{resource_group_name}'")
       @azure_client2.create_empty_managed_disk(resource_group_name, disk_params)
     end
 
-    def create_disk_from_blob(disk_id, blob_uri, location, storage_account_type)
-      @logger.info("create_disk_from_blob(#{disk_id}, #{blob_uri}, #{location}, #{storage_account_type})")
+    def create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, zone = nil)
+      @logger.info("create_disk_from_blob(#{disk_id}, #{blob_uri}, #{location}, #{storage_account_type}, #{zone})")
       resource_group_name = disk_id.resource_group_name()
       disk_name = disk_id.disk_name()
       caching = disk_id.caching()
@@ -52,7 +57,8 @@ module Bosh::AzureCloud
         :location => location,
         :tags => tags,
         :source_uri => blob_uri,
-        :account_type => storage_account_type
+        :account_type => storage_account_type,
+        :zone => zone
       }
       @logger.info("Start to create a managed disk `#{disk_name}' in resource group `#{resource_group_name}' from the source uri `#{blob_uri}'")
       @azure_client2.create_managed_disk_from_blob(resource_group_name, disk_params)
@@ -131,6 +137,12 @@ module Bosh::AzureCloud
       @azure_client2.delete_managed_snapshot(resource_group_name, snapshot_name)
     end
 
+    def has_snapshot?(resource_group_name, snapshot_name)
+      @logger.info("has_snapshot?(#{resource_group_name}, #{snapshot_name})")
+      snapshot = @azure_client2.get_managed_snapshot_by_name(resource_group_name, snapshot_name)
+      !snapshot.nil?
+    end
+
     # bosh-disk-os-[VM-NAME]
     def generate_os_disk_name(vm_name)
       "#{MANAGED_OS_DISK_PREFIX}-#{vm_name}"
@@ -174,6 +186,61 @@ module Bosh::AzureCloud
         :disk_size    => disk_size,
         :disk_caching => 'ReadWrite'
       }
+    end
+
+    def migrate_to_zone(disk_id, disk, zone)
+      @logger.info("migrate_to_zone(#{disk_id}, #{disk}, #{zone})")
+      resource_group_name = disk_id.resource_group_name()
+      disk_name = disk_id.disk_name()
+
+      snapshot_id = DiskId.create(disk_id.caching(), true, resource_group_name: resource_group_name)
+      snapshot_name = snapshot_id.disk_name()
+      snapshot_disk(snapshot_id, disk_name, {})
+      @logger.info("Snapshot #{snapshot_name} is created for disk #{disk_name} for migration purpose")
+
+      if has_snapshot?(resource_group_name, snapshot_name)
+        delete_disk(resource_group_name, disk_name)
+      else
+        error_message = "migrate_to_zone - Can'n find snapshot `#{snapshot_name}' in resource group `#{resource_group_name}', abort migration.\n"
+        error_message += "You need to migrate `#{disk_id}' to zone `#{zone}' manually."
+        raise error_message
+      end
+
+      disk_params = {
+        :name                    => disk_name,
+        :location                => disk[:location],
+        :zone                    => zone,
+        :account_type            => disk[:account_type],
+        :tags                    => disk[:tags]
+      }
+
+      max_retries = 2
+      retry_count = 0
+      begin
+        @azure_client2.create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
+      rescue => e
+        if retry_count < max_retries
+          @logger.info("migrate_to_zone - Got error when creating `#{disk_name}' from snapshot `#{snapshot_name}': \n#{e.inspect}\n#{e.backtrace.join('\n')}. \nRetry #{retry_count}: will retry to create the disk.")
+          retry_count += 1
+          retry
+        end
+
+        error_message = "migrate_to_zone - Failed to create disk `#{disk_name}' from snapshot `#{snapshot_name}' in resource group `#{resource_group_name}'.\n"
+        error_message += "You need to recover `#{disk_id}' mannually from snapshot `#{snapshot_name}' and put it in zone `#{zone}'. Try:\n"
+        error_message += "    `az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
+        error_message += "#{e.inspect}\n#{e.backtrace.join("\n")}"
+        raise error_message
+      end
+
+      if has_data_disk?(disk_id)
+        delete_snapshot(snapshot_id)
+        @logger.info("Disk `#{disk_name}' has migrated to zone `#{zone}'")
+      else
+        error_message = "migrate_to_zone - Can'n find disk `#{disk_name}' in resource group `#{resource_group_name}' after migration.\n"
+        error_message += "You need to recover `#{disk_id}' manually from snapshot `#{snapshot_name}' and put it in zone `#{zone}'. Try:\n"
+        error_message += "    `az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
+        raise error_message
+      end
     end
   end
 end

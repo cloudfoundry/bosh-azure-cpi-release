@@ -124,4 +124,82 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
     end
   end
+
+  describe "#get_managed_snapshot_by_name" do
+    let(:snapshot_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
+
+    context "when response body is null" do
+      it "should return nil" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, snapshot_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+
+        expect(
+          azure_client2.get_managed_snapshot_by_name(resource_group, snapshot_name)
+        ).to be_nil
+      end
+    end
+
+    context "when response body is not null" do
+      let(:snapshot_response_body) {
+        {
+          "accountType" => "a",
+          "properties" => {
+            "osType" => "b",
+            "creationData" => {
+              "createOption" => "c"
+            },
+            "diskSizeGB" => 100,
+            "timeCreated" => "d",
+            "provisioningState" => "e",
+            "diskState" => "f"
+          },
+          "type" => "Microsoft.Compute/snapshots",
+          "location" => "g",
+          "tags" => {
+            "h" => "i"
+          },
+          "id" => "j",
+          "name" => snapshot_name
+        }.to_json
+      }
+
+      let(:fake_snapshot) {
+        {
+          :id => "j",
+          :name => snapshot_name,
+          :location => "g",
+          :tags => { "h" => "i" },
+          :provisioning_state => "e",
+          :disk_size => 100
+        }
+      }
+
+      it "should return the resource" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, snapshot_uri).to_return(
+          :status => 200,
+          :body => snapshot_response_body,
+          :headers => {})
+
+        expect(
+          azure_client2.get_managed_snapshot_by_name(resource_group, snapshot_name)
+        ).to eq(fake_snapshot)
+      end
+    end
+  end
 end

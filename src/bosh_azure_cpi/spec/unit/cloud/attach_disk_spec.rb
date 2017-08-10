@@ -46,11 +46,14 @@ describe Bosh::AzureCloud::Cloud do
         and_return(disk_name)
       allow(instance_id_object).to receive(:vm_name).
         and_return(vm_name)
+
+      allow(vm_manager).to receive(:find).
+        and_return({})
     end
 
     context "when use_managed_disks is true" do
       context "when the disk is a managed disk" do
-        let(:disk) { double("disk") }
+        let(:disk) { {} }
         before do
           allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(disk)
         end
@@ -87,6 +90,50 @@ describe Bosh::AzureCloud::Cloud do
             }.to raise_error /Cannot attach a managed disk to a VM with unmanaged disks/
           end
         end
+
+        context "when the vm is in a zone but the disk is not" do
+          let(:disk) { {} }
+          let(:vm_zone) { 'fake-zone' }
+
+          before do
+            allow(instance_id_object).to receive(:use_managed_disks?).
+              and_return(true)
+            allow(vm_manager).to receive(:find).
+              and_return({:zone => vm_zone})
+          end
+
+          context "when the disk is migrated successfully" do
+            before do
+              allow(disk_manager2).to receive(:migrate_to_zone).with(disk_id_object, disk, vm_zone)
+            end
+
+            it "attach the disk" do
+              expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object).
+                and_return(lun)
+              expect(registry).to receive(:read_settings).with(instance_id).
+                and_return(old_settings)
+              expect(registry).to receive(:update_settings).
+                with(instance_id, new_settings).and_return(true)
+
+              expect {
+                managed_cloud.attach_disk(instance_id, disk_id)
+              }.not_to raise_error
+            end
+          end
+
+          context "when it fails to migrate the disk" do
+            before do
+              allow(disk_manager2).to receive(:migrate_to_zone).
+                and_raise(StandardError)
+            end
+
+            it "raise an error" do
+              expect {
+                managed_cloud.attach_disk(instance_id, disk_id)
+              }.to raise_error /attach_disk - Failed to migrate disk/
+            end
+          end
+        end
       end
 
       context "when the disk is an unmanaged disk" do
@@ -121,7 +168,7 @@ describe Bosh::AzureCloud::Cloud do
               expect(disk_id_object).to receive(:storage_account_name).
                 and_return(storage_account_name)
               expect(disk_manager2).to receive(:create_disk_from_blob).
-                with(disk_id_object, blob_uri, location, account_type)
+                with(disk_id_object, blob_uri, location, account_type, nil)
               expect(blob_manager).to receive(:set_blob_metadata)
 
               expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object).

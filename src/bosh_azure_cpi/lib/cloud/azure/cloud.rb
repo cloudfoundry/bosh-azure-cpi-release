@@ -105,7 +105,8 @@ module Bosh::AzureCloud
     #      "size" => 30720, # disk size in MiB
     #    },
     #    "assign_dynamic_public_ip" => true,
-    #    "resource_group_name" => "rg1"
+    #    "resource_group_name" => "rg1",
+    #    "availability_zone" => "1"
     #  }
     #
     # Sample env config:
@@ -157,6 +158,7 @@ module Bosh::AzureCloud
             end
           end
         else
+          cloud_error("Virtual Machines deployed to an Availability Zone must use managed disks") unless resource_pool['availability_zone'].nil?
           storage_account = @storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
           instance_id = InstanceId.create(resource_group_name, agent_id, storage_account[:name])
 
@@ -309,6 +311,7 @@ module Bosh::AzureCloud
             resource_group = @azure_client2.get_resource_group(resource_group_name)
             location = resource_group[:location]
             default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
+            zone = nil
           else
             instance_id = InstanceId.parse(instance_id, azure_properties)
             cloud_error("Cannot create a managed disk for a VM with unmanaged disks") unless instance_id.use_managed_disks?()
@@ -317,13 +320,14 @@ module Bosh::AzureCloud
             vm = @azure_client2.get_virtual_machine_by_name(resource_group_name, instance_id.vm_name())
             location = vm[:location]
             instance_type = vm[:vm_size]
+            zone = vm[:zone]
             default_storage_account_type = get_storage_account_type_by_instance_type(instance_type)
           end
           storage_account_type = cloud_properties.fetch('storage_account_type', default_storage_account_type)
           caching = cloud_properties.fetch('caching', 'None')
           validate_disk_caching(caching)
           disk_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
-          @disk_manager2.create_disk(disk_id, location, size/1024, storage_account_type)
+          @disk_manager2.create_disk(disk_id, location, size/1024, storage_account_type, zone)
         else
           storage_account_name = azure_properties['storage_account_name']
           caching = cloud_properties.fetch('caching', 'None')
@@ -375,6 +379,7 @@ module Bosh::AzureCloud
         disk_name = disk_id.disk_name()
         if @use_managed_disks
           disk = @disk_manager2.get_data_disk(disk_id)
+          vm_zone = @vm_manager.find(instance_id)[:zone]
           unless instance_id.use_managed_disks?()
             cloud_error("Cannot attach a managed disk to a VM with unmanaged disks") unless disk.nil?
             @logger.debug("attach_disk - although use_managed_disks is enabled, will still attach the unmanaged disk `#{disk_name}' to the VM `#{vm_name}' with unmanaged disks")
@@ -388,7 +393,7 @@ module Bosh::AzureCloud
                 # Can not use the type of the default storage account because only Standard_LRS and Premium_LRS are supported for managed disk.
                 account_type = (storage_account[:account_type] == STORAGE_ACCOUNT_TYPE_PREMIUM_LRS) ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
                 @logger.debug("attach_disk - Migrating the unmanaged disk `#{disk_name}' to a managed disk")
-                @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type)
+                @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type, vm_zone)
 
                 # Set below metadata but not delete it.
                 # Users can manually delete all blobs in container `bosh` whose names start with `bosh-data` after migration is finished.
@@ -402,6 +407,12 @@ module Bosh::AzureCloud
                   end
                 end
                 cloud_error("attach_disk - Failed to create the managed disk for #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+              end
+            elsif disk[:zone].nil? && !vm_zone.nil? #Only for migration scenario: VM is recreated in a zone while its data disk is still a regional resource.
+              begin
+                @disk_manager2.migrate_to_zone(disk_id, disk, vm_zone)
+              rescue => e
+                cloud_error("attach_disk - Failed to migrate disk #{disk_name} to zone #{vm_zone}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
               end
             end
           end
