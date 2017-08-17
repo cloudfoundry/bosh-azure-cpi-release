@@ -8,7 +8,15 @@ A service principal contains the following credentials which will be mentioned i
 - **CLIENT_ID**
 - **CLIENT_SECRET** 
 
-# 1 Prepare Azure CLI
+# Using Azure CLI 2.0
+
+The easiest way to create the Service Principal is with the Azure Cloud Shell in the Azure portal which provides a pre-installed, pre-configured Azure CLI 2.0. If you can't use Azure Cloud Shell, you may [install Azure CLI 2.0](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) in the system of your preference.
+
+You can then create the service principal by simply typing `az ad sp create-for-rbac`
+
+The output, in JSON format, contains the `appId`, `password` and `tenant` parameters that correspond to `TENANT_ID`, `CLIENT_ID` and `CLIENT_SECRET` in the rest of this document. You can optionally use `--output table` or even `--output tsv` as an additional option to `az`.
+
+# Using Azure CLI
 
 ## 1.1 Install Azure CLI
 
