@@ -45,16 +45,6 @@ describe Bosh::AzureCloud::Cloud do
           }.to raise_error /Azure CPI minimum disk size is 1 GiB/
         end
       end
-
-      context 'when disk size is larger than 4095 GiB' do
-        let(:disk_size) { 4096 * 1024 }
-
-        it 'should raise an error' do
-          expect {
-            cloud.create_disk(disk_size, cloud_properties, instance_id)
-          }.to raise_error /Azure CPI maximum disk size is 4095 GiB/
-        end
-      end
     end
 
     context "validating caching" do

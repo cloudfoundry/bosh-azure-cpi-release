@@ -509,16 +509,6 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
 
-    context "disk size is larger than 4095 GiB" do
-      let(:disk_size) { 4096 * 1024 }
-
-      it "should raise an error" do
-        expect {
-          helpers_tester.validate_disk_size(disk_size)
-        }.to raise_error "Azure CPI maximum disk size is 4095 GiB"
-      end
-    end
-
     context "disk size is a correct value" do
       let(:disk_size) { 30 * 1024 }
 
