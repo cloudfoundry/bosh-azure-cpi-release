@@ -1,20 +1,33 @@
 ## Development
 
-The release requires the Ruby gem Bundler (used by the vendoring script):
+### Before you start:
+
+Please make sure you have installed ruby 2.1.0+ before you start. In the beginning of section `Test Interfaces` you will see how to install specific version of ruby with `rubyenv`. _FYI, the latest stable version of ruby is 2.4.1_
+
+ruby2.0 is also required in the setup procedure. If you are using bosh devbox deployed with template in this [guidance](./get-started/via-arm-templates/deploy-bosh-via-arm-templates.md) or guidance from `bosh.io` [here](https://bosh.io/docs/init-azure.html), you should have ruby 2.0 installed already. Otherwise, please install it by:
+
+```
+sudo apt-get install -y ruby2.0
+```
+
+
+### Install Ruby gem Bundler (used by the vendoring script):
 
 ```
 gem install bundler
 ```
 
-With bundler installed, switch to ./src/bosh_azure_cpi and run the vendoring script:
+### Run vendoring script
+
+With bundler installed, switch to ./src/bosh_azure_cpi and run:
 
 ```
 ./vendor_gems
 ```
 
-If you are using Ubuntu 14.04, you should replace the bundle in ./vendor_gems with /usr/local/bin/bundle.
+### Create the BOSH release:
 
-Then create the BOSH release:
+_Please make sure you have ruby 2.0 installed before continue._
 
 ```
 bosh create release --force --with-tarball --name bosh-azure-cpi
@@ -28,7 +41,7 @@ At the end of the CLI output there will be "Release tarball" path.
 After you change the CPI code, you can use `bosh_azure_console` to test your changes. Below commands are tested in Ubuntu 14.04 LTS.
 
 ```
-# Install ruby 2.2.4 with rubyenv
+# Install ruby 2.4.1 with rubyenv
 sudo apt-get update
 sudo apt-get install -y git gcc make libssl-dev libreadline-dev zlib1g-dev
 
@@ -42,8 +55,8 @@ git clone https://github.com/rbenv/ruby-build.git ~/.rbenv/plugins/ruby-build
 echo 'export PATH="$HOME/.rbenv/plugins/ruby-build/bin:$PATH"' >> ~/.bashrc
 exec $SHELL
 
-rbenv install 2.2.4
-rbenv global 2.2.4
+rbenv install 2.4.1
+rbenv global 2.4.1
 ruby -v
 
 # Install postgres which bosh-registry depends on
@@ -63,7 +76,7 @@ exit
 gem install bundle bosh-registry pg --no-ri --no-rdoc
 
 # Workaround for the issue https://github.com/cloudfoundry/bosh/issues/1621
-sed -i -e '23s/^/#/' ~/.rbenv/versions/2.2.4/lib/ruby/gems/2.2.0/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
+sed -i -e '23s/^/#/' ~/.rbenv/versions/2.4.1/lib/ruby/gems/2.4.0/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
 
 cat > ~/registry.cfg <<EOS
 ---
