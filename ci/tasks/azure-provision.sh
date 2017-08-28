@@ -28,6 +28,7 @@ set -e
 : ${AZURE_BOSH_SECOND_SUBNET_NAME:?}
 : ${AZURE_CF_SUBNET_NAME:?}
 : ${AZURE_CF_SECOND_SUBNET_NAME:?}
+: ${AZURE_APPLICATION_GATEWAY_NAME:?}
 
 function create_storage_account {
   resource_group_name="$1"
@@ -91,6 +92,50 @@ do
 EOF
   azure group deployment create ${resource_group_name} --template-file ./bosh-cpi-src/ci/assets/azure/network.json --parameters-file ./network-parameters.json
 done
+
+# Create application gateway
+openssl genrsa -out fake.domain.key 2048
+openssl req -new -x509 -days 365 -key fake.domain.key -out fake.domain.crt -subj "/C=/ST=test/L=test/O=test/OU=test/CN=fake.domain"
+openssl pkcs12 -export -out fake.domain.pfx -inkey fake.domain.key -in fake.domain.crt -passout pass:cpilifecycle
+CERT_DATA=`base64 fake.domain.pfx | tr -d '\n'`
+cat > application-gateway-parameters.json << EOF
+  {
+    "applicationGatewayName": {
+      "value": "${AZURE_APPLICATION_GATEWAY_NAME}"
+    },
+    "virtualNetworkName": {
+      "value": "${AZURE_VNET_NAME_FOR_LIFECYCLE}"
+    },
+    "systemDomain": {
+      "value": "fake.domain"
+    },
+    "certData": {
+      "value": "${CERT_DATA}"
+    },
+    "certPassword": {
+      "value": "cpilifecycle"
+    }
+  }
+EOF
+pids=""
+resource_group_names="${AZURE_DEFAULT_GROUP_NAME} ${AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS} \
+  ${AZURE_DEFAULT_GROUP_NAME_WINDOWS} ${AZURE_DEFAULT_GROUP_NAME_WINDOWS_MANAGED_DISKS}"
+for resource_group_name in ${resource_group_names}
+do
+  {
+    azure group deployment create ${resource_group_name} --template-file ./bosh-cpi-src/ci/assets/azure/application-gateway.json --parameters-file ./application-gateway-parameters.json
+  } &
+  pids="$pids $!"
+done
+rm fake.domain.key
+rm fake.domain.crt
+rm fake.domain.pfx
+
+failed=false
+wait $pids || failed=true
+if [ $failed = true ]; then
+  exit 1
+fi
 
 # The public IP AzureCPICI-bosh and AzureCPICI-cf-bats are needed only in the additional resource groups
 resource_group_names="${AZURE_ADDITIONAL_GROUP_NAME} ${AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS} \

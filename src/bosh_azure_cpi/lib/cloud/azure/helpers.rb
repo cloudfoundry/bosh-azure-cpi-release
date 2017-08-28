@@ -120,14 +120,16 @@ module Bosh::AzureCloud
     MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS = 128
 
     # Lock
-    CPI_LOCK_DIR                      = "/tmp/azure_cpi"
-    CPI_LOCK_PREFIX                   = "bosh-lock"
-    CPI_LOCK_CREATE_STORAGE_ACCOUNT   = "#{CPI_LOCK_PREFIX}-create-storage-account"
-    CPI_LOCK_COPY_STEMCELL            = "#{CPI_LOCK_PREFIX}-copy-stemcell"
-    CPI_LOCK_COPY_STEMCELL_TIMEOUT    = 180 # seconds
-    CPI_LOCK_CREATE_USER_IMAGE        = "#{CPI_LOCK_PREFIX}-create-user-image"
-    CPI_LOCK_PREFIX_AVAILABILITY_SET  = "#{CPI_LOCK_PREFIX}-availability-set"
-    CPI_LOCK_DELETE                   = "#{CPI_LOCK_DIR}/DELETING-LOCKS"
+    CPI_LOCK_DIR                         = "/tmp/azure_cpi"
+    CPI_LOCK_PREFIX                      = "bosh-lock"
+    CPI_LOCK_CREATE_STORAGE_ACCOUNT      = "#{CPI_LOCK_PREFIX}-create-storage-account"
+    CPI_LOCK_COPY_STEMCELL               = "#{CPI_LOCK_PREFIX}-copy-stemcell"
+    CPI_LOCK_COPY_STEMCELL_TIMEOUT       = 180 # seconds
+    CPI_LOCK_CREATE_USER_IMAGE           = "#{CPI_LOCK_PREFIX}-create-user-image"
+    CPI_LOCK_PREFIX_AVAILABILITY_SET     = "#{CPI_LOCK_PREFIX}-availability-set"
+    CPI_LOCK_APPLICATION_GATEWAY         = "#{CPI_LOCK_PREFIX}-application-gateway"
+    CPI_LOCK_APPLICATION_GATEWAY_TIMEOUT = 300 # seconds
+    CPI_LOCK_DELETE                      = "#{CPI_LOCK_DIR}/DELETING-LOCKS"
     class LockError < Bosh::Clouds::CloudError; end
     class LockTimeoutError < LockError; end
     class LockNotFoundError < LockError; end
@@ -526,6 +528,10 @@ module Bosh::AzureCloud
     #   mark_deleting_locks
     #   raise 'what action fails because of the lock error'
     # end
+    #
+    # NOTE:
+    #   The difference between modified time and current time determines if timeout or not.
+    #   So the actully time to wait may be longer than the time set by `expired`.
     #
     class FileMutex
       attr_reader :expired

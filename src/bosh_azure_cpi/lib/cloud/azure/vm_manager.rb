@@ -94,11 +94,14 @@ module Bosh::AzureCloud
         end
       end
 
-      availability_set_name = get_availability_set_name(resource_pool, env)
+      primary_nic_tags = AZURE_TAGS.clone
       # Store the availability set name in the tags of the NIC
-      primary_nic_tags = availability_set_name.nil? ? AZURE_TAGS : AZURE_TAGS.merge({'availability_set' => availability_set_name})
+      availability_set_name = get_availability_set_name(resource_pool, env)
+      primary_nic_tags.merge!({'availability_set' => availability_set_name}) unless availability_set_name.nil?
       # Store the application gateway name in the tags of the NIC
-      primary_nic_tags = resource_pool['application_gateway'].nil? ? AZURE_TAGS : AZURE_TAGS.merge({'application_gateway' => resource_pool['application_gateway']})
+      application_gateway_name = resource_pool['application_gateway']
+      primary_nic_tags.merge!({'application_gateway' => application_gateway_name}) unless application_gateway_name.nil?
+
       network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator, primary_nic_tags)
       availability_set_params = {
         :name                         => availability_set_name,
@@ -109,8 +112,11 @@ module Bosh::AzureCloud
         :managed                      => @use_managed_disks
       }
 
-      unless resource_pool['application_gateway'].nil?
-        @azure_client2.add_backend_address_of_application_gateway(resource_pool['application_gateway'], network_interfaces[0][:private_ip])
+      unless application_gateway_name.nil?
+        if network_interfaces[0][:private_ip].nil?
+          raise "You need to use static IP for the VM which will be bound to the application gateway"
+        end
+        set_backend_address_of_application_gateway("add", application_gateway_name, network_interfaces[0][:private_ip])
       end
 
       create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set_params)
@@ -149,10 +155,10 @@ module Bosh::AzureCloud
           # Delete NICs
           if network_interfaces
             network_interfaces.each do |network_interface|
-              @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
-              unless network_interface[:tags]['application_gateway'].nil?
-                @azure_client2.delete_backend_address_of_application_gateway(network_interface[:tags]['application_gateway'], network_interface[:private_ip])
+              if network_interface[:tags] && !network_interface[:tags]['application_gateway'].nil? && !network_interface[:private_ip].nil?
+                set_backend_address_of_application_gateway("delete", network_interface[:tags]['application_gateway'], network_interface[:private_ip])
               end
+              @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
             end
           else
             # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
@@ -196,10 +202,10 @@ module Bosh::AzureCloud
 
         # Delete NICs
         vm[:network_interfaces].each do |network_interface|
-          @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
-          unless network_interface[:tags]['application_gateway'].nil?
-            @azure_client2.delete_backend_address_of_application_gateway(network_interface[:tags]['application_gateway'], network_interface[:private_ip])
+          if network_interface[:tags] && !network_interface[:tags]['application_gateway'].nil?
+            set_backend_address_of_application_gateway("delete", network_interface[:tags]['application_gateway'], network_interface[:private_ip])
           end
+          @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
         end
       else
         # If the VM is deleted but the availability sets are not deleted due to some reason, BOSH will retry and vm will be nil.
@@ -388,7 +394,6 @@ module Bosh::AzureCloud
           :security_group      => security_group,
           :ipconfig_name       => "ipconfig#{index}"
         }
-
         subnet = get_network_subnet(network)
         tags = index == 0 ? primary_nic_tags : AZURE_TAGS
         @azure_client2.create_network_interface(resource_group_name, nic_params, subnet, tags, load_balancer)
@@ -581,5 +586,24 @@ module Bosh::AzureCloud
       # If resource group does not exist, create it
       @azure_client2.create_resource_group(resource_group_name, location)
     end
+    
+    def set_backend_address_of_application_gateway(method, name, ip_address)
+      begin
+        mutex = FileMutex.new("#{CPI_LOCK_APPLICATION_GATEWAY}-#{name}", @logger, CPI_LOCK_APPLICATION_GATEWAY_TIMEOUT)
+        while !mutex.lock
+          mutex.wait
+        end
+        if method == "add"
+          @azure_client2.add_backend_address_of_application_gateway(name, ip_address)
+        else
+          @azure_client2.delete_backend_address_of_application_gateway(name, ip_address)
+        end
+        mutex.unlock
+      rescue => e
+        mark_deleting_locks
+        raise e
+      end
+    end
+    
   end
 end

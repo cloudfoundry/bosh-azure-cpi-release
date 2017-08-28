@@ -17,6 +17,7 @@ describe Bosh::AzureCloud::Cloud do
     @additional_resource_group_name  = ENV['BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME']  || raise("Missing BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME")
     @primary_public_ip               = ENV['BOSH_AZURE_PRIMARY_PUBLIC_IP']               || raise("Missing BOSH_AZURE_PRIMARY_PUBLIC_IP")
     @secondary_public_ip             = ENV['BOSH_AZURE_SECONDARY_PUBLIC_IP']             || raise("Missing BOSH_AZURE_SECONDARY_PUBLIC_IP")
+    @application_gateway_name        = ENV['BOSH_AZURE_APPLICATION_GATEWAY_NAME']        || raise("Missing BOSH_AZURE_APPLICATION_GATEWAY_NAME")
   end
 
   let(:azure_environment)    { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
@@ -170,6 +171,73 @@ describe Bosh::AzureCloud::Cloud do
         ensure
           cpi.delete_vm(new_instance_id) if new_instance_id
         end
+      end
+    end
+
+    context 'when application_gateway is specified in resource pool' do
+      let(:resource_pool) {
+        {
+          'instance_type' => instance_type,
+          'application_gateway' => @application_gateway_name
+        }
+      }
+      
+      let(:threads) { 2 }
+      let(:ip_address_start) {
+        Random.rand(10..(100 - threads))
+      }
+      let(:ip_address_end) {
+        ip_address_start + threads - 1
+      }
+      let(:ip_address_specs) {
+        (ip_address_start..ip_address_end).to_a.collect { |x| "10.0.0.#{x}" }
+      }
+      let(:network_specs) {
+        ip_address_specs.collect { |ip_address_spec|
+          {
+            'network_a' => {
+              'type' => 'manual',
+              'ip' => ip_address_spec,
+              'cloud_properties' => {
+                'virtual_network_name' => vnet_name,
+                'subnet_name' => subnet_name
+              }
+            }
+          }
+        }
+      }
+
+      it 'should add the VM to the backend pool of application gateway' do
+        ag_url = cpi.azure_client2.rest_api_url(
+          Bosh::AzureCloud::AzureClient2::REST_API_PROVIDER_NETWORK,
+          Bosh::AzureCloud::AzureClient2::REST_API_NETWORK_APPLICATION_GATEWAYS,
+          name: @application_gateway_name)
+
+        lifecycles = []
+        threads.times do |i|
+          lifecycles[i] = Thread.new {
+             begin
+              new_instance_id = cpi.create_vm(
+                SecureRandom.uuid,
+                @stemcell_id,
+                resource_pool,
+                network_specs[i]
+              )
+
+              ag = cpi.azure_client2.get_resource_by_id(ag_url)
+              expect(ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']).to include({
+                "ipAddress" => ip_address_specs[i]
+              })
+            ensure
+              cpi.delete_vm(new_instance_id) if new_instance_id
+            end
+            ag = cpi.azure_client2.get_resource_by_id(ag_url)
+            expect(ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']).not_to include({
+              "ipAddress" => ip_address_specs[i]
+            })
+          }
+        end
+        lifecycles.each { |t| t.join; }
       end
     end
   end

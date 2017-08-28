@@ -26,3 +26,4 @@ params:
   AZURE_DEFAULT_SECURITY_GROUP:               ""
   AZURE_USE_MANAGED_DISKS:                    false
   SSH_PUBLIC_KEY:                             ""
+  AZURE_APPLICATION_GATEWAY_NAME:             ""
