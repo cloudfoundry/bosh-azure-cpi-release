@@ -19,6 +19,7 @@ export no_proxy="<%= no_proxy %>"
 
 BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
+export HOME=~
 
 PATH=$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin:$PATH
 export PATH
