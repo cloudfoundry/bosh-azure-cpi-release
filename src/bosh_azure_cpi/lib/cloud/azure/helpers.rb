@@ -260,7 +260,6 @@ module Bosh::AzureCloud
       validate_disk_size_type(size)
 
       cloud_error('Azure CPI minimum disk size is 1 GiB') if size < 1024
-      cloud_error('Azure CPI maximum disk size is 4095 GiB') if size > 4095 * 1024
     end
 
     def validate_disk_size_type(size)
