@@ -15,7 +15,7 @@ Diego    Version:
 ### Stemcell
 Version:
 Distro:
-  - [ ] Ubuntu
+  - [x] Ubuntu
   - [ ] CentOS
 
 ### Environment
@@ -23,11 +23,13 @@ Distro:
   - [ ] Azure
   - [ ] AzureChinaCloud
   - [ ] AzureUSGovernment
+  - [ ] AzureGermanCloud
   - [ ] AzureStack
   - [ ] Others:
 - Location: (e.g. East US)
 - Subscription ID:
 - Resource Group Name:
+- [ ] Use Managed Disks
 
 ### Issue Details
 

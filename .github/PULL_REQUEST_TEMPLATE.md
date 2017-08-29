@@ -1,3 +1,5 @@
+--------------------MESSAGE FROM ADMIN, DELETE BEFORE SUBMITTING----------------------
+
 Thanks for submitting a pull request!
 
 All pull request submitters and commit authors must have a Contributor License Agreement (CLA) on-file with us. Please sign the appropriate CLA ([individual](http://cloudfoundry.org/pdfs/CFF_Individual_CLA.pdf) or [corporate](http://cloudfoundry.org/pdfs/CFF_Corporate_CLA.pdf)).
@@ -6,13 +8,19 @@ When sending signed CLA please provide your github username in case of individua
 
 If you are confident that you're covered under a Corporate CLA, please make sure you've publicized your membership in the appropriate Github Org, per [these instructions](https://help.github.com/articles/publicizing-or-concealing-organization-membership/).
 
-- [ ] Please check this box once you have run the unit tests
+--------------------MESSAGE FROM ADMIN, DELETE BEFORE SUBMITTING----------------------
+
+- [ ] Please check this box and fill the data as below once you have run the unit tests.
+      Code coverage before your change: 
+      Code coverage with your change:   
+
   ```
   pushd src/bosh_azure_cpi
-    bundle install
-    bundle exec rspec spec/unit/*
+    ./bin/test-unit
   popd
   ```
+
+  NOTE: Please see how to setup dev environment and run unit tests in docs/development.md.
 
 ### Changelog
 

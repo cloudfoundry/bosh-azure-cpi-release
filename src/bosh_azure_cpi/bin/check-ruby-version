@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+[[ ! -f /usr/local/share/chruby/chruby.sh ]] && {
+  echo "You need to install chruby. Please follow the README to install: https://github.com/postmodern/chruby#install"
+  exit
+}
+source /usr/local/share/chruby/chruby.sh
+
+chruby $PROJECT_RUBY_VERSION
+if [[ "$?" -eq "1" ]]; then
+  echo "Ruby version $PROJECT_RUBY_VERSION not found. Installing..."
+
+  which ruby-install > /dev/null 2>&1
+  [[ "$?" -eq "1" ]] && {
+    echo "You need to install ruby-install. Please follow the README to install: https://github.com/postmodern/ruby-install#install"
+    exit
+  }
+
+  echo "Installing Ruby version $PROJECT_RUBY_VERSION ..."
+  ruby-install ruby $PROJECT_RUBY_VERSION
+  chruby $PROJECT_RUBY_VERSION
+
+  echo "Ruby version $PROJECT_RUBY_VERSION successfully installed."
+fi
+echo "Using ruby version $PROJECT_RUBY_VERSION"
+
+echo "Installing bundler..."
+gem install bundler
+
