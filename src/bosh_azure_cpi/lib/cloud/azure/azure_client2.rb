@@ -47,15 +47,16 @@ module Bosh::AzureCloud
     REST_API_COMPUTE_SNAPSHOTS           = 'snapshots'
     REST_API_COMPUTE_PLATFORM_IMAGES     = 'vmimage'
 
-    REST_API_PROVIDER_NETWORK            = 'Microsoft.Network'
-    REST_API_NETWORK_PUBLIC_IP_ADDRESSES = 'publicIPAddresses'
-    REST_API_NETWORK_LOAD_BALANCERS      = 'loadBalancers'
-    REST_API_NETWORK_INTERFACES          = 'networkInterfaces'
-    REST_API_NETWORK_VNETS               = 'virtualNetworks'
-    REST_API_NETWORK_SECURITY_GROUPS     = 'networkSecurityGroups'
+    REST_API_PROVIDER_NETWORK             = 'Microsoft.Network'
+    REST_API_NETWORK_PUBLIC_IP_ADDRESSES  = 'publicIPAddresses'
+    REST_API_NETWORK_LOAD_BALANCERS       = 'loadBalancers'
+    REST_API_NETWORK_INTERFACES           = 'networkInterfaces'
+    REST_API_NETWORK_VNETS                = 'virtualNetworks'
+    REST_API_NETWORK_SECURITY_GROUPS      = 'networkSecurityGroups'
+    REST_API_NETWORK_APPLICATION_GATEWAYS = 'applicationGateways'
 
-    REST_API_PROVIDER_STORAGE            = 'Microsoft.Storage'
-    REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
+    REST_API_PROVIDER_STORAGE             = 'Microsoft.Storage'
+    REST_API_STORAGE_ACCOUNTS             = 'storageAccounts'
 
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = ['adminPassword', 'client_secret', 'customData']
@@ -1461,6 +1462,66 @@ module Bosh::AzureCloud
     def get_network_subnet(url)
       result = get_resource_by_id(url)
       parse_subnet(result)
+    end
+    
+    # Network/Application Gateway
+    
+    # Add a backend address for an application gateway
+    # @param [String] name       - Name of application gateway.
+    # @param [String] ip_address - Backend IP Address.
+    #
+    # @return [Boolean]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/network/applicationgateway/create-or-update-an-application-gateway
+    #
+    def add_backend_address_of_application_gateway(name, ip_address)
+      @logger.debug("add_backend_address_of_application_gateway - trying to add `#{ip_address}' to the backend address pools of the applicaiton gateway #{name}")
+
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_APPLICATION_GATEWAYS, name: name)
+      ag = get_resource_by_id(url)
+      if ag.nil?
+        raise AzureNotFoundError, "add_backend_address_of_application_gateway - Cannot find the application gateway \"#{name}\"."
+      end
+
+      backend_addresses = ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']
+      backend_address = {
+        "ipAddress" => ip_address
+      }
+      unless backend_addresses.include?(backend_address)
+        backend_addresses.push(backend_address)
+        http_put(url, ag)
+      end
+
+      true
+    end
+
+    # Delete a backend address for an application gateway
+    # @param [String] name       - Name of application gateway.
+    # @param [String] ip_address - Backend IP Address.
+    #
+    # @return [Boolean]
+    #
+    # @See https://msdn.microsoft.com/en-us/library/mt684942.aspx
+    #
+    def delete_backend_address_of_application_gateway(name, ip_address)
+      @logger.debug("delete_backend_address_of_application_gateway - trying to remove `#{ip_address}' from the backend address pools of the applicaiton gateway #{name}")
+
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_APPLICATION_GATEWAYS, name: name)
+      ag = get_resource_by_id(url)
+      if ag.nil?
+        raise AzureNotFoundError, "delete_backend_address_of_application_gateway - Cannot find the application gateway \"#{name}\"."
+      end
+
+      backend_addresses = ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']
+      backend_address = {
+        "ipAddress" => ip_address
+      }
+      if backend_addresses.include?(backend_address)
+        backend_addresses.delete(backend_address)
+        http_put(url, ag)
+      end
+
+      true
     end
 
     # Network/Network Security Group

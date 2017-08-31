@@ -37,3 +37,4 @@ params:
   AUZRE_BOSH_SECOND_SUBNET_NAME:                     ""
   AZURE_CF_SUBNET_NAME:                              ""
   AZURE_CF_SECOND_SUBNET_NAME:                       ""
+  AZURE_APPLICATION_GATEWAY_NAME:                    ""

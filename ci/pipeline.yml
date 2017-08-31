@@ -48,6 +48,7 @@ jobs:
       AZURE_BOSH_SECOND_SUBNET_NAME:                     {{azure_bosh_second_subnet_name}}
       AZURE_CF_SUBNET_NAME:                              {{azure_cf_subnet_name}}
       AZURE_CF_SECOND_SUBNET_NAME:                       {{azure_cf_second_subnet_name}}
+      AZURE_APPLICATION_GATEWAY_NAME:                    {{azure_application_gateway_name}}
 
 - name: build-candidate
   serial: true
@@ -90,6 +91,7 @@ jobs:
       AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
       AZURE_USE_MANAGED_DISKS:        false
       SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
 
 - name: bats-ubuntu-unmanaged-disks
   serial: true
@@ -174,22 +176,23 @@ jobs:
   - task: test
     file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
     params:
-      AZURE_ENVIRONMENT:             {{azure_environment}}
-      AZURE_SUBSCRIPTION_ID:         {{azure_subscription_id}}
-      AZURE_CLIENT_ID:               {{azure_client_id}}
-      AZURE_CLIENT_SECRET:           {{azure_client_secret}}
-      AZURE_TENANT_ID:               {{azure_tenant_id}}
-      AZURE_DEFAULT_GROUP_NAME:      {{azure_default_group_name}}
-      AZURE_ADDITIONAL_GROUP_NAME:   {{azure_additional_group_name}}
-      AZURE_DEFAULT_GROUP_NAME:      {{azure_default_group_name_managed_disks}}
-      AZURE_ADDITIONAL_GROUP_NAME:   {{azure_additional_group_name_managed_disks}}
-      AZURE_STORAGE_ACCOUNT_NAME:    {{azure_storage_account_name_managed_disks}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE: {{azure_vnet_name_for_lifecycle}}
-      AZURE_BOSH_SUBNET_NAME:        {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME: {{azure_bosh_second_subnet_name}}
-      AZURE_DEFAULT_SECURITY_GROUP:  {{azure_default_security_group}}
-      AZURE_USE_MANAGED_DISKS:       true
-      SSH_PUBLIC_KEY:                {{ssh_public_key}}
+      AZURE_ENVIRONMENT:              {{azure_environment}}
+      AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
+      AZURE_CLIENT_ID:                {{azure_client_id}}
+      AZURE_CLIENT_SECRET:            {{azure_client_secret}}
+      AZURE_TENANT_ID:                {{azure_tenant_id}}
+      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name}}
+      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name}}
+      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_managed_disks}}
+      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_managed_disks}}
+      AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name_managed_disks}}
+      AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
+      AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
+      AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
+      AZURE_USE_MANAGED_DISKS:        true
+      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
 
 - name: bats-ubuntu-managed-disks
   serial: true
@@ -356,6 +359,7 @@ jobs:
       AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
       AZURE_USE_MANAGED_DISKS:        false
       SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
 
 - name: lifecycle-windows-managed-disks
   serial: true
@@ -368,21 +372,21 @@ jobs:
   - task: test
     file: bosh-cpi-src/ci/tasks/run-lifecycle-windows.yml
     params:
-      AZURE_ENVIRONMENT:             {{azure_environment}}
-      AZURE_SUBSCRIPTION_ID:         {{azure_subscription_id}}
-      AZURE_CLIENT_ID:               {{azure_client_id}}
-      AZURE_CLIENT_SECRET:           {{azure_client_secret}}
-      AZURE_TENANT_ID:               {{azure_tenant_id}}
-      AZURE_DEFAULT_GROUP_NAME:      {{azure_default_group_name_windows_managed_disks}}
-      AZURE_ADDITIONAL_GROUP_NAME:   {{azure_additional_group_name_windows_managed_disks}}
-      AZURE_STORAGE_ACCOUNT_NAME:    {{azure_storage_account_name_windows_managed_disks}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE: {{azure_vnet_name_for_lifecycle}}
-      AZURE_BOSH_SUBNET_NAME:        {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME: {{azure_bosh_second_subnet_name}}
-      AZURE_DEFAULT_SECURITY_GROUP:  {{azure_default_security_group}}
-      AZURE_USE_MANAGED_DISKS:       true
-      SSH_PUBLIC_KEY:                {{ssh_public_key}}
-
+      AZURE_ENVIRONMENT:              {{azure_environment}}
+      AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
+      AZURE_CLIENT_ID:                {{azure_client_id}}
+      AZURE_CLIENT_SECRET:            {{azure_client_secret}}
+      AZURE_TENANT_ID:                {{azure_tenant_id}}
+      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_windows_managed_disks}}
+      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_windows_managed_disks}}
+      AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name_windows_managed_disks}}
+      AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
+      AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
+      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
+      AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
+      AZURE_USE_MANAGED_DISKS:        true
+      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
 
 - name: promote-candidate
   plan:
