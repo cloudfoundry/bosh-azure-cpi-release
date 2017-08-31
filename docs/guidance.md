@@ -56,6 +56,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
 * Integrate Azure Services with Cloud Foundry on Azure
   * [Azure DNS](./advanced/deploy-azuredns/)
   * [Deploy multiple HAProxy instances behind Azure Load Balancer](./advanced/deploy-multiple-haproxy/)
+  * [Integrating Application Gateway](./advanced/application-gateway/)
 
 # 4 Additional Information
 

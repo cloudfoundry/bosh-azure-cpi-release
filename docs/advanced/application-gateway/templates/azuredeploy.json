@@ -61,7 +61,7 @@
     },
     "publicIPAddressName": {
       "type": "string",
-      "defaultValue": "publicIp1",
+      "defaultValue": "publicIP01",
       "metadata": {
         "description": "Public IP Address name"
       }
