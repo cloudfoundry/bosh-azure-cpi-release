@@ -68,8 +68,6 @@
     params['cloud']['properties']['azure']['azure_stack']['authentication'] = p('azure.azure_stack.authentication')
     params['cloud']['properties']['azure']['azure_stack']['resource'] = resource
     params['cloud']['properties']['azure']['azure_stack']['endpoint_prefix'] = p('azure.azure_stack.endpoint_prefix')
-    params['cloud']['properties']['azure']['azure_stack']['skip_ssl_validation'] = p('azure.azure_stack.skip_ssl_validation')
-    params['cloud']['properties']['azure']['azure_stack']['use_http_to_access_storage_account'] = p('azure.azure_stack.use_http_to_access_storage_account')
   end
 
   if_p('blobstore') do

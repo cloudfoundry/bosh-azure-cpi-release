@@ -235,15 +235,7 @@ module Bosh::AzureCloud
         :storage_dns_suffix   => URI.parse(storage_account[:storage_blob_host]).host.split(".")[2..-1].join("."),
         :user_agent_prefix    => USER_AGENT_FOR_REST
       }
-
-      if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
-        use_http = azure_properties['azure_stack']['use_http_to_access_storage_account']
-        if use_http
-          options[:default_endpoints_protocol] = 'http'
-        else
-          options[:ca_file] = get_ca_file_path
-        end
-      end
+      options[:ca_file] = get_ca_file_path if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
 
       Azure::Storage::Client.create(options)
     end
