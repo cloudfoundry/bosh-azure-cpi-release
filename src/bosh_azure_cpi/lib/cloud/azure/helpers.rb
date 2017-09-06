@@ -143,9 +143,8 @@ module Bosh::AzureCloud
     WINDOWS_VM_NAME_LENGTH        = 15
 
     # Azure Stack Authentication Type
-    AZURESTACK_AUTHENTICATION_TYPE_AZURESTACK   = 'AzureStack'
-    AZURESTACK_AUTHENTICATION_TYPE_AZURESTACKAD = 'AzureStackAD'
     AZURESTACK_AUTHENTICATION_TYPE_AZUREAD      = 'AzureAD'
+    AZURESTACK_AUTHENTICATION_TYPE_ADFS         = 'ADFS'
 
     BOSH_JOBS_DIR = '/var/vcap/jobs'
     AZURESTACK_CA_CERT_RELATIVE_PATH            = 'azure_cpi/config/azure_stack_ca_cert.pem'
@@ -219,13 +218,11 @@ module Bosh::AzureCloud
         domain = azure_properties['azure_stack']['domain']
         authentication = azure_properties['azure_stack']['authentication']
 
-        if authentication == AZURESTACK_AUTHENTICATION_TYPE_AZURESTACK
-          url = "https://#{domain}/oauth2/token"
-        elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_AZURESTACKAD
-          url = "https://#{domain}/#{azure_properties['tenant_id']}/oauth2/token"
-        elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_AZUREAD
+        if authentication == AZURESTACK_AUTHENTICATION_TYPE_AZUREAD
           url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
           api_version = AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
+        elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_ADFS
+          url = "https://adfs.#{domain}/adfs/oauth2/token"
         else
           cloud_error("No support for the AzureStack authentication: `#{authentication}'")
         end

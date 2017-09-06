@@ -322,30 +322,6 @@ describe Bosh::AzureCloud::Helpers do
         }
       }
 
-      context "when azure_stack.authentication is AzureStack" do
-        before do
-          azure_properties['azure_stack']['authentication'] = 'AzureStack'
-        end
-
-        it "should return AzureStack authentication endpoint and api version" do
-          expect(
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-          ).to eq(["https://fake-domain/oauth2/token", azure_stack_api_version])
-        end
-      end
-
-      context "when azure_stack.authentication is AzureStackAD" do
-        before do
-          azure_properties['azure_stack']['authentication'] = 'AzureStackAD'
-        end
-
-        it "should return AzureStack authentication endpoint and api version" do
-          expect(
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-          ).to eq(["https://fake-domain/fake-tenant-id/oauth2/token", azure_stack_api_version])
-        end
-      end
-
       context "when azure_stack.authentication is AzureAD" do
         before do
           azure_properties['azure_stack']['authentication'] = 'AzureAD'
@@ -355,6 +331,18 @@ describe Bosh::AzureCloud::Helpers do
           expect(
             helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
           ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", api_version])
+        end
+      end
+
+      context "when azure_stack.authentication is ADFS" do
+        before do
+          azure_properties['azure_stack']['authentication'] = 'ADFS'
+        end
+
+        it "should return ADFS authentication endpoint and api version" do
+          expect(
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          ).to eq(["https://adfs.fake-domain/adfs/oauth2/token", azure_stack_api_version])
         end
       end
 
