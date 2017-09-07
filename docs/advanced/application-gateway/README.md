@@ -1,20 +1,28 @@
-# Integrating Application Gateway with Cloud Foundry on Azure
+# Integrating Application Gateway with CF on Azure
 
-To enable advanced feature like SSL termination on your Cloud Foundry network, you can integrate Azure Application gateway. This document provides steps to create and configure [Azure Application Gateway](https://azure.microsoft.com/en-us/services/application-gateway/), that will be used as load balancer with SSL offloading enabled for Cloud Foundry. We also introduce how to create the application gateway with a single certificate or multiple certificates.
+This document provides steps to create [Azure Application Gateway](https://azure.microsoft.com/services/application-gateway/), and integrate it as load balancer for Cloud Foundry. 
 
-# 1 What is Azure Application Gateway
+## Azure Application Gateway background
 
-Azure Application Gateway provides application-level routing and load balancing services for your web front end, with following capabilities:
-* Scalable, highly-available web application delivery
-  Azure Application Gateway enable you to build a scalable and highly-available web front end in Azure. You control the size of the gateway and can scale your deployment based on your needs.
-* Efficient, secure web frontend
-  SSL offload lets you build a secure web front end with efficient backend servers and also streamline your certificate management.
-* Close integration with Azure services
-  Application Gateway allows easy integration with Azure Traffic Manager to support multi-region redirection, automatic failover, and zero-downtime maintenance. Application Gateway is also integrated with Azure Load Balancer to support scale-out and high-availability for both Internet-facing and internal-only web front ends.
+Microsoft Azure Application Gateway is a dedicated virtual appliance, providing application delivery controller (ADC) as a service. It offers various layer 7 load balancing capabilities, supports SSL offloading and end to end SSL, Web Application Firewall, cookie-based session affinity, url path-based routing, multi site hosting, and others. For a full list of supported features, see [Introduction to Application Gateway](https://docs.microsoft.com/azure/application-gateway/application-gateway-introduction)
 
-# 2 Pre-requisites
 
-* Prepare your certificates in the `.pfx` format.
+## Pre-requisites
+
+* Setup a Cloud Foundry deployment
+
+* Update the manifest to remove HA Proxy, for example remove *ha_proxy_z1* job in following sample file:
+
+  ```
+  - default_networks:
+  - name: cf1
+  instances: 1
+  name: ha_proxy_z1
+  networks:
+  ...
+  ```
+
+* Prepare your certificates in the `.pfx` format
 
   ```
   openssl genrsa -out domain.name.key 2048
@@ -23,13 +31,12 @@ Azure Application Gateway provides application-level routing and load balancing 
   # You will be asked to input the password for the ".pfx" certificate
   ```
 
-* It is assumed that you have already created a basic Cloud Foundry deployment, with multiple routers specified in the manifest, and removed HA Proxy part.
-  
-# 3 Configuration Steps  
+## Configure the CF deployment for Application Gateway
 
-## 3.1 Create Application Gateway and its Public IP
+### 1. Create Application Gateway 
+To create the application gateway, you need to create a public IP and a subnet, then you can enable/configure the optional features, like SSL offloading. You can complete these steps through ARM template or scripts. This applies to both new and updating deployments.
 
-### 3.1.1 Via ARM templates (**RECOMMENDED**)
+#### Creating with ARM templates (**RECOMMENDED**)
 
 <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fcloudfoundry-incubator%2Fbosh-azure-cpi-release%2Fmaster%2Fdocs%2Fadvanced%2Fapplication-gateway%2Ftemplates%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
@@ -41,14 +48,14 @@ Azure Application Gateway provides application-level routing and load balancing 
   base64 domain.name.pfx | tr -d '\n'
   ```
 
-### 3.1.2 Manually
+#### Creating manually with scripts
 
 * [Azure CLI](./cli/create-ag.sh)
 * [Powershell](./powershell/)
 
-## 3.2 Add Cloud Foundry routers into Application Gateway's backend pool
+### 2 Assocaite Application Gateway and Cloud Foundry routers
 
-### 3.2.1 Update Cloud Foundry manifest
+#### Update Cloud Foundry manifest
 
   Add `application_gateway` to the corresponding `cloud_properties` of routers in `resource_pools`:
 
@@ -66,21 +73,21 @@ Azure Application Gateway provides application-level routing and load balancing 
       version: latest
   ```
 
-### 3.2.2 Update Cloud Foundry deployment
+#### Update Cloud Foundry deployment
 
   ```
   bosh deployment multiple-vm-cf.yml
   bosh deploy -n
   ```
     
-## 3.3 Configure DNS for your Cloud Foundry domain.
+### 3. Configure DNS for your Cloud Foundry domain
 
-  * For production, you need to update the DNS configuration according to the belew sample.
+  Update the DNS entries, so the Application gateway's IP is associated with CF system domain.
   * For testing only, you can also update local host file.
     * Windows: `C:\Windows\System32\drivers\etc\hosts`
     * Linux: `/etc/hosts`
 
-  Sample DNS entries after Application Gateway is created:
+  * Below is a sample DNS entry after Application Gateway is created:
 
   ```
   <Public IP Address of Application Gateway>   <SYSTEM-DOMAIN>
@@ -88,7 +95,7 @@ Azure Application Gateway provides application-level routing and load balancing 
 
   You can find the IP addresses mentioned above on Azure Portal in your resource group. `<SYSTEM-DOMAIN>` is specified in your manifest for Cloud Foundry.
 
-# 4 Login to your Cloud Foundry
+### 4. Log into CF deployment for validating
   
   `cf login -a https://api.<SYSTEM-DOMAIN> --skip-ssl-validation`.
 
@@ -99,4 +106,3 @@ Azure Application Gateway provides application-level routing and load balancing 
 
   If you want to create an AG without SSL offloading, reference this:
   https://azure.microsoft.com/en-us/documentation/articles/application-gateway-create-gateway-arm
-
