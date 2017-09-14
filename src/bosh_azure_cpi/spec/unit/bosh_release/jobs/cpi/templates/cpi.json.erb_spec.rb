@@ -114,6 +114,42 @@ describe 'cpi.json.erb' do
       end
     end
 
+    context 'when client_secret is provided' do
+      before do
+        manifest['properties']['azure']['client_secret'] = "fake-client-secret"
+      end
+
+      it 'is able to render client_secret' do
+        expect(subject['cloud']['properties']['azure']['client_secret']).to eq("fake-client-secret")
+      end
+    end
+
+    context 'when client_secret is not provided' do
+      before do
+        manifest['properties']['azure']['client_secret'] = nil
+      end
+
+      context 'when certificate is not provided' do
+        before do
+          manifest['properties']['azure']['certificate'] = nil
+        end
+
+        it 'raises an error of missing azure.client_secret and azure.certificate' do
+          expect { subject }.to raise_error(/both "client_secret" and "certificate" are not provided/)
+        end
+      end
+
+      context 'when certificate is provided' do
+        before do
+          manifest['properties']['azure']['certificate'] = "fake-certificate-content"
+        end
+
+        it 'allows client_secret to be nil' do
+          expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+        end
+      end
+    end
+
     context 'when the managed disks are enabled' do
       before do
         manifest['properties']['azure']['use_managed_disks'] = true

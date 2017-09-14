@@ -148,7 +148,8 @@ module Bosh::AzureCloud
     AZURESTACK_AUTHENTICATION_TYPE_AZUREAD      = 'AzureAD'
 
     BOSH_JOBS_DIR = '/var/vcap/jobs'
-    AZURESTACK_CA_FILE_RELATIVE_PATH = 'azure_cpi/config/azure_stack_ca_cert.pem'
+    AZURESTACK_CA_CERT_RELATIVE_PATH            = 'azure_cpi/config/azure_stack_ca_cert.pem'
+    SERVICE_PRINCIPAL_CERTIFICATE_RELATIVE_PATH = 'azure_cpi/config/service_principal_certificate.pem'
 
     AVAILABILITY_ZONES = ['1', '2', '3']
 
@@ -186,6 +187,13 @@ module Bosh::AzureCloud
         yield
       rescue error
       end
+    end
+
+    def bosh_jobs_dir
+      # When creating bosh director, CPI uses the environment variable BOSH_JOBS_DIR as bosh_jobs_dir,
+      # which is set to a local path (~/.bosh_init for bosh-init and ~/.bosh for bosh cli v2).
+      # Otherwise, CPI uses /var/vcap/jobs/ as bosh_jobs_dir.
+      ENV['BOSH_JOBS_DIR'].nil? ? BOSH_JOBS_DIR : ENV['BOSH_JOBS_DIR']
     end
 
     def get_arm_endpoint(azure_properties)
@@ -228,6 +236,37 @@ module Bosh::AzureCloud
       return url, api_version
     end
 
+    def get_service_principal_certificate_path
+      "#{bosh_jobs_dir}/#{SERVICE_PRINCIPAL_CERTIFICATE_RELATIVE_PATH}"
+    end
+
+    # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials
+    def get_jwt_assertion(authentication_endpoint, client_id)
+      certificate_path = get_service_principal_certificate_path
+      certificate_data = File.read(certificate_path)
+      @logger.info("Reading the certificate from `#{certificate_path}'")
+      cert = OpenSSL::X509::Certificate.new(certificate_data)
+      thumbprint = OpenSSL::Digest::SHA1.new(cert.to_der).to_s
+      @logger.debug("The certificate thumbprint is `#{thumbprint}'")
+      header = {
+        "alg": "RS256",
+        "typ": "JWT",
+        "x5t": Base64.urlsafe_encode64([thumbprint].pack('H*'))
+      }
+      payload = {
+        "aud": authentication_endpoint,
+        "exp": (Time.now + 3600).strftime("%s"),
+        "iss": client_id,
+        "jti": SecureRandom.uuid,
+        "nbf": (Time.now - 90).strftime("%s"),
+        "sub": client_id
+      }
+      rsa_private = OpenSSL::PKey::RSA.new(certificate_data)
+      JWT.encode(payload, rsa_private, 'RS256', header)
+    rescue => e
+      cloud_error("Failed to get the jwt assertion: #{e.inspect}\n#{e.backtrace.join("\n")}")
+    end
+
     def initialize_azure_storage_client(storage_account, azure_properties)
       options = {
         :storage_account_name => storage_account[:name],
@@ -235,15 +274,13 @@ module Bosh::AzureCloud
         :storage_dns_suffix   => URI.parse(storage_account[:storage_blob_host]).host.split(".")[2..-1].join("."),
         :user_agent_prefix    => USER_AGENT_FOR_REST
       }
-      options[:ca_file] = get_ca_file_path if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
+      options[:ca_file] = get_ca_cert_path if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
 
       Azure::Storage::Client.create(options)
     end
 
-    def get_ca_file_path
-      # The environment variable BOSH_JOBS_DIR only exists when deploying BOSH director
-      bosh_jobs_dir = ENV['BOSH_JOBS_DIR'].nil? ? BOSH_JOBS_DIR : ENV['BOSH_JOBS_DIR']
-      "#{bosh_jobs_dir}/#{AZURESTACK_CA_FILE_RELATIVE_PATH}"
+    def get_ca_cert_path
+      "#{bosh_jobs_dir}/#{AZURESTACK_CA_CERT_RELATIVE_PATH}"
     end
 
     def get_api_version(azure_properties, resource_provider)

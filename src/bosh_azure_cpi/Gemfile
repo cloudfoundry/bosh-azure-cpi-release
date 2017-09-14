@@ -4,6 +4,7 @@ gem 'bosh_common',   '1.3262.24.0'
 gem 'bosh_cpi',      '2.4.1'
 gem 'azure-storage', '0.12.3.preview'
 gem 'vhd',           '0.0.4'
+gem 'jwt',           '1.5.6'
 
 group :development, :test do
   gem 'rspec',       '~>3.5.0'

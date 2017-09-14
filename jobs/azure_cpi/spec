@@ -5,6 +5,7 @@ templates:
   cpi.erb: bin/cpi
   cpi.json.erb: config/cpi.json
   azure_stack_ca_cert.pem.erb: config/azure_stack_ca_cert.pem
+  service_principal_certificate.pem.erb: config/service_principal_certificate.pem
 
 packages:
 - ruby-2.4-r3
@@ -29,6 +30,15 @@ properties:
     description: The client id for your service principal
   azure.client_secret:
     description: The client secret for your service principal
+  azure.certificate:
+    description: The certificate for your service principal
+    example:
+      -----BEGIN PRIVATE KEY-----
+      MII...
+      -----END PRIVATE KEY-----
+      -----BEGIN CERTIFICATE-----
+      MII...
+      -----END CERTIFICATE-----
   azure.ssh_user:
     description: Default ssh user to use when spinning up new vms
     default: vcap

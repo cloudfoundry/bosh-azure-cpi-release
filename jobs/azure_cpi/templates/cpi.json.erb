@@ -9,7 +9,6 @@
           'resource_group_name' => p('azure.resource_group_name'),
           'tenant_id' => p('azure.tenant_id'),
           'client_id' => p('azure.client_id'),
-          'client_secret' => p('azure.client_secret'),
           'ssh_user' => p('azure.ssh_user'),
           'parallel_upload_thread_num' => p('azure.parallel_upload_thread_num'),
           'default_security_group' => p('azure.default_security_group'),
@@ -39,18 +38,19 @@
     params['cloud']['properties']['azure']['location'] = location
   end
 
+  if_p('azure.client_secret') do |client_secret|
+    params['cloud']['properties']['azure']['client_secret'] = client_secret
+  end.else do
+    certificate = p('azure.certificate', '')
+    raise 'both "client_secret" and "certificate" are not provided. Please specify at least one of them.' if certificate.empty?
+  end
+
   if_p('azure.storage_account_name') do |storage_account_name|
     params['cloud']['properties']['azure']['storage_account_name'] = storage_account_name
   end.else do
     if p('azure.use_managed_disks') == false
       raise 'storage_account_name cannot be nil if use_managed_disks is false. Please read https://bosh.io/docs/azure-cpi.html.'
     end
-  end
-
-  if_p('registry.endpoint') do |endpoint|
-    params['cloud']['properties']['registry']['endpoint'] = endpoint
-  end.else do
-    params['cloud']['properties']['registry']['endpoint'] = "http://#{p('registry.username')}:#{ERB::Util.url_encode(p('registry.password'))}@#{p('registry.host')}:#{p('registry.port')}"
   end
 
   if_p('azure.ssh_public_key') do |ssh_public_key|
@@ -68,6 +68,12 @@
     params['cloud']['properties']['azure']['azure_stack']['authentication'] = p('azure.azure_stack.authentication')
     params['cloud']['properties']['azure']['azure_stack']['resource'] = resource
     params['cloud']['properties']['azure']['azure_stack']['endpoint_prefix'] = p('azure.azure_stack.endpoint_prefix')
+  end
+
+  if_p('registry.endpoint') do |endpoint|
+    params['cloud']['properties']['registry']['endpoint'] = endpoint
+  end.else do
+    params['cloud']['properties']['registry']['endpoint'] = "http://#{p('registry.username')}:#{ERB::Util.url_encode(p('registry.password'))}@#{p('registry.host')}:#{p('registry.port')}"
   end
 
   if_p('blobstore') do
