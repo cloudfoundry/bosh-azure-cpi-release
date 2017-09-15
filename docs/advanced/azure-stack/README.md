@@ -51,7 +51,7 @@ azure:
 
 * Authentication
 
-  Azure Stack uses either Azure Active Directory (AzureAD) or Active Directory Federation Services (AD FS) as an identity provider. For Azure CPI, only `AzureAD` is supported.
+  Azure Stack uses either Azure Active Directory (AzureAD) or Active Directory Federation Services (AD FS) as an identity provider.
 
   * Azure Active Directory
 
@@ -64,6 +64,20 @@ azure:
       client_secret: <CLIENT-SECRET>
       azure_stack:
         authentication: AzureAD
+    ```
+
+  * Active Directory Federation Services
+
+    Please specify the authentication to `ADFS`, and provide the [service principal with certificate](../use-service-principal-with-certificate/) (`tenant_id`, `client_id` and `certificate`).
+
+    ```
+    azure:
+      environment: AzureStack
+      tenant_id: <TENANT-ID>
+      client_id: <CLIENT-ID>
+      certificate: <CERTIFICATE>
+      azure_stack:
+        authentication: ADFS
     ```
 
 * CA Cert

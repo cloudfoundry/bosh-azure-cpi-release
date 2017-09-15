@@ -8,6 +8,8 @@ A service principal contains the following credentials which will be mentioned i
 - **CLIENT_ID**
 - **CLIENT_SECRET** 
 
+>**NOTE:** A service principal have two types: password-based and certificate-based. This topic only covers the password-based service principal. You can refer to [here](../advanced/use-service-principal-with-certificate) to create a service principal with certificate.
+
 # Create a Service Principal using Azure CLI 2.0
 
 The easiest way to create the Service Principal is with the Azure Cloud Shell in the Azure portal which provides a pre-installed, pre-configured Azure CLI 2.0. If you can't use Azure Cloud Shell, you may [install Azure CLI 2.0](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) in the system of your preference.
