@@ -9,6 +9,7 @@ require 'cloud/azure'
 require 'json'
 require 'net/http'
 require 'stringio'
+require 'fileutils'
 
 MOCK_AZURE_SUBSCRIPTION_ID        = 'aa643f05-5b67-4d58-b433-54c2e9131a59'
 MOCK_DEFAULT_STORAGE_ACCOUNT_NAME = '8853f441db154b438550a853'
