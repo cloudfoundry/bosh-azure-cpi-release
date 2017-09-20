@@ -123,7 +123,7 @@ CREATE DATABASE testdb;
 GRANT ALL PRIVILEGES ON DATABASE testdb to test;
 EOS
   sudo su postgres
-  psql -f ~/workspace/create_db.sql
+  psql -f create_db.sql
   exit
 
   # Install bosh-registry which CPI depends on
