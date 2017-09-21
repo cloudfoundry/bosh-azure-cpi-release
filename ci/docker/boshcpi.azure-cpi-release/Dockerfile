@@ -2,20 +2,17 @@ FROM ubuntu:15.04
 
 RUN apt-get update; apt-get -y upgrade; apt-get clean
 
-RUN apt-get install -y git curl tar make; apt-get clean
+RUN apt-get install -y git curl tar make jq; apt-get clean
 
-RUN apt-get install -y sqlite3 libsqlite3-dev; apt-get clean
+# dependencies for "bosh create-env" command
+RUN apt-get install -y build-essential zlibc zlib1g-dev ruby ruby-dev openssl libxslt-dev libxml2-dev libssl-dev libreadline6 libreadline6-dev libyaml-dev libsqlite3-dev sqlite3; apt-get clean
 
-RUN apt-get install -y mysql-client libmysqlclient-dev; apt-get clean
-
-RUN apt-get install -y jq; apt-get clean
-
-RUN apt-get install -y libpq-dev; apt-get clean
-
-RUN curl -sL https://deb.nodesource.com/setup_4.x | bash -; apt-get install -y nodejs; apt-get clean; rm -f /usr/bin/node; ln -s /usr/bin/nodejs /usr/bin/node
-
-# azure CLI
-RUN npm install -g azure-cli@0.10.10; azure -v
+# azure-cli
+RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ wheezy main" | \
+    tee /etc/apt/sources.list.d/azure-cli.list
+RUN apt-key adv --keyserver packages.microsoft.com --recv-keys 417A0893
+RUN apt-get install -y apt-transport-https
+RUN apt-get update; apt-get install -y azure-cli=2.0.18-1; apt-get clean; az -v
 
 # chruby
 RUN /bin/bash -l -c " \
@@ -39,9 +36,9 @@ RUN /bin/bash -l -c " \
 ENV RUBY_VERSION 2.2.4
 RUN ruby-install ruby ${RUBY_VERSION}
 
-# Bundler and BOSH CLI
-RUN /bin/bash -l -c "                            \
-  source /etc/profile.d/chruby.sh ;              \
-  chruby ${RUBY_VERSION} ;                       \
-  gem install bundler bosh_cli --no-ri --no-rdoc \
+# Bundler
+RUN /bin/bash -l -c "                   \
+  source /etc/profile.d/chruby.sh ;     \
+  chruby ${RUBY_VERSION} ;              \
+  gem install bundler --no-ri --no-rdoc \
 "
