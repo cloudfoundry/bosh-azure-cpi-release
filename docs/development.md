@@ -5,7 +5,7 @@
 # Install GO (used by the vendoring direnv):
 Please install [GO](https://golang.org/dl/).
 
-  ```
+  ```bash
   mkdir ~/workspace ~/go
   cd ~/workspace
   wget https://storage.googleapis.com/golang/go1.9.linux-amd64.tar.gz
@@ -18,7 +18,7 @@ Please install [GO](https://golang.org/dl/).
 # Install direnv
 Please install [direnv](https://github.com/direnv/direnv#from-source).
 
-  ```
+  ```bash
   mkdir -p $GOPATH/src/github.com/direnv
   git clone https://github.com/direnv/direnv.git $GOPATH/src/github.com/direnv/direnv
   pushd $GOPATH/src/github.com/direnv/direnv
@@ -34,7 +34,7 @@ Please install [direnv](https://github.com/direnv/direnv#from-source).
 # Install ruby
 Please make sure you have installed ruby 2.2.4 before you start. Below commands are tested in Ubuntu 14.04 LTS. _FYI, the latest stable version of ruby is 2.4.1_
 
-  ```
+  ```bash
   # Install ruby 2.2.4 with chruby
   sudo apt-get update
   sudo apt-get install -y git gcc make libssl-dev libreadline-dev zlib1g-dev
@@ -62,7 +62,7 @@ Please make sure you have installed ruby 2.2.4 before you start. Below commands 
 
 ### Install Ruby gem Bundler (used by the vendoring script):
 
-  ```
+  ```bash
   chruby 2.2.4
   ruby -v
 
@@ -73,7 +73,7 @@ Please make sure you have installed ruby 2.2.4 before you start. Below commands 
 
 With bundler installed, switch to ./src/bosh_azure_cpi and run:
 
-  ```
+  ```bash
   chruby 2.2.4
   ruby -v
 
@@ -84,14 +84,14 @@ With bundler installed, switch to ./src/bosh_azure_cpi and run:
 
 ### Run unittests script
 
-  ```
+  ```bash
   cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
   ./bin/test-unit
   ```
 
 ### Create the BOSH release:
 
-  ```
+  ```bash
   chruby 2.2.4
   ruby -v
 
@@ -108,7 +108,7 @@ At the end of the CLI output there will be "Release tarball" path.
 ## Test Interfaces
 After you change the CPI code, you can use `bosh_azure_console` to test your changes. Below commands are tested in Ubuntu 14.04 LTS.
 
-  ```
+  ```bash
   cd ~/workspace
   chruby 2.2.4
   ruby -v
@@ -118,10 +118,10 @@ After you change the CPI code, you can use `bosh_azure_console` to test your cha
 
   # Create database and user
   cat > ~/workspace/create_db.sql <<EOS
-CREATE USER test WITH PASSWORD 'test';
-CREATE DATABASE testdb;
-GRANT ALL PRIVILEGES ON DATABASE testdb to test;
-EOS
+  CREATE USER test WITH PASSWORD 'test';
+  CREATE DATABASE testdb;
+  GRANT ALL PRIVILEGES ON DATABASE testdb to test;
+  EOS
   sudo su postgres
   psql -f create_db.sql
   exit
@@ -135,23 +135,23 @@ EOS
   sed -i -e '23s/^/#/' ~/.gem/ruby/2.2.4/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
 
   cat > ~/workspace/registry.cfg <<EOS
----
-loglevel: debug
+  ---
+  loglevel: debug
 
-http:
-  port: 25695
-  user: admin
-  password: admin
+  http:
+    port: 25695
+    user: admin
+    password: admin
 
-db:
-  adapter: postgres
-  max_connections: 32
-  pool_timeout: 10
-  host: 127.0.0.1
-  database: testdb
-  user: test
-  password: test
-EOS
+  db:
+    adapter: postgres
+    max_connections: 32
+    pool_timeout: 10
+    host: 127.0.0.1
+    database: testdb
+    user: test
+    password: test
+  EOS
 
   # Prepare database for bosh-registry
   bosh-registry-migrate -c ~/workspace/registry.cfg
@@ -161,53 +161,53 @@ EOS
   bundle install
 
   # Please replace xxx with your credentials.
-  cat > ~/cpi.cfg <<EOS
----
-azure:
-  environment: AzureCloud
-  subscription_id: xxx
-  storage_account_name: xxx
-  resource_group_name: xxx
-  tenant_id: xxx
-  client_id: xxx
-  client_secret: 'xxx'
-  ssh_user: vcap
-  ssh_public_key: ssh-rsa xxx
-  default_security_group: nsg-bosh
-  debug_mode: false
-  use_managed_disks: false
-registry:
-  endpoint: http://127.0.0.1:25695
-  user: admin
-  password: admin
-EOS
+  cat > ~/workspace/cpi.cfg <<EOS
+  ---
+  azure:
+    environment: AzureCloud
+    subscription_id: xxx
+    storage_account_name: xxx
+    resource_group_name: xxx
+    tenant_id: xxx
+    client_id: xxx
+    client_secret: 'xxx'
+    ssh_user: vcap
+    ssh_public_key: ssh-rsa xxx
+    default_security_group: nsg-bosh
+    debug_mode: false
+    use_managed_disks: false
+  registry:
+    endpoint: http://127.0.0.1:25695
+    user: admin
+    password: admin
+  EOS
   ```
 
 You can use `tmux` to create two consoles. Start `bosh-registry` in one console and `bosh_azure_console` in another console.
 
 Console 1:
 
-  ```
+  ```bash
   bosh-registry -c ~/workspace/registry.cfg
   ```
 
 Console 2:
 
-  ```
+  ```bash
   cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi/bin
-  ./bosh_azure_console -c ~/cpi.cfg
+  ./bosh_azure_console -c ~/workspace/cpi.cfg
   ```
 
 Examples:
 
-  ```
+  ```ruby
   cpi.azure_client2.get_resource_group
   cpi.disk_manager2.has_disk?('bosh-disk-a')
   ```
 
 Below is an example you can type in `bosh_azure_console` to test fake light stemcells.
 
-  ```
+  ```ruby
   begin
     stemcell_properties = {
       "name" => "fake-name",
