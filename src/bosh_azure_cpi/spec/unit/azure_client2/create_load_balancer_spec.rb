@@ -14,6 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
+  let(:api_version_network) { AZURE_RESOURCE_PROVIDER_NETWORK }
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
   let(:request_id) { "fake-request-id" }
 
@@ -50,7 +51,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   }
 
   describe "#create_load_balancer" do
-    let(:load_balancer_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/loadBalancers/#{load_balancer_name}?api-version=#{api_version}" }
+    let(:load_balancer_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/loadBalancers/#{load_balancer_name}?api-version=#{api_version_network}" }
 
     context "when token is valid, create operation is accepted and completed" do
       it "should create a load balancer without error" do

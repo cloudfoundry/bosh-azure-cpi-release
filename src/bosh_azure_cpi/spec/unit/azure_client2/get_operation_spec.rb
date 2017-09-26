@@ -14,6 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
+  let(:api_version_network) { AZURE_RESOURCE_PROVIDER_NETWORK }
   let(:default_resource_group_name) { mock_azure_properties['resource_group_name'] }
   let(:resource_group_name) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
@@ -27,7 +28,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   # Public IP
   let(:public_ip_name) { "fake-name" }
   let(:public_ip_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}" }
-  let(:public_ip_uri) { "https://management.azure.com/#{public_ip_id}?api-version=#{api_version}" }
+  let(:public_ip_uri) { "https://management.azure.com/#{public_ip_id}?api-version=#{api_version_network}" }
   let(:public_ip_response_body) {
     {
       "id" => "fake-id",
@@ -72,7 +73,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   # Load Balancer
   let(:load_balancer_name) { "fake-name" }
   let(:load_balancer_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Network/loadBalancers/#{load_balancer_name}" }
-  let(:load_balancer_uri) { "https://management.azure.com/#{load_balancer_id}?api-version=#{api_version}" }
+  let(:load_balancer_uri) { "https://management.azure.com/#{load_balancer_id}?api-version=#{api_version_network}" }
   let(:load_balancer_response_body) {
     {
       "id" => "fake-id",
@@ -135,8 +136,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   # Network Interface
   let(:nic_name) { "fake-name" }
   let(:nic_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/networkInterfaces/#{nic_name}" }
-  let(:nic_uri) { "https://management.azure.com/#{nic_id}?api-version=#{api_version}" }
-
+  let(:nic_uri) { "https://management.azure.com/#{nic_id}?api-version=#{api_version_network}" }
   let(:nic_response_body) {
     {
       "id" => "fake-id",
@@ -153,13 +153,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             "id" => "fake-id",
             "properties" => {
               "privateIPAddress" => "10.0.0.100",
-              "privateIPAllocationMethod" => "Dynamic",
-              "publicIPAddress" => {
-                "id" => public_ip_id
-              },
-              "loadBalancerBackendAddressPools" => [{
-                "id" => load_balancer_id
-              }]
+              "privateIPAllocationMethod" => "Dynamic"
             }
           }
         ]
@@ -176,15 +170,13 @@ describe Bosh::AzureCloud::AzureClient2 do
       :dns_settings => ["168.63.129.16"],
       :ip_configuration_id => "fake-id",
       :private_ip => "10.0.0.100",
-      :private_ip_allocation_method => "Dynamic",
-      :public_ip => fake_public_ip,
-      :load_balancer => fake_load_balancer
+      :private_ip_allocation_method => "Dynamic"
     }
   }
 
   # Virtual Network
   let(:vnet_name) { "fake-vnet-name" }
-  let(:vnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}?api-version=#{api_version}" }
+  let(:vnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}?api-version=#{api_version_network}" }
   let(:vnet_response_body) {
     {
       "id" => "fake-vnet-id",
@@ -227,7 +219,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   # Subnet
   let(:vnet_name) { "fake-name" }
   let(:subnet_name) { "bar" }
-  let(:network_subnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}/subnets/#{subnet_name}?api-version=#{api_version}" }
+  let(:network_subnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}/subnets/#{subnet_name}?api-version=#{api_version_network}" }
   let(:network_subnet_response_body) {
     {
       "id" => "fake-id",
@@ -248,14 +240,13 @@ describe Bosh::AzureCloud::AzureClient2 do
   }
 
   # Network Security Group
-  let(:nsg_name) { "fake-name" }
+  let(:nsg_name) { "fake-nsg-name" }
   let(:nsg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/networkSecurityGroups/#{nsg_name}" }
-  let(:nsg_uri) { "https://management.azure.com/#{nsg_id}?api-version=#{api_version}" }
-
+  let(:nsg_uri) { "https://management.azure.com/#{nsg_id}?api-version=#{api_version_network}" }
   let(:nsg_response_body) {
     {
       "id" => "fake-id",
-      "name" => "fake-name",
+      "name" => nsg_name,
       "location" => "fake-location",
       "tags" => "fake-tags",
       "properties" => {
@@ -306,7 +297,32 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:fake_nsg) {
     {
       :id => "fake-id",
-      :name => "fake-name",
+      :name => nsg_name,
+      :location => "fake-location",
+      :tags => "fake-tags",
+      :provisioning_state => "fake-state"
+    }
+  }
+
+  # Application Security Group
+  let(:asg_name) { "fake-asg-name" }
+  let(:asg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/applicationSecurityGroups/#{asg_name}" }
+  let(:asg_uri) { "https://management.azure.com/#{asg_id}?api-version=#{api_version_network}" }
+  let(:asg_response_body) {
+    {
+      "id" => "fake-id",
+      "name" => asg_name,
+      "location" => "fake-location",
+      "tags" => "fake-tags",
+      "properties" => {
+        "provisioningState" => "fake-state"
+      }
+    }.to_json
+  }
+  let(:fake_asg) {
+    {
+      :id => "fake-id",
+      :name => asg_name,
       :location => "fake-location",
       :tags => "fake-tags",
       :provisioning_state => "fake-state"
@@ -350,7 +366,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe "#list_public_ips" do
-    let(:list_public_ips_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/publicIPAddresses?api-version=#{api_version}" }
+    let(:list_public_ips_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/publicIPAddresses?api-version=#{api_version_network}" }
     let(:list_public_ips_response_body) {
       {
         "value" => [public_ip_response_body]
@@ -411,8 +427,8 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe "#get_network_interface_by_name" do
-    context "when token is valid, getting response succeeds" do
-      it "should return null if response body is null" do
+    context "when the response body is null" do
+      it "should return null" do
         stub_request(:get, nic_uri).to_return(
           :status => 200,
           :body => '',
@@ -421,23 +437,204 @@ describe Bosh::AzureCloud::AzureClient2 do
           azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
         ).to be_nil
       end
+    end
 
-      it "should return the resource if response body is not null" do
-        stub_request(:get, public_ip_uri).to_return(
-          :status => 200,
-          :body => public_ip_response_body.to_json,
-          :headers => {})
-        stub_request(:get, load_balancer_uri).to_return(
-          :status => 200,
-          :body => load_balancer_response_body,
-          :headers => {})
-        stub_request(:get, nic_uri).to_return(
-          :status => 200,
-          :body => nic_response_body,
-          :headers => {})
-        expect(
-          azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
-        ).to eq(fake_nic)
+    context "when the response body is not null" do
+      context "when the network interface doesn't bind to other resources" do
+        it "should return the resource" do
+          stub_request(:get, public_ip_uri).to_return(
+            :status => 200,
+            :body => public_ip_response_body.to_json,
+            :headers => {})
+          stub_request(:get, load_balancer_uri).to_return(
+            :status => 200,
+            :body => load_balancer_response_body,
+            :headers => {})
+          stub_request(:get, nic_uri).to_return(
+            :status => 200,
+            :body => nic_response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+          ).to eq(fake_nic)
+        end
+      end
+
+      context "when the network interface is bound to public ip" do
+        let(:nic_response_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => "fake-tags",
+            "properties" => {
+              "provisioningState" => "fake-state",
+              "dnsSettings" => {
+                "dnsServers" => ["168.63.129.16"]
+              },
+              "ipConfigurations" => [
+                {
+                  "id" => "fake-id",
+                  "properties" => {
+                    "privateIPAddress" => "10.0.0.100",
+                    "privateIPAllocationMethod" => "Dynamic",
+                    "publicIPAddress" => {
+                      "id" => public_ip_id
+                    }
+                  }
+                }
+              ]
+            }
+          }.to_json
+        }
+        let(:fake_nic) {
+          {
+            :id => "fake-id",
+            :name => "fake-name",
+            :location => "fake-location",
+            :tags => "fake-tags",
+            :provisioning_state => "fake-state",
+            :dns_settings => ["168.63.129.16"],
+            :ip_configuration_id => "fake-id",
+            :private_ip => "10.0.0.100",
+            :private_ip_allocation_method => "Dynamic",
+            :public_ip => fake_public_ip
+          }
+        }
+        it "should return the network interface with public ip" do
+          stub_request(:get, public_ip_uri).to_return(
+            :status => 200,
+            :body => public_ip_response_body.to_json,
+            :headers => {})
+          stub_request(:get, load_balancer_uri).to_return(
+            :status => 200,
+            :body => load_balancer_response_body,
+            :headers => {})
+          stub_request(:get, nic_uri).to_return(
+            :status => 200,
+            :body => nic_response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+          ).to eq(fake_nic)
+        end
+      end
+
+      context "when the network interface is bound to load balancer" do
+        let(:nic_response_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => "fake-tags",
+            "properties" => {
+              "provisioningState" => "fake-state",
+              "dnsSettings" => {
+                "dnsServers" => ["168.63.129.16"]
+              },
+              "ipConfigurations" => [
+                {
+                  "id" => "fake-id",
+                  "properties" => {
+                    "privateIPAddress" => "10.0.0.100",
+                    "privateIPAllocationMethod" => "Dynamic",
+                    "loadBalancerBackendAddressPools" => [{
+                      "id" => load_balancer_id
+                    }]
+                  }
+                }
+              ]
+            }
+          }.to_json
+        }
+        let(:fake_nic) {
+          {
+            :id => "fake-id",
+            :name => "fake-name",
+            :location => "fake-location",
+            :tags => "fake-tags",
+            :provisioning_state => "fake-state",
+            :dns_settings => ["168.63.129.16"],
+            :ip_configuration_id => "fake-id",
+            :private_ip => "10.0.0.100",
+            :private_ip_allocation_method => "Dynamic",
+            :load_balancer => fake_load_balancer
+          }
+        }
+        it "should return the network interface with load balancer" do
+          # get_load_balancer needs get_public_ip
+          stub_request(:get, public_ip_uri).to_return(
+            :status => 200,
+            :body => public_ip_response_body.to_json,
+            :headers => {})
+          stub_request(:get, load_balancer_uri).to_return(
+            :status => 200,
+            :body => load_balancer_response_body,
+            :headers => {})
+          stub_request(:get, nic_uri).to_return(
+            :status => 200,
+            :body => nic_response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+          ).to eq(fake_nic)
+        end
+      end
+
+      context "when the network interface is bound to application security group" do
+        let(:nic_response_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => "fake-tags",
+            "properties" => {
+              "provisioningState" => "fake-state",
+              "dnsSettings" => {
+                "dnsServers" => ["168.63.129.16"]
+              },
+              "ipConfigurations" => [
+                {
+                  "id" => "fake-id",
+                  "properties" => {
+                    "privateIPAddress" => "10.0.0.100",
+                    "privateIPAllocationMethod" => "Dynamic",
+                    "applicationSecurityGroups" => [
+                      "id" => asg_id
+                    ]
+                  }
+                }
+              ]
+            }
+          }.to_json
+        }
+        let(:fake_nic) {
+          {
+            :id => "fake-id",
+            :name => "fake-name",
+            :location => "fake-location",
+            :tags => "fake-tags",
+            :provisioning_state => "fake-state",
+            :dns_settings => ["168.63.129.16"],
+            :ip_configuration_id => "fake-id",
+            :private_ip => "10.0.0.100",
+            :private_ip_allocation_method => "Dynamic",
+            :application_security_groups => [fake_asg]
+          }
+        }
+        it "should return the network interface with public ip" do
+          stub_request(:get, asg_uri).to_return(
+            :status => 200,
+            :body => asg_response_body,
+            :headers => {})
+          stub_request(:get, nic_uri).to_return(
+            :status => 200,
+            :body => nic_response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+          ).to eq(fake_nic)
+        end
       end
     end
   end
@@ -1470,6 +1667,30 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(
           azure_client2.get_network_security_group_by_name(resource_group_name, nsg_name)
         ).to eq(fake_nsg)
+      end
+    end
+  end
+
+  describe "#get_application_security_group_by_name" do
+    context "when token is valid, getting response succeeds" do
+      it "should return null if response body is null" do
+        stub_request(:get, asg_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+        expect(
+          azure_client2.get_application_security_group_by_name(resource_group_name, asg_name)
+        ).to be_nil
+      end
+
+      it "should return the resource if response body is not null" do
+        stub_request(:get, asg_uri).to_return(
+          :status => 200,
+          :body => asg_response_body,
+          :headers => {})
+        expect(
+          azure_client2.get_application_security_group_by_name(resource_group_name, asg_name)
+        ).to eq(fake_asg)
       end
     end
   end

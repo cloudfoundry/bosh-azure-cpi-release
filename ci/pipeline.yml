@@ -81,8 +81,9 @@ shared:
     file: bosh-cpi-src/ci/tasks/run-integration.yml
     params: &run-integration-params
       <<: *azure-environment-params
-      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
-      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
+      SSH_PUBLIC_KEY:                        {{ssh_public_key}}
+      AZURE_APPLICATION_GATEWAY_NAME:        {{azure_application_gateway_name}}
+      AZURE_APPLICATION_SECURITY_GROUP_NAME: {{azure_application_security_group_name}}
 
   - &run-integration-windows
     task: run-integration-windows
@@ -103,6 +104,21 @@ shared:
     params:
       <<: *azure-environment-params
       AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
+
+  - &create-application-security-group
+    task: create-application-security-group
+    file: bosh-cpi-src/ci/tasks/create-application-security-group.yml
+    params:
+      <<: *azure-environment-params
+      AZURE_LOCATION:                        {{azure_location}}
+      AZURE_APPLICATION_SECURITY_GROUP_NAME: {{azure_application_security_group_name}}
+
+  - &delete-application-security-group
+    task: delete-application-security-group
+    file: bosh-cpi-src/ci/tasks/delete-application-security-group.yml
+    params:
+      <<: *azure-environment-params
+      AZURE_APPLICATION_SECURITY_GROUP_NAME: {{azure_application_security_group_name}}
 
   - &ensure-cleanup
     task: ensure-cleanup
@@ -133,6 +149,7 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
       - <<: *create-integration-environment
+      - <<: *create-application-security-group
       - <<: *create-application-gateway
       - <<: *run-integration
         params:
@@ -140,6 +157,7 @@ jobs:
           AZURE_USE_MANAGED_DISKS: false
       - do:
         - <<: *delete-application-gateway
+        - <<: *delete-application-security-group
         - <<: *destroy-integration-environment
         ensure:
           do:
@@ -153,6 +171,7 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
       - <<: *create-integration-environment
+      - <<: *create-application-security-group
       - <<: *create-application-gateway
       - <<: *run-integration
         params:
@@ -160,6 +179,7 @@ jobs:
           AZURE_USE_MANAGED_DISKS: true
       - do:
         - <<: *delete-application-gateway
+        - <<: *delete-application-security-group
         - <<: *destroy-integration-environment
         ensure:
           do:
@@ -173,6 +193,7 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
       - <<: *create-integration-environment
+      - <<: *create-application-security-group
       - <<: *create-application-gateway
       - <<: *run-integration-windows
         params:
@@ -180,6 +201,7 @@ jobs:
           AZURE_USE_MANAGED_DISKS: false
       - do:
         - <<: *delete-application-gateway
+        - <<: *delete-application-security-group
         - <<: *destroy-integration-environment
         ensure:
           do:
@@ -193,6 +215,7 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
       - <<: *create-integration-environment
+      - <<: *create-application-security-group
       - <<: *create-application-gateway
       - <<: *run-integration-windows
         params:
@@ -200,6 +223,7 @@ jobs:
           AZURE_USE_MANAGED_DISKS: true
       - do:
         - <<: *delete-application-gateway
+        - <<: *delete-application-security-group
         - <<: *destroy-integration-environment
         ensure:
           do:

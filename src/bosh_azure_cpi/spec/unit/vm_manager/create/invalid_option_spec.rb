@@ -98,7 +98,7 @@ describe Bosh::AzureCloud::VMManager do
       before do
         allow(client2).to receive(:get_network_security_group_by_name).
           with("fake-resource-group-name", MOCK_DEFAULT_SECURITY_GROUP).
-          and_return(security_group)
+          and_return(default_security_group)
         allow(manual_network).to receive(:resource_group_name).
           and_return("fake-resource-group-name")
         allow(client2).to receive(:get_load_balancer_by_name).

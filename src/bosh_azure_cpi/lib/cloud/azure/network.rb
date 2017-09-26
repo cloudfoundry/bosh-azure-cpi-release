@@ -4,7 +4,7 @@ module Bosh::AzureCloud
     attr_reader :resource_group_name
 
     # {
-    # "bosh"=>{"netmask"=>nil, "gateway"=>nil, "ip"=>"10.0.0.4", "dns"=>["168.63.129.16"], "type"=>"manual", "default"=>["dns", "gateway"], "cloud_properties"=>{"resource_group_name"=>"rg-name", "virtual_network_name"=>"boshvnet", "subnet_name"=>"Bosh", "security_group"=>"nsg-bosh"}},
+    # "bosh"=>{"netmask"=>nil, "gateway"=>nil, "ip"=>"10.0.0.4", "dns"=>["168.63.129.16"], "type"=>"manual", "default"=>["dns", "gateway"], "cloud_properties"=>{"resource_group_name"=>"rg-name", "virtual_network_name"=>"boshvnet", "subnet_name"=>"Bosh", "security_group"=>"nsg-bosh"}, "application_security_groups"=>[]},
     # "vip"=>{"ip"=>"23.101.15.75", "type"=>"vip", "cloud_properties"=>{"resource_group_name"=>"rg-name"}}
     #}
 

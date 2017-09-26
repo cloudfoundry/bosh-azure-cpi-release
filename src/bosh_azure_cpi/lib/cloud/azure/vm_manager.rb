@@ -332,23 +332,40 @@ module Bosh::AzureCloud
 
     def get_network_security_group(resource_pool, network)
       network_security_group = nil
+      # Network security group name can be specified in resource_pool, networks and global configuration (ordered by priority)
+      network_security_group_name = resource_pool.fetch('security_group', network.security_group)
+      network_security_group_name = @azure_properties["default_security_group"] if network_security_group_name.nil?
+      # The resource group which the NSG belongs to can be specified in networks and global configuration (ordered by priority)
       resource_group_name = network.resource_group_name
-      security_group_name = @azure_properties["default_security_group"]
-      if !resource_pool["security_group"].nil?
-        security_group_name = resource_pool["security_group"]
-      elsif !network.security_group.nil?
-        security_group_name = network.security_group
+      network_security_group = @azure_client2.get_network_security_group_by_name(resource_group_name, network_security_group_name)
+      # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
+      default_resource_group_name = @azure_properties['resource_group_name']
+      if network_security_group.nil? && resource_group_name != default_resource_group_name
+        @logger.info("Cannot find the network security group `#{network_security_group_name}' in the resource group `#{resource_group_name}', trying to search it in the default resource group `#{default_resource_group_name}'")
+        network_security_group = @azure_client2.get_network_security_group_by_name(default_resource_group_name, network_security_group_name)
       end
-      network_security_group = @azure_client2.get_network_security_group_by_name(resource_group_name, security_group_name)
-      if network_security_group.nil?
-        default_resource_group_name = @azure_properties['resource_group_name']
-        if resource_group_name != default_resource_group_name
-          @logger.info("Cannot find the network security group `#{security_group_name}' in the resource group `#{resource_group_name}', trying to search it in the resource group `#{default_resource_group_name}'")
-          network_security_group = @azure_client2.get_network_security_group_by_name(default_resource_group_name, security_group_name)
-        end
-      end
-      cloud_error("Cannot find the network security group `#{security_group_name}'") if network_security_group.nil?
+      cloud_error("Cannot find the network security group `#{network_security_group_name}'") if network_security_group.nil?
       network_security_group
+    end
+
+    def get_application_security_groups(resource_pool, network)
+      application_security_groups = []
+      # Application security group name can be specified in resource_pool and networks (ordered by priority)
+      application_security_group_names = resource_pool.fetch('application_security_groups', network.application_security_groups)
+      for application_security_group_name in application_security_group_names
+        # The resource group which the ASG belongs to can be specified in networks and global configuration (ordered by priority)
+        resource_group_name = network.resource_group_name
+        application_security_group = @azure_client2.get_application_security_group_by_name(resource_group_name, application_security_group_name)
+        # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
+        default_resource_group_name = @azure_properties['resource_group_name']
+        if application_security_group.nil? && resource_group_name != default_resource_group_name
+          @logger.info("Cannot find the application security group `#{application_security_group_name}' in the resource group `#{resource_group_name}', trying to search it in the default resource group `#{default_resource_group_name}'")
+          application_security_group = @azure_client2.get_application_security_group_by_name(default_resource_group_name, application_security_group_name)
+        end
+        cloud_error("Cannot find the application security group `#{application_security_group_name}'") if application_security_group.nil?
+        application_security_groups.push(application_security_group)
+      end
+      application_security_groups
     end
 
     def get_public_ip(vip_network)
@@ -384,15 +401,17 @@ module Bosh::AzureCloud
       end
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
-        security_group = get_network_security_group(resource_pool, network)
+        network_security_group = get_network_security_group(resource_pool, network)
+        application_security_groups = get_application_security_groups(resource_pool, network)
         nic_name = "#{vm_name}-#{index}"
         nic_params = {
-          :name                => nic_name,
-          :location            => location,
-          :private_ip          => (network.is_a? ManualNetwork) ? network.private_ip : nil,
-          :public_ip           => index == 0 ? public_ip : nil,
-          :security_group      => security_group,
-          :ipconfig_name       => "ipconfig#{index}"
+          :name                        => nic_name,
+          :location                    => location,
+          :private_ip                  => (network.is_a? ManualNetwork) ? network.private_ip : nil,
+          :public_ip                   => index == 0 ? public_ip : nil,
+          :network_security_group      => network_security_group,
+          :application_security_groups => application_security_groups,
+          :ipconfig_name               => "ipconfig#{index}"
         }
         subnet = get_network_subnet(network)
         tags = index == 0 ? primary_nic_tags : AZURE_TAGS

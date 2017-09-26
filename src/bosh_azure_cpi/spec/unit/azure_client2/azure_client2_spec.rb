@@ -14,6 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
+  let(:api_version_network) { AZURE_RESOURCE_PROVIDER_NETWORK }
   let(:default_resource_group) { mock_azure_properties['resource_group_name'] }
   let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
@@ -604,90 +605,6 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(
           azure_client2.get_resource_group(resource_group)
         ).to eq(fake_resource_group)
-      end
-    end
-  end
-
-  describe "#list_network_interfaces_by_keyword" do
-    let(:network_interfaces_url) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces?api-version=#{api_version}" }
-    let(:instance_id) { "fake-instance-id" }
-    let(:result) {
-      {
-        "value" => [{
-          "name"  => "#{instance_id}-0",
-          "id"  => "b",
-          "location"  => "c",
-          "tags"  => {},
-          "etag"  => "d",
-          "type"  => "e",
-          "properties"  => {
-            "resourceGuid"  => "f",
-            "provisioningState"  => "g",
-            "virtualMachine"  => {
-               "id"  => "h"
-            },
-            "macAddress"  => "i",
-            "networkSecurityGroup"  => {
-               "id"  => "j"
-            },
-            "ipConfigurations"  => [
-              {
-                "name"  => "k",
-                "id"  => "l",
-                "etag"  => "m",
-                "properties"  => {
-                  "provisioningState"  => "n",
-                  "subnet"  => {
-                    "id"  => "o"
-                  },
-                  "privateIPAddress"  => "p",
-                  "privateIPAllocationMethod"  => "q",
-                  "privateIPAddressVersion"  => "u"
-                }
-              }
-            ],
-            "dnsSettings"  => {
-               "dnsServers"  => [
-                  "w",
-                  "x"
-               ]
-            }
-          }
-        }]
-      }.to_json
-    }
-    let(:network_interface) {
-      {
-        :id=>"b",
-        :name=>"#{instance_id}-0",
-        :location=>"c",
-        :tags=>{},
-        :provisioning_state=>"g",
-        :dns_settings=>["w", "x"],
-        :ip_configuration_id=>"l",
-        :private_ip=>"p",
-        :private_ip_allocation_method=>"q"
-      }
-
-    }
-    context "when token is valid, get operation is accepted" do
-      it "should return network interfaces" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, network_interfaces_url).to_return(
-          :status => 200,
-          :body => result,
-          :headers => {
-          })
-
-        expect(
-          azure_client2.list_network_interfaces_by_keyword(resource_group, instance_id)
-        ).to eq([network_interface])
       end
     end
   end

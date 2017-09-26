@@ -14,6 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
+  let(:api_version_network) { AZURE_RESOURCE_PROVIDER_NETWORK }
   let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
@@ -26,7 +27,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
   describe "#create_public_ip" do
-    let(:public_ip_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}?api-version=#{api_version}" }
+    let(:public_ip_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}?api-version=#{api_version_network}" }
 
     let(:location) { "fake-location" }
 

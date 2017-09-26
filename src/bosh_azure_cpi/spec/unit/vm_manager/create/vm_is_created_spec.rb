@@ -4,6 +4,9 @@ require "unit/vm_manager/create/shared_stuff.rb"
 describe Bosh::AzureCloud::VMManager do
   include_context "shared stuff for vm manager"
 
+  # The following variables are defined in shared_stuff.rb. You can override it if needed.
+  #   - resource_group_name
+  #   - default_security_group
   describe "#create" do
     context "when VM is created" do
       before do
@@ -30,173 +33,408 @@ describe Bosh::AzureCloud::VMManager do
 
       # Network Security Group
       context "#network_security_group" do
-        context "with the network security group provided in resource_pool" do
-          let(:resource_pool) {
-            {
-              'instance_type'                 => 'Standard_D1',
-              'storage_account_name'          => 'dfe03ad623f34d42999e93ca',
-              'caching'                       => 'ReadWrite',
-              'load_balancer'                 => 'fake-lb-name',
-              'security_group'                => 'fake-nsg-name'
-            }
-          }
-
-          before do
-            allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
-              and_return(nil)
-            allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-nsg-name").
-              and_return(security_group)
+        context "when the network security group is specified in the global configuration" do
+          it "should assign the default network security group to the network interface" do
+            expect(client2).not_to receive(:delete_virtual_machine)
+            expect(client2).not_to receive(:delete_network_interface)
+            expect(client2).to receive(:create_network_interface).
+              with(resource_group_name, hash_including(:network_security_group => default_security_group), any_args).twice
+            expect {
+              vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            }.not_to raise_error
           end
 
-          context "and a heavy stemcell is used" do
-            it "should succeed" do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-
-              expect(client2).to receive(:create_network_interface).twice
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
-              expect(vm_params[:image_uri]).to eq(stemcell_uri)
-              expect(vm_params[:os_type]).to eq(os_type)
-            end
-          end
-
-          context "and a light stemcell is used" do
-            let(:platform_image) {
+          context " and network specs" do
+            let(:nsg_name_in_network_spec) { "fake-nsg-name-specified-in-network-spec" }
+            let(:security_group_in_network_spec) {
               {
-                'instance_type'                 => 'Standard_D1',
-                'storage_account_name'          => 'dfe03ad623f34d42999e93ca',
-                'caching'                       => 'ReadWrite',
-                'load_balancer'                 => 'fake-lb-name',
-                'security_group'                => 'fake-nsg-name'
+                :name => nsg_name_in_network_spec
               }
             }
 
             before do
+              allow(manual_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
+              allow(dynamic_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
               allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
-                and_return(nil)
-              allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, "fake-nsg-name").
-                and_return(security_group)
+                with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_network_spec).
+                and_return(security_group_in_network_spec)
             end
 
-            it "should succeed" do
+            it "should assign the network security group specified in network specs to the network interface" do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
+              expect(client2).to receive(:create_network_interface).
+                with(resource_group_name, hash_including(:network_security_group => security_group_in_network_spec), any_args).twice
+              expect(client2).not_to receive(:create_network_interface).
+                with(resource_group_name, hash_including(:network_security_group => default_security_group), any_args)
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.not_to raise_error
+            end
 
-              expect(client2).to receive(:create_network_interface).twice
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
+            context " and resource_pool" do
+              let(:nsg_name_in_resource_pool) { "fake-nsg-name-specified-in-resource-pool" }
+              let(:security_group_in_resource_pool) {
+                {
+                  :name => nsg_name_in_resource_pool
+                }
+              }
+              let(:resource_pool) {
+                {
+                  'instance_type'  => 'Standard_D1',
+                  'security_group' => nsg_name_in_resource_pool
+                }
+              }
+
+              before do
+                allow(client2).to receive(:get_network_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_resource_pool).
+                  and_return(security_group_in_resource_pool)
+              end
+
+              it "should assign the network security group specified in resource_pool to the network interface" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:create_network_interface).
+                  with(resource_group_name, hash_including(:network_security_group => security_group_in_resource_pool), any_args).twice
+                expect(client2).not_to receive(:create_network_interface).
+                  with(resource_group_name, hash_including(:network_security_group => security_group_in_network_spec), any_args)
+                expect(client2).not_to receive(:create_network_interface).
+                  with(resource_group_name, hash_including(:network_security_group => default_security_group), any_args)
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.not_to raise_error
+              end
             end
           end
         end
 
-        context "with the network security group provided in network spec" do
-          let(:nsg_name) { "fake-nsg-name-specified-in-network-spec" }
+        # The cases in the below context doesn't care where the nsg name is specified.
+        context "#resource_group_for_network_security_group" do
+          let(:nsg_name) { "fake-nsg-name" }
           let(:security_group) {
             {
               :name => nsg_name
             }
           }
+          let(:resource_pool) {
+            {
+              'instance_type'  => 'Standard_D1',
+              'security_group' => nsg_name
+            }
+          }
 
-          before do
-            allow(manual_network).to receive(:security_group).and_return(nsg_name)
-            allow(dynamic_network).to receive(:security_group).and_return(nsg_name)
-            allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
-              and_return(nil)
-            allow(client2).to receive(:get_network_security_group_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, nsg_name).
-              and_return(security_group)
+          context "when the resource group name is specified in the global configuration" do
+            before do
+              allow(manual_network).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
+              allow(dynamic_network).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
+              allow(client2).to receive(:get_network_subnet_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
+                and_return(subnet)
+            end
+
+            it "should find the network security group in the default resource group" do
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_network_interface)
+              expect(client2).to receive(:get_network_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, nsg_name).
+                and_return(security_group).twice
+              expect(client2).to receive(:create_network_interface).
+                with(resource_group_name, hash_including(:network_security_group => security_group), any_args).twice
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.not_to raise_error
+            end
           end
 
-          it "should succeed" do
+          context "when the resource group name is specified in the network spec" do
+            let(:rg_name_for_nsg) { "resource-group-name-for-network-security-group" }
+            before do
+              allow(manual_network).to receive(:resource_group_name).and_return(rg_name_for_nsg)
+              allow(dynamic_network).to receive(:resource_group_name).and_return(rg_name_for_nsg)
+              allow(client2).to receive(:get_network_subnet_by_name).
+                with(rg_name_for_nsg, "fake-virtual-network-name", "fake-subnet-name").
+                and_return(subnet)
+            end
+
+            context "when network security group is found in the specified resource group" do
+              before do
+                allow(instance_id).to receive(:resource_group_name).and_return(rg_name_for_nsg)
+              end
+
+              it "should assign the security group to the network interface" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:get_network_security_group_by_name).
+                  with(rg_name_for_nsg, nsg_name).
+                  and_return(security_group).twice
+                expect(client2).not_to receive(:get_network_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, nsg_name)
+                expect(client2).to receive(:create_network_interface).
+                  with(rg_name_for_nsg, hash_including(:network_security_group => security_group), any_args).twice
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.not_to raise_error
+              end
+            end
+
+            context "when network security group is not found in the specified resource group, but found in the default resource group" do
+              it "should assign the security group to the network interface" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:get_network_security_group_by_name).
+                  with(rg_name_for_nsg, nsg_name).
+                  and_return(nil).twice
+                expect(client2).to receive(:get_network_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, nsg_name).
+                  and_return(security_group).twice
+                expect(client2).to receive(:create_network_interface).
+                  with(resource_group_name, hash_including(:network_security_group => security_group), any_args).twice
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.not_to raise_error
+              end
+            end
+
+            context "when network security group is not found in neither the specified resource group nor the default resource group" do
+              it "should raise an error" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:get_network_security_group_by_name).
+                  with(rg_name_for_nsg, nsg_name).
+                  and_return(nil)
+                expect(client2).to receive(:get_network_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, nsg_name).
+                  and_return(nil)
+                expect(client2).not_to receive(:create_network_interface)
+                expect(client2).to receive(:list_network_interfaces_by_keyword).and_return([])
+                expect(client2).not_to receive(:delete_network_interface)
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.to raise_error /Cannot find the network security group `#{nsg_name}'/
+              end
+            end
+          end
+        end
+      end
+
+      # Application Security Groups
+      context "#application_security_groups" do
+        context "when the application security groups are specified in network specs" do
+          let(:asg_1_name_in_network_spec) { "fake-asg-1-name-specified-in-network-spec" }
+          let(:asg_1_in_network_spec) {
+            {
+              :name => asg_1_name_in_network_spec
+            }
+          }
+          let(:asg_2_name_in_network_spec) { "fake-asg-2-name-specified-in-network-spec" }
+          let(:asg_2_in_network_spec) {
+            {
+              :name => asg_2_name_in_network_spec
+            }
+          }
+          let(:asg_names_in_network_spec) { [asg_1_name_in_network_spec, asg_2_name_in_network_spec] }
+          let(:asgs_in_network_spec) { [asg_1_in_network_spec, asg_2_in_network_spec] }
+
+          before do
+            allow(manual_network).to receive(:application_security_groups).and_return(asg_names_in_network_spec)
+            allow(dynamic_network).to receive(:application_security_groups).and_return(asg_names_in_network_spec)
+            allow(client2).to receive(:get_application_security_group_by_name).
+              with(MOCK_RESOURCE_GROUP_NAME, asg_1_name_in_network_spec).
+              and_return(asg_1_in_network_spec)
+            allow(client2).to receive(:get_application_security_group_by_name).
+              with(MOCK_RESOURCE_GROUP_NAME, asg_2_name_in_network_spec).
+              and_return(asg_2_in_network_spec)
+          end
+
+          it "should assign the application security groups specified in network specs to the network interface" do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
-
+            expect(client2).to receive(:get_application_security_group_by_name).
+              with(MOCK_RESOURCE_GROUP_NAME, asg_1_name_in_network_spec).
+              and_return(asg_1_in_network_spec).twice
+            expect(client2).to receive(:get_application_security_group_by_name).
+              with(MOCK_RESOURCE_GROUP_NAME, asg_2_name_in_network_spec).
+              and_return(asg_2_in_network_spec).twice
             expect(client2).to receive(:create_network_interface).
-              with(resource_group_name, hash_including(:security_group => security_group), any_args).twice
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(vm_name)
+              with(resource_group_name, hash_including(:application_security_groups => asgs_in_network_spec), any_args).twice
+            expect {
+              vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            }.not_to raise_error
+          end
+
+          context " and resource_pool" do
+            let(:asg_1_name_in_resource_pool) { "fake-asg-1-name-specified-in-resource-pool" }
+            let(:asg_1_in_resource_pool) {
+              {
+                :name => asg_1_name_in_resource_pool
+              }
+            }
+            let(:asg_2_name_in_resource_pool) { "fake-asg-2-name-specified-in-resource-pool" }
+            let(:asg_2_in_resource_pool) {
+              {
+                :name => asg_2_name_in_resource_pool
+              }
+            }
+            let(:asg_names_in_resource_pool) { [asg_1_name_in_resource_pool, asg_2_name_in_resource_pool] }
+            let(:asgs_in_resource_pool) { [asg_1_in_resource_pool, asg_2_in_resource_pool] }
+            let(:resource_pool) {
+              {
+                'instance_type'  => 'Standard_D1',
+                'application_security_groups' => asg_names_in_resource_pool
+              }
+            }
+
+            before do
+              allow(manual_network).to receive(:application_security_groups).and_return(asg_names_in_resource_pool)
+              allow(dynamic_network).to receive(:application_security_groups).and_return(asg_names_in_resource_pool)
+              allow(client2).to receive(:get_application_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, asg_1_name_in_resource_pool).
+                and_return(asg_1_in_resource_pool)
+              allow(client2).to receive(:get_application_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, asg_2_name_in_resource_pool).
+                and_return(asg_2_in_resource_pool)
+            end
+
+            it "should assign the application security groups specified in resource_pool to the network interface" do
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(client2).not_to receive(:delete_network_interface)
+              expect(client2).to receive(:get_application_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, asg_1_name_in_resource_pool).
+                and_return(asg_1_in_resource_pool).twice
+              expect(client2).to receive(:get_application_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, asg_2_name_in_resource_pool).
+                and_return(asg_2_in_resource_pool).twice
+              expect(client2).to receive(:create_network_interface).
+                with(resource_group_name, hash_including(:application_security_groups => asgs_in_resource_pool), any_args).twice
+              expect(client2).not_to receive(:create_network_interface).
+                with(resource_group_name, hash_including(:application_security_groups => asgs_in_network_spec), any_args)
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.not_to raise_error
+            end
           end
         end
 
-        context "with the default network security group" do
-          it "should succeed" do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
+        # The cases in the below context doesn't care where the asg names is specified.
+        context "#resource_group_for_application_security_group" do
+          let(:asg_name) { "fake-asg-name" }
+          let(:asg) {
+            {
+              :name => asg_name
+            }
+          }
+          let(:asg_names) { [asg_name] }
+          let(:asgs) { [asg] }
+          let(:nsg_name_in_resource_pool) { "fake-nsg-name-specified-in-resource-pool" }
+          let(:security_group_in_resource_pool) {
+            {
+              :name => nsg_name_in_resource_pool
+            }
+          }
+          let(:resource_pool) {
+            {
+              'instance_type'                 => 'Standard_D1',
+              'security_group'                => nsg_name_in_resource_pool,
+              'application_security_groups'   => asg_names
+            }
+          }
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:name]).to eq(vm_name)
-          end
-        end
-
-        context "with the resource group name not provided in the network spec" do
-          before do
-            allow(client2).to receive(:get_network_subnet_by_name).
-              with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
-              and_return(subnet)
-          end
-
-          context "when network security group is found in the default resource group" do
+          context "when the resource group name is not specified in the network spec" do
             before do
+              allow(manual_network).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
+              allow(dynamic_network).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
+              allow(client2).to receive(:get_network_subnet_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, "fake-virtual-network-name", "fake-subnet-name").
+                and_return(subnet)
               allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
-                and_return(security_group)
+                with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_resource_pool).
+                and_return(security_group_in_resource_pool)
             end
 
-            it "should succeed" do
+            it "should find the application security group in the default resource group" do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface).twice
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
+              expect(client2).to receive(:get_application_security_group_by_name).
+                with(MOCK_RESOURCE_GROUP_NAME, asg_name).
+                and_return(asg).twice
+              expect(client2).to receive(:create_network_interface).
+                with(resource_group_name, hash_including(:application_security_groups => asgs), any_args).twice
+              expect {
+                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.not_to raise_error
             end
           end
-        end
 
-        context "with the resource group name provided in the network spec" do
-          before do
-            allow(client2).to receive(:get_network_subnet_by_name).
-              with("fake-resource-group-name", "fake-virtual-network-name", "fake-subnet-name").
-              and_return(subnet)
-          end
-
-          context "when network security group is not found in the specified resource group and found in the default resource group" do
+          context "when the resource group name is specified in the network spec" do
+            let(:rg_name_for_asg) { "resource-group-name-for-application-security-group" }
             before do
+              allow(manual_network).to receive(:resource_group_name).and_return(rg_name_for_asg)
+              allow(dynamic_network).to receive(:resource_group_name).and_return(rg_name_for_asg)
+              allow(client2).to receive(:get_network_subnet_by_name).
+                with(rg_name_for_asg, "fake-virtual-network-name", "fake-subnet-name").
+                and_return(subnet)
               allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
-                and_return(security_group)
-              allow(client2).to receive(:get_network_security_group_by_name).
-                with("fake-resource-group-name", MOCK_DEFAULT_SECURITY_GROUP).
-                and_return(nil)
+                with(rg_name_for_asg, nsg_name_in_resource_pool).
+                and_return(security_group_in_resource_pool)
             end
 
-            it "should succeed" do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface).exactly(2).times
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
-            end
-          end
+            context "when application security group is found in the specified resource group" do
+              before do
+                allow(instance_id).to receive(:resource_group_name).and_return(rg_name_for_asg)
+              end
 
-          context "when network security group is found in the specified resource group" do
-            before do
-              allow(client2).to receive(:get_network_security_group_by_name).
-                with("fake-resource-group-name", MOCK_DEFAULT_SECURITY_GROUP).
-                and_return(security_group)
+              it "should assign the application security group to the network interface" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:get_application_security_group_by_name).
+                  with(rg_name_for_asg, asg_name).
+                  and_return(asg).twice
+                expect(client2).not_to receive(:get_application_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, asg_name)
+                expect(client2).to receive(:create_network_interface).
+                  with(rg_name_for_asg, hash_including(:application_security_groups => asgs), any_args).twice
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.not_to raise_error
+              end
             end
 
-            it "should succeed" do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface).twice
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
+            context "when application security group is not found in the specified resource group, but found in the default resource group" do
+              it "should assign the application security group to the network interface" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:get_application_security_group_by_name).
+                  with(rg_name_for_asg, asg_name).
+                  and_return(nil).twice
+                expect(client2).to receive(:get_application_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, asg_name).
+                  and_return(asg).twice
+                expect(client2).to receive(:create_network_interface).
+                  with(resource_group_name, hash_including(:application_security_groups => asgs), any_args).twice
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.not_to raise_error
+              end
+            end
+
+            context "when application security group is not found in neither the specified resource group nor the default resource group" do
+              it "should raise an error" do
+                expect(client2).not_to receive(:delete_virtual_machine)
+                expect(client2).not_to receive(:delete_network_interface)
+                expect(client2).to receive(:get_application_security_group_by_name).
+                  with(rg_name_for_asg, asg_name).
+                  and_return(nil)
+                expect(client2).to receive(:get_application_security_group_by_name).
+                  with(MOCK_RESOURCE_GROUP_NAME, asg_name).
+                  and_return(nil)
+                expect(client2).not_to receive(:create_network_interface)
+                expect(client2).to receive(:list_network_interfaces_by_keyword).and_return([])
+                expect(client2).not_to receive(:delete_network_interface)
+                expect {
+                  vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                }.to raise_error /Cannot find the application security group `#{asg_name}'/
+              end
             end
           end
         end
@@ -204,7 +442,7 @@ describe Bosh::AzureCloud::VMManager do
 
       # Stemcell
       context "#stemcell" do
-        context "and a heavy stemcell is used" do
+        context "when a heavy stemcell is used" do
           it "should succeed" do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
@@ -217,7 +455,7 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
-        context "and a light stemcell is used" do
+        context "when a light stemcell is used" do
           let(:platform_image) {
             {
               'publisher' => 'fake-publisher',
@@ -246,18 +484,9 @@ describe Bosh::AzureCloud::VMManager do
         end
       end
 
+      # Dynamic Public IP
       context "with assign dynamic public IP enabled" do
         let(:dynamic_public_ip) { 'fake-dynamic-public-ip' }
-        let(:nic0_params) {
-          {
-            :name            => "#{vm_name}-0",
-            :location        => location,
-            :private_ip      => nil,
-            :public_ip       => dynamic_public_ip,
-            :security_group  => security_group,
-            :ipconfig_name   => "ipconfig0"
-          }
-        }
         let(:tags) { {'user-agent' => 'bosh'} }
 
         before do
@@ -269,17 +498,18 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         context "and pip_idle_timeout_in_minutes is set" do
+          let(:idle_timeout) { 20 }
           let(:vm_manager_for_pip) { Bosh::AzureCloud::VMManager.new(
             mock_azure_properties_merge({
-              'pip_idle_timeout_in_minutes' => 20
+              'pip_idle_timeout_in_minutes' => idle_timeout
             }), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager)
           }
 
-          it "creates a public IP and assigns it to the NIC" do
+          it "creates a public IP and assigns it to the primary NIC" do
             expect(client2).to receive(:create_public_ip).
-              with(resource_group_name, vm_name, location, false, 20)
+              with(resource_group_name, vm_name, location, false, idle_timeout)
             expect(client2).to receive(:create_network_interface).
-              with(resource_group_name, nic0_params, subnet, tags, load_balancer)
+              with(resource_group_name, hash_including(:name => "#{vm_name}-0", :public_ip => dynamic_public_ip), subnet, tags, load_balancer).once
 
             vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
@@ -287,11 +517,12 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         context "and pip_idle_timeout_in_minutes is not set" do
+          let(:default_idle_timeout) { 4 }
           it "creates a public IP and assigns it to the NIC" do
             expect(client2).to receive(:create_public_ip).
-              with(resource_group_name, vm_name, location, false, 4)
+              with(resource_group_name, vm_name, location, false, default_idle_timeout)
             expect(client2).to receive(:create_network_interface).
-              with(resource_group_name, nic0_params, subnet, tags, load_balancer)
+              with(resource_group_name, hash_including(:public_ip => dynamic_public_ip), subnet, tags, load_balancer)
 
             vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
