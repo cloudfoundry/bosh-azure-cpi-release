@@ -945,9 +945,8 @@ module Bosh::AzureCloud
       end
       user_images
     end
- 
-    # Compute/Snapshots
 
+    # Compute/Snapshots
     # Create a snapshot for a managed disk
     #
     # ==== Attributes
@@ -1274,6 +1273,7 @@ module Bosh::AzureCloud
     # @param [Hash] subnet                - The subnet which the network interface is bound to.
     # @param [Hash] tags                  - The tags of the network interface.
     # @param [Hash] load_balancer         - The load balancer which the network interface is bound to.
+    # @param [Hash] application_gateway   - The application gateway which the network interface is bound to.
     #
     #  ==== Params
     #
@@ -1291,13 +1291,13 @@ module Bosh::AzureCloud
     #
     # @See https://docs.microsoft.com/en-us/rest/api/network/create-or-update-a-network-interface-card
     #
-    def create_network_interface(resource_group_name, nic_params, subnet, tags, load_balancer = nil)
+    def create_network_interface(resource_group_name, nic_params)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, resource_group_name: resource_group_name, name: nic_params[:name])
 
       interface = {
         'name'       => nic_params[:name],
         'location'   => nic_params[:location],
-        'tags'       => tags,
+        'tags'       => nic_params[:tags],
         'properties' => {
           'networkSecurityGroup' => {
             'id' => nic_params[:network_security_group][:id]
@@ -1310,7 +1310,7 @@ module Bosh::AzureCloud
                 'privateIPAllocationMethod' => nic_params[:private_ip].nil? ? 'Dynamic' : 'Static',
                 'publicIPAddress'           => nic_params[:public_ip].nil? ? nil : { 'id' => nic_params[:public_ip][:id] },
                 'subnet' => {
-                  'id' => subnet[:id]
+                  'id' => nic_params[:subnet][:id]
                 }
               }
             }
@@ -1326,10 +1326,8 @@ module Bosh::AzureCloud
       for asg_param in asg_params
         application_security_groups.push({'id' => asg_param[:id]})
       end
-      unless application_security_groups.empty?
-        interface['properties']['ipConfigurations'][0]['properties']['applicationSecurityGroups'] = application_security_groups
-      end
 
+      load_balancer = nic_params[:load_balancer]
       unless load_balancer.nil?
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = [
           {
@@ -1338,6 +1336,15 @@ module Bosh::AzureCloud
         ]
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] =
           load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
+      end
+
+      application_gateway = nic_params[:application_gateway]
+      unless application_gateway.nil?
+        interface['properties']['ipConfigurations'][0]['properties']['applicationGatewayBackendAddressPools'] = [
+          {
+            'id' => application_gateway[:backend_address_pools][0][:id]
+          }
+        ]
       end
 
       http_put(url, interface)
@@ -1478,65 +1485,48 @@ module Bosh::AzureCloud
       result = get_resource_by_id(url)
       parse_subnet(result)
     end
-    
+
     # Network/Application Gateway
-    
-    # Add a backend address for an application gateway
-    # @param [String] name       - Name of application gateway.
-    # @param [String] ip_address - Backend IP Address.
-    #
-    # @return [Boolean]
-    #
-    # @See https://docs.microsoft.com/en-us/rest/api/network/applicationgateway/create-or-update-an-application-gateway
-    #
-    def add_backend_address_of_application_gateway(name, ip_address)
-      @logger.debug("add_backend_address_of_application_gateway - trying to add `#{ip_address}' to the backend address pools of the applicaiton gateway #{name}")
 
+    # Get an application gateway's information
+    # @param [String] name - Name of application gateway.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/application-gateway/applicationgateways/get
+    #
+    def get_application_gateway_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_APPLICATION_GATEWAYS, name: name)
-      ag = get_resource_by_id(url)
-      if ag.nil?
-        raise AzureNotFoundError, "add_backend_address_of_application_gateway - Cannot find the application gateway \"#{name}\"."
-      end
-
-      backend_addresses = ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']
-      backend_address = {
-        "ipAddress" => ip_address
-      }
-      unless backend_addresses.include?(backend_address)
-        backend_addresses.push(backend_address)
-        http_put(url, ag)
-      end
-
-      true
+      get_application_gateway(url)
     end
 
-    # Delete a backend address for an application gateway
-    # @param [String] name       - Name of application gateway.
-    # @param [String] ip_address - Backend IP Address.
+    # Get an application gateway's information
+    # @param [String] url - URL of application gateway.
     #
-    # @return [Boolean]
+    # @return [Hash]
     #
-    # @See https://msdn.microsoft.com/en-us/library/mt684942.aspx
+    # @See https://docs.microsoft.com/en-us/rest/api/application-gateway/applicationgateways/get
     #
-    def delete_backend_address_of_application_gateway(name, ip_address)
-      @logger.debug("delete_backend_address_of_application_gateway - trying to remove `#{ip_address}' from the backend address pools of the applicaiton gateway #{name}")
+    def get_application_gateway(url)
+      application_gateway = nil
+      result = get_resource_by_id(url)
+      unless result.nil?
+        application_gateway = {}
+        application_gateway[:id] = result['id']
+        application_gateway[:name] = result['name']
+        application_gateway[:location] = result['location']
+        application_gateway[:tags] = result['tags']
 
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_APPLICATION_GATEWAYS, name: name)
-      ag = get_resource_by_id(url)
-      if ag.nil?
-        raise AzureNotFoundError, "delete_backend_address_of_application_gateway - Cannot find the application gateway \"#{name}\"."
+        properties = result['properties']
+        backend = properties['backendAddressPools']
+        application_gateway[:backend_address_pools] = []
+        backend.each do |backend_ip|
+          ip = {}
+          ip[:id] = backend_ip['id']
+          application_gateway[:backend_address_pools].push(ip)
+        end
       end
-
-      backend_addresses = ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']
-      backend_address = {
-        "ipAddress" => ip_address
-      }
-      if backend_addresses.include?(backend_address)
-        backend_addresses.delete(backend_address)
-        http_put(url, ag)
-      end
-
-      true
+      application_gateway
     end
 
     # Network/Network Security Group
@@ -1824,7 +1814,7 @@ module Bosh::AzureCloud
       end
       storage_accounts
     end
- 
+
     # Set tags for a storage account
     # @param [String] name - Name of storage account.
     # @param [Hash] tags   - tags key/value pairs.
@@ -1924,6 +1914,14 @@ module Bosh::AzureCloud
             interface[:load_balancer] = {:id => ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id']}
           end
         end
+        unless ip_configuration_properties['applicationGatewayBackendAddressPools'].nil?
+          if recursive
+            names = parse_name_from_id(ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id'])
+            interface[:application_gateway] = get_application_gateway_by_name(names[:resource_name])
+          else
+            interface[:application_gateway] = {:id => ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id']}
+          end
+        end
         unless ip_configuration_properties['applicationSecurityGroups'].nil?
           asgs_properties = ip_configuration_properties['applicationSecurityGroups']
           asgs = []
@@ -1994,7 +1992,7 @@ module Bosh::AzureCloud
     def redact_credentials_in_request_body(body)
       is_debug_mode(@azure_properties) ? body.to_json : redact_credentials(CREDENTIAL_KEYWORD_LIST, body).to_json
     end
-    
+
     def redact_credentials_in_response_body(body)
       is_debug_mode(@azure_properties) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body)).to_json
     rescue => e

@@ -53,6 +53,9 @@ describe Bosh::AzureCloud::VMManager do
           allow(client2).to receive(:get_load_balancer_by_name).
             with(resource_pool['load_balancer'])
             .and_return(load_balancer)
+          allow(client2).to receive(:get_application_gateway_by_name).
+            with(resource_pool['application_gateway'])
+            .and_return(application_gateway)
           allow(client2).to receive(:list_public_ips).
             and_return([{
               :ip_address => "public-ip"
@@ -77,6 +80,9 @@ describe Bosh::AzureCloud::VMManager do
           allow(client2).to receive(:get_load_balancer_by_name).
             with(resource_pool['load_balancer'])
             .and_return(load_balancer)
+          allow(client2).to receive(:get_application_gateway_by_name).
+            with(resource_pool['application_gateway'])
+            .and_return(application_gateway)
           allow(client2).to receive(:list_public_ips).
             and_return([{
               :ip_address => "public-ip"
@@ -104,6 +110,9 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_load_balancer_by_name).
           with(resource_pool['load_balancer'])
           .and_return(load_balancer)
+        allow(client2).to receive(:get_application_gateway_by_name).
+          with(resource_pool['application_gateway'])
+          .and_return(application_gateway)
         allow(client2).to receive(:list_public_ips).
           and_return([{
             :ip_address => "public-ip"
@@ -150,6 +159,9 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_load_balancer_by_name).
           with(resource_pool['load_balancer'])
           .and_return(load_balancer)
+        allow(client2).to receive(:get_application_gateway_by_name).
+          with(resource_pool['application_gateway'])
+          .and_return(application_gateway)
       end
 
       context "when the public ip list azure returns is empty" do
@@ -219,6 +231,30 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
+    context "when application gateway can not be found" do
+      before do
+        allow(client2).to receive(:list_network_interfaces_by_keyword).
+          with(resource_group_name, vm_name).
+          and_return([])
+      end
+
+      it "should raise an error" do
+        allow(client2).to receive(:get_load_balancer_by_name).
+          with(resource_pool['load_balancer']).
+          and_return(load_balancer)
+        allow(client2).to receive(:get_application_gateway_by_name).
+          with(resource_pool['application_gateway']).
+          and_return(nil)
+
+        expect(client2).not_to receive(:delete_virtual_machine)
+        expect(client2).not_to receive(:delete_network_interface)
+
+        expect {
+          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+        }.to raise_error /Cannot find the application gateway/
+      end
+    end
+
     context "when network interface is not created" do
       before do
         allow(client2).to receive(:get_network_subnet_by_name).
@@ -226,6 +262,9 @@ describe Bosh::AzureCloud::VMManager do
         allow(client2).to receive(:get_load_balancer_by_name).
           with(resource_pool['load_balancer']).
           and_return(load_balancer)
+        allow(client2).to receive(:get_application_gateway_by_name).
+          with(resource_pool['application_gateway']).
+          and_return(application_gateway)
         allow(client2).to receive(:list_public_ips).
           and_return([{
             :ip_address => "public-ip"
@@ -267,6 +306,9 @@ describe Bosh::AzureCloud::VMManager do
           allow(client2).to receive(:get_load_balancer_by_name).
             with(resource_pool['load_balancer']).
             and_return(load_balancer)
+          allow(client2).to receive(:get_application_gateway_by_name).
+            with(resource_pool['application_gateway']).
+            and_return(application_gateway)
           allow(client2).to receive(:list_public_ips).
             and_return([{
               :ip_address => "public-ip"

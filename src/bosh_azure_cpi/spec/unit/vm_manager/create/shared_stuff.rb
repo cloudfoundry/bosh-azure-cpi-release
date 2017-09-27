@@ -27,7 +27,8 @@ shared_context "shared stuff for vm manager" do
       'instance_type'         => 'Standard_D1',
       'storage_account_name'  => 'dfe03ad623f34d42999e93ca',
       'caching'               => 'ReadWrite',
-      'load_balancer'         => 'fake-lb-name'
+      'load_balancer'         => 'fake-lb-name',
+      'application_gateway'   => 'fake-ag-name'
     }
   }
   let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
@@ -78,6 +79,11 @@ shared_context "shared stuff for vm manager" do
       :name => "fake-lb-name"
     }
   }
+  let(:application_gateway) {
+    {
+      :name => "fake-ag-name"
+    }
+  }
   before do
     allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
       and_return(client2)
@@ -90,6 +96,9 @@ shared_context "shared stuff for vm manager" do
     allow(client2).to receive(:get_load_balancer_by_name).
       with(resource_pool['load_balancer']).
       and_return(load_balancer)
+    allow(client2).to receive(:get_application_gateway_by_name).
+      with(resource_pool['application_gateway']).
+      and_return(application_gateway)
     allow(client2).to receive(:get_public_ip_by_name).
       with(resource_group_name, vm_name).
       and_return(nil)
