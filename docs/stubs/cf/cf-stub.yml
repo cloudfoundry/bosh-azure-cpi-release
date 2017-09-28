@@ -1,5 +1,5 @@
 # code_snippet cf-stub-azure start
-# This stub is made according to cf-release v250
+# This stub is made according to cf-release v275
 ---
 director_uuid: DIRECTOR_UUID
 meta:
@@ -17,7 +17,7 @@ networks:
   - name: cf1
     type: manual
     subnets:
-    - range: 10.0.16.0/24
+    - range: 10.0.16.0/20
       gateway: 10.0.16.1
       dns:
       - 168.63.129.16
@@ -40,6 +40,10 @@ properties:
   system_domain: SYSTEM_DOMAIN
   system_domain_organization: SYSTEM_DOMAIN_ORGANIZATION
 
+  app_ssh:
+    host_key_fingerprint: HOST_KEY_FINGERPRINT
+    oauth_client_id: ssh-proxy
+
   ssl:
     skip_cert_verify: true
 
@@ -49,6 +53,11 @@ properties:
     bulk_api_password: BULK_API_PASSWORD
     db_encryption_key: DB_ENCRYPTION_KEY
     uaa_skip_ssl_validation: true
+    tls_port: CC_MUTUAL_TLS_PORT
+    mutual_tls:
+      ca_cert: CC_MUTUAL_TLS_CA_CERT
+      public_cert: CC_MUTUAL_TLS_PUBLIC_CERT
+      private_key: CC_MUTUAL_TLS_PRIVATE_KEY
 
   blobstore:
     admin_users:
@@ -90,6 +99,15 @@ properties:
       trafficcontroller:
         cert: TRAFFICCONTROLLER_CERT
         key: TRAFFICCONTROLLER_KEY
+      cc_trafficcontroller:
+        cert: CCTRAFFICCONTROLLER_CERT
+        key: CCTRAFFICCONTROLLER_KEY
+      syslogdrainbinder:
+        cert: SYSLOGDRAINBINDER_CERT
+        key: SYSLOGDRAINBINDER_KEY
+      statsd_injector:
+        cert: STATSDINJECTOR_CERT
+        key: STATSDINJECTOR_KEY
   loggregator_endpoint:
     shared_secret: LOGGREGATOR_ENDPOINT_SHARED_SECRET
   nats:
@@ -99,12 +117,15 @@ properties:
     status:
       user: ROUTER_USER
       password: ROUTER_PASSWORD
+
   uaa:
     admin:
       client_secret: ADMIN_SECRET
     cc:
       client_secret: CC_CLIENT_SECRET
     clients:
+      cc_service_key_client:
+        secret: CC_SERVICE_KEY_CLIENT_SECRET
       cc_routing:
         secret: CC_ROUTING_SECRET
       cloud_controller_username_lookup:
@@ -136,6 +157,7 @@ properties:
         - openid
         - cloud_controller.admin
         - doppler.firehose
+    ca_cert: UAA_CA_CERT
     sslCertificate: UAA_SERVER_CERT
     sslPrivateKey: UAA_SERVER_KEY
   ccdb:
@@ -154,12 +176,6 @@ properties:
       password: UAADB_PASSWORD
     - name: diego
       password: DIEGODB_PASSWORD
-  hm9000:
-    server_key: HM9000_SERVER_KEY
-    server_cert: HM9000_SERVER_CERT
-    client_key: HM9000_CLIENT_KEY
-    client_cert: HM9000_CLIENT_CERT
-    ca_cert: HM9000_CA_CERT
   login:
     saml:
       serviceProviderKey: SAML_KEY
