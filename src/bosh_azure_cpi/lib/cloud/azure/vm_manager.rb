@@ -207,19 +207,18 @@ module Bosh::AzureCloud
           @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
         end
       else
-        # If the VM is deleted but the availability sets are not deleted due to some reason, BOSH will retry and vm will be nil.
-        # CPI need to get the availability set name from NIC's tags, and delete it.
-        # If the primary nic was deleted successfully but it failed in deleting second nic, nics[0] may not be the primary nic when retrying.
-        # It still works since no avset name in the tags of second nic.
-        network_interface = @azure_client2.list_network_interfaces_by_keyword(resource_group_name, vm_name)[0]
-        unless network_interface.nil?
-          availability_set_name = network_interface[:tags]['availability_set']
-          delete_empty_availability_set(resource_group_name, availability_set_name) unless availability_set_name.nil?
+        # If the VM is deleted but the availability sets are not deleted due to some reason, BOSH will retry and VM will be nil.
+        # CPI needs to get the availability set name from the primary NIC's tags, and delete it.
+        # If CPI deleted the primary NIC successfully but failed deleting the second NIC, then NICs[0] is not the primary NIC when retrying.
+        # It still works since no avset name in the tags of the second NIC.
+        network_interfaces = @azure_client2.list_network_interfaces_by_keyword(resource_group_name, vm_name)
+        unless network_interfaces.empty?
+          for network_interface in network_interfaces
+            availability_set_name = network_interface[:tags]['availability_set']
+            delete_empty_availability_set(resource_group_name, availability_set_name) unless availability_set_name.nil?
+            @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
+          end
         end
-
-        # If the VM is deleted but the NICs are not deleted due to some reason, BOSH will retry and vm will be nil.
-        # CPI need to delete the possible NICs.
-        delete_possible_network_interfaces(resource_group_name, vm_name)
       end
 
       # Delete the dynamic public IP
