@@ -12,7 +12,6 @@ You can create an Azure account according to the environment where Cloud Foundry
 * [Creating an Azure account for AzureChinaCloud](https://www.azure.cn/pricing/pia/)
 * [Creating an Azure account for AzureUSGovernment](https://azuregov.microsoft.com/trial/azuregovtrial)
 
-<a name="get-started"/>
 # 2 Get Started
 
 ## 2.1 Create a Service Principal
