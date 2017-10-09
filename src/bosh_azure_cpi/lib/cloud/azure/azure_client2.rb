@@ -1,6 +1,9 @@
 ###############################################################################
-# This client is for using Azure Resource Manager. It will be obsoleted soon
-# after azure-sdk-for-ruby supports Azure Resource Manager.
+# This client is for using Azure Resource Manager.
+# The reasons why we do not use azure-sdk-for-ruby are as below:
+#   1. azure-sdk-for-ruby is not always ready when new Azure features come
+#   2. Various retries need to be handle
+#   3. azure-sdk-for-ruby hides asynchronous calls from callers
 ###############################################################################
 module Bosh::AzureCloud
   class AzureError < Bosh::Clouds::CloudError; end
