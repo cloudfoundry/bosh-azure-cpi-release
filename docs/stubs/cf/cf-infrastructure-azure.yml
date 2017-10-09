@@ -34,10 +34,6 @@ properties:
   uaa:
     clients: (( merge ))
 
-  dea_next:
-    deny_networks: (( merge || nil ))
-    allow_networks: (( merge || nil ))
-
   ccdb:
     address: (( properties.databases.address ))
     databases:
@@ -73,6 +69,9 @@ properties:
       - tag: admin
         name: uaaadmin
         password: (( merge ))
+      - tag: admin
+        name: diego
+        password: (( merge ))
     databases:
       - tag: cc
         name: ccdb
@@ -80,6 +79,12 @@ properties:
       - tag: uaa
         name: uaadb
         citext: true
+      - tag: diego
+        name: diego
+        citext: false
+      - tag: diego
+        name: locket
+        citext: false
     collect_statement_statistics: null
     additional_config: (( merge || nil ))
 
@@ -104,12 +109,6 @@ resource_pools:
 
   - name: large_z2
     cloud_properties: (( merge || meta.resource_pools.large.cloud_properties  ))
-
-  - name: runner_z1
-    cloud_properties: (( merge || meta.resource_pools.runner.cloud_properties  ))
-
-  - name: runner_z2
-    cloud_properties: (( merge || meta.resource_pools.runner.cloud_properties  ))
 
   - name: router_z1
     cloud_properties: (( merge || meta.resource_pools.small.cloud_properties  ))
@@ -250,11 +249,5 @@ jobs:
   - name: api_worker_z2
     instances: 0
 
-  - name: hm9000_z2
-    instances: 0
-
-  - name: runner_z2
-    instances: 0
-
-  - name: api_worker_z2
+  - name: clock_z2
     instances: 0
