@@ -256,10 +256,10 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
         end
 
-        context "when 'SocketError: Hostname not known' is raised at the first time but returns 200 at the second time" do
+        context "when 'Hostname not known' is raised at the first time but returns 200 at the second time" do
           before do
             stub_request(:post, token_uri).
-              to_raise('SocketError: Hostname not known').then.
+              to_raise('Hostname not known').then.
               to_return(
                 :status => 200,
                 :body => {

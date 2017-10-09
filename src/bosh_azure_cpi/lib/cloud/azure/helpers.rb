@@ -137,7 +137,7 @@ module Bosh::AzureCloud
 
     # REST Connection Errors
     ERROR_OPENSSL_RESET           = 'SSL_connect'
-    ERROR_SOCKET_UNKNOWN_HOSTNAME = 'SocketError: Hostname not known'
+    ERROR_SOCKET_UNKNOWN_HOSTNAME = 'Hostname not known'
     ERROR_CONNECTION_REFUSED      = 'Connection refused'
 
     # Length of instance id

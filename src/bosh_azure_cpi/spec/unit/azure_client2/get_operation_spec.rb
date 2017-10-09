@@ -690,7 +690,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         }.to raise_error OpenSSL::X509::StoreError
       end
 
-      it "should not raise error if it raises 'SocketError: Hostname not known' at the first time but returns 200 at the second time" do
+      it "should not raise error if it raises 'Hostname not known' at the first time but returns 200 at the second time" do
         stub_request(:post, token_uri).to_return(
           :status => 200,
           :body => {
@@ -699,7 +699,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           }.to_json,
           :headers => {})
         stub_request(:get, storage_account_uri).
-            to_raise('SocketError: Hostname not known').then.
+            to_raise('Hostname not known').then.
             to_return(
               {
                 :status => 200,
