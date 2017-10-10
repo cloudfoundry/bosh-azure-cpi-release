@@ -2,484 +2,372 @@
 groups:
   - name: bosh-azure-cpi-release
     jobs:
-      - recreate-infrastructure-primary
       - build-candidate
-      - lifecycle-unmanaged-disks
-      - bats-ubuntu-unmanaged-disks
-      - lifecycle-managed-disks
-      - bats-ubuntu-managed-disks
-      - lifecycle-windows-unmanaged-disks
-      - lifecycle-windows-managed-disks
+      - integration-unmanaged-disks
+      - integration-managed-disks
+      - integration-windows-unmanaged-disks
+      - integration-windows-managed-disks
+      - bats-unmanaged-disks
+      - bats-managed-disks
       - promote-candidate
 
+shared:
+  - &azure-environment-params
+    AZURE_ENVIRONMENT:                    {{azure_environment}}
+    AZURE_SUBSCRIPTION_ID:                {{azure_subscription_id}}
+    AZURE_CLIENT_ID:                      {{azure_client_id}}
+    AZURE_CLIENT_SECRET:                  {{azure_client_secret}}
+    AZURE_TENANT_ID:                      {{azure_tenant_id}}
+
+  - &create-bats-environment
+    put: environment
+    params:
+      delete_on_failure: true
+      generate_random_name: true
+      terraform_source: pipelines/azure/assets/terraform
+
+  - &destroy-bats-environment
+    put: environment
+    params:
+      action: destroy
+      env_name_file: environment/name
+      terraform_source: pipelines/azure/assets/terraform
+    get_params:
+      action: destroy
+
+  - &prepare-director
+    task: prepare-director
+    file: pipelines/shared/tasks/prepare-director.yml
+    params: &prepare-director-params
+      INFRASTRUCTURE:     azure
+      DIRECTOR_VARS_FILE: {{azure_director_vars_file}}
+
+  - &deploy-director
+    task: deploy-director
+    file: pipelines/shared/tasks/deploy-director.yml
+
+  - &run-bats
+    task: run-bats
+    file: pipelines/shared/tasks/run-bats.yml
+    params: &run-bats-params
+      INFRASTRUCTURE:                     azure
+      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-trusty-go_agent
+      BAT_INFRASTRUCTURE:                 azure
+      BAT_NETWORKING:                     manual
+      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
+
+  - &teardown
+    task: teardown
+    file: pipelines/shared/tasks/teardown.yml
+
+  - &create-integration-environment
+    put: environment
+    params:
+      delete_on_failure: true
+      generate_random_name: true
+      terraform_source: bosh-cpi-src/ci/assets/terraform/integration
+
+  - &destroy-integration-environment
+    put: environment
+    params:
+      action: destroy
+      env_name_file: environment/name
+      terraform_source: bosh-cpi-src/ci/assets/terraform/integration
+    get_params:
+      action: destroy
+
+  - &run-integration
+    task: run-integration
+    file: bosh-cpi-src/ci/tasks/run-integration.yml
+    params: &run-integration-params
+      <<: *azure-environment-params
+      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
+      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
+
+  - &run-integration-windows
+    task: run-integration-windows
+    file: bosh-cpi-src/ci/tasks/run-integration-windows.yml
+    params: &run-integration-windows-params
+      <<: *run-integration-params
+
+  - &create-application-gateway
+    task: create-application-gateway
+    file: bosh-cpi-src/ci/tasks/create-application-gateway.yml
+    params:
+      <<: *azure-environment-params
+      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
+
+  - &delete-application-gateway
+    task: delete-application-gateway
+    file: bosh-cpi-src/ci/tasks/delete-application-gateway.yml
+    params:
+      <<: *azure-environment-params
+      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
+
+  - &ensure-cleanup
+    task: ensure-cleanup
+    file: bosh-cpi-src/ci/tasks/ensure-cleanup.yml
+    params:
+      <<: *azure-environment-params
+
 jobs:
-- name: recreate-infrastructure-primary
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in}
+  - name: build-candidate
+    serial: true
+    plan:
+      - aggregate:
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in}
+        - {trigger: false, get: version-semver, params: {bump: patch}}
+        - {trigger: false, get: bosh-cli}
+      - put: version-semver
+        params: {file: version-semver/number}
+      - task: build
+        file: bosh-cpi-src/ci/tasks/build-candidate.yml
+      - put: bosh-cpi-dev-artifacts
+        params: {file: candidate/*.tgz}
 
-  - task: azure-provision
-    file: bosh-cpi-src/ci/tasks/azure-provision.yml
-    params:
-      AZURE_ENVIRONMENT:                                 {{azure_environment}}
-      AZURE_CLIENT_ID:                                   {{azure_client_id}}
-      AZURE_CLIENT_SECRET:                               {{azure_client_secret}}
-      AZURE_TENANT_ID:                                   {{azure_tenant_id}}
-      AZURE_DEFAULT_GROUP_NAME:                          {{azure_default_group_name}}
-      AZURE_ADDITIONAL_GROUP_NAME:                       {{azure_additional_group_name}}
-      AZURE_DEFAULT_GROUP_NAME_MANAGED_DISKS:            {{azure_default_group_name_managed_disks}}
-      AZURE_ADDITIONAL_GROUP_NAME_MANAGED_DISKS:         {{azure_additional_group_name_managed_disks}}
-      AZURE_DEFAULT_GROUP_NAME_CENTOS:                   {{azure_default_group_name_centos}}
-      AZURE_ADDITIONAL_GROUP_NAME_CENTOS:                {{azure_additional_group_name_centos}}
-      AZURE_DEFAULT_GROUP_NAME_WINDOWS:                  {{azure_default_group_name_windows}}
-      AZURE_ADDITIONAL_GROUP_NAME_WINDOWS:               {{azure_additional_group_name_windows}}
-      AZURE_DEFAULT_GROUP_NAME_WINDOWS_MANAGED_DISKS:    {{azure_default_group_name_windows_managed_disks}}
-      AZURE_ADDITIONAL_GROUP_NAME_WINDOWS_MANAGED_DISKS: {{azure_additional_group_name_windows_managed_disks}}
-      AZURE_REGION_NAME:                                 {{azure_region_name}}
-      AZURE_VNET_NAME_FOR_BATS:                          {{azure_vnet_name_for_bats}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE:                     {{azure_vnet_name_for_lifecycle}}
-      AZURE_REGION_SHORT_NAME:                           {{azure_region_short_name}}
-      AZURE_STORAGE_ACCOUNT_NAME:                        {{azure_storage_account_name}}
-      AZURE_STORAGE_ACCOUNT_NAME_MANAGED_DISKS:          {{azure_storage_account_name_managed_disks}}
-      AZURE_STORAGE_ACCOUNT_NAME_WINDOWS:                {{azure_storage_account_name_windows}}
-      AZURE_STORAGE_ACCOUNT_NAME_WINDOWS_MANAGED_DISKS:  {{azure_storage_account_name_windows_managed_disks}}
-      AZURE_BOSH_SUBNET_NAME:                            {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME:                     {{azure_bosh_second_subnet_name}}
-      AZURE_CF_SUBNET_NAME:                              {{azure_cf_subnet_name}}
-      AZURE_CF_SECOND_SUBNET_NAME:                       {{azure_cf_second_subnet_name}}
-      AZURE_APPLICATION_GATEWAY_NAME:                    {{azure_application_gateway_name}}
+  - name: integration-unmanaged-disks
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
+      - <<: *create-integration-environment
+      - <<: *create-application-gateway
+      - <<: *run-integration
+        params:
+          <<: *run-integration-params
+          AZURE_USE_MANAGED_DISKS: false
+      - do:
+        - <<: *delete-application-gateway
+        - <<: *destroy-integration-environment
+        ensure:
+          do:
+            - <<: *ensure-cleanup
 
-- name: build-candidate
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in}
-    - {trigger: false, get: version-semver, params: {bump: patch}}
+  - name: integration-managed-disks
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
+      - <<: *create-integration-environment
+      - <<: *create-application-gateway
+      - <<: *run-integration
+        params:
+          <<: *run-integration-params
+          AZURE_USE_MANAGED_DISKS: true
+      - do:
+        - <<: *delete-application-gateway
+        - <<: *destroy-integration-environment
+        ensure:
+          do:
+            - <<: *ensure-cleanup
 
-  - put: version-semver
-    params: {file: version-semver/number}
+  - name: integration-windows-unmanaged-disks
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
+      - <<: *create-integration-environment
+      - <<: *create-application-gateway
+      - <<: *run-integration-windows
+        params:
+          <<: *run-integration-windows-params
+          AZURE_USE_MANAGED_DISKS: false
+      - do:
+        - <<: *delete-application-gateway
+        - <<: *destroy-integration-environment
+        ensure:
+          do:
+            - <<: *ensure-cleanup
 
-  - task: build
-    file: bosh-cpi-src/ci/tasks/build-candidate.yml
+  - name: integration-windows-managed-disks
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
+      - <<: *create-integration-environment
+      - <<: *create-application-gateway
+      - <<: *run-integration-windows
+        params:
+          <<: *run-integration-windows-params
+          AZURE_USE_MANAGED_DISKS: true
+      - do:
+        - <<: *delete-application-gateway
+        - <<: *destroy-integration-environment
+        ensure:
+          do:
+            - <<: *ensure-cleanup
 
-  - put: bosh-cpi-dev-artifacts
-    params: {file: candidate/*.tgz}
+  - name: bats-unmanaged-disks
+    serial: true
+    plan:
+      - aggregate:
+        - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
+        - {get: bosh-release,    trigger: false, resource: bosh-release}
+        - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell}
+        - {get: bosh-deployment, trigger: false}
+        - {get: pipelines,       trigger: false}
+        - {get: bosh-cli,        trigger: false}
+        - {get: bats,            trigger: false}
+      - <<: *create-bats-environment
+      - <<: *prepare-director
+        params:
+          <<: *prepare-director-params
+          OPTIONAL_OPS_FILE: |
+            -o pipelines/shared/assets/ops/remove-hm.yml
+            -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+      - <<: *deploy-director
+      - <<: *run-bats
+      - do:
+        - <<: *teardown
+        - <<: *destroy-bats-environment
+        ensure:
+          do:
+            - <<: *ensure-cleanup
 
-- name: lifecycle-unmanaged-disks
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
-    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
+  - name: bats-managed-disks
+    serial: true
+    plan:
+      - aggregate:
+        - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
+        - {get: bosh-release,    trigger: false, resource: bosh-release}
+        - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell}
+        - {get: bosh-deployment, trigger: false}
+        - {get: pipelines,       trigger: false}
+        - {get: bosh-cli,        trigger: false}
+        - {get: bats,            trigger: false}
+      - <<: *create-bats-environment
+      - <<: *prepare-director
+        params:
+          <<: *prepare-director-params
+          OPTIONAL_OPS_FILE: |
+            -o pipelines/shared/assets/ops/remove-hm.yml
+            -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+            -o bosh-deployment/azure/use-managed-disks.yml
+      - <<: *deploy-director
+      - <<: *run-bats
+      - do:
+        - <<: *teardown
+        - <<: *destroy-bats-environment
+        ensure:
+          do:
+            - <<: *ensure-cleanup
 
-  - task: test
-    file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
-    params:
-      AZURE_ENVIRONMENT:              {{azure_environment}}
-      AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
-      AZURE_CLIENT_ID:                {{azure_client_id}}
-      AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-      AZURE_TENANT_ID:                {{azure_tenant_id}}
-      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name}}
-      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name}}
-      AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
-      AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
-      AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
-      AZURE_USE_MANAGED_DISKS:        false
-      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
-      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
+  - name: promote-candidate
+    plan:
+      - aggregate:
+        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
+        - {trigger: false, get: release-version-semver, params: {bump: major}}
+      - task: promote
+        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
+        params:
+          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
+          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
+      - put: bosh-cpi-src
+        resource: bosh-cpi-src-out
+        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/integer_version}
+      - put: release-version-semver
+        params: {file: release-version-semver/number}
 
-- name: bats-ubuntu-unmanaged-disks
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
-    - {trigger: false,                            get: bats}
-    - {trigger: false,                            get: bosh-init}
-    - {trigger: false, passed: [build-candidate], get: version-semver, resource: version-semver}
-    - {trigger: false,                            get: bosh-release}
-
-  - do:
-    - task: setup-director
-      file: bosh-cpi-src/ci/tasks/setup-director.yml
-      params:
-        AZURE_ENVIRONMENT:              {{azure_environment}}
-        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
-        AZURE_CLIENT_ID:                {{azure_client_id}}
-        AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-        AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name}}
-        AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name}}
-        AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
-        AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name}}
-        AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-        AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
-        AZURE_DEBUG_MODE:               {{azure_debug_mode}}
-        AZURE_USE_MANAGED_DISKS:        false
-        BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
-        BOSH_DIRECTOR_USERNAME:         {{bosh_director_username}}
-        BOSH_DIRECTOR_PASSWORD:         {{bosh_director_password}}
-        BOSH_DIRECTOR_SSL_CERT:         {{bosh_director_ssl_cert}}
-        BOSH_DIRECTOR_SSL_KEY:          {{bosh_director_ssl_key}}
-        SSH_PUBLIC_KEY:                 {{ssh_public_key}}
-        SSH_PRIVATE_KEY:                {{ssh_private_key}}
-
-    - task: run-bats
-      file: bosh-cpi-src/ci/tasks/run-bats.yml
-      params:
-        AZURE_ENVIRONMENT:                  {{azure_environment}}
-        AZURE_CLIENT_ID:                    {{azure_client_id}}
-        AZURE_CLIENT_SECRET:                {{azure_client_secret}}
-        AZURE_TENANT_ID:                    {{azure_tenant_id}}
-        AZURE_GROUP_NAME:                   {{azure_additional_group_name}}
-        AZURE_VNET_NAME_FOR_BATS:           {{azure_vnet_name_for_bats}}
-        AZURE_CF_SUBNET_NAME:               {{azure_cf_subnet_name}}
-        AZURE_CF_SECOND_SUBNET_NAME:        {{azure_cf_second_subnet_name}}
-        AZURE_DEFAULT_SECURITY_GROUP:       {{azure_default_security_group}}
-        BAT_NETWORK_CIDR:                   {{bat_network_cidr}}
-        BAT_SECOND_NETWORK_CIDR:            {{bat_second_network_cidr}}
-        BAT_NETWORK_RESERVED_RANGE:         {{bat_network_reserved_range}}
-        BAT_SECOND_NETWORK_RESERVED_RANGE:  {{bat_second_network_reserved_range}}
-        BAT_NETWORK_GATEWAY:                {{bat_network_gateway}}
-        BAT_SECOND_NETWORK_GATEWAY:         {{bat_second_network_gateway}}
-        BAT_NETWORK_STATIC_RANGE:           {{bat_network_static_range}}
-        BAT_SECOND_NETWORK_STATIC_RANGE:    {{bat_second_network_static_range}}
-        BAT_NETWORK_STATIC_IP:              {{bat_network_static_ip}}
-        BAT_SECOND_NETWORK_STATIC_IP:       {{bat_second_network_static_ip}}
-        BAT_SECOND_STATIC_IP:               {{bat_second_static_ip}}
-        BAT_VCAP_PASSWORD:                  {{bat_vcap_password}}
-        BAT_BASE_OS:                        ubuntu-trusty
-        BOSH_DIRECTOR_USERNAME:             {{bosh_director_username}}
-        BOSH_DIRECTOR_PASSWORD:             {{bosh_director_password}}
-        SSH_PRIVATE_KEY:                    {{ssh_private_key}}
-        COLUMNS:                            80
-
-    ensure:
-      do:
-        - task: teardown-director
-          file: bosh-cpi-src/ci/tasks/teardown-director.yml
-
-- name: lifecycle-managed-disks
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
-    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
-
-  - task: test
-    file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
-    params:
-      AZURE_ENVIRONMENT:              {{azure_environment}}
-      AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
-      AZURE_CLIENT_ID:                {{azure_client_id}}
-      AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-      AZURE_TENANT_ID:                {{azure_tenant_id}}
-      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name}}
-      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name}}
-      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_managed_disks}}
-      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_managed_disks}}
-      AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name_managed_disks}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
-      AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
-      AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
-      AZURE_USE_MANAGED_DISKS:        true
-      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
-      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
-
-- name: bats-ubuntu-managed-disks
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-    - {trigger: false,                            get: stemcell, resource: azure-ubuntu-stemcell}
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
-    - {trigger: false,                            get: bats}
-    - {trigger: false,                            get: bosh-init}
-    - {trigger: false, passed: [build-candidate], get: version-semver, resource: version-semver}
-    - {trigger: false,                            get: bosh-release}
-
-  - do:
-    - task: setup-director
-      file: bosh-cpi-src/ci/tasks/setup-director.yml
-      params:
-        AZURE_ENVIRONMENT:              {{azure_environment}}
-        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
-        AZURE_CLIENT_ID:                {{azure_client_id}}
-        AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-        AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_managed_disks}}
-        AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_managed_disks}}
-        AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
-        AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-        AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
-        AZURE_DEBUG_MODE:               {{azure_debug_mode}}
-        AZURE_USE_MANAGED_DISKS:        true
-        BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
-        BOSH_DIRECTOR_USERNAME:         {{bosh_director_username}}
-        BOSH_DIRECTOR_PASSWORD:         {{bosh_director_password}}
-        BOSH_DIRECTOR_SSL_CERT:         {{bosh_director_ssl_cert}}
-        BOSH_DIRECTOR_SSL_KEY:          {{bosh_director_ssl_key}}
-        SSH_PUBLIC_KEY:                 {{ssh_public_key}}
-        SSH_PRIVATE_KEY:                {{ssh_private_key}}
-
-    - task: run-bats
-      file: bosh-cpi-src/ci/tasks/run-bats.yml
-      params:
-        AZURE_ENVIRONMENT:                  {{azure_environment}}
-        AZURE_CLIENT_ID:                    {{azure_client_id}}
-        AZURE_CLIENT_SECRET:                {{azure_client_secret}}
-        AZURE_TENANT_ID:                    {{azure_tenant_id}}
-        AZURE_GROUP_NAME:                   {{azure_additional_group_name_managed_disks}}
-        AZURE_VNET_NAME_FOR_BATS:           {{azure_vnet_name_for_bats}}
-        AZURE_CF_SUBNET_NAME:               {{azure_cf_subnet_name}}
-        AZURE_CF_SECOND_SUBNET_NAME:        {{azure_cf_second_subnet_name}}
-        AZURE_DEFAULT_SECURITY_GROUP:       {{azure_default_security_group}}
-        BAT_NETWORK_CIDR:                   {{bat_network_cidr}}
-        BAT_SECOND_NETWORK_CIDR:            {{bat_second_network_cidr}}
-        BAT_NETWORK_RESERVED_RANGE:         {{bat_network_reserved_range}}
-        BAT_SECOND_NETWORK_RESERVED_RANGE:  {{bat_second_network_reserved_range}}
-        BAT_NETWORK_GATEWAY:                {{bat_network_gateway}}
-        BAT_SECOND_NETWORK_GATEWAY:         {{bat_second_network_gateway}}
-        BAT_NETWORK_STATIC_RANGE:           {{bat_network_static_range}}
-        BAT_SECOND_NETWORK_STATIC_RANGE:    {{bat_second_network_static_range}}
-        BAT_NETWORK_STATIC_IP:              {{bat_network_static_ip}}
-        BAT_SECOND_NETWORK_STATIC_IP:       {{bat_second_network_static_ip}}
-        BAT_SECOND_STATIC_IP:               {{bat_second_static_ip}}
-        BAT_VCAP_PASSWORD:                  {{bat_vcap_password}}
-        BAT_BASE_OS:                        ubuntu-trusty
-        BOSH_DIRECTOR_USERNAME:             {{bosh_director_username}}
-        BOSH_DIRECTOR_PASSWORD:             {{bosh_director_password}}
-        SSH_PRIVATE_KEY:                    {{ssh_private_key}}
-        COLUMNS:                            80
-
-    ensure:
-      do:
-        - task: teardown-director
-          file: bosh-cpi-src/ci/tasks/teardown-director.yml
-
-- name: bats-centos
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: false,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-    - {trigger: false,                            get: stemcell, resource: azure-centos-stemcell}
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
-    - {trigger: false,                            get: bats}
-    - {trigger: false,                            get: bosh-init}
-    - {trigger: false, passed: [build-candidate], get: version-semver, resource: version-semver}
-    - {trigger: false,                            get: bosh-release}
-
-  - do:
-    - task: setup-director
-      file: bosh-cpi-src/ci/tasks/setup-director.yml
-      params:
-        AZURE_ENVIRONMENT:              {{azure_environment}}
-        AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
-        AZURE_CLIENT_ID:                {{azure_client_id}}
-        AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-        AZURE_TENANT_ID:                {{azure_tenant_id}}
-        AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_centos}}
-        AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_centos}}
-        AZURE_VNET_NAME_FOR_BATS:       {{azure_vnet_name_for_bats}}
-        AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-        AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
-        AZURE_DEBUG_MODE:               {{azure_debug_mode}}
-        AZURE_USE_MANAGED_DISKS:        true
-        BAT_NETWORK_GATEWAY:            {{bat_network_gateway}}
-        BOSH_DIRECTOR_USERNAME:         {{bosh_director_username}}
-        BOSH_DIRECTOR_PASSWORD:         {{bosh_director_password}}
-        SSH_PUBLIC_KEY:                 {{ssh_public_key}}
-        SSH_PRIVATE_KEY:                {{ssh_private_key}}
-
-    - task: run-bats
-      file: bosh-cpi-src/ci/tasks/run-bats.yml
-      params:
-        AZURE_ENVIRONMENT:                  {{azure_environment}}
-        AZURE_CLIENT_ID:                    {{azure_client_id}}
-        AZURE_CLIENT_SECRET:                {{azure_client_secret}}
-        AZURE_TENANT_ID:                    {{azure_tenant_id}}
-        AZURE_GROUP_NAME:                   {{azure_additional_group_name_centos}}
-        AZURE_VNET_NAME_FOR_BATS:           {{azure_vnet_name_for_bats}}
-        AZURE_CF_SUBNET_NAME:               {{azure_cf_subnet_name}}
-        AZURE_CF_SECOND_SUBNET_NAME:        {{azure_cf_second_subnet_name}}
-        AZURE_DEFAULT_SECURITY_GROUP:       {{azure_default_security_group}}
-        BAT_NETWORK_CIDR:                   {{bat_network_cidr}}
-        BAT_SECOND_NETWORK_CIDR:            {{bat_second_network_cidr}}
-        BAT_NETWORK_RESERVED_RANGE:         {{bat_network_reserved_range}}
-        BAT_SECOND_NETWORK_RESERVED_RANGE:  {{bat_second_network_reserved_range}}
-        BAT_NETWORK_GATEWAY:                {{bat_network_gateway}}
-        BAT_SECOND_NETWORK_GATEWAY:         {{bat_second_network_gateway}}
-        BAT_NETWORK_STATIC_RANGE:           {{bat_network_static_range}}
-        BAT_SECOND_NETWORK_STATIC_RANGE:    {{bat_second_network_static_range}}
-        BAT_NETWORK_STATIC_IP:              {{bat_network_static_ip}}
-        BAT_SECOND_NETWORK_STATIC_IP:       {{bat_second_network_static_ip}}
-        BAT_SECOND_STATIC_IP:               {{bat_second_static_ip}}
-        BAT_VCAP_PASSWORD:                  {{bat_vcap_password}}
-        BAT_BASE_OS:                        centos-7
-        BOSH_DIRECTOR_USERNAME:             {{bosh_director_username}}
-        BOSH_DIRECTOR_PASSWORD:             {{bosh_director_password}}
-        SSH_PRIVATE_KEY:                    {{ssh_private_key}}
-        COLUMNS:                            80
-
-    ensure:
-      do:
-        - task: teardown-director
-          file: bosh-cpi-src/ci/tasks/teardown-director.yml
-
-- name: lifecycle-windows-unmanaged-disks
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
-    - {trigger: false,                            get: stemcell, resource: azure-windows-stemcell}
-
-  - task: test
-    file: bosh-cpi-src/ci/tasks/run-lifecycle-windows.yml
-    params:
-      AZURE_ENVIRONMENT:              {{azure_environment}}
-      AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
-      AZURE_CLIENT_ID:                {{azure_client_id}}
-      AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-      AZURE_TENANT_ID:                {{azure_tenant_id}}
-      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_windows}}
-      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_windows}}
-      AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name_windows}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
-      AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
-      AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
-      AZURE_USE_MANAGED_DISKS:        false
-      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
-      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
-
-- name: lifecycle-windows-managed-disks
-  serial: true
-  plan:
-  - aggregate:
-    - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-    - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, resource: bosh-cpi-src-in}
-    - {trigger: false,                            get: stemcell, resource: azure-windows-stemcell}
-
-  - task: test
-    file: bosh-cpi-src/ci/tasks/run-lifecycle-windows.yml
-    params:
-      AZURE_ENVIRONMENT:              {{azure_environment}}
-      AZURE_SUBSCRIPTION_ID:          {{azure_subscription_id}}
-      AZURE_CLIENT_ID:                {{azure_client_id}}
-      AZURE_CLIENT_SECRET:            {{azure_client_secret}}
-      AZURE_TENANT_ID:                {{azure_tenant_id}}
-      AZURE_DEFAULT_GROUP_NAME:       {{azure_default_group_name_windows_managed_disks}}
-      AZURE_ADDITIONAL_GROUP_NAME:    {{azure_additional_group_name_windows_managed_disks}}
-      AZURE_STORAGE_ACCOUNT_NAME:     {{azure_storage_account_name_windows_managed_disks}}
-      AZURE_VNET_NAME_FOR_LIFECYCLE:  {{azure_vnet_name_for_lifecycle}}
-      AZURE_BOSH_SUBNET_NAME:         {{azure_bosh_subnet_name}}
-      AZURE_BOSH_SECOND_SUBNET_NAME:  {{azure_bosh_second_subnet_name}}
-      AZURE_DEFAULT_SECURITY_GROUP:   {{azure_default_security_group}}
-      AZURE_USE_MANAGED_DISKS:        true
-      SSH_PUBLIC_KEY:                 {{ssh_public_key}}
-      AZURE_APPLICATION_GATEWAY_NAME: {{azure_application_gateway_name}}
-
-- name: promote-candidate
-  plan:
-  - aggregate:
-    - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [lifecycle-unmanaged-disks, bats-ubuntu-unmanaged-disks, lifecycle-managed-disks, bats-ubuntu-managed-disks, lifecycle-windows-unmanaged-disks, lifecycle-windows-managed-disks]}
-    - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
-    - {trigger: false, get: release-version-semver, params: {bump: major}}
-
-  - task: promote
-    file: bosh-cpi-src/ci/tasks/promote-candidate.yml
-    params:
-      S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
-      S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
-
-  - put: bosh-cpi-src
-    resource: bosh-cpi-src-out
-    params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/integer_version}
-
-  - put: release-version-semver
-    params: {file: release-version-semver/number}
+resource_types:
+  - name: terraform_type
+    type: docker-image
+    source:
+      repository: ljfranklin/terraform-resource
 
 resources:
-- name: bosh-cpi-dev-artifacts
-  type: s3
-  source:
-    regexp: bosh-azure-cpi-(\d+\.\d+\.\d+)\.tgz
-    bucket: {{s3_azure_cpi_pipeline_bucket}}
-    region_name: {{s3_region__primary}}
-    access_key_id: {{s3_access_key__primary}}
-    secret_access_key: {{s3_secret_key__primary}}
-
-- name: bosh-cpi-src-in
-  type: git
-  source:
-    uri: git@github.com:cloudfoundry-incubator/bosh-azure-cpi-release.git
-    branch: master
-    private_key: {{github_deployment_key__bosh-azure-cpi-release}}
-    ignore_paths:
-      - .final_builds/**/*.yml
-      - releases/**/*.yml
-
-- name: bosh-cpi-src-out
-  type: git
-  source:
-    uri: git@github.com:cloudfoundry-incubator/bosh-azure-cpi-release.git
-    branch: master
-    private_key: {{github_deployment_key__bosh-azure-cpi-release}}
-
-- name: version-semver
-  type: semver
-  source:
-    key:               current-version # dev-release version
-    bucket:            {{s3_azure_cpi_pipeline_bucket}}
-    access_key_id:     {{s3_access_key__primary}}
-    secret_access_key: {{s3_secret_key__primary}}
-
-- name: release-version-semver
-  type: semver
-  source:
-    key:               release-current-version
-    bucket:            {{s3_azure_cpi_pipeline_bucket}}
-    access_key_id:     {{s3_access_key__primary}}
-    secret_access_key: {{s3_secret_key__primary}}
-
-- name: bosh-release
-  type: bosh-io-release
-  source:
-    repository: cloudfoundry/bosh
-
-- name: bosh-init
-  type: s3
-  source:
-    regexp: bosh-init-([0-9\.]+)-linux-amd64
-    bucket: bosh-init-artifacts
-    region_name: us-east-1
-
-- name: bats
-  type: git
-  source:
-    uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
-    branch: master
-
-- name: azure-ubuntu-stemcell
-  type: bosh-io-stemcell
-  source:
-    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-
-- name: azure-centos-stemcell
-  type: bosh-io-stemcell
-  source:
-    name: bosh-azure-hyperv-centos-7-go_agent
-
-- name: azure-windows-stemcell
-  type: bosh-io-stemcell
-  source:
-    name: bosh-azure-hyperv-windows2012R2-go_agent
+  - name: bosh-cpi-dev-artifacts
+    type: s3
+    source:
+      regexp: bosh-azure-cpi-(\d+\.\d+\.\d+)\.tgz
+      bucket: {{s3_azure_cpi_pipeline_bucket}}
+      region_name: {{s3_region__primary}}
+      access_key_id: {{s3_access_key__primary}}
+      secret_access_key: {{s3_secret_key__primary}}
+  - name: bosh-cpi-src-in
+    type: git
+    source:
+      uri: git@github.com:cloudfoundry-incubator/bosh-azure-cpi-release.git
+      branch: master
+      private_key: {{github_deployment_key__bosh-azure-cpi-release}}
+      ignore_paths:
+        - .final_builds/**/*.yml
+        - releases/**/*.yml
+  - name: bosh-cpi-src-out
+    type: git
+    source:
+      uri: git@github.com:cloudfoundry-incubator/bosh-azure-cpi-release.git
+      branch: master
+      private_key: {{github_deployment_key__bosh-azure-cpi-release}}
+  - name: version-semver
+    type: semver
+    source:
+      key:               current-version # dev-release version
+      bucket:            {{s3_azure_cpi_pipeline_bucket}}
+      access_key_id:     {{s3_access_key__primary}}
+      secret_access_key: {{s3_secret_key__primary}}
+  - name: release-version-semver
+    type: semver
+    source:
+      key:               release-current-version
+      bucket:            {{s3_azure_cpi_pipeline_bucket}}
+      access_key_id:     {{s3_access_key__primary}}
+      secret_access_key: {{s3_secret_key__primary}}
+  - name: environment
+    type: terraform_type
+    source:
+      storage:
+        access_key_id:     {{s3_access_key__primary}}
+        secret_access_key: {{s3_secret_key__primary}}
+        bucket:            {{terraform_bucket}}
+        bucket_path:       terraform-state
+      vars:
+        location:              {{azure_location}}
+        azure_environment:     {{azure_environment}}
+        azure_subscription_id: {{azure_subscription_id}}
+        azure_client_id:       {{azure_client_id}}
+        azure_client_secret:   {{azure_client_secret}}
+        azure_tenant_id:       {{azure_tenant_id}}
+  - name: bosh-cli
+    type: s3
+    source:
+      regexp: bosh-cli-([0-9.]+)-linux-amd64
+      bucket: bosh-cli-artifacts
+      region_name: us-east-1
+  - name: pipelines
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry-incubator/bosh-cpi-certification
+      branch: master
+  - name: bosh-release
+    type: bosh-io-release
+    source:
+      repository: cloudfoundry/bosh
+  - name: azure-ubuntu-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+  - name: azure-windows-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-azure-hyperv-windows2012R2-go_agent
+  - name: bats
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
+      branch: gocli-bats
+  - name: bosh-deployment
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-deployment
+      branch: master

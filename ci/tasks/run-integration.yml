@@ -1,0 +1,23 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source: {repository: boshcpi/azure-cpi-release}
+
+inputs:
+  - name: environment
+  - name: bosh-cpi-src
+  - name: stemcell
+
+run:
+  path: bosh-cpi-src/ci/tasks/run-integration.sh
+
+params:
+  AZURE_ENVIRONMENT:                          ""
+  AZURE_SUBSCRIPTION_ID:                      ""
+  AZURE_CLIENT_ID:                            ""
+  AZURE_CLIENT_SECRET:                        ""
+  AZURE_TENANT_ID:                            ""
+  SSH_PUBLIC_KEY:                             ""
+  AZURE_APPLICATION_GATEWAY_NAME:             ""
+  AZURE_USE_MANAGED_DISKS:                    false
