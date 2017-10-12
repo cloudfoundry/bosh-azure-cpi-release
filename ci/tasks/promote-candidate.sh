@@ -5,6 +5,7 @@ set -e -x
 : ${S3_ACCESS_KEY_ID:?}
 : ${S3_SECRET_ACCESS_KEY:?}
 
+source bosh-cpi-src/ci/utils.sh
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}
 
@@ -18,7 +19,6 @@ cp -r bosh-cpi-src promoted/repo
 dev_release=$(realpath bosh-cpi-release/*.tgz)
 
 pushd promoted/repo > /dev/null
-  set +x
   echo creating config/private.yml with blobstore secrets
   cat > config/private.yml << EOF
 ---
@@ -27,13 +27,9 @@ blobstore:
     access_key_id: ${S3_ACCESS_KEY_ID}
     secret_access_key: ${S3_SECRET_ACCESS_KEY}
 EOF
-  set -x
-
-  echo "using bosh CLI version..."
-  bosh version
 
   echo "finalizing CPI release..."
-  bosh finalize release ${dev_release} --version ${integer_version}
+  bosh2 finalize-release ${dev_release} --version ${integer_version}
 
   rm config/private.yml
 

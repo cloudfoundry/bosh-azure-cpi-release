@@ -8,6 +8,7 @@ inputs:
   - name: bosh-cpi-src
   - name: bosh-cpi-release
   - name: release-version-semver
+  - name: bosh-cli
 
 outputs:
   - name: promoted

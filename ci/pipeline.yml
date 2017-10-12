@@ -268,6 +268,7 @@ jobs:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: major}}
+        - {trigger: false, get: bosh-cli}
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
