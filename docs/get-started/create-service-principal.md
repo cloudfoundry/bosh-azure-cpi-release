@@ -8,17 +8,20 @@ A service principal contains the following credentials which will be mentioned i
 - **CLIENT_ID**
 - **CLIENT_SECRET** 
 
-# Using Azure CLI 2.0
+# Create a Service Principal using Azure CLI 2.0
 
 The easiest way to create the Service Principal is with the Azure Cloud Shell in the Azure portal which provides a pre-installed, pre-configured Azure CLI 2.0. If you can't use Azure Cloud Shell, you may [install Azure CLI 2.0](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) in the system of your preference.
 
-You can then create the service principal by simply typing `az ad sp create-for-rbac`
+You can then create the service principal by simply typing `az ad sp create-for-rbac`. You can get more inforamtions from the [doc](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?toc=%2fazure%2fazure-resource-manager%2ftoc.json&view=azure-cli-latest).
 
-The output, in JSON format, contains the `appId`, `password` and `tenant` parameters that correspond to `TENANT_ID`, `CLIENT_ID` and `CLIENT_SECRET` in the rest of this document. You can optionally use `--output table` or even `--output tsv` as an additional option to `az`.
+The default role is `Contributor` and the default scope is the current subscription. Please go to the section [Assigning roles to your Service Principal](#assigning-roles-to-your-service-principal).
 
-# Using Azure CLI
+The output, in JSON format, contains the `appId`, `password` and `tenant` parameters that correspond to `CLIENT_ID`, `CLIENT_SECRET` and `TENANT_ID` in the rest of this document. You can optionally use `--output table` or even `--output tsv` as an additional option to `az`.
 
-## 1.1 Install Azure CLI
+
+# Create a Service Principal using Azure CLI 1.0
+
+## 1.1 Install Azure CLI 1.0
 
 Install and configure Azure CLI following the documentation [**HERE**](http://azure.microsoft.com/en-us/documentation/articles/xplat-cli/).
 
@@ -30,7 +33,7 @@ The following commands in this topic are based on Azure CLI version `0.9.18`.
   * If you hit the error `/usr/bin/env: node: No such file or directory` when running `azure` commands, you need to run `sudo ln -s /usr/bin/nodejs /usr/bin/node`.
 
 <a name="configure_azure_cli"></a>
-## 1.2 Configure Azure CLI
+## 1.2 Configure Azure CLI 1.0
 
 ### 1.2.1 Set mode to Azure Resource Management
 
@@ -202,11 +205,11 @@ info:    ad sp create command OK
 
 You can get **service-principal-name** from any value of **Service Principal Names** to assign role to your service principal.
 
-### 2.2.4 Assigning roles to your Service Principal
+# Assigning roles to your Service Principal
 
-Now you have a service principal account, you need to grant this account access to proper resource use Azure CLI. Please refer to [RBAC: Built-in roles](https://azure.microsoft.com/en-us/documentation/articles/role-based-access-built-in-roles/) to learn Azure Role-Based Access Control.
+If you use `az ad sp create-for-rbac` to create a service principal, the default role has been assigned. You can skip this section if you don't want to customize the role assignment.
 
-There are two options:
+Please refer to [RBAC: Built-in roles](https://azure.microsoft.com/en-us/documentation/articles/role-based-access-built-in-roles/) to learn Azure Role-Based Access Control. There are two options for Cloud Foundry scenarios:
 
 * Please assgin the role `Virtual Machine Contributor` and `Network Contributor`, if the service principal is only for deploying BOSH and Cloud Foundry on Azure.
 * Please assign the role `Contributor` to your service principal if you need to manage other more resources. For example:
@@ -218,6 +221,11 @@ In this section, `Virtual Machine Contributor` and `Network Contributor` are ass
   * `Virtual Machine Contributor` can manage virtual machines but not the virtual network or storage account to which they are connected. However, it can list keys of the storage account.
   * `Network Contributor` can manage all network resources.
 
+## Using Azure CLI 2.0
+
+You need to use the option `--role` and `--scopes` of the command [az ad sp create-for-rbac](https://docs.microsoft.com/en-us/cli/azure/ad/sp?view=azure-cli-latest#az_ad_sp_create_for_rbac).
+
+## Using Azure CLI 1.0
 
 ```
 azure role assignment create --spn <service-principal-name> --roleName "Virtual Machine Contributor" --subscription <subscription-id>
@@ -317,7 +325,7 @@ info:    role assignment list command OK
 ```
 
 <a name="verify-your-service-principal"></a>
-## 2.3 Verify Your Service Principal
+# Verify Your Service Principal
 
 Your service principal is created as follows:
 
@@ -329,22 +337,38 @@ Please verify it with the following steps:
 
 1. Use Azure CLI to login with your service principal.
 
-  You can find the `TENANT_ID`, `CLIENT_ID`, and `CLIENT_SECRET` properties in the `~/bosh.yml` file. If you cannot login, then the service principal is invalid.
+    You can find the `TENANT_ID`, `CLIENT_ID`, and `CLIENT_SECRET` properties in the `~/bosh.yml` file. If you cannot login, then the service principal is invalid.
 
-  ```
-  azure login --username $CLIENT_ID --password $CLIENT_SECRET --service-principal --tenant $TENANT_ID --environment $ENVIRONMENT
-  ```
+    * Azure CLI 2.0
 
-  Example:
+        ```
+        az cloud set --name $ENVIRONMENT
+        az login --service-principal --username $CLIENT_ID --password $CLIENT_SECRET --tenant $TENANT_ID
+        ```
 
-  ```
-  azure login --username 246e4af7-75b5-494a-89b5-363addb9f0fa --password "password" --service-principal --tenant 22222222-1234-5678-1234-678912345678 --environment AzureCloud
-  ```
+        Example:
 
-2. Verify that the subscription which the service principal belongs to is the same subscription that is used to create your resource group. (This may happen when you have multiple subscriptions.)
+        ```
+        az cloud set --name AzureCloud
+        az login --service-principal --username 246e4af7-75b5-494a-89b5-363addb9f0fa --password "password" --tenant 22222222-1234-5678-1234-678912345678
+        ```
 
-3. Verify that your service principal has been assigned the correct roles according to your usage. For example, verify whether you can use the service principal to create the service which you want.
+    * Azure CLI 1.0
 
-4. Recreate a service principal on your tenant if the service principal is invalid.
+        ```
+        azure login --service-principal --username $CLIENT_ID --password $CLIENT_SECRET --tenant $TENANT_ID --environment $ENVIRONMENT
+        ```
+
+        Example:
+
+        ```
+        azure login --service-principal --username 246e4af7-75b5-494a-89b5-363addb9f0fa --password "password" --tenant 22222222-1234-5678-1234-678912345678 --environment AzureCloud
+        ```
+
+1. Verify that the subscription which the service principal belongs to is the same subscription that is used to create your resource group. (This may happen when you have multiple subscriptions.)
+
+1. Verify that your service principal has been assigned the correct roles according to your usage. For example, verify whether you can use the service principal to create the service which you want.
+
+1. Recreate a service principal on your tenant if the service principal is invalid.
 
 > **NOTE:** In some cases, if the service principal is invalid, then the deployment of BOSH will fail. Errors in `~/run.log` will show `get_token - http error` like this [reported issue](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/49).
