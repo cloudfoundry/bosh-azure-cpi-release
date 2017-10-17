@@ -96,8 +96,7 @@ module Bosh::AzureCloud
           cloud_error("The status of the stemcell #{name} in the storage account #{storage_account_name} is unknown: #{entity['Status']}")
         end
 
-        # Another process is copying the same stemcell
-        return wait_stemcell_copy(storage_account_name, name, timeout = DEFAULT_COPY_STEMCELL_TIMEOUT)
+        return wait_stemcell_copy(storage_account_name, name)
       else
         begin
           entity = {
@@ -107,8 +106,7 @@ module Bosh::AzureCloud
           }
           ret = @table_manager.insert_entity(STEMCELL_TABLE, entity)
           unless ret
-            # Another process is copying the same stemcell
-            return wait_stemcell_copy(storage_account_name, name, timeout = DEFAULT_COPY_STEMCELL_TIMEOUT)
+            return wait_stemcell_copy(storage_account_name, name)
           end
 
           # Create containers if they are missing.
@@ -116,7 +114,7 @@ module Bosh::AzureCloud
           #             CPI will try to create related containers when copying stemcell to that storage account.
           @blob_manager.prepare(storage_account_name)
 
-          @logger.info("Copy stemcell #{name} to #{storage_account_name}")
+          @logger.info("Copying stemcell #{name} to #{storage_account_name}")
           source_blob_uri = get_stemcell_uri(@default_storage_account_name, name)
           @blob_manager.copy_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd", source_blob_uri)
 
@@ -137,6 +135,7 @@ module Bosh::AzureCloud
     end
 
     def wait_stemcell_copy(storage_account_name, name, timeout = DEFAULT_COPY_STEMCELL_TIMEOUT)
+      @logger.info("Another process is copying the same stemcell")
       while true
         options = {
           :filter => "PartitionKey eq '#{name}' and RowKey eq '#{storage_account_name}'"
@@ -148,7 +147,7 @@ module Bosh::AzureCloud
 
         return true if entities[0]['Status'] == STEMCELL_STATUS_SUCCESS
 
-        start_time   = entities[0]['Timestamp']
+        start_time   = Time.parse(entities[0]['Timestamp'])
         current_time = Time.now
         if (current_time - start_time) > timeout
           @logger.info("The timestamp of the record is #{start_time}, current time is #{current_time}")

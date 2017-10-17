@@ -53,14 +53,15 @@ resource "azurerm_subnet" "azure_subnet_2_in_default_rg" {
   address_prefix       = "10.0.1.0/24"
 }
 
-# Create a Storage Account in the azure_default_rg resouce group
+# Create a default Storage Account in the azure_default_rg resouce group
 resource "azurerm_storage_account" "azure_bosh_sa" {
-  name                = "${replace(var.env_name, "-", "")}"
-  resource_group_name = "${azurerm_resource_group.azure_default_rg.name}"
-  location            = "${var.location}"
-  account_type        = "Standard_LRS"
+  name                     = "${replace(var.env_name, "-", "")}"
+  resource_group_name      = "${azurerm_resource_group.azure_default_rg.name}"
+  location                 = "${var.location}"
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
 }
-# Create a Storage Container for the bosh director
+# Create a Storage Container for the disks
 resource "azurerm_storage_container" "azure_bosh_container" {
   name                  = "bosh"
   resource_group_name   = "${azurerm_resource_group.azure_default_rg.name}"
@@ -73,6 +74,35 @@ resource "azurerm_storage_container" "azure_stemcell_container" {
   resource_group_name   = "${azurerm_resource_group.azure_default_rg.name}"
   storage_account_name  = "${azurerm_storage_account.azure_bosh_sa.name}"
   container_access_type = "blob"
+}
+# Create a Storage Table for the metadata of the stemcells
+resource "azurerm_storage_table" "azure_stemcells_table" {
+  name                  = "stemcells"
+  resource_group_name   = "${azurerm_resource_group.azure_default_rg.name}"
+  storage_account_name  = "${azurerm_storage_account.azure_bosh_sa.name}"
+}
+
+# Create an extra Storage Account in the azure_default_rg resouce group
+resource "azurerm_storage_account" "azure_bosh_sa_extra" {
+  name                     = "${format("%sx", replace(var.env_name, "-", ""))}"
+  resource_group_name      = "${azurerm_resource_group.azure_default_rg.name}"
+  location                 = "${var.location}"
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+# Create a Storage Container for the disks
+resource "azurerm_storage_container" "azure_bosh_container_extra" {
+  name                  = "bosh"
+  resource_group_name   = "${azurerm_resource_group.azure_default_rg.name}"
+  storage_account_name  = "${azurerm_storage_account.azure_bosh_sa_extra.name}"
+  container_access_type = "private"
+}
+# Create a Storage Container for the stemcells
+resource "azurerm_storage_container" "azure_stemcell_container_extra" {
+  name                  = "stemcell"
+  resource_group_name   = "${azurerm_resource_group.azure_default_rg.name}"
+  storage_account_name  = "${azurerm_storage_account.azure_bosh_sa_extra.name}"
+  container_access_type = "private"
 }
 
 # Create a Network Securtiy Group
@@ -238,6 +268,9 @@ output "additional_resource_group_name" {
 }
 output "storage_account_name" {
   value = "${azurerm_storage_account.azure_bosh_sa.name}"
+}
+output "extra_storage_account_name" {
+  value = "${azurerm_storage_account.azure_bosh_sa_extra.name}"
 }
 output "default_security_group" {
   value = "${azurerm_network_security_group.azure_bosh_nsg_in_default_rg.name}"
