@@ -22,6 +22,7 @@ export BOSH_AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
 export BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME=$(echo ${metadata} | jq -e --raw-output ".default_resource_group_name")
 export BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME=$(echo ${metadata} | jq -e --raw-output ".additional_resource_group_name")
 export BOSH_AZURE_STORAGE_ACCOUNT_NAME=$(echo ${metadata} | jq -e --raw-output ".storage_account_name")
+export BOSH_AZURE_EXTRA_STORAGE_ACCOUNT_NAME=$(echo ${metadata} | jq -e --raw-output ".extra_storage_account_name")
 export BOSH_AZURE_VNET_NAME=$(echo ${metadata} | jq -e --raw-output ".vnet_name")
 export BOSH_AZURE_SUBNET_NAME=$(echo ${metadata} | jq -e --raw-output ".subnet_1_name")
 export BOSH_AZURE_SECOND_SUBNET_NAME=$(echo ${metadata} | jq -e --raw-output ".subnet_2_name")
@@ -62,5 +63,9 @@ az storage blob upload --file /tmp/root.vhd --container-name stemcell --name ${B
 export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
 pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   bundle install
-  bundle exec rspec spec/integration/lifecycle_spec.rb
+  if [ "${AZURE_USE_MANAGED_DISKS}" == "false" ]; then
+    bundle exec rspec spec/integration/lifecycle_spec.rb --tag ~heavy_stemcell
+  else
+    bundle exec rspec spec/integration/lifecycle_spec.rb --tag ~heavy_stemcell --tag ~unmanaged_disks
+  fi
 popd > /dev/null

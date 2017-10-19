@@ -20,16 +20,18 @@ describe Bosh::AzureCloud::Cloud do
     @application_gateway_name        = ENV['BOSH_AZURE_APPLICATION_GATEWAY_NAME']        || raise("Missing BOSH_AZURE_APPLICATION_GATEWAY_NAME")
   end
 
-  let(:azure_environment)    { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
-  let(:storage_account_name) { ENV.fetch('BOSH_AZURE_STORAGE_ACCOUNT_NAME', nil) }
-  let(:use_managed_disks)    { ENV.fetch('BOSH_AZURE_USE_MANAGED_DISKS', false).to_s == 'true' }
-  let(:vnet_name)            { ENV.fetch('BOSH_AZURE_VNET_NAME', 'boshvnet-crp') }
-  let(:subnet_name)          { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
-  let(:second_subnet_name)   { ENV.fetch('BOSH_AZURE_SECOND_SUBNET_NAME', 'BOSH2') }
-  let(:instance_type)        { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
-  let(:vm_metadata)          { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
-  let(:network_spec)         { {} }
-  let(:resource_pool)        { { 'instance_type' => instance_type } }
+  let(:azure_environment)          { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
+  let(:storage_account_name)       { ENV.fetch('BOSH_AZURE_STORAGE_ACCOUNT_NAME', nil) }
+  let(:extra_storage_account_name) { ENV.fetch('BOSH_AZURE_EXTRA_STORAGE_ACCOUNT_NAME', nil) }
+  let(:use_managed_disks)          { ENV.fetch('BOSH_AZURE_USE_MANAGED_DISKS', false).to_s == 'true' }
+  let(:vnet_name)                  { ENV.fetch('BOSH_AZURE_VNET_NAME', 'boshvnet-crp') }
+  let(:subnet_name)                { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
+  let(:second_subnet_name)         { ENV.fetch('BOSH_AZURE_SECOND_SUBNET_NAME', 'BOSH2') }
+  let(:instance_type)              { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
+  let(:image_path)                 { ENV.fetch('BOSH_AZURE_STEMCELL_PATH', '/tmp/image') }
+  let(:vm_metadata)                { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
+  let(:network_spec)               { {} }
+  let(:resource_pool)              { { 'instance_type' => instance_type } }
 
   let(:cloud_options) {
     {
@@ -75,6 +77,36 @@ describe Bosh::AzureCloud::Cloud do
       cpi.delete_disk(disk_id) if disk_id
     end
   }
+
+  context '#stemcell' do
+    context 'with heavy stemcell', heavy_stemcell: true do
+      it 'should create/delete the stemcell' do
+        heavy_stemcell_id = cpi.create_stemcell(image_path, {})
+        expect(heavy_stemcell_id).not_to be_nil
+        cpi.delete_stemcell(heavy_stemcell_id)
+      end
+    end
+
+    context 'with light stemcell', light_stemcell: true do
+      let(:stemcell_properties) {
+        {
+          'infrastructure' => 'azure',
+          'os_type' => 'windows',
+          'image' => {
+            'offer'     => 'bosh-windows-server',
+            'publisher' => 'pivotal',
+            'sku'       => '2012r2',
+            'version'   => '1089.0.1'
+          }
+        }
+      }
+      it 'should create/delete the stemcell' do
+        light_stemcell_id = cpi.create_stemcell(image_path, stemcell_properties)
+        expect(light_stemcell_id).not_to be_nil
+        cpi.delete_stemcell(light_stemcell_id)
+      end
+    end
+  end
 
   context 'manual networking' do
     let(:network_spec) {
@@ -492,6 +524,36 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle
+    end
+  end
+
+  context 'when assigning a different storage account to VM', unmanaged_disks: true do
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'dynamic',
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        }
+      }
+    }
+    let(:resource_pool) {
+      {
+        'instance_type' => instance_type,
+        'storage_account_name' => extra_storage_account_name
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      lifecycles = []
+      3.times do |i|
+        lifecycles[i] = Thread.new {
+          vm_lifecycle
+        }
+      end
+      lifecycles.each { |t| t.join; }
     end
   end
 
