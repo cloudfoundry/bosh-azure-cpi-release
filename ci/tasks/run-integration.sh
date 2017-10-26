@@ -9,6 +9,7 @@ set -e
 : ${AZURE_CLIENT_SECRET:?}
 : ${SSH_PUBLIC_KEY:?}
 : ${AZURE_APPLICATION_GATEWAY_NAME:?}
+: ${AZURE_APPLICATION_SECURITY_GROUP_NAME:?}
 
 : ${METADATA_FILE:=environment/metadata}
 
@@ -31,6 +32,7 @@ export BOSH_AZURE_PRIMARY_PUBLIC_IP=$(echo ${metadata} | jq -e --raw-output ".pu
 export BOSH_AZURE_SECONDARY_PUBLIC_IP=$(echo ${metadata} | jq -e --raw-output ".public_ip_in_additional_rg")
 export BOSH_AZURE_SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
 export BOSH_AZURE_APPLICATION_GATEWAY_NAME=${AZURE_APPLICATION_GATEWAY_NAME}
+export BOSH_AZURE_APPLICATION_SECURITY_GROUP=${AZURE_APPLICATION_SECURITY_GROUP_NAME}
 
 az cloud set --name ${AZURE_ENVIRONMENT}
 az login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}

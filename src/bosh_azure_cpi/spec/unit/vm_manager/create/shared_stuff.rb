@@ -67,7 +67,7 @@ shared_context "shared stuff for vm manager" do
 
   # AzureClient2
   let(:subnet) { double("subnet") }
-  let(:security_group) {
+  let(:default_security_group) {
     {
       :name => MOCK_DEFAULT_SECURITY_GROUP,
       :id   => "fake-nsg-id"
@@ -86,7 +86,7 @@ shared_context "shared stuff for vm manager" do
       and_return(subnet)
     allow(client2).to receive(:get_network_security_group_by_name).
       with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP).
-      and_return(security_group)
+      and_return(default_security_group)
     allow(client2).to receive(:get_load_balancer_by_name).
       with(resource_pool['load_balancer']).
       and_return(load_balancer)
@@ -120,23 +120,27 @@ shared_context "shared stuff for vm manager" do
 
     allow(manual_network).to receive(:resource_group_name).
       and_return(MOCK_RESOURCE_GROUP_NAME)
-    allow(manual_network).to receive(:security_group).
-      and_return(nil)
     allow(manual_network).to receive(:virtual_network_name).
       and_return("fake-virtual-network-name")
     allow(manual_network).to receive(:subnet_name).
       and_return("fake-subnet-name")
     allow(manual_network).to receive(:private_ip).
       and_return('private-ip')
+    allow(manual_network).to receive(:security_group).
+      and_return(nil)
+    allow(manual_network).to receive(:application_security_groups).
+      and_return([])
 
     allow(dynamic_network).to receive(:resource_group_name).
       and_return(MOCK_RESOURCE_GROUP_NAME)
-    allow(dynamic_network).to receive(:security_group).
-      and_return(nil)
     allow(dynamic_network).to receive(:virtual_network_name).
       and_return("fake-virtual-network-name")
     allow(dynamic_network).to receive(:subnet_name).
       and_return("fake-subnet-name")
+    allow(dynamic_network).to receive(:security_group).
+      and_return(nil)
+    allow(dynamic_network).to receive(:application_security_groups).
+      and_return([])
   end
 
   # Disk

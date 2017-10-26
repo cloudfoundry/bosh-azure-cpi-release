@@ -43,23 +43,24 @@ module Bosh::AzureCloud
     AZURE_RETRY_ERROR_CODES       = [408, 429, 500, 502, 503, 504]
 
     REST_API_PROVIDER_COMPUTE            = 'Microsoft.Compute'
-    REST_API_COMPUTE_VIRTUAL_MACHINES    = 'virtualMachines'
-    REST_API_COMPUTE_AVAILABILITY_SETS   = 'availabilitySets'
-    REST_API_COMPUTE_DISKS               = 'disks'
-    REST_API_COMPUTE_IMAGES              = 'images'
-    REST_API_COMPUTE_SNAPSHOTS           = 'snapshots'
-    REST_API_COMPUTE_PLATFORM_IMAGES     = 'vmimage'
+    REST_API_VIRTUAL_MACHINES            = 'virtualMachines'
+    REST_API_AVAILABILITY_SETS           = 'availabilitySets'
+    REST_API_DISKS                       = 'disks'
+    REST_API_IMAGES                      = 'images'
+    REST_API_SNAPSHOTS                   = 'snapshots'
+    REST_API_VM_IMAGE                    = 'vmimage'
 
-    REST_API_PROVIDER_NETWORK             = 'Microsoft.Network'
-    REST_API_NETWORK_PUBLIC_IP_ADDRESSES  = 'publicIPAddresses'
-    REST_API_NETWORK_LOAD_BALANCERS       = 'loadBalancers'
-    REST_API_NETWORK_INTERFACES           = 'networkInterfaces'
-    REST_API_NETWORK_VNETS                = 'virtualNetworks'
-    REST_API_NETWORK_SECURITY_GROUPS      = 'networkSecurityGroups'
-    REST_API_NETWORK_APPLICATION_GATEWAYS = 'applicationGateways'
+    REST_API_PROVIDER_NETWORK            = 'Microsoft.Network'
+    REST_API_PUBLIC_IP_ADDRESSES         = 'publicIPAddresses'
+    REST_API_LOAD_BALANCERS              = 'loadBalancers'
+    REST_API_NETWORK_INTERFACES          = 'networkInterfaces'
+    REST_API_VIRTUAL_NETWORKS            = 'virtualNetworks'
+    REST_API_NETWORK_SECURITY_GROUPS     = 'networkSecurityGroups'
+    REST_API_APPLICATION_SECURITY_GROUPS = 'applicationSecurityGroups'
+    REST_API_APPLICATION_GATEWAYS        = 'applicationGateways'
 
-    REST_API_PROVIDER_STORAGE             = 'Microsoft.Storage'
-    REST_API_STORAGE_ACCOUNTS             = 'storageAccounts'
+    REST_API_PROVIDER_STORAGE            = 'Microsoft.Storage'
+    REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
 
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = ['adminPassword', 'client_secret', 'customData']
@@ -219,7 +220,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
     def create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set = nil)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: vm_params[:name])
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: vm_params[:name])
 
       os_profile = {
         'customData'         => vm_params[:custom_data],
@@ -265,7 +266,7 @@ module Bosh::AzureCloud
       vm = {
         'name'       => vm_params[:name],
         'location'   => vm_params[:location],
-        'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_COMPUTE_VIRTUAL_MACHINES}",
+        'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_VIRTUAL_MACHINES}",
         'tags'       => vm_params[:tags],
         'properties' => {
           'hardwareProfile' => {
@@ -377,7 +378,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-restart
     #
     def restart_virtual_machine(resource_group_name, name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name, others: 'restart')
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name, others: 'restart')
       http_post(url)
     end
 
@@ -391,7 +392,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
     def update_tags_of_virtual_machine(resource_group_name, name, tags)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
         raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name `#{name}' in resource group `#{resource_group_name}'"
@@ -434,7 +435,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
     def attach_disk_to_virtual_machine(resource_group_name, vm_name, disk_params)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: vm_name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: vm_name)
       vm = get_resource_by_id(url)
       if vm.nil?
         raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{vm_name}' in resource group `#{resource_group_name}'"
@@ -500,7 +501,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
     #
     def detach_disk_from_virtual_machine(resource_group_name, name, disk_name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       vm = get_resource_by_id(url)
       if vm.nil?
         raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name `#{name}' in resource group `#{resource_group_name}'"
@@ -531,7 +532,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-get
     #
     def get_virtual_machine_by_name(resource_group_name, name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       get_virtual_machine(url)
     end
 
@@ -621,7 +622,7 @@ module Bosh::AzureCloud
     #
     def delete_virtual_machine(resource_group_name, name)
       @logger.debug("delete_virtual_machine - trying to delete `#{name}' from resource group `#{resource_group_name}'")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
 
@@ -649,10 +650,10 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/availabilitysets-create
     #
     def create_availability_set(resource_group_name, params)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: params[:name])
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: params[:name])
       availability_set = {
         'name'       => params[:name],
-        'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_COMPUTE_AVAILABILITY_SETS}",
+        'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_AVAILABILITY_SETS}",
         'location'   => params[:location],
         'tags'       => params[:tags],
         'properties' => {
@@ -679,7 +680,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/availabilitysets-get
     #
     def get_availability_set_by_name(resource_group_name, name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: name)
       get_availability_set(url)
     end
 
@@ -729,7 +730,7 @@ module Bosh::AzureCloud
     #
     def delete_availability_set(resource_group_name, name)
       @logger.debug("delete_availability_set - trying to delete `#{name}' from resource group `#{resource_group_name}'")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
 
@@ -755,7 +756,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
     #
     def create_empty_managed_disk(resource_group_name, params)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, resource_group_name: resource_group_name, name: params[:name])
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
       disk = {
         'location'   => params[:location],
         'tags'       => params[:tags],
@@ -790,7 +791,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
     #
     def create_managed_disk_from_blob(resource_group_name, params)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, resource_group_name: resource_group_name, name: params[:name])
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
       disk = {
         'location'   => params[:location],
         'tags'       => params[:tags],
@@ -815,7 +816,7 @@ module Bosh::AzureCloud
     #
     def delete_managed_disk(resource_group_name, name)
       @logger.debug("delete_managed_disk - trying to delete #{name} from resource group #{resource_group_name}")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
 
@@ -828,7 +829,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-get
     #
     def get_managed_disk_by_name(resource_group_name, name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, resource_group_name:resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name:resource_group_name, name: name)
       get_managed_disk(url)
     end
 
@@ -869,7 +870,7 @@ module Bosh::AzureCloud
     #
     def create_user_image(params)
       @logger.debug("create_user_image - trying to create a user image `#{params[:name]}'")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_IMAGES, name: params[:name])
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: params[:name])
       user_image = {
         'location'   => params[:location],
         'tags'       => params[:tags],
@@ -898,7 +899,7 @@ module Bosh::AzureCloud
     #
     def delete_user_image(name)
       @logger.debug("delete_user_image - trying to delete `#{name}'")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_IMAGES, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: name)
       http_delete(url)
     end
 
@@ -910,7 +911,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-get
     #
     def get_user_image_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_IMAGES, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: name)
       get_user_image(url)
     end
 
@@ -934,7 +935,7 @@ module Bosh::AzureCloud
     #
     def list_user_images()
       user_images = []
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_IMAGES)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES)
       result = get_resource_by_id(url)
       unless result.nil?
         result['value'].each do |value|
@@ -971,14 +972,14 @@ module Bosh::AzureCloud
       @logger.debug("create_managed_snapshot - trying to create a snapshot `#{snapshot_name}' for the managed disk `#{disk_name}'")
       disk = get_managed_disk_by_name(resource_group_name, disk_name)
       raise AzureNotFoundError, "The disk `#{disk_name}' cannot be found" if disk.nil?
-      snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
+      snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
       snapshot = {
         'location'   => disk[:location],
         'tags'       => params[:tags],
         'properties' => {
           'creationData' => {
             'createOption' => 'Copy',
-            'sourceUri' => rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_DISKS, resource_group_name: resource_group_name, name: disk_name)
+            'sourceUri' => rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: disk_name)
           }
         }
       }
@@ -996,7 +997,7 @@ module Bosh::AzureCloud
     #
     def delete_managed_snapshot(resource_group_name, name)
       @logger.debug("delete_managed_snapshot - trying to delete `#{name}' from resource group `#{resource_group_name}'")
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_COMPUTE_SNAPSHOTS, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
 
@@ -1017,7 +1018,7 @@ module Bosh::AzureCloud
       url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
       url += "/locations/#{location}"
       url += "/publishers/#{publisher}"
-      url += "/artifacttypes/#{REST_API_COMPUTE_PLATFORM_IMAGES}"
+      url += "/artifacttypes/#{REST_API_VM_IMAGE}"
       url += "/offers/#{offer}"
       url += "/skus/#{sku}"
       url += "/versions"
@@ -1046,7 +1047,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/network/create-or-update-a-public-ip-address
     #
     def create_public_ip(resource_group_name, name, location, is_static = true, idle_timeout_in_minutes = 4)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: name)
       public_ip = {
         'name'       => name,
         'location'   => location,
@@ -1067,7 +1068,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/network/get-information-about-a-public-ip-address
     #
     def get_public_ip_by_name(resource_group_name, name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: name)
       get_public_ip(url)
     end
 
@@ -1092,7 +1093,7 @@ module Bosh::AzureCloud
     #
     def list_public_ips(resource_group_name)
       ip_addresses = []
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name)
       result = get_resource_by_id(url)
       unless result.nil?
         result['value'].each do |ret|
@@ -1113,7 +1114,7 @@ module Bosh::AzureCloud
     #
     def delete_public_ip(resource_group_name, name)
       @logger.debug("delete_public_ip - trying to delete #{name} from resource group #{resource_group_name}")
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
 
@@ -1131,7 +1132,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/create-or-update-a-load-balancer
     #
     def create_load_balancer(name,  public_ip, tags, tcp_endpoints = [], udp_endpoints = [])
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, name: name)
       load_balancer = {
         'name'       => name,
         'location'   => public_ip[:location],
@@ -1152,7 +1153,7 @@ module Bosh::AzureCloud
         }
       }
 
-      frontend_ip_configuration_id = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name, others: 'frontendIPConfigurations/LBFE')
+      frontend_ip_configuration_id = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, name: name, others: 'frontendIPConfigurations/LBFE')
       tcp_endpoints.each do |endpoint|
         ports = endpoint.split(':')
         inbound_nat_rules = {
@@ -1197,7 +1198,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
     #
     def get_load_balancer_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, name: name)
       get_load_balancer(url)
     end
 
@@ -1258,7 +1259,7 @@ module Bosh::AzureCloud
     #
     def delete_load_balancer(name)
       @logger.debug("delete_load_balancer - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_LOAD_BALANCERS, name: name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, name: name)
       http_delete(url)
     end
 
@@ -1270,20 +1271,21 @@ module Bosh::AzureCloud
     #
     # @param [String] resource_group_name - Name of resource group.
     # @param [Hash] nic_params            - Parameters for creating the network interface.
-    # @param [Hash] subnet                - The subnet which the network interface is binded to.
+    # @param [Hash] subnet                - The subnet which the network interface is bound to.
     # @param [Hash] tags                  - The tags of the network interface.
-    # @param [Hash] load_balancer         - The load balancer which the network interface is binded to.
+    # @param [Hash] load_balancer         - The load balancer which the network interface is bound to.
     #
     #  ==== Params
     #
     # Accepted key/value pairs are:
-    # * +:name+          - String. Name of network interface.
-    # * +:location+      - String. The location where the network interface will be created.
-    # * +:ipconfig_name+ - String. The name of ipConfigurations for the network interface.
-    # * +:private_ip     - String. Private IP address which the network interface will use.
-    # * +:dns_servers    - Array. DNS servers.
-    # * +:public_ip      - Hash. The public IP which the network interface is binded to.
-    # * +:security_group - Hash. The network security group which the network interface is binded to.
+    # * +:name+                       - String. Name of network interface.
+    # * +:location+                   - String. The location where the network interface will be created.
+    # * +:ipconfig_name+              - String. The name of ipConfigurations for the network interface.
+    # * +:private_ip                  - String. Private IP address which the network interface will use.
+    # * +:dns_servers                 - Array. DNS servers.
+    # * +:public_ip                   - Hash. The public IP which the network interface is bound to.
+    # * +:network_security_group      - Hash. The network security group which the network interface is bound to.
+    # * +:application_security_groups - Array. The application security groups which the network interface is bound to.
     #
     # @return [Boolean]
     #
@@ -1291,13 +1293,14 @@ module Bosh::AzureCloud
     #
     def create_network_interface(resource_group_name, nic_params, subnet, tags, load_balancer = nil)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, resource_group_name: resource_group_name, name: nic_params[:name])
+
       interface = {
         'name'       => nic_params[:name],
         'location'   => nic_params[:location],
         'tags'       => tags,
         'properties' => {
           'networkSecurityGroup' => {
-            'id' => nic_params[:security_group][:id]
+            'id' => nic_params[:network_security_group][:id]
           },
           'ipConfigurations' => [
             {
@@ -1317,6 +1320,15 @@ module Bosh::AzureCloud
           }
         }
       }
+
+      application_security_groups = []
+      asg_params = nic_params.fetch(:application_security_groups, [])
+      for asg_param in asg_params
+        application_security_groups.push({'id' => asg_param[:id]})
+      end
+      unless application_security_groups.empty?
+        interface['properties']['ipConfigurations'][0]['properties']['applicationSecurityGroups'] = application_security_groups
+      end
 
       unless load_balancer.nil?
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = [
@@ -1408,7 +1420,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/network/virtualnetwork/get-information-about-a-virtual-network
     #
     def get_virtual_network_by_name(resource_group_name, vnet_name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_VNETS, resource_group_name: resource_group_name, name: vnet_name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_VIRTUAL_NETWORKS, resource_group_name: resource_group_name, name: vnet_name)
       get_virtual_network(url)
     end
 
@@ -1451,7 +1463,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/network/create-or-update-a-subnet
     #
     def get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_VNETS, resource_group_name: resource_group_name, name: vnet_name, others: "subnets/#{subnet_name}")
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_VIRTUAL_NETWORKS, resource_group_name: resource_group_name, name: vnet_name, others: "subnets/#{subnet_name}")
       get_network_subnet(url)
     end
 
@@ -1480,7 +1492,7 @@ module Bosh::AzureCloud
     def add_backend_address_of_application_gateway(name, ip_address)
       @logger.debug("add_backend_address_of_application_gateway - trying to add `#{ip_address}' to the backend address pools of the applicaiton gateway #{name}")
 
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_APPLICATION_GATEWAYS, name: name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_APPLICATION_GATEWAYS, name: name)
       ag = get_resource_by_id(url)
       if ag.nil?
         raise AzureNotFoundError, "add_backend_address_of_application_gateway - Cannot find the application gateway \"#{name}\"."
@@ -1509,7 +1521,7 @@ module Bosh::AzureCloud
     def delete_backend_address_of_application_gateway(name, ip_address)
       @logger.debug("delete_backend_address_of_application_gateway - trying to remove `#{ip_address}' from the backend address pools of the applicaiton gateway #{name}")
 
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_APPLICATION_GATEWAYS, name: name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_APPLICATION_GATEWAYS, name: name)
       ag = get_resource_by_id(url)
       if ag.nil?
         raise AzureNotFoundError, "delete_backend_address_of_application_gateway - Cannot find the application gateway \"#{name}\"."
@@ -1563,6 +1575,44 @@ module Bosh::AzureCloud
         nsg[:provisioning_state] = properties['provisioningState']
       end
       nsg
+    end
+
+    # Network/Application Security Group
+
+    # Get a application security group's information
+    # @param [String] resource_group_name - Name of resource group.
+    # @param [String] name                - Name of application security group.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/virtualnetwork/applicationsecuritygroups/get
+    #
+    def get_application_security_group_by_name(resource_group_name, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_APPLICATION_SECURITY_GROUPS, resource_group_name: resource_group_name, name: name)
+      get_application_security_group(url)
+    end
+
+    # Get a application security group's information
+    # @param [String] url - URL of application security group.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/virtualnetwork/applicationsecuritygroups/get
+    #
+    def get_application_security_group(url)
+      asg = nil
+      result = get_resource_by_id(url)
+      unless result.nil?
+        asg = {}
+        asg[:id]   = result['id']
+        asg[:name] = result['name']
+        asg[:location] = result['location']
+        asg[:tags] = result['tags']
+
+        properties = result['properties']
+        asg[:provisioning_state] = properties['provisioningState']
+      end
+      asg
     end
 
     # Storage/StorageAccounts
@@ -1873,6 +1923,18 @@ module Bosh::AzureCloud
           else
             interface[:load_balancer] = {:id => ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id']}
           end
+        end
+        unless ip_configuration_properties['applicationSecurityGroups'].nil?
+          asgs_properties = ip_configuration_properties['applicationSecurityGroups']
+          asgs = []
+          for asg_property in asgs_properties
+            if recursive
+              asgs.push(get_application_security_group(asg_property['id']))
+            else
+              asgs.push({:id => asg_property['id']})
+            end
+          end
+          interface[:application_security_groups] = asgs
         end
       end
       interface

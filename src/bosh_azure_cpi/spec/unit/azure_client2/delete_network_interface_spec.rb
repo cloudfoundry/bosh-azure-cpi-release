@@ -14,6 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
+  let(:api_version_network) { AZURE_RESOURCE_PROVIDER_NETWORK }
   let(:resource_group) { "fake-resource-group-name" }
   let(:request_id) { "fake-request-id" }
 
@@ -27,7 +28,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:nic_name) { "fake-nic-name" }
 
   describe "#delete_network_interface" do
-    let(:network_interface_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces/#{nic_name}?api-version=#{api_version}" }
+    let(:network_interface_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces/#{nic_name}?api-version=#{api_version_network}" }
 
     context "when token is valid, delete operation is accepted and completed" do
       it "should delete a network interface without error" do

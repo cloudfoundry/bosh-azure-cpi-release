@@ -45,6 +45,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Configure resource groups](./advanced/configure-resource-groups/)
   * [Deploy multiple network interfaces for a Cloud Foundry instance](./advanced/deploy-multiple-network-interfaces/)
   * [Use managed disks in Cloud Foundry](./advanced/managed-disks/)
+  * [Use application security groups in Cloud Foundry](./advanced/application-security-groups/)
 * Cloud Foundry Scenarios
   * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
   * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)

@@ -18,6 +18,7 @@ describe Bosh::AzureCloud::Cloud do
     @primary_public_ip               = ENV['BOSH_AZURE_PRIMARY_PUBLIC_IP']               || raise("Missing BOSH_AZURE_PRIMARY_PUBLIC_IP")
     @secondary_public_ip             = ENV['BOSH_AZURE_SECONDARY_PUBLIC_IP']             || raise("Missing BOSH_AZURE_SECONDARY_PUBLIC_IP")
     @application_gateway_name        = ENV['BOSH_AZURE_APPLICATION_GATEWAY_NAME']        || raise("Missing BOSH_AZURE_APPLICATION_GATEWAY_NAME")
+    @application_security_group      = ENV['BOSH_AZURE_APPLICATION_SECURITY_GROUP']     || raise("Missing BOSH_AZURE_APPLICATION_SECURITY_GROUP")
   end
 
   let(:azure_environment)          { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
@@ -33,20 +34,23 @@ describe Bosh::AzureCloud::Cloud do
   let(:network_spec)               { {} }
   let(:resource_pool)              { { 'instance_type' => instance_type } }
 
+  let(:azure_properties) {
+    {
+      'environment' => azure_environment,
+      'subscription_id' => @subscription_id,
+      'resource_group_name' => @default_resource_group_name,
+      'tenant_id' => @tenant_id,
+      'client_id' => @client_id,
+      'client_secret' => @client_secret,
+      'ssh_user' => 'vcap',
+      'ssh_public_key' => @ssh_public_key,
+      'default_security_group' => @default_security_group,
+      'parallel_upload_thread_num' => 16,
+    }
+  }
   let(:cloud_options) {
     {
-      'azure' => {
-        'environment' => azure_environment,
-        'subscription_id' => @subscription_id,
-        'resource_group_name' => @default_resource_group_name,
-        'tenant_id' => @tenant_id,
-        'client_id' => @client_id,
-        'client_secret' => @client_secret,
-        'ssh_user' => 'vcap',
-        'ssh_public_key' => @ssh_public_key,
-        'default_security_group' => @default_security_group,
-        'parallel_upload_thread_num' => 16,
-      },
+      'azure' => azure_properties,
       'registry' => {
         'endpoint' => 'fake',
         'user' => 'fake',
@@ -242,7 +246,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'should add the VM to the backend pool of application gateway' do
         ag_url = cpi.azure_client2.rest_api_url(
           Bosh::AzureCloud::AzureClient2::REST_API_PROVIDER_NETWORK,
-          Bosh::AzureCloud::AzureClient2::REST_API_NETWORK_APPLICATION_GATEWAYS,
+          Bosh::AzureCloud::AzureClient2::REST_API_APPLICATION_GATEWAYS,
           name: @application_gateway_name)
 
         lifecycles = []
@@ -554,6 +558,39 @@ describe Bosh::AzureCloud::Cloud do
         }
       end
       lifecycles.each { |t| t.join; }
+    end
+  end
+
+  context 'when assigning application security groups to VM NIC' do
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'dynamic',
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        }
+      }
+    }
+    let(:resource_pool) {
+      {
+        'instance_type' => instance_type,
+        'application_security_groups' => [@application_security_group]
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      vm_lifecycle do |instance_id|
+        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_properties)
+        network_interface = cpi.azure_client2.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
+        asgs = network_interface[:application_security_groups]
+        asg_names = []
+        for asg in asgs
+          asg_names.push(asg[:name])
+        end
+        expect(asg_names).to eq([@application_security_group])
+      end
     end
   end
 

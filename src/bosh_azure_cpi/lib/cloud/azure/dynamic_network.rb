@@ -3,7 +3,7 @@ module Bosh::AzureCloud
   class DynamicNetwork < Network
     include Helpers
 
-    attr_reader :virtual_network_name, :subnet_name, :security_group
+    attr_reader :virtual_network_name, :subnet_name, :security_group, :application_security_groups
 
     # create dynamic network
     # @param [String] name Network name
@@ -14,8 +14,6 @@ module Bosh::AzureCloud
       if @cloud_properties.nil?
         cloud_error("cloud_properties required for dynamic network")
       end
-
-      @security_group = @cloud_properties["security_group"]
 
       unless @cloud_properties["virtual_network_name"].nil?
         @virtual_network_name = @cloud_properties["virtual_network_name"]
@@ -28,6 +26,10 @@ module Bosh::AzureCloud
       else
         cloud_error("subnet_name required for dynamic network")
       end
+
+      @security_group = @cloud_properties["security_group"]
+
+      @application_security_groups = @cloud_properties.fetch("application_security_groups", [])
     end
 
     def dns
