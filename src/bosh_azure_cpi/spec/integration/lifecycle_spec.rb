@@ -252,25 +252,28 @@ describe Bosh::AzureCloud::Cloud do
         lifecycles = []
         threads.times do |i|
           lifecycles[i] = Thread.new {
-             begin
+            agent_id = SecureRandom.uuid
+            ip_config_id = "/subscriptions/#{@subscription_id}/resourceGroups/#{@default_resource_group_name}/providers/Microsoft.Network/networkInterfaces/#{agent_id}-0/ipConfigurations/ipconfig0"
+            begin
               new_instance_id = cpi.create_vm(
-                SecureRandom.uuid,
+                agent_id,
                 @stemcell_id,
                 resource_pool,
                 network_specs[i]
               )
-
               ag = cpi.azure_client2.get_resource_by_id(ag_url)
-              expect(ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']).to include({
-                "ipAddress" => ip_address_specs[i]
+              expect(ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations']).to include({
+                "id" => ip_config_id
               })
             ensure
               cpi.delete_vm(new_instance_id) if new_instance_id
             end
             ag = cpi.azure_client2.get_resource_by_id(ag_url)
-            expect(ag['properties']['backendAddressPools'][0]['properties']['backendAddresses']).not_to include({
-              "ipAddress" => ip_address_specs[i]
-            })
+            unless ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations'].nil?
+              expect(ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations']).not_to include({
+                "id" => ip_config_id
+              })
+            end
           }
         end
         lifecycles.each { |t| t.join; }

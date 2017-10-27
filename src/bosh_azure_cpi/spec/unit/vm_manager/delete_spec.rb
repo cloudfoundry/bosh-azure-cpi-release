@@ -18,6 +18,7 @@ describe Bosh::AzureCloud::VMManager do
     let(:appgw_backend_pool_ip) { "fake-private-ip" }
 
     let(:load_balancer) { double("load_balancer") }
+    let(:application_gateway) { double("application_gateway") }
     let(:network_interface) {
       {
         :tags => {}
@@ -28,8 +29,6 @@ describe Bosh::AzureCloud::VMManager do
     let(:public_ip) { "fake-public-ip" }
 
     let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
-
-    let(:lock_application_gateway) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
     
     before do
       allow(instance_id).to receive(:resource_group_name).
@@ -39,16 +38,12 @@ describe Bosh::AzureCloud::VMManager do
 
       allow(client2).to receive(:get_load_balancer_by_name).
         with(vm_name).and_return(load_balancer)
+      allow(client2).to receive(:get_application_gateway_by_name).
+        with(vm_name).and_return(application_gateway)
       allow(client2).to receive(:get_network_interface_by_name).
         with(resource_group_name, vm_name).and_return(network_interface)
       allow(client2).to receive(:get_public_ip_by_name).
         with(resource_group_name, vm_name).and_return(public_ip)
-
-      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_application_gateway)
-      allow(lock_application_gateway).to receive(:expired).and_return("fake-expired-value")
-      allow(lock_application_gateway).to receive(:lock).and_return(true)
-      allow(lock_application_gateway).to receive(:wait)
-      allow(lock_application_gateway).to receive(:unlock)
     end
 
     context "When vm is not nil" do
@@ -64,7 +59,7 @@ describe Bosh::AzureCloud::VMManager do
           and_return(ephemeral_disk_name)
       end
 
-      context "when vm is not in an availability set or a backend pool of application gateway" do
+      context "when vm is not in an availability set" do
         let(:vm) {
           {
              :network_interfaces => [
@@ -193,35 +188,6 @@ describe Bosh::AzureCloud::VMManager do
               }.to raise_error(StandardError)
             end
           end
-        end
-      end
-      
-      context "when vm is in a backend pool of application gateway" do
-        let(:vm) {
-          {
-             :network_interfaces => [
-               {:name => "fake-nic-1", :private_ip => appgw_backend_pool_ip, :tags => {"application_gateway" => appgw_name}},
-               {:name => "fake-nic-2"}
-             ]
-          }
-        }
-        before do
-          allow(client2).to receive(:get_virtual_machine_by_name).
-            with(resource_group_name, vm_name).and_return(vm)
-        end
-
-        it "should delete all resources" do
-          expect(client2).to receive(:delete_virtual_machine).with(resource_group_name, vm_name)
-          expect(client2).to receive(:delete_backend_address_of_application_gateway).with(appgw_name, appgw_backend_pool_ip)
-          expect(client2).to receive(:delete_network_interface).with(resource_group_name, "fake-nic-1")
-          expect(client2).to receive(:delete_network_interface).with(resource_group_name, "fake-nic-2")
-          expect(client2).to receive(:delete_public_ip).with(resource_group_name, vm_name)
-          expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, os_disk_name)
-          expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, ephemeral_disk_name)
-
-          expect {
-            vm_manager.delete(instance_id)
-          }.not_to raise_error
         end
       end
     end

@@ -40,14 +40,17 @@ describe Bosh::AzureCloud::AzureClient2 do
             :name => nic_name,
             :location => "fake-location",
             :ipconfig_name => "fake-ipconfig-name",
+            :subnet => {:id => "fake-id"},
+            :tags => {},
             :private_ip => "10.0.0.100",
             :dns_servers => ["168.63.129.16"],
             :public_ip => {:id => "fake-public-id"},
             :network_security_group => {:id => nsg_id},
-            :application_security_groups => []
+            :application_security_groups => [],
+            :load_balancer => nil,
+            :application_gateway => nil
           }
         }
-        let(:load_balancer) { nil }
         let(:request_body) {
           {
             :name     => nic_params[:name],
@@ -98,7 +101,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_network_interface(resource_group, nic_params, subnet, tags, nil)
+            azure_client2.create_network_interface(resource_group, nic_params)
           }.not_to raise_error
         end
       end
@@ -109,11 +112,14 @@ describe Bosh::AzureCloud::AzureClient2 do
             :name => nic_name,
             :location => "fake-location",
             :ipconfig_name => "fake-ipconfig-name",
+            :subnet => {:id => "fake-id"},
+            :tags => {},
             :network_security_group => {:id => nsg_id},
-            :application_security_groups => []
+            :application_security_groups => [],
+            :load_balancer => nil,
+            :application_gateway => nil
           }
         }
-        let(:load_balancer) { nil }
         let(:request_body) {
           {
             :name     => nic_params[:name],
@@ -164,7 +170,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_network_interface(resource_group, nic_params, subnet, tags, nil)
+            azure_client2.create_network_interface(resource_group, nic_params)
           }.not_to raise_error
         end
       end
@@ -175,25 +181,29 @@ describe Bosh::AzureCloud::AzureClient2 do
             :name => nic_name,
             :location => "fake-location",
             :ipconfig_name => "fake-ipconfig-name",
+            :subnet => {:id => "fake-id"},
+            :tags => {},
             :private_ip => "10.0.0.100",
             :dns_servers => ["168.63.129.16"],
             :public_ip => {:id => "fake-public-id"},
             :network_security_group => {:id => nsg_id},
-            :application_security_groups => []
+            :application_security_groups => [],
+            :load_balancer => {
+              :backend_address_pools => [
+                {
+                  :id => "fake-id"
+                }
+              ],
+              :frontend_ip_configurations => [
+                {
+                  :inbound_nat_rules => [{}]
+                }
+              ]
+            },
+            :application_gateway => nil
           }
         }
-        let(:load_balancer) {
-          {
-            :backend_address_pools => [
-              {
-                :id => "fake-id"
-              }
-            ],
-            :frontend_ip_configurations => [{
-              :inbound_nat_rules => [{}]
-            }]
-          }
-        }
+
         let(:request_body) {
           {
             :name     => nic_params[:name],
@@ -244,7 +254,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_network_interface(resource_group, nic_params, subnet, tags, load_balancer)
+            azure_client2.create_network_interface(resource_group, nic_params)
           }.not_to raise_error
         end
       end
@@ -255,23 +265,15 @@ describe Bosh::AzureCloud::AzureClient2 do
             :name => nic_name,
             :location => "fake-location",
             :ipconfig_name => "fake-ipconfig-name",
+            :subnet => {:id => "fake-id"},
+            :tags => {},
             :private_ip => "10.0.0.100",
             :dns_servers => ["168.63.129.16"],
             :public_ip => {:id => "fake-public-id"},
             :network_security_group => {:id => nsg_id},
-            :application_security_groups => [{:id => "fake-asg-id-1"}, {:id => "fake-asg-id-2"}]
-          }
-        }
-        let(:load_balancer) {
-          {
-            :backend_address_pools => [
-              {
-                :id => "fake-id"
-              }
-            ],
-            :frontend_ip_configurations => [{
-              :inbound_nat_rules => [{}]
-            }]
+            :application_security_groups => [{:id => "fake-asg-id-1"}, {:id => "fake-asg-id-2"}],
+            :load_balancer => nil,
+            :application_gateway => nil
           }
         }
         let(:request_body) {
@@ -331,7 +333,92 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {})
 
           expect {
-            azure_client2.create_network_interface(resource_group, nic_params, subnet, tags, load_balancer)
+            azure_client2.create_network_interface(resource_group, nic_params)
+          }.not_to raise_error
+        end
+      end
+
+      context "with application gateway" do
+        let(:nic_params) {
+          {
+            :name => nic_name,
+            :location => "fake-location",
+            :ipconfig_name => "fake-ipconfig-name",
+            :subnet => {:id => "fake-id"},
+            :tags => {},
+            :private_ip => "10.0.0.100",
+            :dns_servers => ["168.63.129.16"],
+            :public_ip => {:id => "fake-public-id"},
+            :network_security_group => {:id => nsg_id},
+            :application_security_groups => [],
+            :load_balancer => nil,
+            :application_gateway => {
+              :backend_address_pools => [
+                {
+                  :id => "fake-id-2"
+                }
+              ]
+            }
+          }
+        }
+        let(:request_body) {
+          {
+            :name     => nic_params[:name],
+            :location => nic_params[:location],
+            :tags     => {
+              :foo => "bar"
+            },
+            :properties => {
+              :networkSecurityGroup => {
+                :id => nic_params[:network_security_group][:id]
+              },
+              :ipConfigurations => [{
+                :name        => nic_params[:ipconfig_name],
+                :properties  => {
+                  :privateIPAddress          => nic_params[:private_ip],
+                  :privateIPAllocationMethod => "Static",
+                  :publicIPAddress           => { :id => nic_params[:public_ip][:id] },
+                  :subnet => {
+                    :id => subnet[:id]
+                  },
+                  :applicationSecurityGroups => [
+                    {
+                      :id => "fake-asg-id-1"
+                    },
+                    {
+                      :id => "fake-asg-id-2"
+                    }
+                  ]
+                }
+              }],
+              :dnsSettings => {
+                :dnsServers => ["168.63.129.16"]
+              }
+            }
+          }
+        }
+
+        it "should create a network interface without error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token"=>valid_access_token,
+              "expires_on"=>expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:put, network_interface_uri).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.create_network_interface(resource_group, nic_params)
           }.not_to raise_error
         end
       end

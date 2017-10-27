@@ -133,6 +133,38 @@ describe Bosh::AzureCloud::AzureClient2 do
     }
   }
 
+  # Application Gateway
+  let(:application_gateway_name) { "fake-name" }
+  let(:application_gateway_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Network/applicationGateways/#{application_gateway_name}" }
+  let(:application_gateway_uri) { "https://management.azure.com/#{application_gateway_id}?api-version=#{api_version_network}" }
+  let(:application_gateway_response_body) {
+    {
+      "id" => "fake-id",
+      "name" => "fake-name",
+      "location" => "fake-location",
+      "tags" => "fake-tags",
+      "properties" => {
+        "provisioningState" => "fake-state",
+        "backendAddressPools" => [{
+          "id" => "fake-id"
+        }]
+      }
+    }.to_json
+  }
+  let(:fake_application_gateway) {
+    {
+      :id => "fake-id",
+      :name => "fake-name",
+      :location => "fake-location",
+      :tags => "fake-tags",
+      :backend_address_pools => [
+        {
+          :id => "fake-id"
+        }
+      ]
+    }
+  }
+
   # Network Interface
   let(:nic_name) { "fake-name" }
   let(:nic_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/networkInterfaces/#{nic_name}" }
@@ -426,6 +458,34 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
   end
 
+  describe "#get_application_gateway_by_name" do
+    context "when token is valid, getting response succeeds" do
+      it "should return null if response body is null" do
+        stub_request(:get, application_gateway_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+        expect(
+          azure_client2.get_application_gateway_by_name(application_gateway_name)
+        ).to be_nil
+      end
+
+      it "should return the resource if response body is not null" do
+        stub_request(:get, application_gateway_uri).to_return(
+          :status => 200,
+          :body => application_gateway_response_body,
+          :headers => {})
+        stub_request(:get, public_ip_uri).to_return(
+          :status => 200,
+          :body => public_ip_response_body.to_json,
+          :headers => {})
+        expect(
+          azure_client2.get_application_gateway_by_name(application_gateway_name)
+        ).to eq(fake_application_gateway)
+      end
+    end
+  end
+
   describe "#get_network_interface_by_name" do
     context "when the response body is null" do
       it "should return null" do
@@ -570,6 +630,67 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:get, load_balancer_uri).to_return(
             :status => 200,
             :body => load_balancer_response_body,
+            :headers => {})
+          stub_request(:get, nic_uri).to_return(
+            :status => 200,
+            :body => nic_response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+          ).to eq(fake_nic)
+        end
+      end
+
+      context "when the network interface is bound to application gateway" do
+        let(:nic_response_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => "fake-tags",
+            "properties" => {
+              "provisioningState" => "fake-state",
+              "dnsSettings" => {
+                "dnsServers" => ["168.63.129.16"]
+              },
+              "ipConfigurations" => [
+                {
+                  "id" => "fake-id",
+                  "properties" => {
+                    "privateIPAddress" => "10.0.0.100",
+                    "privateIPAllocationMethod" => "Dynamic",
+                    "applicationGatewayBackendAddressPools" => [{
+                      "id" => application_gateway_id
+                    }]
+                  }
+                }
+              ]
+            }
+          }.to_json
+        }
+        let(:fake_nic) {
+          {
+            :id => "fake-id",
+            :name => "fake-name",
+            :location => "fake-location",
+            :tags => "fake-tags",
+            :provisioning_state => "fake-state",
+            :dns_settings => ["168.63.129.16"],
+            :ip_configuration_id => "fake-id",
+            :private_ip => "10.0.0.100",
+            :private_ip_allocation_method => "Dynamic",
+            :application_gateway => fake_application_gateway
+          }
+        }
+        it "should return the network interface with load balancer" do
+          # get_load_balancer needs get_public_ip
+          stub_request(:get, public_ip_uri).to_return(
+            :status => 200,
+            :body => public_ip_response_body.to_json,
+            :headers => {})
+          stub_request(:get, application_gateway_uri).to_return(
+            :status => 200,
+            :body => application_gateway_response_body,
             :headers => {})
           stub_request(:get, nic_uri).to_return(
             :status => 200,
@@ -909,7 +1030,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
       end
-      
+
       it "should not raise error if it raises 'Connection refused - connect(2) for \"xx.xxx.xxx.xx\" port 443' at the first time but returns 200 at the second time" do
         stub_request(:post, token_uri).to_return(
           :status => 200,
@@ -1259,6 +1380,10 @@ describe Bosh::AzureCloud::AzureClient2 do
             :status => 200,
             :body => load_balancer_response_body,
             :headers => {})
+          stub_request(:get, application_gateway_uri).to_return(
+            :status => 200,
+            :body => application_gateway_response_body,
+            :headers => {})
           stub_request(:get, nic_uri).to_return(
             :status => 200,
             :body => nic_response_body,
@@ -1357,6 +1482,10 @@ describe Bosh::AzureCloud::AzureClient2 do
           stub_request(:get, load_balancer_uri).to_return(
             :status => 200,
             :body => load_balancer_response_body,
+            :headers => {})
+          stub_request(:get, application_gateway_uri).to_return(
+            :status => 200,
+            :body => application_gateway_response_body,
             :headers => {})
           stub_request(:get, nic_uri).to_return(
             :status => 200,
@@ -1461,6 +1590,10 @@ describe Bosh::AzureCloud::AzureClient2 do
             :status => 200,
             :body => load_balancer_response_body,
             :headers => {})
+          stub_request(:get, application_gateway_uri).to_return(
+            :status => 200,
+            :body => application_gateway_response_body,
+            :headers => {})
           stub_request(:get, nic_uri).to_return(
             :status => 200,
             :body => nic_response_body,
@@ -1544,6 +1677,10 @@ describe Bosh::AzureCloud::AzureClient2 do
             stub_request(:get, load_balancer_uri).to_return(
               :status => 200,
               :body => load_balancer_response_body,
+              :headers => {})
+            stub_request(:get, application_gateway_uri).to_return(
+              :status => 200,
+              :body => application_gateway_response_body,
               :headers => {})
             stub_request(:get, nic_uri).to_return(
               :status => 200,
@@ -1629,6 +1766,10 @@ describe Bosh::AzureCloud::AzureClient2 do
             stub_request(:get, load_balancer_uri).to_return(
               :status => 200,
               :body => load_balancer_response_body,
+              :headers => {})
+            stub_request(:get, application_gateway_uri).to_return(
+              :status => 200,
+              :body => application_gateway_response_body,
               :headers => {})
             stub_request(:get, nic_uri).to_return(
               :status => 200,

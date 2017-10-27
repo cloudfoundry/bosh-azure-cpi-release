@@ -509,7 +509,15 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:create_public_ip).
               with(resource_group_name, vm_name, location, false, idle_timeout)
             expect(client2).to receive(:create_network_interface).
-              with(resource_group_name, hash_including(:name => "#{vm_name}-0", :public_ip => dynamic_public_ip), subnet, tags, load_balancer).once
+              with(resource_group_name, hash_including(
+                  :name => "#{vm_name}-0",
+                  :public_ip => dynamic_public_ip,
+                  :subnet => subnet,
+                  :tags => tags,
+                  :load_balancer => load_balancer,
+                  :application_gateway => application_gateway
+                )
+              ).once
 
             vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
@@ -522,7 +530,14 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:create_public_ip).
               with(resource_group_name, vm_name, location, false, default_idle_timeout)
             expect(client2).to receive(:create_network_interface).
-              with(resource_group_name, hash_including(:public_ip => dynamic_public_ip), subnet, tags, load_balancer)
+              with(resource_group_name, hash_including(
+                  :public_ip => dynamic_public_ip,
+                  :subnet => subnet,
+                  :tags => tags,
+                  :load_balancer => load_balancer,
+                  :application_gateway => application_gateway
+                )
+              )
 
             vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
