@@ -1326,6 +1326,9 @@ module Bosh::AzureCloud
       for asg_param in asg_params
         application_security_groups.push({'id' => asg_param[:id]})
       end
+      unless application_security_groups.empty?
+        interface['properties']['ipConfigurations'][0]['properties']['applicationSecurityGroups'] = application_security_groups
+      end
 
       load_balancer = nic_params[:load_balancer]
       unless load_balancer.nil?
