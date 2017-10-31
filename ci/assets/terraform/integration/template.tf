@@ -56,6 +56,12 @@ resource "azurerm_subnet" "azure_subnet_2_in_default_rg" {
   virtual_network_name = "${azurerm_virtual_network.azure_bosh_network_in_default_rg.name}"
   address_prefix       = "10.0.1.0/24"
 }
+resource "azurerm_subnet" "azure_subnet_appgw_in_default_rg" {
+  name                 = "azure_subnet_3"
+  resource_group_name  = "${azurerm_resource_group.azure_default_rg.name}"
+  virtual_network_name = "${azurerm_virtual_network.azure_bosh_network_in_default_rg.name}"
+  address_prefix       = "10.0.2.0/24"
+}
 
 # Create a default Storage Account in the azure_default_rg resouce group
 resource "azurerm_storage_account" "azure_bosh_sa" {
@@ -176,6 +182,68 @@ resource "azurerm_application_security_group" "azure_asg" {
   name                         = "azure_asg"
   location                     = "${var.location}"
   resource_group_name          = "${azurerm_resource_group.azure_default_rg.name}"
+}
+
+# Public IP Address for Application Gateway
+resource "azurerm_public_ip" "azure_ip_application_gateway" {
+  name                         = "azure_ip_application_gateway"
+  location                     = "${var.location}"
+  resource_group_name          = "${azurerm_resource_group.azure_default_rg.name}"
+  public_ip_address_allocation = "dynamic"
+}
+
+resource "azurerm_application_gateway" "azure_application_gateway" {
+  name                = "azure_application_gateway"
+  resource_group_name = "${azurerm_resource_group.azure_default_rg.name}"
+  location            = "${var.location}"
+
+  sku {
+    name     = "Standard_Medium"
+    tier     = "Standard"
+    capacity = 2
+  }
+
+  gateway_ip_configuration {
+    name      = "appGatewayIpConfig"
+    subnet_id = "${azurerm_subnet.azure_subnet_appgw_in_default_rg.id}"
+  }
+
+  frontend_port {
+    name = "appGWFEHttp"
+    port = 80
+  }
+
+  frontend_ip_configuration {
+    name                 = "appGatewayFrontendIP"
+    public_ip_address_id = "${azurerm_public_ip.azure_ip_application_gateway.id}"
+  }
+
+  backend_address_pool {
+    name = "appGatewayBackendPool"
+  }
+
+  backend_http_settings {
+    name                  = "appGWBEHttpSettings"
+    cookie_based_affinity = "Disabled"
+    port                  = 80
+    protocol              = "Http"
+    request_timeout       = 1
+  }
+
+  http_listener {
+    name                           = "appGatewayHttpListener"
+    frontend_ip_configuration_name = "appGatewayFrontendIP"
+    frontend_port_name             = "appGWFEHttp"
+    protocol                       = "Http"
+  }
+
+  request_routing_rule {
+    name                       = "HTTPrule"
+    rule_type                  = "Basic"
+    http_listener_name         = "appGatewayHttpListener"
+    backend_address_pool_name  = "appGatewayBackendPool"
+    backend_http_settings_name = "appGWBEHttpSettings"
+  }
 }
 
 # Create an additional resource group
@@ -305,4 +373,7 @@ output "public_ip_in_additional_rg" {
 }
 output "asg_name" {
   value = "${azurerm_application_security_group.azure_asg.name}"
+}
+output "application_gateway_name" {
+  value = "${azurerm_application_gateway.azure_application_gateway.name}"
 }
