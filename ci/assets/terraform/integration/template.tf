@@ -4,7 +4,7 @@ variable "azure_client_secret" {}
 variable "azure_subscription_id" {}
 variable "azure_tenant_id" {}
 variable "location" {
-  default = "East US"
+  default = "eastus2"
 }
 variable "env_name" {}
 variable "azure_environment" {}
@@ -259,6 +259,9 @@ resource "azurerm_public_ip" "azure_ip_integration_in_additional_rg" {
 
 output "environment" {
   value = "${var.azure_environment}"
+}
+output "location" {
+  value = "${var.location}"
 }
 output "default_resource_group_name" {
   value = "${azurerm_resource_group.azure_default_rg.name}"

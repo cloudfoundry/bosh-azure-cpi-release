@@ -138,6 +138,10 @@ module Bosh::AzureCloud
         vnet = @azure_client2.get_virtual_network_by_name(network.resource_group_name, network.virtual_network_name)
         cloud_error("Cannot find the virtual network `#{network.virtual_network_name}' under resource group `#{network.resource_group_name}'") if vnet.nil?
         location = vnet[:location]
+        location_in_global_configuration = azure_properties['location'] 
+        if !location_in_global_configuration.nil? && location_in_global_configuration != location
+          cloud_error("The location in the global configuration `#{location_in_global_configuration}' is different from the location of the virtual network `#{location}'")
+        end
         resource_group_name = resource_pool.fetch('resource_group_name', azure_properties['resource_group_name'])
 
         if @use_managed_disks
@@ -265,6 +269,34 @@ module Bosh::AzureCloud
     def set_vm_metadata(instance_id, metadata)
       @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
       @vm_manager.set_metadata(InstanceId.parse(instance_id, azure_properties), encode_metadata(metadata))
+    end
+
+    ##
+    # Map a set of cloud agnostic VM properties (cpu, ram, ephemeral_disk_size) to
+    # a set of Azure specific cloud_properties
+    #
+    # @param  [Hash] vm_resources requested cpu, ram, and ephemeral_disk_size
+    # @return [Hash] Azure specific cloud_properties describing instance (e.g. instance_type)
+    def calculate_vm_cloud_properties(vm_resources)
+      @logger.info("calculate_vm_cloud_properties(#{vm_resources})")
+      location = azure_properties['location']
+      cloud_error("Missing the property `location' in the global configuration") if location.nil?
+
+      required_keys = ['cpu', 'ram', 'ephemeral_disk_size']
+      missing_keys = required_keys.reject { |key| vm_resources[key] }
+      unless missing_keys.empty?
+        missing_keys.map! { |k| "`#{k}'" }
+        raise "Missing VM cloud properties: #{missing_keys.join(', ')}"
+      end
+
+      available_vm_sizes = @azure_client2.list_available_virtual_machine_sizes(location)
+      instance_type = @instance_type_mapper.map(vm_resources, available_vm_sizes)
+      {
+        'instance_type' => instance_type,
+        'ephemeral_disk' => {
+          'size' => (vm_resources['ephemeral_disk_size']/1024.0).ceil * 1024
+        },
+      }
     end
 
     ##
@@ -566,6 +598,7 @@ module Bosh::AzureCloud
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @table_manager, @storage_account_manager, @azure_client2)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client2)
       @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_properties, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client2, @storage_account_manager)
+      @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager
     end

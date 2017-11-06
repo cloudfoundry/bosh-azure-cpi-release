@@ -9,7 +9,7 @@ describe Bosh::AzureCloud::Cloud do
     @subscription_id                 = ENV['BOSH_AZURE_SUBSCRIPTION_ID']                 || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
     @tenant_id                       = ENV['BOSH_AZURE_TENANT_ID']                       || raise("Missing BOSH_AZURE_TENANT_ID")
     @client_id                       = ENV['BOSH_AZURE_CLIENT_ID']                       || raise("Missing BOSH_AZURE_CLIENT_ID")
-    @client_secret                   = ENV['BOSH_AZURE_CLIENT_SECRET']                   || raise("Missing BOSH_AZURE_CLIENT_secret")
+    @client_secret                   = ENV['BOSH_AZURE_CLIENT_SECRET']                   || raise("Missing BOSH_AZURE_CLIENT_SECRET")
     @stemcell_id                     = ENV['BOSH_AZURE_STEMCELL_ID']                     || raise("Missing BOSH_AZURE_STEMCELL_ID")
     @ssh_public_key                  = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']                  || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
     @default_security_group          = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']          || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
@@ -18,10 +18,11 @@ describe Bosh::AzureCloud::Cloud do
     @primary_public_ip               = ENV['BOSH_AZURE_PRIMARY_PUBLIC_IP']               || raise("Missing BOSH_AZURE_PRIMARY_PUBLIC_IP")
     @secondary_public_ip             = ENV['BOSH_AZURE_SECONDARY_PUBLIC_IP']             || raise("Missing BOSH_AZURE_SECONDARY_PUBLIC_IP")
     @application_gateway_name        = ENV['BOSH_AZURE_APPLICATION_GATEWAY_NAME']        || raise("Missing BOSH_AZURE_APPLICATION_GATEWAY_NAME")
-    @application_security_group      = ENV['BOSH_AZURE_APPLICATION_SECURITY_GROUP']     || raise("Missing BOSH_AZURE_APPLICATION_SECURITY_GROUP")
+    @application_security_group      = ENV['BOSH_AZURE_APPLICATION_SECURITY_GROUP']      || raise("Missing BOSH_AZURE_APPLICATION_SECURITY_GROUP")
   end
 
   let(:azure_environment)          { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
+  let(:location)                   { ENV.fetch('BOSH_AZURE_LOCATION', 'westcentralus') }
   let(:storage_account_name)       { ENV.fetch('BOSH_AZURE_STORAGE_ACCOUNT_NAME', nil) }
   let(:extra_storage_account_name) { ENV.fetch('BOSH_AZURE_EXTRA_STORAGE_ACCOUNT_NAME', nil) }
   let(:use_managed_disks)          { ENV.fetch('BOSH_AZURE_USE_MANAGED_DISKS', false).to_s == 'true' }
@@ -63,6 +64,14 @@ describe Bosh::AzureCloud::Cloud do
     cloud_options['azure']['storage_account_name'] = storage_account_name unless storage_account_name.nil?
     cloud_options['azure']['use_managed_disks'] = use_managed_disks
     described_class.new(cloud_options)
+  end
+
+  subject(:cpi_with_location) do
+    cloud_options_with_location = cloud_options.dup
+    cloud_options_with_location['azure']['storage_account_name'] = storage_account_name unless storage_account_name.nil?
+    cloud_options_with_location['azure']['use_managed_disks'] = use_managed_disks
+    cloud_options_with_location['azure']['location'] = location
+    described_class.new(cloud_options_with_location)
   end
 
   before {
@@ -109,6 +118,24 @@ describe Bosh::AzureCloud::Cloud do
         expect(light_stemcell_id).not_to be_nil
         cpi.delete_stemcell(light_stemcell_id)
       end
+    end
+  end
+
+  context '#calculate_vm_cloud_properties' do
+    let(:vm_resources) {
+      {
+        "cpu" => 2,
+        "ram" => 4096,
+        "ephemeral_disk_size" => 32 * 1024
+      }
+    }
+    it 'should return Azure specific cloud properties' do
+      expect(cpi_with_location.calculate_vm_cloud_properties(vm_resources)).to eq({
+        'instance_type' => 'Standard_F2',
+        'ephemeral_disk' => {
+          'size' => 32 * 1024
+        },
+      })
     end
   end
 

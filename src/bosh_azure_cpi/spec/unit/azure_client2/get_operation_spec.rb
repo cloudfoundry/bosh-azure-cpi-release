@@ -375,6 +375,68 @@ describe Bosh::AzureCloud::AzureClient2 do
       :headers => {})
   end
 
+  describe "#list_available_virtual_machine_sizes" do
+    let(:location) { "fake-location" }
+    let(:list_available_virtual_machine_sizes_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/providers/Microsoft.Compute/locations/#{location}/vmSizes?api-version=#{AZURE_RESOURCE_PROVIDER_COMPUTE}" }
+    let(:list_available_virtual_machine_sizes_response_body) {
+      {
+        "value" => [
+          {
+            "name": "Standard_A0",
+            "numberOfCores": 1,
+            "osDiskSizeInMB": 130048,
+            "resourceDiskSizeInMB": 20480,
+            "memoryInMB": 768,
+            "maxDataDiskCount": 1
+          },
+          {
+            "name": "Standard_A1",
+            "numberOfCores": 1,
+            "osDiskSizeInMB": 130048,
+            "resourceDiskSizeInMB": 71680,
+            "memoryInMB": 1792,
+            "maxDataDiskCount": 2
+          }
+        ]
+      }
+    }
+    let(:fake_vm_size_list) {
+      [
+        {
+          "name": "Standard_A0",
+          "number_of_cores": 1,
+          "memory_in_mb": 768
+        },
+        {
+          "name": "Standard_A1",
+          "number_of_cores": 1,
+          "memory_in_mb": 1792
+        }
+      ]
+    }
+    context "when token is valid, getting response succeeds" do
+      it "should return null if response body is null" do
+        stub_request(:get, list_available_virtual_machine_sizes_uri).to_return(
+          :status => 200,
+          :body => '',
+          :headers => {})
+        expect(
+          azure_client2.list_available_virtual_machine_sizes(location)
+        ).to eq([])
+      end
+
+      it "should return the resource if response body is not null" do
+        stub_request(:get, list_available_virtual_machine_sizes_uri).to_return(
+          :status => 200,
+          :body => list_available_virtual_machine_sizes_response_body.to_json,
+          :headers => {})
+        expect(
+          azure_client2.list_available_virtual_machine_sizes(location)
+        ).to eq(fake_vm_size_list)
+      end
+    end
+  end
+
   describe "#get_public_ip_by_name" do
     context "when token is valid, getting response succeeds" do
       it "should return null if response body is null" do

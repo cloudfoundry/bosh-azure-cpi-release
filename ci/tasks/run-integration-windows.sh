@@ -21,6 +21,7 @@ export BOSH_AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID}
 export BOSH_AZURE_TENANT_ID=${AZURE_TENANT_ID}
 export BOSH_AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
 export BOSH_AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}
+export BOSH_AZURE_LOCATION=$(echo ${metadata} | jq -e --raw-output ".location")
 export BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME=$(echo ${metadata} | jq -e --raw-output ".default_resource_group_name")
 export BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME=$(echo ${metadata} | jq -e --raw-output ".additional_resource_group_name")
 export BOSH_AZURE_STORAGE_ACCOUNT_NAME=$(echo ${metadata} | jq -e --raw-output ".storage_account_name")

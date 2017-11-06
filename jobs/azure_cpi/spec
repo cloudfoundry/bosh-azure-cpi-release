@@ -14,6 +14,9 @@ properties:
   azure.environment:
     description: The environment for Azure Management Service. AzureCloud, AzureChinaCloud, AzureUSGovernment or AzureStack
     default: AzureCloud
+  azure.location:
+    description: Azure region name
+    example: eastus
   azure.subscription_id:
     description: Azure Subscription Id
   azure.resource_group_name:

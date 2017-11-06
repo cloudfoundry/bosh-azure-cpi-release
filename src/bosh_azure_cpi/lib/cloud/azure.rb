@@ -60,6 +60,8 @@ require 'cloud/azure/storage_account_manager'
 require 'cloud/azure/instance_id'
 require 'cloud/azure/disk_id'
 
+require 'cloud/azure/instance_type_mapper'
+
 module Bosh
   module Clouds
     Azure = Bosh::AzureCloud::Cloud

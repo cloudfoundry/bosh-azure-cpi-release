@@ -49,6 +49,7 @@ module Bosh::AzureCloud
     REST_API_IMAGES                      = 'images'
     REST_API_SNAPSHOTS                   = 'snapshots'
     REST_API_VM_IMAGE                    = 'vmimage'
+    REST_API_VM_SIZES                    = 'vmSizes'
 
     REST_API_PROVIDER_NETWORK            = 'Microsoft.Network'
     REST_API_PUBLIC_IP_ADDRESSES         = 'publicIPAddresses'
@@ -374,6 +375,30 @@ module Bosh::AzureCloud
       }
 
       http_put(url, vm, params)
+    end
+
+    # List the available virtual machine sizes
+    # @param [String] location - Location of virtual machine.
+    #
+    # @return [Array]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-list-sizes-region
+    #
+    def list_available_virtual_machine_sizes(location)
+      vm_sizes = []
+      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
+      url += "/locations/#{location}"
+      url += "/#{REST_API_VM_SIZES}"
+      result = get_resource_by_id(url)
+
+      unless result.nil? || result["value"].nil?
+        result["value"].each do |value|
+          vm_size = parse_vm_size(value)
+          vm_sizes << vm_size
+        end
+      end
+      vm_sizes
     end
 
     # Restart a virtual machine
@@ -1933,6 +1958,17 @@ module Bosh::AzureCloud
     end
 
     private
+
+    def parse_vm_size(result)
+      vm_size = nil
+      unless result.nil?
+        vm_size = {}
+        vm_size[:name]            = result['name']
+        vm_size[:number_of_cores] = result['numberOfCores']
+        vm_size[:memory_in_mb]    = result['memoryInMB']
+      end
+      vm_size
+    end
 
     def parse_managed_disk(result)
       managed_disk = nil
