@@ -68,6 +68,7 @@ describe 'cpi.json.erb' do
             'default_security_group'      => 'fake-default-security-group',
             'parallel_upload_thread_num'  => 16,
             'debug_mode'                  => false,
+            'keep_failed_vms'             => false,
             'use_managed_disks'           => false,
             'pip_idle_timeout_in_minutes' => 4
           },
@@ -110,6 +111,16 @@ describe 'cpi.json.erb' do
 
       it 'is able to render use_managed_disks to true' do
         expect(subject['cloud']['properties']['azure']['use_managed_disks']).to be(true)
+      end
+    end
+
+    context 'when the keep_failed_vms are enabled' do
+      before do
+        manifest['properties']['azure']['keep_failed_vms'] = true
+      end
+
+      it 'is able to render keep_failed_vms to true' do
+        expect(subject['cloud']['properties']['azure']['keep_failed_vms']).to be(true)
       end
     end
 

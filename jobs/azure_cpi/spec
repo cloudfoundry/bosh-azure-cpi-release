@@ -45,6 +45,9 @@ properties:
   azure.pip_idle_timeout_in_minutes:
     description: Idle timeouts in minutes for dynamic public IPs
     default: 4
+  azure.keep_failed_vms:
+    description: Enable keeping the VM which failed in provisioning for troubleshooting
+    default: false
   azure.azure_stack.domain:
     description: The domain for your AzureStack deployment
     default: local.azurestack.external
