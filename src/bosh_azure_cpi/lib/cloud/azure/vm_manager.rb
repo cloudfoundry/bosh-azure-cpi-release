@@ -114,7 +114,7 @@ module Bosh::AzureCloud
       vm_params
     rescue => e
       error_message = ''
-      if @keep_failed_vm
+      if @keep_failed_vms
         # Including undeleted resources in error message to ask users to delete them manually later
         error_message = 'This VM fails in provisioning after multiple retries.\n'
         error_message += 'You need to delete below resource manually after finishing investigation.\n'
@@ -515,10 +515,10 @@ module Bosh::AzureCloud
     def create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set_params)
       resource_group_name = instance_id.resource_group_name()
       vm_name = instance_id.vm_name()
-      provisioning_fail_retries = 2
-      retry_count = 0
+      max_retries = 2
+      retry_create_count = 0
       begin
-        @keep_failed_vm = false
+        @keep_failed_vms = false
         is_vm_created = false
         availability_set = nil
         availability_set_name = availability_set_params[:name]
@@ -551,18 +551,19 @@ module Bosh::AzureCloud
 
         retry_create = false
         if e.instance_of?(AzureAsynchronousError) && e.status == PROVISIONING_STATE_FAILED
-          if (retry_count += 1) <= provisioning_fail_retries
-            @logger.info("create_virtual_machine - Retry #{retry_count}: will retry to create the virtual machine #{vm_name} which failed in provisioning")
+          if (retry_create_count += 1) <= max_retries
+            @logger.info("create_virtual_machine - Retry #{retry_create_count}: will retry to create the virtual machine #{vm_name} which failed in provisioning")
             retry_create = true
           else
-            # Keep failed VM for advanced investigation only if the VM fails in provisioning after multiple retries
-            @keep_failed_vm = true
+            # Keep the VM which fails in provisioning after multiple retries if "keep_failed_vms" is true in global configuration
+            @keep_failed_vms = @azure_properties['keep_failed_vms']
           end
         end
 
-        unless @keep_failed_vm
+        unless @keep_failed_vms
+          retry_delete_count = 0
           begin
-            @logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{vm_name} from resource group #{resource_group_name}")
+            @logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{vm_name} from resource group #{resource_group_name}. Retry #{retry_delete_count}.")
             @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
 
             # Delete the empty availability set
@@ -590,7 +591,8 @@ module Bosh::AzureCloud
               end
             end
           rescue => error
-            @keep_failed_vm = true
+            retry if (retry_delete_count += 1) <= max_retries
+            @keep_failed_vms = true # If the cleanup fails, then the VM resources have to be kept
             error_message = 'The VM fails in provisioning but an error is thrown in cleanuping VM, os disk or ephemeral disk before retry.\n'
             error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
             raise e, error_message
