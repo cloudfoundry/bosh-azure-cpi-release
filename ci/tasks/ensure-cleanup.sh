@@ -3,6 +3,7 @@
 set -e
 
 : ${AZURE_ENVIRONMENT:?}
+: ${AZURE_SUBSCRIPTION_ID:?}
 : ${AZURE_CLIENT_ID:?}
 : ${AZURE_CLIENT_SECRET:?}
 : ${AZURE_TENANT_ID:?}
@@ -11,6 +12,7 @@ set -e
 
 az cloud set --name ${AZURE_ENVIRONMENT}
 az login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
+az account set -s ${AZURE_SUBSCRIPTION_ID}
 
 set +e
 metadata=$(cat ${METADATA_FILE})

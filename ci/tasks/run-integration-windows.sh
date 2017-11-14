@@ -36,6 +36,7 @@ export BOSH_AZURE_APPLICATION_SECURITY_GROUP=${AZURE_APPLICATION_SECURITY_GROUP_
 
 az cloud set --name ${AZURE_ENVIRONMENT}
 az login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
+az account set -s ${AZURE_SUBSCRIPTION_ID}
 
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}
