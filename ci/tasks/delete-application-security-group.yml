@@ -13,7 +13,9 @@ run:
 
 params:
   AZURE_ENVIRONMENT:                                 ""
+  AZURE_SUBSCRIPTION_ID:                             ""
   AZURE_CLIENT_ID:                                   ""
   AZURE_CLIENT_SECRET:                               ""
   AZURE_TENANT_ID:                                   ""
   AZURE_APPLICATION_SECURITY_GROUP_NAME:             ""
+  AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED:    true

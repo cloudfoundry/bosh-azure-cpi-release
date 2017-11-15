@@ -13,6 +13,7 @@ run:
 
 params:
   AZURE_ENVIRONMENT:                                 ""
+  AZURE_SUBSCRIPTION_ID:                             ""
   AZURE_CLIENT_ID:                                   ""
   AZURE_CLIENT_SECRET:                               ""
   AZURE_TENANT_ID:                                   ""

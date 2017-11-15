@@ -564,7 +564,7 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
-  context 'when assigning application security groups to VM NIC' do
+  context 'when assigning application security groups to VM NIC', application_security_group: true do
     let(:network_spec) {
       {
         'network_a' => {

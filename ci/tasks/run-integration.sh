@@ -10,6 +10,7 @@ set -e
 : ${SSH_PUBLIC_KEY:?}
 : ${AZURE_APPLICATION_GATEWAY_NAME:?}
 : ${AZURE_APPLICATION_SECURITY_GROUP_NAME:?}
+: ${AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED:?}
 
 : ${METADATA_FILE:=environment/metadata}
 
@@ -36,6 +37,7 @@ export BOSH_AZURE_APPLICATION_SECURITY_GROUP=${AZURE_APPLICATION_SECURITY_GROUP_
 
 az cloud set --name ${AZURE_ENVIRONMENT}
 az login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
+az account set -s ${AZURE_SUBSCRIPTION_ID}
 
 export BOSH_AZURE_STEMCELL_ID="bosh-stemcell-00000000-0000-0000-0000-0AZURECPICI0"
 export BOSH_AZURE_STEMCELL_PATH="/tmp/image"
@@ -52,12 +54,16 @@ chruby ${RUBY_VERSION}
 pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   bundle install
 
-  export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
-  if [ "${AZURE_USE_MANAGED_DISKS}" == "false" ]; then
-    bundle exec rspec spec/integration/lifecycle_spec.rb --tag ~light_stemcell
-  else
-    bundle exec rspec spec/integration/lifecycle_spec.rb --tag ~light_stemcell --tag ~unmanaged_disks
+  tags="--tag ~light_stemcell"
+  if [ "${AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED}" == "false" ]; then
+    echo "Azure Application Security Group related tests are disabled."
+    tags+=" --tag ~application_security_group"
   fi
+  export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
+  if [ "${AZURE_USE_MANAGED_DISKS}" == "true" ]; then
+    tags+=" --tag ~unmanaged_disks"
+  fi
+  bundle exec rspec spec/integration/lifecycle_spec.rb ${tags}
 
   # Only run migration test when AZURE_USE_MANAGED_DISKS is set to false initially
   if [ "${AZURE_USE_MANAGED_DISKS}" == "false" ]; then
