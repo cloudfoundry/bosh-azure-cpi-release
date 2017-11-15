@@ -19,3 +19,4 @@ params:
   AZURE_TENANT_ID:                                   ""
   AZURE_LOCATION:                                    ""
   AZURE_APPLICATION_SECURITY_GROUP_NAME:             ""
+  AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED:    true

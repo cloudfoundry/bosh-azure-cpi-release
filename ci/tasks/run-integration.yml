@@ -13,12 +13,13 @@ run:
   path: bosh-cpi-src/ci/tasks/run-integration.sh
 
 params:
-  AZURE_ENVIRONMENT:                          ""
-  AZURE_SUBSCRIPTION_ID:                      ""
-  AZURE_CLIENT_ID:                            ""
-  AZURE_CLIENT_SECRET:                        ""
-  AZURE_TENANT_ID:                            ""
-  SSH_PUBLIC_KEY:                             ""
-  AZURE_USE_MANAGED_DISKS:                    false
-  AZURE_APPLICATION_GATEWAY_NAME:             ""
-  AZURE_APPLICATION_SECURITY_GROUP_NAME:      ""
+  AZURE_ENVIRONMENT:                              ""
+  AZURE_SUBSCRIPTION_ID:                          ""
+  AZURE_CLIENT_ID:                                ""
+  AZURE_CLIENT_SECRET:                            ""
+  AZURE_TENANT_ID:                                ""
+  SSH_PUBLIC_KEY:                                 ""
+  AZURE_USE_MANAGED_DISKS:                        false
+  AZURE_APPLICATION_GATEWAY_NAME:                 ""
+  AZURE_APPLICATION_SECURITY_GROUP_NAME:          ""
+  AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED: true

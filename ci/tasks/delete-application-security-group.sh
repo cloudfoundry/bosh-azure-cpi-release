@@ -2,6 +2,13 @@
 
 set -e
 
+: ${AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED:?}
+
+if [ "${AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED}" == "false" ]; then
+  echo "Azure Application Security Group related tests are disabled. Exit 0."
+  exit 0
+fi
+
 : ${AZURE_ENVIRONMENT:?}
 : ${AZURE_SUBSCRIPTION_ID:?}
 : ${AZURE_CLIENT_ID:?}

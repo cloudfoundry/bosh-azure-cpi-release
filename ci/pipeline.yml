@@ -81,9 +81,10 @@ shared:
     file: bosh-cpi-src/ci/tasks/run-integration.yml
     params: &run-integration-params
       <<: *azure-environment-params
-      SSH_PUBLIC_KEY:                        {{ssh_public_key}}
-      AZURE_APPLICATION_GATEWAY_NAME:        {{azure_application_gateway_name}}
-      AZURE_APPLICATION_SECURITY_GROUP_NAME: {{azure_application_security_group_name}}
+      SSH_PUBLIC_KEY:                                 {{ssh_public_key}}
+      AZURE_APPLICATION_GATEWAY_NAME:                 {{azure_application_gateway_name}}
+      AZURE_APPLICATION_SECURITY_GROUP_NAME:          {{azure_application_security_group_name}}
+      AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED: {{azure_application_security_group_tests_enabled}}
 
   - &run-integration-windows
     task: run-integration-windows
@@ -110,15 +111,17 @@ shared:
     file: bosh-cpi-src/ci/tasks/create-application-security-group.yml
     params:
       <<: *azure-environment-params
-      AZURE_LOCATION:                        {{azure_location}}
-      AZURE_APPLICATION_SECURITY_GROUP_NAME: {{azure_application_security_group_name}}
+      AZURE_LOCATION:                                 {{azure_location}}
+      AZURE_APPLICATION_SECURITY_GROUP_NAME:          {{azure_application_security_group_name}}
+      AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED: {{azure_application_security_group_tests_enabled}}
 
   - &delete-application-security-group
     task: delete-application-security-group
     file: bosh-cpi-src/ci/tasks/delete-application-security-group.yml
     params:
       <<: *azure-environment-params
-      AZURE_APPLICATION_SECURITY_GROUP_NAME: {{azure_application_security_group_name}}
+      AZURE_APPLICATION_SECURITY_GROUP_NAME:          {{azure_application_security_group_name}}
+      AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED: {{azure_application_security_group_tests_enabled}}
 
   - &ensure-cleanup
     task: ensure-cleanup

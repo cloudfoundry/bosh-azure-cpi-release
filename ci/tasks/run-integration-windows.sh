@@ -10,6 +10,7 @@ set -e
 : ${SSH_PUBLIC_KEY:?}
 : ${AZURE_APPLICATION_GATEWAY_NAME:?}
 : ${AZURE_APPLICATION_SECURITY_GROUP_NAME:?}
+: ${AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED:?}
 
 : ${METADATA_FILE:=environment/metadata}
 
@@ -66,9 +67,15 @@ az storage blob upload --file /tmp/root.vhd --container-name stemcell --name ${B
 export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
 pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   bundle install
-  if [ "${AZURE_USE_MANAGED_DISKS}" == "false" ]; then
-    bundle exec rspec spec/integration/lifecycle_spec.rb --tag ~heavy_stemcell
-  else
-    bundle exec rspec spec/integration/lifecycle_spec.rb --tag ~heavy_stemcell --tag ~unmanaged_disks
+
+  tags="--tag ~heavy_stemcell"
+  if [ "${AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED}" == "false" ]; then
+    echo "Azure Application Security Group related tests are disabled."
+    tags+=" --tag ~application_security_group"
   fi
+  export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
+  if [ "${AZURE_USE_MANAGED_DISKS}" == "true" ]; then
+    tags+=" --tag ~unmanaged_disks"
+  fi
+  bundle exec rspec spec/integration/lifecycle_spec.rb ${tags}
 popd > /dev/null
