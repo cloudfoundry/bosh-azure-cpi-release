@@ -21,6 +21,11 @@ module Bosh::AzureCloud
       vm_size = resource_pool.fetch('instance_type', nil)
       cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?
 
+      # When both availability_zone and availability_set are specified, raise an error
+      if !resource_pool['availability_zone'].nil? && !resource_pool['availability_set'].nil?
+        cloud_error("Only one of `availability_zone' and `availability_set' is allowed to be configured for the VM but you have configured both.")
+      end
+
       check_resource_group(resource_group_name, location)
 
       @disk_manager.resource_pool = resource_pool
@@ -85,6 +90,12 @@ module Bosh::AzureCloud
         vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns, computer_name)
       end
 
+      zone = resource_pool.fetch('availability_zone', nil)
+      unless zone.nil?
+        cloud_error("`#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
+        vm_params[:zone] = zone.to_s
+      end
+
       if is_debug_mode(@azure_properties)
         default_storage_account = @storage_account_manager.default_storage_account
         if default_storage_account[:location] == location
@@ -95,8 +106,12 @@ module Bosh::AzureCloud
       end
 
       primary_nic_tags = AZURE_TAGS.clone
+
+      # When availability_zone is specified, VM won't be in any availability set;
+      # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
+      availability_set_name = resource_pool['availability_zone'].nil? ? get_availability_set_name(resource_pool, env) : nil
+
       # Store the availability set name in the tags of the NIC
-      availability_set_name = get_availability_set_name(resource_pool, env)
       primary_nic_tags.merge!({'availability_set' => availability_set_name}) unless availability_set_name.nil?
 
       network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator, primary_nic_tags)
@@ -391,7 +406,14 @@ module Bosh::AzureCloud
         # create dynamic public ip
         idle_timeout_in_minutes = @azure_properties.fetch('pip_idle_timeout_in_minutes', 4)
         validate_idle_timeout(idle_timeout_in_minutes)
-        @azure_client2.create_public_ip(resource_group_name, vm_name, location, false, idle_timeout_in_minutes)
+        public_ip_params = {
+          :name => vm_name,
+          :location => location,
+          :is_static => false,
+          :idle_timeout_in_minutes => idle_timeout_in_minutes
+        }
+        public_ip_params[:zone] = resource_pool['availability_zone'].to_s unless resource_pool['availability_zone'].nil?
+        @azure_client2.create_public_ip(resource_group_name, public_ip_params)
         public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
       end
       networks = network_configurator.networks

@@ -195,6 +195,25 @@ describe Bosh::AzureCloud::Cloud do
         end
       end
 
+      context 'when availability_zone is specified' do
+        let(:resource_pool) {
+          { 'availability_zone' => 'fake-az' }
+        }
+
+        it 'should raise an error' do
+          expect {
+            cloud.create_vm(
+              agent_id,
+              stemcell_id,
+              resource_pool,
+              networks_spec,
+              disk_locality,
+              environment
+            )
+          }.to raise_error("Virtual Machines deployed to an Availability Zone must use managed disks")
+        end
+      end
+
       context 'when stemcell_id is invalid' do
         before do
           allow(stemcell_manager).to receive(:has_stemcell?).

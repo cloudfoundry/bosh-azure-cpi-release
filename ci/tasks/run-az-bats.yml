@@ -1,0 +1,28 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source: {repository: boshcpi/cpi-certification}
+
+inputs:
+  - name: pipelines
+  - name: environment
+  - name: bats
+  - name: director-state
+  - name: bosh-cli
+  - name: stemcell
+  - name: bosh-cpi-src
+  - name: ipaddrs
+
+run:
+  path: bosh-cpi-src/ci/tasks/run-az-bats.sh
+
+params:
+  INFRASTRUCTURE:                                    ""
+  STEMCELL_NAME:                                     ""
+  BAT_INFRASTRUCTURE:                                ""
+  BAT_NETWORKING:                                    ""
+  BAT_RSPEC_FLAGS:                                   ""
+
+  AZURE_BATS_STANDARD_PUBLIC_IP_NAME:                ""
+  AZURE_BATS_ZONE:                                   ""

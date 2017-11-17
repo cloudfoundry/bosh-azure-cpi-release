@@ -31,6 +31,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     let(:location) { "SouthEastAsia" }
     let(:size) { 100 }
     let(:storage_account_type) { "fake-storage-account-type" }
+    let(:zone) { "fake-zone" }
 
     let(:disk_params) {
       {
@@ -41,7 +42,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           "caching" => caching
         },
         :disk_size => size,
-        :account_type => storage_account_type
+        :account_type => storage_account_type,
+        :zone => zone
       }
     }
 
@@ -49,7 +51,7 @@ describe Bosh::AzureCloud::DiskManager2 do
       expect(client2).to receive(:create_empty_managed_disk).
         with(resource_group_name, disk_params)
       expect {
-        disk_manager2.create_disk(disk_id, location, size, storage_account_type)
+        disk_manager2.create_disk(disk_id, location, size, storage_account_type, zone)
       }.not_to raise_error
     end
   end
@@ -59,6 +61,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     let(:blob_uri) { "fake-blob-uri" }
     let(:location) { "SouthEastAsia" }
     let(:storage_account_type) { "Standard_LRS" }
+    let(:zone) { "fake-zone" }
 
     let(:disk_params) {
       {
@@ -70,7 +73,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           "original_blob" => blob_uri
         },
         :source_uri => blob_uri,
-        :account_type => storage_account_type
+        :account_type => storage_account_type,
+        :zone => zone
       }
     }
 
@@ -78,7 +82,7 @@ describe Bosh::AzureCloud::DiskManager2 do
       expect(client2).to receive(:create_managed_disk_from_blob).
         with(resource_group_name, disk_params)
       expect {
-        disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, storage_account_type)
+        disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, zone)
       }.not_to raise_error
     end
   end
@@ -248,7 +252,35 @@ describe Bosh::AzureCloud::DiskManager2 do
     it "deletes the snapshot" do
       expect(client2).to receive(:delete_managed_snapshot).with(resource_group_name, snapshot_name)
 
-      disk_manager2.delete_snapshot(snapshot_id)
+      expect {
+        disk_manager2.delete_snapshot(snapshot_id)
+      }.not_to raise_error
+    end
+  end
+
+  describe "#has_snapshot?" do
+    context "when the snapshot exists" do
+      before do
+        allow(client2).to receive(:get_managed_snapshot_by_name).
+          with(resource_group_name, snapshot_name).
+          and_return({})
+      end
+
+      it "should return true" do
+        expect(disk_manager2.has_snapshot?(resource_group_name, snapshot_name)).to be(true)
+      end
+    end
+
+    context "when the snapshot does not exist" do
+      before do
+        allow(client2).to receive(:get_managed_snapshot_by_name).
+          with(resource_group_name, snapshot_name).
+          and_return(nil)
+      end
+
+      it "should return false" do
+        expect(disk_manager2.has_snapshot?(resource_group_name, snapshot_name)).to be(false)
+      end
     end
   end
 
@@ -779,6 +811,115 @@ describe Bosh::AzureCloud::DiskManager2 do
             end
           end
         end
+      end
+    end
+  end
+
+  describe "#migrate_to_zone" do
+    let(:disk) {
+      {
+        :location => "fake-location",
+        :account_type => "fake-account-type",
+        :tags => {}
+      }
+    }
+    let(:zone) { "fake-zone" }
+    let(:disk_params) {
+      {
+        :name            => disk_name,
+        :location        => "fake-location",
+        :zone            => "fake-zone",
+        :account_type    => "fake-account-type",
+        :tags            => {}
+      }
+    }
+
+    before do
+      allow(Bosh::AzureCloud::DiskId).to receive(:create).and_return(snapshot_id)
+      allow(disk_manager2).to receive(:snapshot_disk).
+        with(snapshot_id, disk_name, {})
+      allow(disk_manager2).to receive(:has_snapshot?).
+        with(resource_group_name, snapshot_name).
+        and_return(true)
+      allow(disk_manager2).to receive(:delete_disk).
+        with(resource_group_name, disk_name)
+      allow(client2).to receive(:create_managed_disk_from_snapshot).
+        with(resource_group_name, disk_params, snapshot_name)
+      allow(disk_manager2).to receive(:has_data_disk?).
+        with(disk_id).
+        and_return(true)
+      allow(disk_manager2).to receive(:delete_snapshot).
+        with(snapshot_id)
+    end
+
+    context "When everything is ok" do
+      it "should migrate the disk without error" do
+        expect {
+          disk_manager2.migrate_to_zone(disk_id, disk, zone)
+        }.not_to raise_error
+      end
+    end
+
+    context "When the created snapshot does not exist" do
+      before do
+        allow(disk_manager2).to receive(:has_snapshot?).
+          with(resource_group_name, snapshot_name).
+          and_return(false)
+      end
+
+      it "should raise an error" do
+        expect {
+          disk_manager2.migrate_to_zone(disk_id, disk, zone)
+        }.to raise_error /migrate_to_zone - Can'n find snapshot `#{snapshot_name}' in resource group `#{resource_group_name}'/
+      end
+    end
+
+    context "When it fails to create disk from snapshot" do
+      before do
+        allow(client2).to receive(:create_managed_disk_from_snapshot).
+          with(resource_group_name, disk_params, snapshot_name).
+          and_raise('fails to create disk')
+      end
+
+      it "should retry and raise an error finally" do
+        expect(client2).to receive(:create_managed_disk_from_snapshot).exactly(3).times
+
+        expect {
+          disk_manager2.migrate_to_zone(disk_id, disk, zone)
+        }.to raise_error /fails to create disk/
+      end
+    end
+
+    context "When it fails to create disk from snapshot but succeeds with retry" do
+      it "should migrate the disk without error" do
+        count = 0
+        allow(client2).to receive(:create_managed_disk_from_snapshot).
+          with(resource_group_name, disk_params, snapshot_name) do
+          count += 1
+          count == 1 ? raise('fails to create disk') : nil
+          end
+
+        expect(client2).to receive(:create_managed_disk_from_snapshot).exactly(2).times
+
+        expect {
+          disk_manager2.migrate_to_zone(disk_id, disk, zone)
+        }.not_to raise_error
+      end
+    end
+
+    context "When the migrated disk does not exist" do
+      before do
+        allow(disk_manager2).to receive(:has_data_disk?).
+          with(disk_id).
+          and_return(false)
+      end
+
+      it "should raise an error and not delete the snapshot" do
+        expect(disk_manager2).not_to receive(:delete_snapshot)
+
+        expect {
+          disk_manager2.migrate_to_zone(disk_id, disk, zone)
+        }.to raise_error /migrate_to_zone - Can'n find disk `#{disk_name}' in resource group `#{resource_group_name}' after migration/
       end
     end
   end

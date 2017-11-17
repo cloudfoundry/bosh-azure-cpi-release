@@ -150,6 +150,8 @@ module Bosh::AzureCloud
     BOSH_JOBS_DIR = '/var/vcap/jobs'
     AZURESTACK_CA_FILE_RELATIVE_PATH = 'azure_cpi/config/azure_stack_ca_cert.pem'
 
+    AVAILABILITY_ZONES = ['1', '2', '3']
+
     ##
     # Raises CloudError exception
     #

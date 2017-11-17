@@ -504,10 +504,18 @@ describe Bosh::AzureCloud::VMManager do
               'pip_idle_timeout_in_minutes' => idle_timeout
             }), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager)
           }
+          let(:public_ip_params) {
+            {
+              :name => vm_name,
+              :location => location,
+              :is_static => false,
+              :idle_timeout_in_minutes => idle_timeout
+            }
+          }
 
           it "creates a public IP and assigns it to the primary NIC" do
             expect(client2).to receive(:create_public_ip).
-              with(resource_group_name, vm_name, location, false, idle_timeout)
+              with(resource_group_name, public_ip_params)
             expect(client2).to receive(:create_network_interface).
               with(resource_group_name, hash_including(
                   :name => "#{vm_name}-0",
@@ -526,9 +534,18 @@ describe Bosh::AzureCloud::VMManager do
 
         context "and pip_idle_timeout_in_minutes is not set" do
           let(:default_idle_timeout) { 4 }
+          let(:public_ip_params) {
+            {
+              :name => vm_name,
+              :location => location,
+              :is_static => false,
+              :idle_timeout_in_minutes => default_idle_timeout
+            }
+          }
+
           it "creates a public IP and assigns it to the NIC" do
             expect(client2).to receive(:create_public_ip).
-              with(resource_group_name, vm_name, location, false, default_idle_timeout)
+              with(resource_group_name, public_ip_params)
             expect(client2).to receive(:create_network_interface).
               with(resource_group_name, hash_including(
                   :public_ip => dynamic_public_ip,
@@ -735,6 +752,77 @@ describe Bosh::AzureCloud::VMManager do
           it "should enable diagnostics" do
             vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to eq(diag_storage_uri)
+          end
+        end
+      end
+
+      # Availability Zones
+      context "with availability zone specified" do
+        let(:availability_zone) { '1' }
+
+        before do
+          resource_pool['availability_zone'] = availability_zone
+
+          allow(network_configurator).to receive(:vip_network).
+            and_return(nil)
+        end
+
+        context "and assign_dynamic_public_ip is true" do
+          let(:dynamic_public_ip) { 'fake-dynamic-public-ip' }
+
+          before do
+            resource_pool['assign_dynamic_public_ip'] = true
+            allow(client2).to receive(:get_public_ip_by_name).
+              with(resource_group_name, vm_name).and_return(dynamic_public_ip)
+          end
+
+          it "creates public IP and virtual machine in the specified zone" do
+            expect(client2).to receive(:create_public_ip).
+              with(resource_group_name, hash_including(
+                  :zone => availability_zone
+                )
+              ).once
+            expect(client2).to receive(:create_virtual_machine).
+              with(resource_group_name,
+                   hash_including(:zone => availability_zone),
+                   anything,
+                   nil             # Availability set must be nil when availability is specified
+              )
+
+            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            expect(vm_params[:zone]).to eq(availability_zone)
+          end
+        end
+
+        context "and assign_dynamic_public_ip is not set" do
+          it "creates virtual machine in the specified zone" do
+            expect(client2).to receive(:create_virtual_machine).
+              with(resource_group_name,
+                   hash_including(:zone => availability_zone),
+                   anything,
+                   nil             # Availability set must be nil when availability is specified
+              )
+
+            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            expect(vm_params[:zone]).to eq(availability_zone)
+          end
+        end
+
+        context "and availability_zone is an integer" do
+          before do
+            resource_pool['availability_zone'] = 1
+          end
+
+          it "convert availability_zone to string" do
+            expect(client2).to receive(:create_virtual_machine).
+              with(resource_group_name,
+                   hash_including(:zone => '1'),
+                   anything,
+                   nil             # Availability set must be nil when availability is specified
+              )
+
+            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            expect(vm_params[:zone]).to eq('1')
           end
         end
       end

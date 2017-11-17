@@ -1,0 +1,41 @@
+---
+cpi: azure
+properties:
+  stemcell:
+    name: ((stemcell_name))
+    version: latest
+  vip: ((bats_public_ip))
+  pool_size: 1
+  instances: 1
+  second_static_ip: ((bats_first_network.static_ip_2))
+  availability_zone: ((availability_zone))
+  networks:
+  - name: default
+    type: manual
+    static_ip: ((bats_first_network.static_ip_1))
+    cloud_properties:
+      resource_group_name: ((resource_group_name))
+      virtual_network_name: ((vnet_name))
+      subnet_name: ((bats_first_network.name))
+      security_group: ((default_security_group))
+    cidr: ((bats_first_network.cidr))
+    reserved: [((bats_first_network.reserved_range))]
+    static: [((bats_first_network.static_range))]
+    gateway: ((bats_first_network.gateway))
+  - name: second
+    type: manual
+    static_ip: ((bats_second_network.static_ip_1))
+    cloud_properties:
+      resource_group_name: ((resource_group_name))
+      virtual_network_name: ((vnet_name))
+      subnet_name: ((bats_second_network.name))
+      security_group: ((default_security_group))
+    cidr: ((bats_second_network.cidr))
+    reserved: [((bats_second_network.reserved_range))]
+    static: [((bats_second_network.static_range))]
+    gateway: ((bats_second_network.gateway))
+  - name: static
+    type: vip
+    cloud_properties:
+      resource_group_name: ((resource_group_name))
+  key_name: bosh

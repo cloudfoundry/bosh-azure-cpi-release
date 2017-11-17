@@ -215,6 +215,9 @@ module Bosh::AzureCloud
     #   When debug_mode is on, CPI will use below parameter for boot diagnostics
     # * +:diag_storage_uri      - String. Diagnostics storage account URI.
     #
+    #  When virtual machine is in an availability zone
+    # * +:zone+                 - String. Zone number in string. Possible values: "1", "2" or "3".
+    #
     # @return [Boolean]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
@@ -278,6 +281,10 @@ module Bosh::AzureCloud
           }
         }
       }
+
+      unless vm_params[:zone].nil?
+        vm['zones'] = [vm_params[:zone]]
+      end
 
       os_disk = {
         'name'         => vm_params[:os_disk][:disk_name],
@@ -554,6 +561,8 @@ module Bosh::AzureCloud
         vm[:location] = result['location']
         vm[:tags]     = result['tags']
 
+        vm[:zone]  = result['zones'][0] unless result['zones'].nil?
+
         properties = result['properties']
         vm[:provisioning_state] = properties['provisioningState']
         vm[:vm_size]            = properties['hardwareProfile']['vmSize']
@@ -752,6 +761,8 @@ module Bosh::AzureCloud
     # * +:disk_size+                    - Integer. Specifies the size in GB of the empty managed disk.
     # * +:account_type+                 - String. Specifies the account type of the empty managed disk.
     #                                     Optional values: Standard_LRS or Premium_LRS.
+    # When disk is in a zone
+    # * +:zone+                         - String. Zone number in string.
     #
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
     #
@@ -768,6 +779,7 @@ module Bosh::AzureCloud
           'diskSizeGB'   => params[:disk_size]
         }
       }
+      disk['zones'] = [params[:zone]] unless params[:zone].nil?
       http_put(url, disk)
     end
 
@@ -787,6 +799,8 @@ module Bosh::AzureCloud
     # * +:source_uri+                   - String. The SAS URI of the source storage blob.
     # * +:account_type+                 - String. Specifies the account type of the managed disk.
     #                                     Optional values: Standard_LRS or Premium_LRS.
+    # When disk is in a zone
+    # * +:zone+                         - String. Zone number in string.
     #
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
     #
@@ -803,7 +817,47 @@ module Bosh::AzureCloud
           'accountType'  => params[:account_type]
         }
       }
+      disk['zones'] = [params[:zone]] unless params[:zone].nil?
       http_put(url, disk)
+    end
+
+    # Create a managed disk by copying a snapshot
+    #
+    # ==== Attributes
+    #
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [Hash] disk_params            - Parameters for creating the managed disk.
+    # @param [Hash] snapshot_name          - snapshot name
+    #
+    # ==== params
+    #
+    # Accepted key/value pairs for disk_params are:
+    # * +:name+                         - String. Name of the managed disk.
+    # * +:location+                     - String. The location where the managed disk will be created.
+    # * +:tags+                         - Hash. Tags of the managed disk.
+    # * +:account_type+                 - String. Specifies the account type of the managed disk.
+    #                                     Optional values: Standard_LRS or Premium_LRS.
+    # When disk is in a zone
+    # * +:zone+                         - String. Zone number in string.
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
+    #
+    def create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
+      disk_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: disk_params[:name])
+      snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
+      disk = {
+        'location'   => disk_params[:location],
+        'properties' => {
+          'creationData' => {
+            'createOption'  => 'Copy',
+            'sourceResourceId'  => snapshot_url
+          },
+          'accountType'  => disk_params[:account_type]
+        }
+      }
+      disk['zones'] = [disk_params[:zone]] unless disk_params[:zone].nil?
+      disk['tags']  = disk_params[:tags] unless disk_params[:tags].nil?
+      http_put(disk_url, disk)
     end
 
     # Delete a managed disk
@@ -986,6 +1040,43 @@ module Bosh::AzureCloud
       http_put(snapshot_url, snapshot)
     end
 
+    # Get a (managed) snapshot's information
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [String] snapshot_name        - Name of snapshot.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/manageddisks/snapshots/snapshots-get
+    #
+    def get_managed_snapshot_by_name(resource_group_name, snapshot_name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
+      get_managed_snapshot(url)
+    end
+
+    # Get a (managed) snapshot's information
+    # @param [String] url - URL of snapshot.
+    #
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/manageddisks/snapshots/snapshots-get
+    #
+    def get_managed_snapshot(url)
+      result = get_resource_by_id(url)
+      snapshot = nil
+      unless result.nil?
+        snapshot = {}
+        snapshot[:id]       = result['id']
+        snapshot[:name]     = result['name']
+        snapshot[:location] = result['location']
+        snapshot[:tags]     = result['tags']
+
+        properties = result['properties']
+        snapshot[:provisioning_state] = properties['provisioningState']
+        snapshot[:disk_size]          = properties['diskSizeGB']
+      end
+      snapshot
+    end
+
     # Delete a snapshot of managed disk
     # @param [String] resource_group_name  - Name of resource group.
     # @param [String] name                 - Name of snapshot.
@@ -1036,25 +1127,33 @@ module Bosh::AzureCloud
 
     # Create a public IP
     # @param [String] resource_group_name      - Name of resource group.
-    # @param [String] name                     - Name of public IP.
-    # @param [String] location                 - Location where the public IP will be created.
-    # @param [Boolean] is_static               - Whether the IP address is static or dynamic.
-    # @param [Integer] idle_timeout_in_minutes - Timeout for the TCP idle connection. The value can be set between 4 and 30 minutes.
+    # @param [Hash] params                     - Parameters of public ip.
+    #
+    # ==== params
+    # * +:name+                                - String. Name of public IP.
+    # * +:location+                            - String. Location where the public IP will be created.
+    # * +:is_static+                           - Boolean. Whether the IP address is static or dynamic.
+    # * +:idle_timeout_in_minutes+             - Integer. Timeout for the TCP idle connection. The value can be set between 4 and 30 minutes.
+    # When public IP is in an availability zone
+    # * +:zone+                                - String. Zone number in string. Possible values: "1", "2" or "3".
     #
     # @return [Boolean]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/network/create-or-update-a-public-ip-address
     #
-    def create_public_ip(resource_group_name, name, location, is_static = true, idle_timeout_in_minutes = 4)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: name)
+    def create_public_ip(resource_group_name, params)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: params[:name])
+
       public_ip = {
-        'name'       => name,
-        'location'   => location,
+        'name'       => params[:name],
+        'location'   => params[:location],
         'properties' => {
-          'publicIPAllocationMethod' => is_static ? 'Static' : 'Dynamic',
-          'idleTimeoutInMinutes'     => idle_timeout_in_minutes
+          'publicIPAllocationMethod' => params[:is_static] ? 'Static' : 'Dynamic',
+          'idleTimeoutInMinutes'     => params[:idle_timeout_in_minutes]
         }
       }
+      public_ip['zones'] = [params[:zone]] unless params[:zone].nil?
+
       http_put(url, public_ip)
     end
 
@@ -1844,6 +1943,8 @@ module Bosh::AzureCloud
         managed_disk[:location]  = result['location']
         managed_disk[:tags]      = result['tags']
 
+        managed_disk[:zone]      = result['zones'][0] unless result['zones'].nil?
+
         properties = result['properties']
         managed_disk[:provisioning_state] = properties['provisioningState']
         managed_disk[:disk_size]          = properties['diskSizeGB']
@@ -1963,6 +2064,8 @@ module Bosh::AzureCloud
         ip_address[:name]     = result['name']
         ip_address[:location] = result['location']
         ip_address[:tags]     = result['tags']
+
+        ip_address[:zone]    = result['zones'][0] unless result['zones'].nil?
 
         properties = result['properties']
         ip_address[:resource_guid]               = properties['resourceGuid']

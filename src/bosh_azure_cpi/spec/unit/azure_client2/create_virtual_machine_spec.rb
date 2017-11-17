@@ -1103,6 +1103,113 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
       end
 
+      context "when zone is not nil" do
+        let(:vm_params_managed) do
+          {
+            :name           => vm_name,
+            :location       => "b",
+            :tags           => { "foo" => "bar"},
+            :vm_size        => "c",
+            :ssh_username   => "d",
+            :ssh_cert_data  => "e",
+            :custom_data    => "f",
+            :image_id       => "g",
+            :os_disk        => {
+              :disk_name     => "h",
+              :disk_caching  => "j",
+              :disk_size     => "k",
+            },
+            :os_type        => "linux",
+            :managed        => true,
+            :zone           => "m"
+          }
+        end
+
+        let(:request_body) {
+          {
+            :name     => vm_name,
+            :location => "b",
+            :type     => "Microsoft.Compute/virtualMachines",
+            :tags     => {
+              :foo => "bar"
+            },
+            :zones    => ["m"],
+            :properties => {
+              :hardwareProfile => {
+                :vmSize => "c"
+              },
+              :osProfile => {
+                :customData => "f",
+                :computerName => vm_name,
+                :adminUsername => "d",
+                :linuxConfiguration => {
+                  :disablePasswordAuthentication => "true",
+                  :ssh => {
+                    :publicKeys => [
+                      {
+                        :path => "/home/d/.ssh/authorized_keys",
+                        :keyData => "e"
+                      }
+                    ]
+                  }
+                }
+              },
+              :networkProfile => {
+                :networkInterfaces => [
+                  {
+                    :id => "a",
+                    :properties => {
+                      :primary => true
+                    }
+                  },
+                  {
+                    :id => "b",
+                    :properties => {
+                      :primary => false
+                    }
+                  }
+                ]
+              },
+              :storageProfile => {
+                :imageReference => {
+                  :id => "g"
+                },
+                :osDisk => {
+                  :name => "h",
+                  :createOption => "FromImage",
+                  :caching => "j",
+                  :diskSizeGB => "k"
+                }
+              }
+            }
+          }
+        }
+
+        it "should raise no error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {
+              "azure-asyncoperation" => operation_status_link
+            })
+          stub_request(:get, operation_status_link).to_return(
+            :status => 200,
+            :body => '{"status":"Succeeded"}',
+            :headers => {})
+
+          expect {
+            azure_client2.create_virtual_machine(resource_group, vm_params_managed, network_interfaces)
+          }.not_to raise_error
+        end
+      end
+
       context "when os_type is invalid" do
         let(:vm_params) do
           {
