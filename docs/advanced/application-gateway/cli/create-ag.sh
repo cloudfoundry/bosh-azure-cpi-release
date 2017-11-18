@@ -10,7 +10,7 @@ while true; do
 done
 
 while true; do
-  read -p "Input your resource group name: " rgName
+  read -p "Input your existing resource group name: " rgName
   if [ -z "$rgName" ]; then
     echo "Resource group name can't be null"
   else
@@ -75,14 +75,14 @@ done
 
 # Remove it if the application gateway (AG) exists
 echo "Removing it if the application gateway exists"
-azure network application-gateway delete --resource-group $rgName --name $appgwName --quiet
+azure network application-gateway delete --resource-group $rgName --name $appgwName --quiet || true
 
 # Create public-ip
 echo "Creating public IP address for front end configuration"
-azure network public-ip create --resource-group $rgName --name $publicipName --location $location --allocation-method Dynamic
+azure network public-ip create --resource-group $rgName --name $publicipName --location "$location" --allocation-method Dynamic
 
 # Create AG
-azure network application-gateway create --resource-group $rgName --name $appgwName --location $location --vnet-name $vnetName --subnet-name $subnetName --http-settings-protocol http --http-settings-port 80 --http-settings-cookie-based-affinity Disabled --frontend-port 80 --public-ip-name $publicipName --frontend-ip-name $publicipName --http-listener-protocol http --routing-rule-type Basic --sku-name Standard_Small --sku-tier Standard --capacity $routerNumber
+azure network application-gateway create --resource-group $rgName --name $appgwName --location "$location" --vnet-name $vnetName --subnet-name $subnetName --http-settings-protocol http --http-settings-port 80 --http-settings-cookie-based-affinity Disabled --frontend-port 80 --public-ip-name $publicipName --frontend-ip-name $publicipName --http-listener-protocol http --routing-rule-type Basic --sku-name Standard_Small --sku-tier Standard --capacity $routerNumber
 
 # Create probe
 echo "Configuring a probe"
