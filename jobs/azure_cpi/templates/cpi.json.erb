@@ -35,6 +35,10 @@
     }
   }
 
+  if_p('azure.location') do |location|
+    params['cloud']['properties']['azure']['location'] = location
+  end
+
   if_p('azure.storage_account_name') do |storage_account_name|
     params['cloud']['properties']['azure']['storage_account_name'] = storage_account_name
   end.else do

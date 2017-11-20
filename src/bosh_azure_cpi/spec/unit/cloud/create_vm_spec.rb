@@ -58,6 +58,32 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
+    context 'when the location in the global configuration is different from the vnet location' do
+      let(:cloud_properties_with_location) { mock_cloud_properties_merge({'azure'=>{'location'=>"location-other-than-#{location}"}}) }
+      let(:cloud_with_location) { mock_cloud(cloud_properties_with_location) }
+      before do
+        allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
+          with(cloud_properties_with_location['azure'], networks_spec).
+          and_return(network_configurator)
+        allow(client2).to receive(:get_virtual_network_by_name).
+          with(default_resource_group_name, virtual_network_name).
+          and_return(vnet)
+      end
+
+      it 'should raise an error' do
+        expect {
+          cloud_with_location.create_vm(
+            agent_id,
+            stemcell_id,
+            resource_pool,
+            networks_spec,
+            disk_locality,
+            environment
+          )
+        }.to raise_error(/The location in the global configuration `location-other-than-#{location}' is different from the location of the virtual network `#{location}'/)
+      end
+    end
+
     context 'when use_managed_disks is not set' do
       let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
       let(:instance_id_string) { "fake-instance-id" }

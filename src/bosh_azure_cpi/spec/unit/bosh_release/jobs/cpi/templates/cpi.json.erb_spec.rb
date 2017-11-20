@@ -104,6 +104,16 @@ describe 'cpi.json.erb' do
   end
 
   context 'when parsing the azure property' do
+    context 'when the location is specified' do
+      before do
+        manifest['properties']['azure']['location'] = 'fake-location'
+      end
+
+      it 'is able to render location to fake-location' do
+        expect(subject['cloud']['properties']['azure']['location']).to eq('fake-location')
+      end
+    end
+
     context 'when the managed disks are enabled' do
       before do
         manifest['properties']['azure']['use_managed_disks'] = true
