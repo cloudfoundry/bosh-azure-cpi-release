@@ -171,34 +171,65 @@ describe Bosh::AzureCloud::StemcellManager do
       end
 
       context "when stemcell status is pending and it timeouts" do
-        let(:entities) {
-          [
-            {
-              'PartitionKey' => stemcell_name,
-              'RowKey'       => storage_account_name,
-              'Status'       => 'pending',
-              'Timestamp'    => (Time.now - ( 20 * 60 - 1 )).to_s  # The default timeout of copying stemcell is 20 * 60 seconds
-            }
-          ]
-        }
         let(:stemcell_table) { 'stemcells' }
         let(:stemcell_container) { 'stemcell' }
 
-        before do
-          allow(table_manager).to receive(:query_entities).
-            and_return(entities)
+        context "when Timestamp in entities is a String" do
+          let(:entities) {
+            [
+              {
+                'PartitionKey' => stemcell_name,
+                'RowKey'       => storage_account_name,
+                'Status'       => 'pending',
+                'Timestamp'    => (Time.now - ( 20 * 60 - 1 )).to_s  # The default timeout of copying stemcell is 20 * 60 seconds
+              }
+            ]
+          }
+          before do
+            allow(table_manager).to receive(:query_entities).
+              and_return(entities)
+          end
+
+          it "should raise an error" do
+            expect(blob_manager).not_to receive(:get_blob_properties)
+            expect(table_manager).to receive(:delete_entity).
+              with(stemcell_table, stemcell_name, storage_account_name)
+            expect(blob_manager).to receive(:delete_blob).
+              with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
+
+            expect{
+              stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+            }.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+          end
         end
 
-        it "should raise an error" do
-          expect(blob_manager).not_to receive(:get_blob_properties)
-          expect(table_manager).to receive(:delete_entity).
-            with(stemcell_table, stemcell_name, storage_account_name)
-          expect(blob_manager).to receive(:delete_blob).
-            with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
+        context "when Timestamp in entities is a Time object" do
+          let(:entities) {
+            [
+              {
+                'PartitionKey' => stemcell_name,
+                'RowKey'       => storage_account_name,
+                'Status'       => 'pending',
+                'Timestamp'    => Time.now - ( 20 * 60 - 1 )  # The default timeout of copying stemcell is 20 * 60 seconds
+              }
+            ]
+          }
+          before do
+            allow(table_manager).to receive(:query_entities).
+              and_return(entities)
+          end
 
-          expect{
-            stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-          }.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+          it "should raise an error" do
+            expect(blob_manager).not_to receive(:get_blob_properties)
+            expect(table_manager).to receive(:delete_entity).
+              with(stemcell_table, stemcell_name, storage_account_name)
+            expect(blob_manager).to receive(:delete_blob).
+              with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
+
+            expect{
+              stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+            }.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+          end
         end
       end
 
