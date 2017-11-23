@@ -1,5 +1,7 @@
 # Deploy BOSH on Azure via ARM templates
 
+>**NOTE**: This guidance is for the version `v2.7.0` of [bosh-setup template](https://github.com/Azure/azure-quickstart-templates/tree/137cb18522ae28175f9e96715f93104d113b338f/bosh-setup). The `v2.7.0` is based on [cf-release](https://github.com/cloudfoundry/cf-release). The latest version `v3.0.0+` of the template is based on [cf-deployment](https://github.com/cloudfoundry/cf-deployment). If you would like to follow the guidance for the latest template, please go to the [latest doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/get-started/via-arm-templates/deploy-bosh-via-arm-templates.md).
+
 # 1 Prepare Azure Resources
 
 Here we’ll create the following Azure resources that’s required for deploying BOSH and Cloud Foundry:
@@ -15,25 +17,30 @@ Here we’ll create the following Azure resources that’s required for deployin
 
 The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup) ARM template can help you to deploy all the above resources on Azure. Just click the button below with the following parameters:
 
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2F137cb18522ae28175f9e96715f93104d113b338f%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
-<a href="https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
+<a href="https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2F137cb18522ae28175f9e96715f93104d113b338f%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/AzureGov.png"/>
 </a>
 
 | Name | Required | Default Value | Description |
 |:----:|:--------:|:-------------:|:----------- |
 | vmName | **YES** | | Name of Virtual Machine |
+| ubuntuOSVersion | NO | 14.04.5-LTS | OS version of Ubuntu |
 | adminUsername | **YES** | | Username for the Virtual Machines. **Never use root as the adminUsername**. |
 | sshKeyData | **YES** | | SSH **RSA** public key file as a string. |
-| environment | **YES**  | | Different environments in Azure. Choose AzureCloud for Global Azure, choose AzureChinaCloud for Azure China Cloud, choose AzureUSGovernment for Azure Government. |
+| environment | **YES**  | | Different environments in Azure. Choose AzureCloud for Global Azure, choose AzureChinaCloud for Azure China Cloud, choose AzureUSGovernment for Azure Government, choose AzureGermanCloud for German cloud. |
 | tenantID | **YES**  | | ID of the tenant |
 | clientID | **YES**  | | ID of the client |
 | clientSecret | **YES** | | secret of the client |
 | autoDeployBosh | NO | enabled | The flag allowing to deploy the Bosh director. |
+| boshVmSize | NO | Standard_D2_v2 | The VM size of the BOSH director VM. Please check if the region support this VM size https://azure.microsoft.com/en-us/regions/#services. For more information about virtual machine sizes, see https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/ |
+| \_artifactsLocation | NO | https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/ | The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated. |
+| azureStackDomain | NO | NotApplicableIfEnvironmentIsNotAzureStack | Domain of the Azure Stack deployment. |
+| azureStackResource | NO | NotApplicableIfEnvironmentIsNotAzureStack | Resource of the Azure Stack deployment. Use Azure Powershell command: (Invoke-RestMethod -Uri https://api.azurestack.local/metadata/endpoints?api-version=1.0 -Method Get).authentication.audiences[0] |
 
->**NOTE:**
+**NOTE:**
   * Currently BOSH can be only deployed from a Virtual Machine (dev-box) in the same virtual network on Azure.
 
 ## 1.1 Basic Configuration
@@ -75,11 +82,11 @@ If you would like to deploy Bosh using a more customized `bosh.yml`, you can set
 
 ## 1.2 Advanced Configurations
 
-If you want to customize your `bosh-setup` template, you can modify the following variables in [azuredeploy.json](https://github.com/Azure/azure-quickstart-templates/blob/master/bosh-setup/azuredeploy.json).
+If you want to customize your `bosh-setup` template, you can modify the following variables in [azuredeploy.json](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2F137cb18522ae28175f9e96715f93104d113b338f%2Fbosh-setup%2Fazuredeploy.json).
 
 | Name | Default Value |
 |:----:|:-------------:|
-| storageAccountType | Standard_RAGRS |
+| storageAccountType | Standard_LRS |
 | virtualNetworkName | boshvnet-crp |
 | virtualNetworkAddressSpace | 10.0.0.0/16 |
 | subnetNameForBosh | Bosh |
@@ -89,13 +96,12 @@ If you want to customize your `bosh-setup` template, you can modify the followin
 | devboxNetworkSecurityGroup | nsg-devbox |
 | boshNetworkSecurityGroup | nsg-bosh |
 | cfNetworkSecurityGroup | nsg-cf |
-| vmSize | Standard_D1 |
+| vmSize | Standard_D1_v2 |
 | devboxPrivateIPAddress | 10.0.0.100 |
-| ubuntuOSVersion | 14.04.3-LTS |
 | keepUnreachableVMs | false |
 
->**NOTE:**
-  * The default type of Azue storage account is "Standard_RAGRS" (Read access geo-redundant storage). For a list of available Azure storage accounts, their capacities and prices, check [**HERE**](http://azure.microsoft.com/en-us/pricing/details/storage/). Please note Standard_ZRS account cannot be changed to another account type later, and the other account types cannot be changed to Standard_ZRS. The same goes for Premium_LRS accounts.
+**NOTE:**
+  * The default type of Azue storage account is "Standard_LRS". For a list of available Azure storage accounts, their capacities and prices, check [**HERE**](http://azure.microsoft.com/en-us/pricing/details/storage/). Please note Standard_ZRS account cannot be changed to another account type later, and the other account types cannot be changed to Standard_ZRS. The same goes for Premium_LRS accounts.
   * `vmSize` is the instance type of the dev-box. For a list of available instance types, please check [**HERE**](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-size-specs/).
   * Set `keepUnreachableVMs` as true when you want to keep unreachable VMs when the deployment fails.
 
@@ -137,7 +143,7 @@ Run the following commands in your home directory to deploy bosh:
 ./deploy_bosh.sh
 ```
 
->**NOTE:**
+**NOTE:**
   * Never use root to perform these steps.
   * More verbose logs are written to `~/run.log`.
   * If you hit any issue, please see [**troubleshooting**](../../additional-information/troubleshooting.md), [**known issues**](../../additional-information/known-issues.md) and [**migration**](../../additional-information/migration.md). If it does not work, you can file an issue [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues).

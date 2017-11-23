@@ -49,89 +49,89 @@ Please update the value which starts with `REPLACE-ME` and run it after you [log
 
 1. Log on to your dev-box.
 
-2. Login to your BOSH director VM
-
-  ```
-  bosh target 10.0.0.4
-  ```
-
-  >**Note:** The username and password can be found in your `bosh.yml`. If you deployed BOSH using ARM template, the default username is `admin`, and the password can be found in the file `~/BOSH_DIRECTOR_ADMIN_PASSWORD`.
-
-3. Update the cloud foundry manifest `~/example_manifests/multiple-vm-cf.yml`.
-
-  1. Update the job `router_z1`
-
-    1. Set the router instance number to 2
-
-    2. Add a new static private IP
-
-    Example:
+1. Login to your BOSH director VM
 
     ```
-    - name: router_z1
-    instances: 2
-    resource_pool: resource_z1
-    templates:
-    - {name: gorouter, release: cf}
-    - {name: metron_agent, release: cf}
-    networks:
-    - name: cf_private
-      static_ips: [10.0.16.12, 10.0.16.22]
-    properties:
-      ...
+    bosh target 10.0.0.4
     ```
 
-  2. Update the job `ha_proxy_z1`
+    >**Note:** The username and password can be found in your `bosh.yml`. If you deployed BOSH using ARM template, the default username is `admin`, and the password can be found in the file `~/BOSH_DIRECTOR_ADMIN_PASSWORD`.
 
-    1. Add a new resource pool for HAProxy. If you do not use `haproxylb`, you need use your Azure Load Balancer name.
+1. Update the cloud foundry manifest `~/example_manifests/multiple-vm-cf.yml`.
 
-    2. Set the HAProxy instance number to 2
+    1. Update the job `router_z1`
 
-    3. Use the resource pool `resource_haproxy`
+        1. Set the router instance number to 2
 
-    4. Remove the `cf_public` network
+        1. Add a new static private IP
 
-    5. Add a new static private IP for the second HAProxy instance
+        Example:
 
-    6. Add the IP address of the second router
+        ```
+        - name: router_z1
+        instances: 2
+        resource_pool: resource_z1
+        templates:
+        - {name: gorouter, release: cf}
+        - {name: metron_agent, release: cf}
+        networks:
+        - name: cf_private
+          static_ips: [10.0.16.12, 10.0.16.22]
+        properties:
+          ...
+        ```
 
-    Example:
+    1. Update the job `ha_proxy_z1`
 
-    ```
-    resource_pools:
-    ...
-    - name: resource_haproxy
-      network: cf_private
-      stemcell:
-        name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-        version: latest
-      cloud_properties:
-        load_balancer: haproxylb
-        availability_set: haproxy
-        instance_type: Standard_D1
-        security_group: nsg-cf
-    ...
-    - name: ha_proxy_z1
-    instances: 2
-    resource_pool: resource_haproxy
-    templates:
-    - {name: haproxy, release: cf}
-    - {name: metron_agent, release: cf}
-    - {name: consul_agent, release: cf}
-    networks:
-    - name: cf_private
-      default: [gateway, dns]
-      static_ips: [10.0.16.4, 10.0.16.5]
-    properties:
-      ...
-      router:
-        servers:
-        - 10.0.16.12
-        - 10.0.16.22
-      ...
-    ```
+        1. Add a new resource pool for HAProxy. If you do not use `haproxylb`, you need use your Azure Load Balancer name.
 
-4. Deploy cloud foundry
+        1. Set the HAProxy instance number to 2
+
+        1. Use the resource pool `resource_haproxy`
+
+        1. Remove the `cf_public` network
+
+        1. Add a new static private IP for the second HAProxy instance
+
+        1. Add the IP address of the second router
+
+        Example:
+
+        ```
+        resource_pools:
+        ...
+        - name: resource_haproxy
+          network: cf_private
+          stemcell:
+            name: bosh-azure-hyperv-ubuntu-trusty-go_agent
+            version: latest
+          cloud_properties:
+            load_balancer: haproxylb
+            availability_set: haproxy
+            instance_type: Standard_D1
+            security_group: nsg-cf
+        ...
+        - name: ha_proxy_z1
+        instances: 2
+        resource_pool: resource_haproxy
+        templates:
+        - {name: haproxy, release: cf}
+        - {name: metron_agent, release: cf}
+        - {name: consul_agent, release: cf}
+        networks:
+        - name: cf_private
+          default: [gateway, dns]
+          static_ips: [10.0.16.4, 10.0.16.5]
+        properties:
+          ...
+          router:
+            servers:
+            - 10.0.16.12
+            - 10.0.16.22
+          ...
+        ```
+
+1. Deploy cloud foundry
 
   ```
   ./deploy_cloudfoundry.sh ~/example_manifests/multiple-vm-cf.yml

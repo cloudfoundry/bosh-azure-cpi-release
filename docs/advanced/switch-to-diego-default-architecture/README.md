@@ -1,12 +1,12 @@
 # Update your Cloud Foundry to use Diego on Azure
 
+>**NOTE:** If you have deployed your Cloud Foundry by following the latest [guidance](../../guidance.md) via ARM templates on Azure, you already have Diego as default architecture, and don't need to follow this guide.
+
 Cloud Foundry has used two architectures for managing application containers: Droplet Execution Agents (DEA) and Diego.
 With the DEA architecture, the Cloud Controller schedules and manages applications on the DEA nodes. 
 In the Diego architecture, Diego components replace the DEAs and the Health Manager (HM9000), and assume application scheduling and management responsibility from the Cloud Controller.
 
 This document describes the steps to update your Cloud Foundry to use Diego as default architecture on Azure.
-
->**NOTE:** If you have deployed your Cloud Foundry by following the latest [guidance](../../guidance.md) via ARM templates on Azure, you already have Diego as default architecture, and don't need to follow this guide.
 
 ## 1 Prerequisites
 
@@ -22,345 +22,346 @@ This document describes the steps to update your Cloud Foundry to use Diego as d
 
 1. Update manifest.
 
-  * Change for DEA nodes
+    * Change for DEA nodes
 
-    * If you want to keep DEA nodes, just keep the original manifest as what it is and go ahead to `Change for Diego`
+        * If you want to keep DEA nodes, just keep the original manifest as what it is and go ahead to `Change for Diego`
 
-      _You may want to migrate DEA applications to Diego, please refer to [guide](https://docs.cloudfoundry.org/adminguide/apps-enable-diego.html) to do migration after the deployment is done._
+            _You may want to migrate DEA applications to Diego, please refer to [guide](https://docs.cloudfoundry.org/adminguide/apps-enable-diego.html) to do migration after the deployment is done._
 
-    * If you want to remove DEA nodes, remove DEA and hm9000 related configuration out of the manifest
+        * If you want to remove DEA nodes, remove DEA and hm9000 related configuration out of the manifest
 
-      * remove jobs.hm9000_z1 and jobs.runner_z1
+            * remove jobs.hm9000_z1 and jobs.runner_z1
 
-        ```
-        - name: hm9000_z1
-          instances: 1
-          resource_pool: resource_z1
-          ...
-        ```
+                ```
+                - name: hm9000_z1
+                  instances: 1
+                  resource_pool: resource_z1
+                  ...
+                ```
 
-        ```
-        - name: runner_z1
-          instances: 1
-          resource_pool: resource_z1
-          ...
-        ```
-      * remove properties.dea_next and properties.hm9000
+                ```
+                - name: runner_z1
+                  instances: 1
+                  resource_pool: resource_z1
+                  ...
+                ```
 
-        ```
-        dea_next:
-          advertise_interval_in_seconds: 5
-          heartbeat_interval_in_seconds: 10
-          memory_mb: 33996
-          enable_ssl: true
-          ...
-        ```
+            * remove properties.dea_next and properties.hm9000
 
-        ```
-        hm9000:
-          url: https://hm9000.REPLACE_WITH_SYSTEM_DOMAIN
-          port: 5155
-          ...
-        ```
+                ```
+                dea_next:
+                  advertise_interval_in_seconds: 5
+                  heartbeat_interval_in_seconds: 10
+                  memory_mb: 33996
+                  enable_ssl: true
+                  ...
+                ```
 
-  * Change for Diego
+                ```
+                hm9000:
+                  url: https://hm9000.REPLACE_WITH_SYSTEM_DOMAIN
+                  port: 5155
+                  ...
+                ```
 
-    >**NOTE:** The versions and job specs below could be different in your environment, depending on which version of cf-release / diego-release you are using and how you deploy your Cloud Foundry.
+    * Change for Diego
 
-    * Add Diego related releases. Example:
+        >**NOTE:** The versions and job specs below could be different in your environment, depending on which version of cf-release / diego-release you are using and how you deploy your Cloud Foundry.
 
-      ```yaml
-      releases:
-      - {name: diego, version: 0.1476.0}
-      - {name: garden-linux, version: 0.338.0}
-      - {name: cflinuxfs2-rootfs , version: 1.16.0}
-      ```
+        * Add Diego related releases. Example:
 
-    * Add Diego related jobs. Example:
+            ```yaml
+            releases:
+            - {name: diego, version: 0.1476.0}
+            - {name: garden-linux, version: 0.338.0}
+            - {name: cflinuxfs2-rootfs , version: 1.16.0}
+            ```
 
-      ```yaml
-      jobs:
-      - name: database_z1
-        instances: 1
-        templates:
-        - name: consul_agent
-          release: cf
-        - name: etcd
-          release: cf
-        - name: bbs
-          release: diego
-        - name: metron_agent
-          release: cf
-        persistent_disk: 20480
-        resource_pool: resource_z1
-        networks:
-          - name: cf_private
-        update:
-          serial: true
-          max_in_flight: 1
+        * Add Diego related jobs. Example:
+
+            ```yaml
+            jobs:
+            - name: database_z1
+              instances: 1
+              templates:
+              - name: consul_agent
+                release: cf
+              - name: etcd
+                release: cf
+              - name: bbs
+                release: diego
+              - name: metron_agent
+                release: cf
+              persistent_disk: 20480
+              resource_pool: resource_z1
+              networks:
+                - name: cf_private
+              update:
+                serial: true
+                max_in_flight: 1
+              properties:
+                consul:
+                  agent:
+                    services:
+                      etcd: {}
+                metron_agent:
+                  zone: z1
+            - name: brain_z1
+              instances: 1
+              templates:
+              - name: consul_agent
+                release: cf
+              - name: auctioneer
+                release: diego
+              - name: converger
+                release: diego
+              - name: metron_agent
+                release: cf
+              resource_pool: resource_z1
+              networks:
+                - name: cf_private
+              update:
+                serial: true
+                max_in_flight: 1
+              properties:
+                metron_agent:
+                  zone: z1
+            - name: cell_z1
+              instances: 2
+              templates:
+              - name: consul_agent
+                release: cf
+              - name: rep
+                release: diego
+              - name: garden
+                release: garden-linux
+              - name: cflinuxfs2-rootfs-setup
+                release: cflinuxfs2-rootfs
+              - name: metron_agent
+                release: cf
+              resource_pool: resource_z1
+              networks:
+                - name: cf_private
+              update:
+                serial: false
+                max_in_flight: 1
+              properties:
+                metron_agent:
+                  zone: z1
+                diego:
+                  rep:
+                    zone: z1
+            - name: cc_bridge_z1
+              instances: 1
+              templates:
+              - name: consul_agent
+                release: cf
+              - name: stager
+                release: cf
+              - name: nsync
+                release: cf
+              - name: tps
+                release: cf
+              - name: cc_uploader
+                release: cf
+              - name: metron_agent
+                release: cf
+              resource_pool: resource_z1
+              networks:
+                - name: cf_private
+              update:
+                serial: false
+                max_in_flight: 1
+              properties:
+                metron_agent:
+                  zone: z1
+            - name: access_z1
+              instances: 1
+              templates:
+              - name: consul_agent
+                release: cf
+              - name: ssh_proxy
+                release: diego
+              - name: metron_agent
+                release: cf
+              - name: file_server
+                release: diego
+              resource_pool: resource_z1
+              networks:
+                - name: cf_private
+              update:
+                serial: false
+                max_in_flight: 1
+              properties:
+                metron_agent:
+                  zone: z1
+            - name: route_emitter_z1
+              instances: 1
+              templates:
+              - name: consul_agent
+                release: cf
+              - name: route_emitter
+                release: diego
+              - name: metron_agent
+                release: cf
+              resource_pool: resource_z1
+              networks:
+                - name: cf_private
+              update:
+                serial: false
+                max_in_flight: 1
+              properties:
+                metron_agent:
+                  zone: z1
+            ```
+
+    * Add diego properties. Example:
+
+        ```yaml
         properties:
-          consul:
-            agent:
-              services:
-                etcd: {}
-          metron_agent:
-            zone: z1
-      - name: brain_z1
-        instances: 1
-        templates:
-        - name: consul_agent
-          release: cf
-        - name: auctioneer
-          release: diego
-        - name: converger
-          release: diego
-        - name: metron_agent
-          release: cf
-        resource_pool: resource_z1
-        networks:
-          - name: cf_private
-        update:
-          serial: true
-          max_in_flight: 1
-        properties:
-          metron_agent:
-            zone: z1
-      - name: cell_z1
-        instances: 2
-        templates:
-        - name: consul_agent
-          release: cf
-        - name: rep
-          release: diego
-        - name: garden
-          release: garden-linux
-        - name: cflinuxfs2-rootfs-setup
-          release: cflinuxfs2-rootfs
-        - name: metron_agent
-          release: cf
-        resource_pool: resource_z1
-        networks:
-          - name: cf_private
-        update:
-          serial: false
-          max_in_flight: 1
-        properties:
-          metron_agent:
-            zone: z1
+          capi:
+            nsync:
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+              cc:
+                base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
+                basic_auth_password: REPLACE_WITH_PASSWORD
+            tps:
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+              cc:
+                base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
+                basic_auth_password: REPLACE_WITH_PASSWORD
+              traffic_controller_url: wss://doppler.REPLACE_WITH_SYSTEM_DOMAIN:443
+            tps_listener:
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+              cc:
+                base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
+                basic_auth_password: REPLACE_WITH_PASSWORD
+            stager:
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+              cc:
+                base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
+                basic_auth_password: REPLACE_WITH_PASSWORD
           diego:
+            auctioneer:
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+            bbs:
+              active_key_label: active
+              encryption_keys:
+              - label: active
+                passphrase: REPLACE_WITH_PASSWORD
+              ca_cert: ""
+              etcd:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+              require_ssl: false
+              server_cert: ""
+              server_key: ""
+            converger:
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
             rep:
-              zone: z1
-      - name: cc_bridge_z1
-        instances: 1
-        templates:
-        - name: consul_agent
-          release: cf
-        - name: stager
-          release: cf
-        - name: nsync
-          release: cf
-        - name: tps
-          release: cf
-        - name: cc_uploader
-          release: cf
-        - name: metron_agent
-          release: cf
-        resource_pool: resource_z1
-        networks:
-          - name: cf_private
-        update:
-          serial: false
-          max_in_flight: 1
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+              preloaded_rootfses: ["cflinuxfs2:/var/vcap/packages/cflinuxfs2/rootfs"]
+            route_emitter:
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+              nats:
+                machines: [REPLACE_WITH_NATS_IP]
+                password: REPLACE_WITH_PASSWORD
+                port: 4222
+                user: nats
+            ssl:
+              skip_cert_verify: true
+            ssh_proxy:
+              bbs:
+                ca_cert: ""
+                client_cert: ""
+                client_key: ""
+                require_ssl: false
+              enable_cf_auth: true
+              enable_diego_auth: false
+              host_key: |
+                REPLACE_WITH_SSH_HOST_KEY
+              uaa_secret: REPLACE_WITH_PASSWORD
+              uaa_token_url: https://uaa.REPLACE_WITH_SYSTEM_DOMAIN/oauth/token
+        ```
+
+        * Remember to change the REPLACE\_WITH* to proper values in your manifest
+
+        * For production, you should use your certs and keys to set above ca_cert, client_cert and client_key. And You should set 'ssl.skip_cert_verify' to false and set 'require_ssl' to true.  For cert configuration, please refer to this [guide](https://github.com/cloudfoundry/diego-release/blob/develop/docs/tls-configuration.md); for additional changes when ssl is enabled, please refer to documents and job specs in [diego-release](https://github.com/cloudfoundry/diego-release/).
+
+    * Add `properties.hm9000.port`. (In cf-release v238, even if hm9000 is not used, properties.hm9000.port is still requred.) Example:
+
+        ```yaml
         properties:
-          metron_agent:
-            zone: z1
-      - name: access_z1
-        instances: 1
-        templates:
-        - name: consul_agent
-          release: cf
-        - name: ssh_proxy
-          release: diego
-        - name: metron_agent
-          release: cf
-        - name: file_server
-          release: diego
-        resource_pool: resource_z1
-        networks:
-          - name: cf_private
-        update:
-          serial: false
-          max_in_flight: 1
+          hm9000:
+            port: 5525
+        ```
+
+    * Add/change `properties.cc.default_to_diego_backend` as true. This value will make Diego as default backend.
+
+        ```yaml
         properties:
-          metron_agent:
-            zone: z1
-      - name: route_emitter_z1
-        instances: 1
-        templates:
-        - name: consul_agent
-          release: cf
-        - name: route_emitter
-          release: diego
-        - name: metron_agent
-          release: cf
-        resource_pool: resource_z1
-        networks:
-          - name: cf_private
-        update:
-          serial: false
-          max_in_flight: 1
-        properties:
-          metron_agent:
-            zone: z1
-      ```
-
-  * Add diego properties. Example:
-
-    ```yaml
-    properties:
-      capi:
-        nsync:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
           cc:
-            base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
-            basic_auth_password: REPLACE_WITH_PASSWORD
-        tps:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-          cc:
-            base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
-            basic_auth_password: REPLACE_WITH_PASSWORD
-          traffic_controller_url: wss://doppler.REPLACE_WITH_SYSTEM_DOMAIN:443
-        tps_listener:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-          cc:
-            base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
-            basic_auth_password: REPLACE_WITH_PASSWORD
-        stager:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-          cc:
-            base_url: https://api.REPLACE_WITH_SYSTEM_DOMAIN
-            basic_auth_password: REPLACE_WITH_PASSWORD
-      diego:
-        auctioneer:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-        bbs:
-          active_key_label: active
-          encryption_keys:
-          - label: active
-            passphrase: REPLACE_WITH_PASSWORD
-          ca_cert: ""
-          etcd:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-          require_ssl: false
-          server_cert: ""
-          server_key: ""
-        converger:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-        rep:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-          preloaded_rootfses: ["cflinuxfs2:/var/vcap/packages/cflinuxfs2/rootfs"]
-        route_emitter:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-          nats:
-            machines: [REPLACE_WITH_NATS_IP]
-            password: REPLACE_WITH_PASSWORD
-            port: 4222
-            user: nats
-        ssl:
-          skip_cert_verify: true
-        ssh_proxy:
-          bbs:
-            ca_cert: ""
-            client_cert: ""
-            client_key: ""
-            require_ssl: false
-          enable_cf_auth: true
-          enable_diego_auth: false
-          host_key: |
-            REPLACE_WITH_SSH_HOST_KEY
-          uaa_secret: REPLACE_WITH_PASSWORD
-          uaa_token_url: https://uaa.REPLACE_WITH_SYSTEM_DOMAIN/oauth/token
-    ```
-
-    * Remember to change the REPLACE\_WITH* to proper values in your manifest
-
-    * For production, you should use your certs and keys to set above ca_cert, client_cert and client_key. And You should set 'ssl.skip_cert_verify' to false and set 'require_ssl' to true.  For cert configuration, please refer to this [guide](https://github.com/cloudfoundry/diego-release/blob/develop/docs/tls-configuration.md); for additional changes when ssl is enabled, please refer to documents and job specs in [diego-release](https://github.com/cloudfoundry/diego-release/).
-
-  * Add properties.hm9000.port. (In cf-release v238, even if hm9000 is not used, properties.hm9000.port is still requred.) Example:
-
-    ```yaml
-    properties:
-      hm9000:
-        port: 5525
-    ```
-
-  * Add (change) properties.cc.default_to_diego_backend as true. This value will make Diego as default backend.
-
-    ```yaml
-    properties:
-      cc:
-        default_to_diego_backend: true
-    ```
+            default_to_diego_backend: true
+        ```
 
 1. Deploy
 
-  * Log on to your dev-box and login to your BOSH director VM. Example:
+    * Log on to your dev-box and login to your BOSH director VM. Example:
 
-    ```
-    bosh target 10.0.0.4
-    ```
+        ```
+        bosh target 10.0.0.4
+        ```
 
-  * Upload addition Diego releases besides cf-release and stemcell. Example:
+    * Upload addition Diego releases besides cf-release and stemcell. Example:
 
-    ```
-    bosh upload stemcell https://bosh.io/d/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent?v=3232.11 --sha1 575a284a3e314a5e1dc78fed8ff73e8a1da9b78b --skip-if-exists
-    bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=238 --sha1 fa6d35300f4fcd74a75fd8c7138f592acfcb32b0 --skip-if-exists
-    bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/diego-release?v=0.1476.0 --sha1 4b66fde250472e47eb2a0151bb676fc1be840f47 --skip-if-exists
-    bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/garden-linux-release?v=0.338.0 --sha1 432225d88edc9731be4453cb61eba33fa829ebdc --skip-if-exists
-    bosh upload release https://bosh.io/d/github.com/cloudfoundry/cflinuxfs2-rootfs-release?v=1.16.0 --sha1 acfa1c4aad1fa9ef4623bf189cbab788a53f678e --skip-if-exists
-    ```
+        ```
+        bosh upload stemcell https://bosh.io/d/stemcells/bosh-azure-hyperv-ubuntu-trusty-go_agent?v=3232.11 --sha1 575a284a3e314a5e1dc78fed8ff73e8a1da9b78b --skip-if-exists
+        bosh upload release https://bosh.io/d/github.com/cloudfoundry/cf-release?v=238 --sha1 fa6d35300f4fcd74a75fd8c7138f592acfcb32b0 --skip-if-exists
+        bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/diego-release?v=0.1476.0 --sha1 4b66fde250472e47eb2a0151bb676fc1be840f47 --skip-if-exists
+        bosh upload release https://bosh.io/d/github.com/cloudfoundry-incubator/garden-linux-release?v=0.338.0 --sha1 432225d88edc9731be4453cb61eba33fa829ebdc --skip-if-exists
+        bosh upload release https://bosh.io/d/github.com/cloudfoundry/cflinuxfs2-rootfs-release?v=1.16.0 --sha1 acfa1c4aad1fa9ef4623bf189cbab788a53f678e --skip-if-exists
+        ```
 
-  * deploy
+    * deploy
 
-    ```
-    bosh deployment ~/example_manifests/multiple-vm-cf.yml
-    bosh -n deploy
-    ```
+        ```
+        bosh deployment ~/example_manifests/multiple-vm-cf.yml
+        bosh -n deploy
+        ```
 
 
 ## 3 Push your first application to Diego

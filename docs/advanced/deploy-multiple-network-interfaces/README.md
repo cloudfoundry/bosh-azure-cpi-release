@@ -21,8 +21,8 @@ It is assumed that you have followed the [guidance](../../guidance.md) via ARM t
 Besides the existing subnets, create 2 more subnets (called `CloudFoundry2` and `CloudFoundry3`) for the new NICs. When a VM has multiple NICs, it is recommended that each NIC is in seperate subnet.
 
 ```
-azure network vnet subnet create --resource-group bosh-res-group --vnet-name boshvnet-crp --name CloudFoundry2 --address-prefix 10.0.40.0/24
-azure network vnet subnet create --resource-group bosh-res-group --vnet-name boshvnet-crp --name CloudFoundry3 --address-prefix 10.0.41.0/24
+az network vnet subnet create --resource-group bosh-res-group --vnet-name boshvnet-crp --name CloudFoundry2 --address-prefix 10.0.40.0/24
+az network vnet subnet create --resource-group bosh-res-group --vnet-name boshvnet-crp --name CloudFoundry3 --address-prefix 10.0.41.0/24
 ```
 >**NOTE:** All NICs must be connected to Subnets within the same VNET, you cannot deploy a VM on multiple VNETs.
 
@@ -34,7 +34,7 @@ azure network vnet subnet create --resource-group bosh-res-group --vnet-name bos
 
   Here you need 3 NICs for instance `cell_z1`, so you can use `Standard_D3` which supports up to 4 NICs.
 
-  You can create a new resource_pool (called `resource2_z1`), and set `instance_type` to `Standard_D3`. (if `instance_type` of the resource_pool already meets the requirement of VM size, you don't have to create new resource_pool) 
+  You can create a new `resource_pool` (called `resource2_z1`), and set `instance_type` to `Standard_D3`. (if `instance_type` of the resource_pool already meets the requirement of VM size, you don't have to create new resource_pool) 
 
   ```yaml
   resource_pools:

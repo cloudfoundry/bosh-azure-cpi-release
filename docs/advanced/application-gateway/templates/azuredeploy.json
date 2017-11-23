@@ -182,7 +182,7 @@
             "properties": {
               "protocol": "Http",
               "host": "[concat('login.', parameters('systemDomain'))]",
-              "path": "/login",
+              "path": "/",
               "interval": 60,
               "timeout": 60,
               "unhealthyThreshold": 3
