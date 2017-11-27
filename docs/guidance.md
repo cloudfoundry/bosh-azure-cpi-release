@@ -52,6 +52,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
   * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
   * [Backup and restore Cloud Foundry](./advanced/backup-and-restore-cloud-foundry/)
+  * [SSH into the application](./advanced/cf-ssh-application/)
 * Service Brokers
   * [Meta Azure Service Broker](https://github.com/Azure/meta-azure-service-broker)
   * [MySQL Service](./advanced/deploy-mysql/)

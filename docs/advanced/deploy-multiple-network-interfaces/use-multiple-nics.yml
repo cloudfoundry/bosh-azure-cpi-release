@@ -1,0 +1,10 @@
+- type: replace
+  path: /instance_groups/name=diego-cell/vm_type
+  value: standard_d3
+- type: replace
+  path: /instance_groups/name=diego-cell/networks
+  value:
+  - name: default
+    default: [gateway, dns]
+  - name: network2
+  - name: network3

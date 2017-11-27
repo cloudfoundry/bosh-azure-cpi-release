@@ -9,18 +9,7 @@ Microsoft Azure Application Gateway is a dedicated virtual appliance, providing 
 
 ## Pre-requisites
 
-* Setup a Cloud Foundry deployment
-
-* Update the manifest to remove HA Proxy, for example remove *ha_proxy_z1* job in following sample file:
-
-  ```
-  - default_networks:
-  - name: cf1
-  instances: 1
-  name: ha_proxy_z1
-  networks:
-  ...
-  ```
+* Follow the [guidance](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md) to setup a Cloud Foundry deployment
 
 * Prepare your certificates in the `.pfx` format
 
@@ -34,6 +23,7 @@ Microsoft Azure Application Gateway is a dedicated virtual appliance, providing 
 ## Configure the CF deployment for Application Gateway
 
 ### 1. Create Application Gateway 
+
 To create the application gateway, you need to create a public IP and a subnet, then you can enable/configure the optional features, like SSL offloading. You can complete these steps through ARM template or scripts. This applies to both new and updating deployments.
 
 #### Creating with ARM templates (**RECOMMENDED**)
@@ -57,27 +47,28 @@ base64 domain.name.pfx | tr -d '\n'
 
 #### Update Cloud Foundry manifest
 
-Add `application_gateway` to the corresponding `cloud_properties` of routers in `resource_pools`:
+Update the cloud config from
 
 ```
-- cloud_properties:
-    instance_type: Standard_F1
-    application_gateway: <application-gateway-name>
-  env:
-    bosh:
-      password: *********************************************************************************************************
-  name: router_z1
-  network: cf1
-  stemcell:
-    name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-    version: latest
+- name: cf-router-network-properties
+  cloud_properties:
+    load_balancer: ((load_balancer_name))
+```
+
+to
+
+```
+- name: cf-router-network-properties
+  cloud_properties:
+    application_gateway: ((application_gateway_name))
 ```
 
 #### Update Cloud Foundry deployment
 
+Remove `load_balancer_name` and specify `application_gateway_name` in `deploy_cloud_foundry.sh`, and run the script.
+
 ```
-bosh deployment multiple-vm-cf.yml
-bosh deploy -n
+./deploy_cloud_foundry.sh
 ```
     
 ### 3. Configure DNS for your Cloud Foundry domain

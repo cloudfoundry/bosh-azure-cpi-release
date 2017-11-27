@@ -1,5 +1,7 @@
 # Deploy multiple HAProxy instances behind Azure Load Balancer
 
+>**NOTE:** The [cf-deployment](https://github.com/cloudfoundry/cf-deployment) doesn't use haproxy now. The guidance is only for cf-release.
+
 ## Overview
 
 This guidance describes how to setup multiple HAProxy instances for Cloud Foundry. Compared to a single instance of HAProxy, multiple HAProxy instances provide high-available load balancing functionalities to your Cloud Foundry traffic. 

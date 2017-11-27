@@ -1,6 +1,6 @@
 # Deploy BOSH on Azure via ARM templates
 
->**NOTE**: This guidance is for the version `v2.7.0` of [bosh-setup template](https://github.com/Azure/azure-quickstart-templates/tree/137cb18522ae28175f9e96715f93104d113b338f/bosh-setup). The `v2.7.0` is based on [cf-release](https://github.com/cloudfoundry/cf-release). The latest version `v3.0.0+` of the template is based on [cf-deployment](https://github.com/cloudfoundry/cf-deployment). If you would like to follow the guidance for the latest template, please go to the [latest doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/get-started/via-arm-templates/deploy-bosh-via-arm-templates.md).
+>**NOTE**: This guidance is for the version `v3.0.0+` of [bosh-setup template](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup). The `v3.0.0+` is based on [cf-deployment](https://github.com/cloudfoundry/cf-deployment). The older version `v2.7.0` of the template is based on [cf-release](https://github.com/cloudfoundry/cf-release). If you would like to follow the guidance for the older template, please go to the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/a5a3f6c3d0c773aa274fe96f2e5fee4ecf3d7b00/docs/get-started/via-arm-templates/deploy-bosh-via-arm-templates.md).
 
 # 1 Prepare Azure Resources
 
@@ -10,24 +10,24 @@ Here we’ll create the following Azure resources that’s required for deployin
 * Three reserved public IPs
   * For dev-box
   * For Cloud Foundry
-  * For Bosh
 * A Virtual Network
 * A Virtual Machine as your dev-box
 * A Bosh director if you need
+* A Cloud Foundry deployment if you need
 
 The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup) ARM template can help you to deploy all the above resources on Azure. Just click the button below with the following parameters:
 
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2F137cb18522ae28175f9e96715f93104d113b338f%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
-<a href="https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2F137cb18522ae28175f9e96715f93104d113b338f%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
+<a href="https://portal.azure.us/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fbosh-setup%2Fazuredeploy.json" target="_blank">
     <img src="http://azuredeploy.net/AzureGov.png"/>
 </a>
 
 | Name | Required | Default Value | Description |
 |:----:|:--------:|:-------------:|:----------- |
 | vmName | **YES** | | Name of Virtual Machine |
-| ubuntuOSVersion | NO | 14.04.5-LTS | OS version of Ubuntu |
+| ubuntuOSVersion | NO | 16.04.0-LTS | OS version of Ubuntu |
 | adminUsername | **YES** | | Username for the Virtual Machines. **Never use root as the adminUsername**. |
 | sshKeyData | **YES** | | SSH **RSA** public key file as a string. |
 | environment | **YES**  | | Different environments in Azure. Choose AzureCloud for Global Azure, choose AzureChinaCloud for Azure China Cloud, choose AzureUSGovernment for Azure Government, choose AzureGermanCloud for German cloud. |
@@ -35,6 +35,7 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 | clientID | **YES**  | | ID of the client |
 | clientSecret | **YES** | | secret of the client |
 | autoDeployBosh | NO | enabled | The flag allowing to deploy the Bosh director. |
+| autoDeployCloudFoundry | NO | enabled | The flag allowing to deploy Cloud Foundry automatically or not. |
 | boshVmSize | NO | Standard_D2_v2 | The VM size of the BOSH director VM. Please check if the region support this VM size https://azure.microsoft.com/en-us/regions/#services. For more information about virtual machine sizes, see https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/ |
 | \_artifactsLocation | NO | https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/ | The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated. |
 | azureStackDomain | NO | NotApplicableIfEnvironmentIsNotAzureStack | Domain of the Azure Stack deployment. |
@@ -76,13 +77,19 @@ The service principal includes `tenantID`, `clientID` and `clientSecret`. If you
 
 ### 1.1.3 Deploy Bosh Director Automatically
 
-By default, `autoDeployBosh` is set to `enabled`. The Bosh director will be deployed by the template. As a result, the deployment time of `bosh-setup` template will be much longer (~1h).
+By default, `autoDeployBosh` is set to `enabled`. The Bosh director will be deployed automatically by the template. As a result, the deployment time of `bosh-setup` template will be much longer (~1h).
 
-If you would like to deploy Bosh using a more customized `bosh.yml`, you can set `autoDeployBosh` to `disabled`. After the deployment succeeds, you can login the dev-box, update `~/bosh.yml`, and run `./deploy_bosh.sh`.
+If `autoDeployBosh` is set to `disabled`, you can [login the dev-box](#2-login-your-dev-box) after the deployment succeeds, and run `./deploy_bosh.sh`. Additionally, you can check the ops file in [bosh-deployment](https://github.com/cloudfoundry/bosh-deployment) to customize your BOSH director.
+
+### 1.1.3 Deploy Cloud Foundry Automatically
+
+By default, `autoDeployCloudFoundry` is set to `enabled`. The Cloud Foundry will be deployed automatically after the BOSH director is deployed. Since the CF deployment takes a long time, so the template will run it background. It means, after the BOSH director is deployed, the status of the template deployment will become `Succeeded`. You need to login the dev-box, and check `~/install.log` whether the CF deployment is finished.
+
+If `autoDeployCloudFoundry` is set to `disabled`, you can [login the dev-box](#2-login-your-dev-box) after the deployment succeeds, and run `./deploy_cloud_foundry.sh`. Additionally, you can check the ops file in [cf-deployment](https://github.com/cloudfoundry/cf-deployment) to customize your Cloud Foundry.
 
 ## 1.2 Advanced Configurations
 
-If you want to customize your `bosh-setup` template, you can modify the following variables in [azuredeploy.json](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2F137cb18522ae28175f9e96715f93104d113b338f%2Fbosh-setup%2Fazuredeploy.json).
+If you want to customize your `bosh-setup` template, you can modify the following variables in [azuredeploy.json](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FAzure%2Fazure-quickstart-templates%2Fmaster%2Fbosh-setup%2Fazuredeploy.json).
 
 | Name | Default Value |
 |:----:|:-------------:|
@@ -107,7 +114,7 @@ If you want to customize your `bosh-setup` template, you can modify the followin
 
 # 2 Login your dev-box
 
-After the deployment succeeded, you can find the resource group with the name you specified on Azure Portal. The VM in the resource group is your dev-box.
+After the template deployment succeeded, you can find the resource group with the name you specified on Azure Portal. The VM in the resource group is your dev-box.
 
 * For Linux/Mac Users
 
@@ -123,9 +130,9 @@ After the deployment succeeded, you can find the resource group with the name yo
 
   1. Open **Putty**.
   1. Fill in `Public IP address/DNS name label` of the dev-box.
-  2. Before selecting **Open**, click the `Connection > SSH > Auth` tab to choose your private key (.ppk).
+  1. Before selecting **Open**, click the `Connection > SSH > Auth` tab to choose your private key (.ppk).
 
-After you login, you can check `~/install.log` to determine the status of the deployment. When the deployment succeeds, you will find **Finish** at the end of the log file and no **ERROR** message in it.
+After you login, you can check `~/install.log` to determine the status of the deployment. After the BOSH director is created, you can run `~/login_bosh.sh` to login the BOSH director. After Cloud Foundry is deployed, you can run `~/login_cloud_foundry.sh` to login Cloud Foundry.
 
 # 3 Deploy BOSH
 

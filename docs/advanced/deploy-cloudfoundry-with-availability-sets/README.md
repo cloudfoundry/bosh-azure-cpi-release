@@ -14,39 +14,27 @@ There are two types of Microsoft Azure platform events that can affect the avail
 
 ## How
 
-1. Open your manifest, and configure an availability set into your `resource_pools`.
+1. Add a new `vm_extension` with the property `availability_set` into your cloud config.
 
-   * Specify `availability_set` in `cloud_properties`
+    ```
+    vm_extensions:
+    - name: availability-set-properties
+      cloud_properties:
+        availability_set: <availability-set-name>
+    ```
 
-      ```
-      - name: resource_pool_with_availability_set
-        network: default
-        stemcell:
-          name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-          version: latest
-        cloud_properties:
-          availability_set: <availability-set-name>
-          instance_type: Standard_D1
-      ```
-
-    if `availability_set` is not specified in `cloud_properties`, Azure CPI will pick `env.bosh.group` as the availability set name.
+    if `availability_set` is not specified, Azure CPI will pick `env.bosh.group` as the availability set name.
 
     If the specified availability set does not exist, Azure CPI will create it automatically.
 
-1. You can specify the `resource_pool` as `resource_pool_with_availability_set` in your job. Then these 2 VMs of this job will be put into the availability set `<availability-set-name>`.
+1. You can add the vm extension `availability-set-properties` into `vm_extensions` of your instance group. Then the VMs of this instance group will be put into the availability set `<availability-set-name>`.
 
-    ```
-    - name: router_z1
-      instances: 2
-      resource_pool: resource_pool_with_availability_set
-      templates:
-      - {name: gorouter, release: cf}
-      - {name: metron_agent, release: cf}
-      networks:
-      - name: default
-        static_ips: [10.0.16.12, 10.0.16.22]
-      properties:
-        ...
-    ```
+    1. Download the ops file [`use-availability-set.yml`](./use-availability-set.yml) to `~/use-availability-set.yml`.
+
+    1. Add the line `-o ~/use-availability-set.yml` to the `bosh -n -d cf deploy` command in `deploy_cloud_foundry.sh`.
 
 1. Deploy your Cloud Foundry.
+
+    ```
+    ./deploy_cloud_foundry.sh
+    ```
