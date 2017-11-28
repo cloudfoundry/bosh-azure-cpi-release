@@ -409,9 +409,26 @@ module Bosh::AzureCloud
         disk_id = DiskId.parse(disk_id, azure_properties)
         vm_name = instance_id.vm_name()
         disk_name = disk_id.disk_name()
+
+        vm = @vm_manager.find(instance_id)
+
+        # Workaround for issue #280
+        # Issue root cause: Attaching a data disk to a VM whose OS disk is busy might lead to OS hang.
+        #                   If `use_root_disk` is true in `resource_pools`, release packages will be copied to OS disk before attaching data disk,
+        #                   it will continuously write the data to OS disk, that is why OS disk is busy.
+        # Workaround: Sleep 30 seconds before attaching data disk, to wait for completion of data writing.
+        has_ephemeral_disk = false
+        vm[:data_disks].each do |disk|
+          has_ephemeral_disk = true if is_ephemeral_disk?(disk[:name])
+        end
+        unless has_ephemeral_disk
+          @logger.debug("Sleep 30 seconds before attaching data disk - workaround for issue #280")
+          sleep(30)
+        end
+
         if @use_managed_disks
           disk = @disk_manager2.get_data_disk(disk_id)
-          vm_zone = @vm_manager.find(instance_id)[:zone]
+          vm_zone = vm[:zone]
           unless instance_id.use_managed_disks?()
             cloud_error("Cannot attach a managed disk to a VM with unmanaged disks") unless disk.nil?
             @logger.debug("attach_disk - although use_managed_disks is enabled, will still attach the unmanaged disk `#{disk_name}' to the VM `#{vm_name}' with unmanaged disks")
