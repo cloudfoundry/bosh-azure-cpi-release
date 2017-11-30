@@ -49,304 +49,129 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
     end
 
-    context "when network interfaces are found" do
-      context "when the first one of the network interface array is the primary NIC" do
-        let(:result) {
-          {
-            "value" => [
-              {
-                "name"  => "#{instance_id}-0",
-                "id"  => "a",
-                "location"  => "b",
-                "tags"  => {},
-                "properties"  => {
-                  "provisioningState"  => "c",
-                  "ipConfigurations"  => [
-                    {
-                      "id"  => "d0",
-                      "properties"  => {
-                        "primary" => true,
-                        "privateIPAddress"  => "e0",
-                        "privateIPAllocationMethod"  => "f0"
-                      }
+    context "when network interfaces are found and some of them have the keyword in the name" do
+      let(:result) {
+        {
+          "value" => [
+            {
+              "name"  => "#{instance_id}-0",
+              "id"  => "a",
+              "location"  => "b",
+              "tags"  => {},
+              "properties"  => {
+                "provisioningState"  => "c",
+                "ipConfigurations"  => [
+                  {
+                    "id"  => "d0",
+                    "properties"  => {
+                      "privateIPAddress"  => "e0",
+                      "privateIPAllocationMethod"  => "f0"
                     }
-                  ],
-                  "dnsSettings"  => {
-                     "dnsServers"  => [
-                        "g",
-                        "h"
-                     ]
                   }
-                }
-              },
-              {
-                "name"  => "#{instance_id}-1",
-                "id"  => "a",
-                "location"  => "b",
-                "tags"  => {},
-                "properties"  => {
-                  "provisioningState"  => "c",
-                  "ipConfigurations"  => [
-                    {
-                      "id"  => "d1",
-                      "properties"  => {
-                        "privateIPAddress"  => "e1",
-                        "privateIPAllocationMethod"  => "f1"
-                      }
-                    }
-                  ],
-                  "dnsSettings"  => {
-                     "dnsServers"  => [
-                        "g",
-                        "h"
-                     ]
-                  }
+                ],
+                "dnsSettings"  => {
+                   "dnsServers"  => [
+                      "g",
+                      "h"
+                   ]
                 }
               }
-            ]
-          }.to_json
-        }
-        let(:network_interface_0) {
-          {
-            :id=>"a",
-            :name=>"#{instance_id}-0",
-            :location=>"b",
-            :tags=>{},
-            :provisioning_state=>"c",
-            :dns_settings=>["g", "h"],
-            :ip_configuration_id=>"d0",
-            :private_ip=>"e0",
-            :private_ip_allocation_method=>"f0",
-            :primary => true
-          }
-        }
-        let(:network_interface_1) {
-          {
-            :id=>"a",
-            :name=>"#{instance_id}-1",
-            :location=>"b",
-            :tags=>{},
-            :provisioning_state=>"c",
-            :dns_settings=>["g", "h"],
-            :ip_configuration_id=>"d1",
-            :private_ip=>"e1",
-            :private_ip_allocation_method=>"f1"
-          }
-        }
-
-        it "should return network interfaces" do
-          stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
-            }.to_json,
-            :headers => {})
-          stub_request(:get, network_interfaces_url).to_return(
-            :status => 200,
-            :body => result,
-            :headers => {
-            })
-
-          expect(
-            azure_client2.list_network_interfaces_by_keyword(resource_group, instance_id)
-          ).to eq([network_interface_0, network_interface_1])
-        end
-      end
-
-      context "when the first one of the network interface array is not the primary NIC" do
-        let(:result) {
-          {
-            "value" => [
-              {
-                "name"  => "#{instance_id}-0",
-                "id"  => "a",
-                "location"  => "b",
-                "tags"  => {},
-                "properties"  => {
-                  "provisioningState"  => "c",
-                  "ipConfigurations"  => [
-                    {
-                      "id"  => "d0",
-                      "properties"  => {
-                        "privateIPAddress"  => "e0",
-                        "privateIPAllocationMethod"  => "f0"
-                      }
+            },
+            {
+              "name"  => "#{instance_id}-1",
+              "id"  => "a",
+              "location"  => "b",
+              "tags"  => {},
+              "properties"  => {
+                "provisioningState"  => "c",
+                "ipConfigurations"  => [
+                  {
+                    "id"  => "d1",
+                    "properties"  => {
+                      "privateIPAddress"  => "e1",
+                      "privateIPAllocationMethod"  => "f1"
                     }
-                  ],
-                  "dnsSettings"  => {
-                     "dnsServers"  => [
-                        "g",
-                        "h"
-                     ]
                   }
-                }
-              },
-              {
-                "name"  => "#{instance_id}-1",
-                "id"  => "a",
-                "location"  => "b",
-                "tags"  => {},
-                "properties"  => {
-                  "provisioningState"  => "c",
-                  "ipConfigurations"  => [
-                    {
-                      "id"  => "d1",
-                      "properties"  => {
-                        "primary" => true,
-                        "privateIPAddress"  => "e1",
-                        "privateIPAllocationMethod"  => "f1"
-                      }
-                    }
-                  ],
-                  "dnsSettings"  => {
-                     "dnsServers"  => [
-                        "g",
-                        "h"
-                     ]
-                  }
+                ],
+                "dnsSettings"  => {
+                   "dnsServers"  => [
+                      "g",
+                      "h"
+                   ]
                 }
               }
-            ]
-          }.to_json
-        }
-        let(:network_interface_0) {
-          {
-            :id=>"a",
-            :name=>"#{instance_id}-0",
-            :location=>"b",
-            :tags=>{},
-            :provisioning_state=>"c",
-            :dns_settings=>["g", "h"],
-            :ip_configuration_id=>"d0",
-            :private_ip=>"e0",
-            :private_ip_allocation_method=>"f0"
-          }
-        }
-        let(:network_interface_1) {
-          {
-            :id=>"a",
-            :name=>"#{instance_id}-1",
-            :location=>"b",
-            :tags=>{},
-            :provisioning_state=>"c",
-            :dns_settings=>["g", "h"],
-            :ip_configuration_id=>"d1",
-            :private_ip=>"e1",
-            :private_ip_allocation_method=>"f1",
-            :primary => true
-          }
-        }
-
-        it "should return network interfaces" do
-          stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
-            }.to_json,
-            :headers => {})
-          stub_request(:get, network_interfaces_url).to_return(
-            :status => 200,
-            :body => result,
-            :headers => {
-            })
-
-          expect(
-            azure_client2.list_network_interfaces_by_keyword(resource_group, instance_id)
-          ).to eq([network_interface_1, network_interface_0])
-        end
-      end
-
-      context "when some of the network interface array have the keyword in the name" do
-        let(:result) {
-          {
-            "value" => [
-              {
-                "name"  => "#{instance_id}-0",
-                "id"  => "a",
-                "location"  => "b",
-                "tags"  => {},
-                "properties"  => {
-                  "provisioningState"  => "c",
-                  "ipConfigurations"  => [
-                    {
-                      "id"  => "d0",
-                      "properties"  => {
-                        "primary" => true,
-                        "privateIPAddress"  => "e0",
-                        "privateIPAllocationMethod"  => "f0"
-                      }
+            },
+            {
+              "name"  => "the-name-witout-keyword",
+              "id"  => "a",
+              "location"  => "b",
+              "tags"  => {},
+              "properties"  => {
+                "provisioningState"  => "c",
+                "ipConfigurations"  => [
+                  {
+                    "id"  => "d2",
+                    "properties"  => {
+                      "privateIPAddress"  => "e2",
+                      "privateIPAllocationMethod"  => "f2"
                     }
-                  ],
-                  "dnsSettings"  => {
-                     "dnsServers"  => [
-                        "g",
-                        "h"
-                     ]
                   }
-                }
-              },
-              {
-                "name"  => "the-name-witout-keyword",
-                "id"  => "a",
-                "location"  => "b",
-                "tags"  => {},
-                "properties"  => {
-                  "provisioningState"  => "c",
-                  "ipConfigurations"  => [
-                    {
-                      "id"  => "d1",
-                      "properties"  => {
-                        "privateIPAddress"  => "e1",
-                        "privateIPAllocationMethod"  => "f1"
-                      }
-                    }
-                  ],
-                  "dnsSettings"  => {
-                     "dnsServers"  => [
-                        "g",
-                        "h"
-                     ]
-                  }
+                ],
+                "dnsSettings"  => {
+                   "dnsServers"  => [
+                      "g",
+                      "h"
+                   ]
                 }
               }
-            ]
-          }.to_json
+            }
+          ]
+        }.to_json
+      }
+      let(:network_interface_0) {
+        {
+          :id=>"a",
+          :name=>"#{instance_id}-0",
+          :location=>"b",
+          :tags=>{},
+          :provisioning_state=>"c",
+          :dns_settings=>["g", "h"],
+          :ip_configuration_id=>"d0",
+          :private_ip=>"e0",
+          :private_ip_allocation_method=>"f0"
         }
-        let(:network_interface_0) {
-          {
-            :id=>"a",
-            :name=>"#{instance_id}-0",
-            :location=>"b",
-            :tags=>{},
-            :provisioning_state=>"c",
-            :dns_settings=>["g", "h"],
-            :ip_configuration_id=>"d0",
-            :private_ip=>"e0",
-            :private_ip_allocation_method=>"f0",
-            :primary => true
-          }
+      }
+      let(:network_interface_1) {
+        {
+          :id=>"a",
+          :name=>"#{instance_id}-1",
+          :location=>"b",
+          :tags=>{},
+          :provisioning_state=>"c",
+          :dns_settings=>["g", "h"],
+          :ip_configuration_id=>"d1",
+          :private_ip=>"e1",
+          :private_ip_allocation_method=>"f1"
         }
+      }
 
-        it "should return network interfaces with the keyword" do
-          stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
-            }.to_json,
-            :headers => {})
-          stub_request(:get, network_interfaces_url).to_return(
-            :status => 200,
-            :body => result,
-            :headers => {
-            })
+      it "should return network interfaces" do
+        stub_request(:post, token_uri).to_return(
+          :status => 200,
+          :body => {
+            "access_token" => valid_access_token,
+            "expires_on" => expires_on
+          }.to_json,
+          :headers => {})
+        stub_request(:get, network_interfaces_url).to_return(
+          :status => 200,
+          :body => result,
+          :headers => {
+          })
 
-          expect(
-            azure_client2.list_network_interfaces_by_keyword(resource_group, instance_id)
-          ).to eq([network_interface_0])
-        end
+        expect(
+          azure_client2.list_network_interfaces_by_keyword(resource_group, instance_id)
+        ).to eq([network_interface_0, network_interface_1])
       end
     end
   end

@@ -162,7 +162,7 @@ module Bosh::AzureCloud
     #
     # @param [String] resource_group_name  - Name of resource group.
     # @param [Hash]   vm_params            - Parameters for creating the virtual machine.
-    # @param [Array]  network_interfaces   - Network Interface Instances. network_interfaces[0] will be picked as the primary network and able to bind to public ip or load balancers.
+    # @param [Array]  network_interfaces   - Network Interface Instances. network_interfaces[0] will be picked as the primary network and bound to public ip or load balancers.
     # @param [Hash]   availability_set     - Availability set.
     #
     # ==== vm_params
@@ -632,12 +632,7 @@ module Bosh::AzureCloud
 
         vm[:network_interfaces] = []
         properties['networkProfile']['networkInterfaces'].each do |nic_properties|
-          network_interface = get_network_interface(nic_properties['id'])
-          if network_interface[:primary]
-            vm[:network_interfaces].insert(0, network_interface)
-          else
-            vm[:network_interfaces].push(network_interface)
-          end
+          vm[:network_interfaces].push(get_network_interface(nic_properties['id']))
         end
 
         boot_diagnostics = properties.fetch('diagnosticsProfile', {}).fetch('bootDiagnostics', {})
@@ -1394,22 +1389,22 @@ module Bosh::AzureCloud
     #
     # @param [String] resource_group_name - Name of resource group.
     # @param [Hash] nic_params            - Parameters for creating the network interface.
-    # @param [Hash] subnet                - The subnet which the network interface is bound to.
-    # @param [Hash] tags                  - The tags of the network interface.
-    # @param [Hash] load_balancer         - The load balancer which the network interface is bound to.
-    # @param [Hash] application_gateway   - The application gateway which the network interface is bound to.
     #
     #  ==== Params
     #
     # Accepted key/value pairs are:
     # * +:name+                       - String. Name of network interface.
     # * +:location+                   - String. The location where the network interface will be created.
+    # * +:tags                        - Hash. The tags of the network interface.
     # * +:ipconfig_name+              - String. The name of ipConfigurations for the network interface.
     # * +:private_ip                  - String. Private IP address which the network interface will use.
     # * +:dns_servers                 - Array. DNS servers.
     # * +:public_ip                   - Hash. The public IP which the network interface is bound to.
+    # * +:subnet                      - Hash. The subnet which the network interface is bound to.
     # * +:network_security_group      - Hash. The network security group which the network interface is bound to.
     # * +:application_security_groups - Array. The application security groups which the network interface is bound to.
+    # * +:load_balancer               - Hash. The load balancer which the network interface is bound to.
+    # * +:application_gateway         - Hash. The application gateway which the network interface is bound to.
     #
     # @return [Boolean]
     #
@@ -1517,12 +1512,7 @@ module Bosh::AzureCloud
       unless results.nil? || results["value"].nil?
         results["value"].each do |network_interface_spec|
           if network_interface_spec["name"].include?(keyword)
-            network_interface = parse_network_interface(network_interface_spec, recursive: false)
-            if network_interface[:primary]
-              network_interfaces.insert(0, network_interface)
-            else
-              network_interfaces.push(network_interface)
-            end
+            network_interfaces.push(parse_network_interface(network_interface_spec, recursive: false))
           end
         end
       end
@@ -2036,9 +2026,6 @@ module Bosh::AzureCloud
         ip_configuration_properties = ip_configuration['properties']
         interface[:private_ip] = ip_configuration_properties['privateIPAddress']
         interface[:private_ip_allocation_method] = ip_configuration_properties['privateIPAllocationMethod']
-        if ip_configuration_properties["primary"] == true
-          interface[:primary] = true
-        end
         unless ip_configuration_properties['publicIPAddress'].nil?
           if recursive
             interface[:public_ip] = get_public_ip(ip_configuration_properties['publicIPAddress']['id'])
