@@ -8,7 +8,7 @@ cp -a bosh_azure_cpi/* ${BOSH_INSTALL_TARGET}
 
 export BUNDLE_CACHE_PATH="vendor/package"
 export BUNDLE_WITHOUT="development:test"
-bundle_cmd="$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin/bundle"
+bundle_cmd="$BOSH_PACKAGES_DIR/ruby-2.4-r3/bin/bundle"
 
 cd ${BOSH_INSTALL_TARGET}
 

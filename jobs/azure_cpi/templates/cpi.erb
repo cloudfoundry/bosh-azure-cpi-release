@@ -21,12 +21,12 @@ BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
 export HOME=~
 
-PATH=$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin:$PATH
+PATH=$BOSH_PACKAGES_DIR/ruby-2.4-r3/bin:$PATH
 export PATH
 
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/bosh_azure_cpi/Gemfile
 
-bundle_cmd="$BOSH_PACKAGES_DIR/ruby_azure_cpi/bin/bundle"
+bundle_cmd="$BOSH_PACKAGES_DIR/ruby-2.4-r3/bin/bundle"
 
 exec $bundle_cmd exec $BOSH_PACKAGES_DIR/bosh_azure_cpi/bin/azure_cpi \
   $BOSH_JOBS_DIR/azure_cpi/config/cpi.json

@@ -7,7 +7,7 @@ templates:
   azure_stack_ca_cert.pem.erb: config/azure_stack_ca_cert.pem
 
 packages:
-- ruby_azure_cpi
+- ruby-2.4-r3
 - bosh_azure_cpi
 
 properties:

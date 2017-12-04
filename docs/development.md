@@ -32,10 +32,10 @@ Please install [direnv](https://github.com/direnv/direnv#from-source).
   **NOTE**: You may need to use `direnv allow .` in the root directory of `bosh-azure-cpi-release`.
 
 # Install ruby
-Please make sure you have installed ruby 2.2.4 before you start. Below commands are tested in Ubuntu 14.04 LTS. _FYI, the latest stable version of ruby is 2.4.1_
+Please make sure you have installed ruby 2.4.2 before you start. Below commands are tested in Ubuntu 14.04 LTS.
 
   ```bash
-  # Install ruby 2.2.4 with chruby
+  # Install ruby 2.4.2 with chruby
   sudo apt-get update
   sudo apt-get install -y git gcc make libssl-dev libreadline-dev zlib1g-dev
 
@@ -54,16 +54,16 @@ Please make sure you have installed ruby 2.2.4 before you start. Below commands 
     sudo make install
   popd
 
-  ruby-install ruby 2.2.4
+  ruby-install ruby 2.4.2
   exec $SHELL
-  chruby 2.2.4
+  chruby 2.4.2
   ruby -v
   ```
 
 ### Install Ruby gem Bundler (used by the vendoring script):
 
   ```bash
-  chruby 2.2.4
+  chruby 2.4.2
   ruby -v
 
   gem install bundler
@@ -71,10 +71,10 @@ Please make sure you have installed ruby 2.2.4 before you start. Below commands 
 
 ### Run vendoring script
 
-With bundler installed, switch to ./src/bosh_azure_cpi and run:
+With bundler installed, switch to `./src/bosh_azure_cpi` and run:
 
   ```bash
-  chruby 2.2.4
+  chruby 2.4.2
   ruby -v
 
   # Assume that you have cloned https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release.git into ~/workspace/bosh-azure-cpi-release
@@ -92,7 +92,7 @@ With bundler installed, switch to ./src/bosh_azure_cpi and run:
 ### Create the BOSH release:
 
   ```bash
-  chruby 2.2.4
+  chruby 2.4.2
   ruby -v
 
   gem install bosh_cli
@@ -110,7 +110,7 @@ After you change the CPI code, you can use `bosh_azure_console` to test your cha
 
   ```bash
   cd ~/workspace
-  chruby 2.2.4
+  chruby 2.4.2
   ruby -v
 
   # Install postgres which bosh-registry depends on
@@ -132,7 +132,7 @@ After you change the CPI code, you can use `bosh_azure_console` to test your cha
   gem install pg --version 0.20.0 --no-ri --no-rdoc
 
   # Workaround for the issue https://github.com/cloudfoundry/bosh/issues/1621
-  sed -i -e '23s/^/#/' ~/.gem/ruby/2.2.4/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
+  sed -i -e '23s/^/#/' ~/.gem/ruby/2.4.2/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
 
   cat > ~/workspace/registry.cfg <<EOS
   ---
