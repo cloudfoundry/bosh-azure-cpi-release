@@ -64,6 +64,32 @@ stemcell_metadata=$(ruby -r yaml -r json -e '
   puts metadata' < /tmp/stemcell.MF)
 dd if=/dev/zero of=/tmp/root.vhd bs=1K count=1
 az storage blob upload --file /tmp/root.vhd --container-name stemcell --name ${BOSH_AZURE_STEMCELL_ID}.vhd --type page --metadata ${stemcell_metadata} --account-name ${account_name} --account-key ${account_key}
+export BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_SKU=$(ruby -r yaml -r json -e '
+  data = YAML::load(STDIN.read)
+  stemcell_properties = data["cloud_properties"]
+  stemcell_properties.each do |key, value|
+    if key == "image"
+      value.each do |k, v|
+        if k == "sku"
+          puts v
+          break
+        end
+      end
+    end
+  end' < /tmp/stemcell.MF)
+export BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION=$(ruby -r yaml -r json -e '
+  data = YAML::load(STDIN.read)
+  stemcell_properties = data["cloud_properties"]
+  stemcell_properties.each do |key, value|
+    if key == "image"
+      value.each do |k, v|
+        if k == "version"
+          puts v
+          break
+        end
+      end
+    end
+  end' < /tmp/stemcell.MF)
 
 export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
 pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null

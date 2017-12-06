@@ -101,6 +101,8 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'with light stemcell', light_stemcell: true do
+      let(:windows_light_stemcell_sku)     { ENV.fetch('BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_SKU', '2012r2') }
+      let(:windows_light_stemcell_version) { ENV.fetch('BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION', '1200.7.001001') }
       let(:stemcell_properties) {
         {
           'infrastructure' => 'azure',
@@ -108,8 +110,8 @@ describe Bosh::AzureCloud::Cloud do
           'image' => {
             'offer'     => 'bosh-windows-server',
             'publisher' => 'pivotal',
-            'sku'       => '2012r2',
-            'version'   => '1089.0.1'
+            'sku'       => windows_light_stemcell_sku,
+            'version'   => windows_light_stemcell_version
           }
         }
       }
