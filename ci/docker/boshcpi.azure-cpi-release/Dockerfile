@@ -33,7 +33,7 @@ RUN /bin/bash -l -c " \
 "
 
 # ruby
-ENV RUBY_VERSION 2.2.4
+ENV RUBY_VERSION 2.4.2
 RUN ruby-install ruby ${RUBY_VERSION}
 
 # Bundler
