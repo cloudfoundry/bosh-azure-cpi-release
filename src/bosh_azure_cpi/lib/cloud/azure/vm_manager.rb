@@ -632,6 +632,5 @@ module Bosh::AzureCloud
       # If resource group does not exist, create it
       @azure_client2.create_resource_group(resource_group_name, location)
     end
-
   end
 end

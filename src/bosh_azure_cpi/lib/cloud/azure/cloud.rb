@@ -3,7 +3,7 @@ module Bosh::AzureCloud
     attr_reader   :registry
     attr_reader   :options
     # Below defines are for test purpose
-    attr_reader   :azure_client2, :blob_manager, :table_manager, :storage_account_manager
+    attr_reader   :azure_client2, :blob_manager, :table_manager, :storage_account_manager, :vm_manager, :instance_type_mapper
     attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
 
     include Helpers
@@ -238,11 +238,23 @@ module Bosh::AzureCloud
     def has_disk?(disk_id)
       with_thread_name("has_disk?(#{disk_id})") do
         disk_id = DiskId.parse(disk_id, azure_properties)
-        if @use_managed_disks
-          return true if @disk_manager2.has_data_disk?(disk_id)
-          return false if @disk_manager.is_migrated?(disk_id)
+        if disk_id.disk_name().start_with?(MANAGED_DATA_DISK_PREFIX)
+           return @disk_manager2.has_data_disk?(disk_id)
+        else
+          ##
+          # when disk name starts with DATA_DISK_PREFIX, the disk could be an unmanaged disk OR a managed disk (migrated from unmanaged disk)
+          #
+          # if @use_managed_disks is true, and
+          #   if the managed disk is found (the unmanaged disk is already migrated to managed disk for sure), return true;
+          #   if the managed disk is not found, but the unmanaged disk is already migrated to managed disk, return false;
+          #   if the managed disk is not found, and the unmanaged disk not yet migrated (bosh is updated but vm is not), check existence of the unmanaged disk.
+          # if @use_managed_disks is false, check existence of the unmanaged disk.
+          if @use_managed_disks
+            return true if @disk_manager2.has_data_disk?(disk_id)
+            return false if @disk_manager.is_migrated?(disk_id) # the managed disk is not found, and the unmanaged disk is already migrated to managed disk
+          end
+          return @disk_manager.has_data_disk?(disk_id)
         end
-        @disk_manager.has_data_disk?(disk_id)
       end
     end
 
