@@ -55,7 +55,7 @@ properties:
     description: The domain for your AzureStack deployment
     default: local.azurestack.external
   azure.azure_stack.authentication:
-    description: The authentication type for your AzureStack deployment. AzureAD, AzureStackAD or AzureStack
+    description: The authentication type for your AzureStack deployment. Only AzureAD is supported for now.
     default: AzureAD
   azure.azure_stack.resource:
     description: The token resource for your AzureStack deployment
