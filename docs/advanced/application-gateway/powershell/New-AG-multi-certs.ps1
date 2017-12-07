@@ -53,10 +53,10 @@ Write-Host "Configuring the back end IP address pool"
 $pool = New-AzureRmApplicationGatewayBackendAddressPool -Name pool01 -BackendIPAddresses $routerIPs
 
 # Configure a probe which will detect whether backend servers are healthy.
-# It detects "login.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/login" every 60 seconds.
+# It detects "login.REPLACE_WITH_CLOUD_FOUNDRY_PUBLIC_IP.xip.io/" every 60 seconds.
 Write-Host "Configuring a probe"
 $hostName="login."+$systemDomain
-$probe=New-AzureRmApplicationGatewayProbeConfig -Name Probe01 -Protocol Http -HostName $hostName -Path "/login" -Interval 60 -Timeout 60 -UnhealthyThreshold 3
+$probe=New-AzureRmApplicationGatewayProbeConfig -Name Probe01 -Protocol Http -HostName $hostName -Path "/" -Interval 60 -Timeout 60 -UnhealthyThreshold 3
 
 # Configure AG settings to load balance network traffic in the back end pool
 Write-Host "Configuring pool settings"

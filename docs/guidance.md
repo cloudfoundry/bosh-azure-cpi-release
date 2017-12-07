@@ -41,16 +41,18 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
 # 3 Advanced Configurations and Deployments
 
 * CPI Settings
-  * [Deploy Cloud Foundry using multiple storage accounts and availability sets](./advanced/deploy-cloudfoundry-for-enterprise/)
+  * [Use availability zones in Cloud Foundry](./advanced/availability-zone/)
+  * [Deploy Cloud Foundry using availability sets](./advanced/deploy-cloudfoundry-with-availability-sets/)
+  * [Use managed disks in Cloud Foundry](./advanced/managed-disks/)
+  * [Deploy Cloud Foundry using multiple storage accounts](./advanced/deploy-cloudfoundry-with-multiple-storage-accounts/)
   * [Configure resource groups](./advanced/configure-resource-groups/)
   * [Deploy multiple network interfaces for a Cloud Foundry instance](./advanced/deploy-multiple-network-interfaces/)
-  * [Use managed disks in Cloud Foundry](./advanced/managed-disks/)
   * [Use application security groups in Cloud Foundry](./advanced/application-security-groups/)
-  * [Use availability zones in Cloud Foundry](./advanced/availability-zone/)
 * Cloud Foundry Scenarios
   * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
   * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
   * [Backup and restore Cloud Foundry](./advanced/backup-and-restore-cloud-foundry/)
+  * [SSH into the application](./advanced/cf-ssh-application/)
 * Service Brokers
   * [Meta Azure Service Broker](https://github.com/Azure/meta-azure-service-broker)
   * [MySQL Service](./advanced/deploy-mysql/)

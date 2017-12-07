@@ -9,18 +9,7 @@ Microsoft Azure Application Gateway is a dedicated virtual appliance, providing 
 
 ## Pre-requisites
 
-* Setup a Cloud Foundry deployment
-
-* Update the manifest to remove HA Proxy, for example remove *ha_proxy_z1* job in following sample file:
-
-  ```
-  - default_networks:
-  - name: cf1
-  instances: 1
-  name: ha_proxy_z1
-  networks:
-  ...
-  ```
+* Follow the [guidance](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md) to setup a Cloud Foundry deployment
 
 * Prepare your certificates in the `.pfx` format
 
@@ -34,6 +23,7 @@ Microsoft Azure Application Gateway is a dedicated virtual appliance, providing 
 ## Configure the CF deployment for Application Gateway
 
 ### 1. Create Application Gateway 
+
 To create the application gateway, you need to create a public IP and a subnet, then you can enable/configure the optional features, like SSL offloading. You can complete these steps through ARM template or scripts. This applies to both new and updating deployments.
 
 #### Creating with ARM templates (**RECOMMENDED**)
@@ -42,11 +32,11 @@ To create the application gateway, you need to create a public IP and a subnet, 
     <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 
-  * The cert data is the .pfx file you created in pre-requisites in base64. And you can get it by running:
-  
-  ```
-  base64 domain.name.pfx | tr -d '\n'
-  ```
+* The cert data is the .pfx file you created in pre-requisites in base64. And you can get it by running:
+
+```
+base64 domain.name.pfx | tr -d '\n'
+```
 
 #### Creating manually with scripts
 
@@ -57,52 +47,56 @@ To create the application gateway, you need to create a public IP and a subnet, 
 
 #### Update Cloud Foundry manifest
 
-  Add `application_gateway` to the corresponding `cloud_properties` of routers in `resource_pools`:
+Update the cloud config from
 
-  ```
-  - cloud_properties:
-      instance_type: Standard_F1
-      application_gateway: <application-gateway-name>
-    env:
-      bosh:
-        password: *********************************************************************************************************
-    name: router_z1
-    network: cf1
-    stemcell:
-      name: bosh-azure-hyperv-ubuntu-trusty-go_agent
-      version: latest
-  ```
+```
+- name: cf-router-network-properties
+  cloud_properties:
+    load_balancer: ((load_balancer_name))
+```
+
+to
+
+```
+- name: cf-router-network-properties
+  cloud_properties:
+    application_gateway: ((application_gateway_name))
+```
 
 #### Update Cloud Foundry deployment
 
-  ```
-  bosh deployment multiple-vm-cf.yml
-  bosh deploy -n
-  ```
+Remove `load_balancer_name` and specify `application_gateway_name` in `deploy_cloud_foundry.sh`, and run the script.
+
+```
+./deploy_cloud_foundry.sh
+```
     
 ### 3. Configure DNS for your Cloud Foundry domain
 
-  Update the DNS entries, so the Application gateway's IP is associated with CF system domain.
-  * For testing only, you can also update local host file.
+Update the DNS entries, so the Application gateway's IP is associated with CF system domain.
+
+* For testing only, you can also update local host file.
+
     * Windows: `C:\Windows\System32\drivers\etc\hosts`
+
     * Linux: `/etc/hosts`
 
-  * Below is a sample DNS entry after Application Gateway is created:
+* Below is a sample DNS entry after Application Gateway is created:
 
-  ```
-  <Public IP Address of Application Gateway>   <SYSTEM-DOMAIN>
-  ```
+    ```
+    <Public IP Address of Application Gateway>   <SYSTEM-DOMAIN>
+    ```
 
-  You can find the IP addresses mentioned above on Azure Portal in your resource group. `<SYSTEM-DOMAIN>` is specified in your manifest for Cloud Foundry.
+    You can find the IP addresses mentioned above on Azure Portal in your resource group. `<SYSTEM-DOMAIN>` is specified in your manifest for Cloud Foundry.
 
 ### 4. Log into CF deployment for validating
   
-  `cf login -a https://api.<SYSTEM-DOMAIN> --skip-ssl-validation`.
+`cf login -a https://api.<SYSTEM-DOMAIN> --skip-ssl-validation`.
 
-  If you can login successfully, the Application Gateway is created successfully.
+If you can login successfully, the Application Gateway is created successfully.
 
-  For more information about how to create and configure an Application Gateway, please go to:
-  https://azure.microsoft.com/en-us/documentation/articles/application-gateway-ssl-arm/
+For more information about how to create and configure an Application Gateway, please go to:
+https://azure.microsoft.com/en-us/documentation/articles/application-gateway-ssl-arm/
 
-  If you want to create an AG without SSL offloading, reference this:
-  https://azure.microsoft.com/en-us/documentation/articles/application-gateway-create-gateway-arm
+If you want to create an AG without SSL offloading, reference this:
+https://azure.microsoft.com/en-us/documentation/articles/application-gateway-create-gateway-arm

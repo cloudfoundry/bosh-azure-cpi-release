@@ -30,22 +30,7 @@ You can deploy the template [azuredns.json](./azuredns.json). By default, it wil
 
 You can put your own domain name as `systemDomainName`, and get `cloudFoundryIPAddress` with the command `cat ~/settings | grep cf-ip`.
 
-For example: The deployment will create a DNS Record Set "*" of type "A" for the system domain `microsoftlovelinux.com`, and map it to the public IP address of Cloud Foundry `123.123.123.123`. 
-
-```
-info:    Executing command network dns record-set show
-Type: A
-+ Looking up the DNS Record Set "*" of type "A"
-data:    Id                              : /subscriptions/########-####-####-####-############/resourceGroups/cf734feb24918045a7aa6527/providers/Microsoft.Network/dnszones/microsoftlovelinux.com/A/*
-data:    Name                            : *
-data:    Type                            : Microsoft.Network/dnszones/A
-data:    Location                        : global
-data:    TTL                             : 3600
-data:    A records:
-data:        IPv4 address                : 123.123.123.123
-data:
-info:    network dns record-set show command OK
-```
+For example: The deployment will create a DNS Record Set "*" of type "A" for the system domain `mslinux.love`, and map it to the public IP address of Cloud Foundry `123.123.123.123`. 
 
 ### 1.2 Manually
 
@@ -53,72 +38,82 @@ You can also use Azure CLI to manage DNS zones and records manually.
 
 1. Create a DNS zone
 
-  ```
-  azure network dns zone create --resource-group $resource-group-name --name $name
-  ```
-
-  Example:
-
-  ```
-  $ azure network dns zone create --resource-group cfc6f8ef9cabd8490687806b --name mslinux.love
-  info:    Executing command network dns zone create
-  + Creating dns zone "mslinux.love"
-  + Looking up the dns zone "mslinux.love"
-  data:    Id                              : /subscriptions/########-####-####-####-############/resourceGroups/cfc6f8ef9cabd8490687806b/providers/Microsoft.Network/dnszones/mslinux.love
-  data:    Name                            : mslinux.love
-  data:    Type                            : Microsoft.Network/dnszones
-  data:    Location                        : global
-  data:    Number of record sets           : 2
-  data:    Max number of record sets       : 1000
-  info:    network dns zone create command OK
-  ```
-
-2. Create DNS records
-
-  1. Create a record set
-
     ```
-    azure network dns record-set create --resource-group $resource-group-name --dns-zone-name $dns-zone-name --name $name --type $dns-type --ttl $dns-ttl
+    az network dns zone create --resource-group $resource-group-name --name $name
     ```
 
     Example:
 
     ```
-    $ azure network dns record-set create --resource-group cfc6f8ef9cabd8490687806b --dns-zone-name mslinux.love --name "*" --type A --ttl 3600
-    info:    Executing command network dns record-set create
-    + Creating DNS record set "*"
-    data:    Id                              : /subscriptions/########-####-####-####-############/resourceGroups/cfc6f8ef9cabd8490687806b/providers/Microsoft.Network/dnszones/mslinux.love/A/*
-    data:    Name                            : *
-    data:    Type                            : Microsoft.Network/dnszones/A
-    data:    Location                        : global
-    data:    TTL                             : 3600
-    info:    network dns record-set create command OK
+    $ az network dns zone create --resource-group cfc6f8ef9cabd8490687806b --name mslinux.love
+    {
+      "etag": "00000002-0000-0000-1d04-e4253e67d301",
+      "id": "/subscriptions/########-####-####-####-############/resourceGroups/cfc6f8ef9cabd8490687806b/providers/Microsoft.Network/dnszones/mslinux.love",
+      "location": "global",
+      "maxNumberOfRecordSets": 5000,
+      "name": "mslinux.love",
+      "nameServers": [
+        "ns1-07.azure-dns.com.",
+        "ns2-07.azure-dns.net.",
+        "ns3-07.azure-dns.org.",
+        "ns4-07.azure-dns.info."
+      ],
+      "numberOfRecordSets": 2,
+      "resourceGroup": "cfc6f8ef9cabd8490687806b",
+      "tags": {},
+      "type": "Microsoft.Network/dnszones"
+    }
     ```
 
-  2. Add a record into the resord set
+1. Create DNS records
 
-  ```
-  azure network dns record-set add-record --resource-group $resource-group-name --dns-zone-name $dns-zone-name --record-set-name $record-set-name --type $dns-type --ipv4-address $ipv4-address
-  ```
+    1. Create a record set
 
-  Example:
+        ```
+        az network dns record-set a create --resource-group $resource_group_name --zone-name $zone_name --name $name --ttl $dns_ttl
+        ```
 
-  ```
-  $ azure network dns record-set add-record --resource-group cfc6f8ef9cabd8490687806b --dns-zone-name mslinux.love --record-set-name "*" --type A --ipv4-address "123.123.123.123"
-  info:    Executing command network dns record-set add-record
-  + Looking up the dns zone "mslinux.love"
-  + Looking up the DNS Record Set "*" of type "A"
-  + Updating record set "*"
-  data:    Id                              : /subscriptions/########-####-####-####-############/resourceGroups/cfc6f8ef9cabd8490687806b/providers/Microsoft.Network/dnszones/mslinux.love/A/*
-  data:    Name                            : *
-  data:    Type                            : Microsoft.Network/dnszones/A
-  data:    Location                        : global
-  data:    TTL                             : 3600
-  data:    A records:
-  data:        IPv4 address                : 123.123.123.123
-  data:
-  info:    network dns record-set add-record command OK
-  ```
+        Example:
+
+        ```
+        $ az network dns record-set a create --resource-group cfc6f8ef9cabd8490687806b --zone-name mslinux.love --name "*" --ttl 3600
+        {
+          "etag": "325965ff-2b08-4ead-95f9-72dc2094976f",
+          "fqdn": "*.mslinux.love.",
+          "id": "/subscriptions/########-####-####-####-############/resourceGroups/cfc6f8ef9cabd8490687806b/providers/Microsoft.Network/dnszones/mslinux.love/A/*",
+          "metadata": null,
+          "name": "*",
+          "resourceGroup": "cfc6f8ef9cabd8490687806b",
+          "ttl": 3600,
+          "type": "Microsoft.Network/dnszones/A"
+        }
+        ```
+
+    1. Add a record into the resord set
+
+        ```
+        az network dns record-set a add-record --resource-group $resource_group_name --zone-name $zone_name --record-set-name $record_set_name --ipv4-address $ipv4_address
+        ```
+
+        Example:
+
+        ```
+        $ az network dns record-set a add-record --resource-group cfc6f8ef9cabd8490687806b --zone-name mslinux.love --record-set-name "*" --ipv4-address "123.123.123.123"                    {
+          "arecords": [
+            {
+              "ipv4Address": "123.123.123.123"
+            }
+          ],
+          "etag": "2357298b-7203-4d60-96be-2171be6c51ff",
+          "fqdn": "*.mslinux.love.",
+          "id": "/subscriptions/########-####-####-####-############/resourceGroups/cfc6f8ef9cabd8490687806b/providers/Microsoft.Network/dnszones/mslinux.love/A/*",
+          "metadata": null,
+          "name": "*",
+          "resourceGroup": "cfc6f8ef9cabd8490687806b",
+          "ttl": 3600,
+          "type": "Microsoft.Network/dnszones/A"
+        }
+        ```
 
 Please click [**HERE**](https://azure.microsoft.com/en-us/documentation/articles/dns-overview/), if you want to learn more about Azure DNS.
 
@@ -129,35 +124,40 @@ After you create Azure DNS service via ARM tempaltes or manually, you need to re
 ### 2.1 Get your Name Server Domain Name
 
 ```
-azure network dns record-set show --resource-group $resource-group-name --dns-zone-name $dns-zone-name --name "@" --type NS
+az network dns record-set ns show --resource-group $resource_group_name --zone-name $zone_name --name "@"
 ```
 
 Example:
 
 ```
-azure network dns record-set show --resource-group cfc6f8ef9cabd8490687806b --dns-zone-name mslovelinux.com --name "@" --type NS
+$ az network dns record-set ns show --resource-group cfc6f8ef9cabd8490687806b --zone-name mslinux.love --name "@"
+{
+  "etag": "10bdcfe0-ec2b-4fd2-a934-e07483111aea",
+  "fqdn": "mslinux.love.",
+  "id": "/subscriptions/########-####-####-####-############/resourceGroups/cfc6f8ef9cabd8490687806b/providers/Microsoft.Network/dnszones/mslinux.love/NS/@",
+  "metadata": null,
+  "name": "@",
+  "nsRecords": [
+    {
+      "nsdname": "ns1-07.azure-dns.com."
+    },
+    {
+      "nsdname": "ns2-07.azure-dns.net."
+    },
+    {
+      "nsdname": "ns3-07.azure-dns.org."
+    },
+    {
+      "nsdname": "ns4-07.azure-dns.info."
+    }
+  ],
+  "resourceGroup": "cfc6f8ef9cabd8490687806b",
+  "ttl": 172800,
+  "type": "Microsoft.Network/dnszones/NS"
+}
 ```
 
-Sample Output:
-
-```
-info:    Executing command network dns record-set show
-+ Looking up the DNS Record Set "@" of type "NS"
-data:    Id                              : /subscriptions/########-####-####-####-############/resourceGroups/cfc6f8ef9cabd8490687806b/providers/Microsoft.Network/dnszones/mslovelinux.com/NS/@
-data:    Name                            : @
-data:    Type                            : Microsoft.Network/dnszones
-data:    Location                        : global
-data:    TTL                             : 3600
-data:    NS records
-data:        Name server domain name     : ns1-07.azure-dns.com.
-data:        Name server domain name     : ns2-07.azure-dns.net.
-data:        Name server domain name     : ns3-07.azure-dns.org.
-data:        Name server domain name     : ns4-07.azure-dns.info.
-data:
-info:    network dns record-set show command OK
-```
-
-You can get four `Name server domain name` from the output.
+You can get four `nsdname` from the output.
 
 ### 2.2 Register your Azure DNS Name
 

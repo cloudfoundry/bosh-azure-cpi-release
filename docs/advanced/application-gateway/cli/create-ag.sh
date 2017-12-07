@@ -87,7 +87,7 @@ azure network application-gateway create --resource-group $rgName --name $appgwN
 # Create probe
 echo "Configuring a probe"
 hostName="login."$systemDomain
-azure network application-gateway probe create --resource-group $rgName --gateway-name $appgwName --name 'Probe01' --protocol Http --host-name $hostName --path '/login' --interval 60 --timeout 60 --unhealthy-threshold 3 
+azure network application-gateway probe create --resource-group $rgName --gateway-name $appgwName --name 'Probe01' --protocol Http --host-name $hostName --path '/' --interval 60 --timeout 60 --unhealthy-threshold 3 
 
 # TODO
 # Need to set the custom probe for the http settings via Azure Portal or Azure Powershell
