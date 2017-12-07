@@ -6,18 +6,20 @@ describe Bosh::AzureCloud::StemcellManager2 do
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
   let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
   let(:stemcell_manager2) { Bosh::AzureCloud::StemcellManager2.new(blob_manager, table_manager, storage_account_manager, client2) }
-  let(:stemcell_name) { "fake-stemcell-name" }
 
   before do
     allow(storage_account_manager).to receive(:default_storage_account_name).
       and_return(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
   end
 
+  let(:stemcell_uuid) { "fbb636e9-89b6-432b-b52c-b5cd93654900" }
+  let(:stemcell_name) { "bosh-stemcell-#{stemcell_uuid}" }
+
   describe "#delete_stemcell" do
     let(:user_images) {
       [
-        { :name => "#{stemcell_name}-postfix1" },
-        { :name => "#{stemcell_name}-postfix2" },
+        { :name => "#{stemcell_uuid}-postfix" }, # New format
+        { :name => "#{stemcell_name}-postfix" },  # Old format
         { :name => "prefix-#{stemcell_name}" },
         { :name => "prefix-#{stemcell_name}-postfix" }
       ]
@@ -55,11 +57,11 @@ describe Bosh::AzureCloud::StemcellManager2 do
     end
 
     it "deletes the stemcell in default storage account" do
-      # Delete the user images whose prefix is the stemcell_name
+      # Delete the user images whose prefix is the stemcell_uuid or stemcell_name
       expect(client2).to receive(:delete_user_image).
-        with("#{stemcell_name}-postfix1").once
+        with("#{stemcell_uuid}-postfix").once
       expect(client2).to receive(:delete_user_image).
-        with("#{stemcell_name}-postfix2").once
+        with("#{stemcell_name}-postfix").once
 
       # Delete all stemcells with the given stemcell name in all storage accounts
       expect(blob_manager).to receive(:delete_blob).twice
@@ -98,7 +100,8 @@ describe Bosh::AzureCloud::StemcellManager2 do
   describe "#get_user_image_info" do
     let(:storage_account_type) { "Standard_LRS" }
     let(:location) { "SoutheastAsia" }
-    let(:user_image_name) { "#{stemcell_name}-#{storage_account_type}-#{location}" }
+    let(:user_image_name_deprecated) { "#{stemcell_name}-#{storage_account_type}-#{location}" }
+    let(:user_image_name) { "#{stemcell_uuid}-S-#{location}" }
     let(:user_image_id) { "fake-user-image-id" }
     let(:tags) {
       {
@@ -111,6 +114,11 @@ describe Bosh::AzureCloud::StemcellManager2 do
         :tags => tags
       }
     }
+
+    # CPI will try to delete the user image with the old format name no matter it exists
+    before do
+      allow(client2).to receive(:delete_user_image).with(user_image_name_deprecated)
+    end
 
     context "when the user image already exists" do
       before do

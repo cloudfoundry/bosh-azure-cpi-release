@@ -11,7 +11,11 @@ module Bosh::AzureCloud
     def delete_stemcell(name)
       @logger.info("delete_stemcell(#{name})")
 
-      user_images = @azure_client2.list_user_images().select{ |item| item[:name] =~ /^#{name}/ }
+      # Both the old format and new format of user image are deleted
+      stemcell_uuid = name.sub("#{STEMCELL_PREFIX}-", "")
+      user_images = @azure_client2.list_user_images().select{ |user_image|
+        user_image[:name].start_with?(stemcell_uuid) || user_image[:name].start_with?(name)
+      }
       user_images.each do |user_image|
         user_image_name = user_image[:name]
         @logger.info("Delete user image `#{user_image_name}'")
@@ -56,7 +60,14 @@ module Bosh::AzureCloud
 
     def get_user_image(stemcell_name, storage_account_type, location)
       @logger.info("get_user_image(#{stemcell_name}, #{storage_account_type}, #{location})")
-      user_image_name = "#{stemcell_name}-#{storage_account_type}-#{location}"
+
+      # The old user image name's length exceeds 80 in some location, which would cause the creation failure.
+      # Old format: bosh-stemcell-<UUID>-Standard_LRS-<LOCATION>, bosh-stemcell-<UUID>-Premium_LRS-<LOCATION>
+      # New format: <UUID>-S-<LOCATION>, <UUID>-P-<LOCATION>
+      user_image_name_deprecated = "#{stemcell_name}-#{storage_account_type}-#{location}"
+      user_image_name = user_image_name_deprecated.sub("#{STEMCELL_PREFIX}-", "")
+        .sub(STORAGE_ACCOUNT_TYPE_STANDARD_LRS, "S")
+        .sub(STORAGE_ACCOUNT_TYPE_PREMIUM_LRS, "P")
       user_image = @azure_client2.get_user_image_by_name(user_image_name)
       return user_image unless user_image.nil?
 
@@ -126,6 +137,7 @@ module Bosh::AzureCloud
       begin
         mutex = FileMutex.new("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", @logger)
         if mutex.lock
+          @azure_client2.delete_user_image(user_image_name_deprecated) # CPI will cleanup the user image with the old format name
           @azure_client2.create_user_image(user_image_params)
           mutex.unlock
         else
