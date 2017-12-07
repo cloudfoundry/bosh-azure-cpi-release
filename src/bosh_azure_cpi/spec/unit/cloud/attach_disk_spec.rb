@@ -31,6 +31,16 @@ describe Bosh::AzureCloud::Cloud do
     let(:vm_name) { "fake-vm-name" }
     let(:instance_id)  { "fake-instance-id" }
     let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
+    let(:vm) {
+      {
+        :name => vm_name,
+        :data_disks => [
+          {
+            :name => 'bosh-disk-os-fake-ephemeral-disk'
+          }
+        ]
+      }
+    }
 
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:parse).
@@ -48,7 +58,7 @@ describe Bosh::AzureCloud::Cloud do
         and_return(vm_name)
 
       allow(vm_manager).to receive(:find).
-        and_return({})
+        and_return(vm)
     end
 
     context "when use_managed_disks is true" do
@@ -96,10 +106,11 @@ describe Bosh::AzureCloud::Cloud do
           let(:vm_zone) { 'fake-zone' }
 
           before do
+            vm[:zone] = vm_zone
             allow(instance_id_object).to receive(:use_managed_disks?).
               and_return(true)
             allow(vm_manager).to receive(:find).
-              and_return({:zone => vm_zone})
+              and_return(vm)
           end
 
           context "when the disk is migrated successfully" do
@@ -251,6 +262,29 @@ describe Bosh::AzureCloud::Cloud do
           and_return(old_settings)
         expect(registry).to receive(:update_settings).
           with(instance_id, new_settings).and_return(true)
+
+        expect {
+          cloud.attach_disk(instance_id, disk_id)
+        }.not_to raise_error
+      end
+    end
+
+    # workaround for issue 280
+    context "when vm does not have an ephemeral disk" do
+      before do
+        vm[:data_disks] = []
+        allow(instance_id_object).to receive(:vm_name).
+          and_return(vm_name)
+      end
+
+      it "should sleep 30 seconds before attaching disk to the vm" do
+        expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object).
+          and_return(lun)
+        expect(registry).to receive(:read_settings).with(instance_id).
+          and_return(old_settings)
+        expect(registry).to receive(:update_settings).
+          with(instance_id, new_settings).and_return(true)
+        expect(cloud).to receive(:sleep).with(30)
 
         expect {
           cloud.attach_disk(instance_id, disk_id)
