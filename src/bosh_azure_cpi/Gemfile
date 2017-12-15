@@ -2,7 +2,7 @@ source 'https://rubygems.org'
 
 gem 'bosh_common',   '1.3262.24.0'
 gem 'bosh_cpi',      '2.4.1'
-gem 'azure-storage', '0.14.0.preview'
+gem 'azure-storage', '0.12.1.preview'
 gem 'vhd',           '0.0.4'
 
 group :development, :test do
