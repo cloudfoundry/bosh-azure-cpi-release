@@ -595,6 +595,14 @@ module Bosh::AzureCloud
       raise Bosh::Clouds::NotImplemented
     end
 
+   # Information about the CPI
+   # @return [Hash] CPI properties
+   def info
+     {
+       'stemcell_formats' => %w(azure-vhd azure-light)
+     }
+   end
+
     private
 
     def agent_properties
