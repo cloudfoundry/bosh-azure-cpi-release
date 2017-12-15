@@ -41,3 +41,38 @@
               cloud_properties:
                 instance_type: Standard_D1
             ```
+
+1. The deployment of Cloud Foundry fails because of timeout when creating VMs
+
+    1. This could be due to network glitch, which would be resolved through a retry.
+
+        ```
+        bosh -n deploy
+        ```
+
+        If this deployment succeeds, then you can skip the next step.
+
+    1. If the above re-deployment failed again, please follow the below steps, keep the unreachable VMs for the further investigation, and file an issue [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues).
+
+        1. Update `~/bosh.yml` if the debug option is not enabled.
+
+            ```YAML
+            director:
+              debug:
+                keep_unreachable_vms: true
+            ```
+
+        1. Re-deploy BOSH.
+
+            ```
+            bosh-init deploy ~/bosh.yml
+            ```
+
+        1. Re-deploy Cloud Foundry.
+
+            ```
+            bosh deployment PATH-TO-YOUR-MANIFEST-FOR-CLOUD-FOUNDRY
+            bosh -n deploy
+            ```
+
+        1. If the deployment failed, the unreachable VMs will be kept for further investigations.

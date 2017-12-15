@@ -1,53 +1,5 @@
 # Known Issues
 
-1. The deployment of Cloud Foundry fails because of timeout when creating VMs
-
-    1. This could be due to network glitch, which would be resolved through a retry.
-
-        ```
-        bosh -n deploy
-        ```
-
-        If this deployment succeeds, then you can skip the next step.
-
-    1. If the above re-deployment failed again, please follow the below steps, keep the unreachable VMs for the further investigation, and file an issue [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues).
-
-        1. Delete your current Cloud Foundry deployment.
-
-            ```
-            bosh deployments # Get the name of the Cloud Foundry deployment
-            bosh delete deployment CLOUD-FOUNDRY-DEPLOYMENT-NAME
-            ```
-
-        1. Delete your current BOSH deployment.
-
-            ```
-            bosh-init delete ~/bosh.yml
-            ```
-
-        1. Update `~/bosh.yml` if the debug option is not enabled.
-
-            ```YAML
-            director:
-              debug:
-                keep_unreachable_vms: true
-            ```
-
-        1. Re-deploy BOSH.
-
-            ```
-            bosh-init deploy ~/bosh.yml
-            ```
-
-        1. Re-deploy Cloud Foundry.
-
-            ```
-            bosh deployment PATH-TO-YOUR-MANIFEST-FOR-CLOUD-FOUNDRY
-            bosh -n deploy
-            ```
-
-        1. If the deployment failed, the unreachable VMs will be kept for further investigations.
-
 1. Connection dropped
 
     By default, Azure load balancer has an `idle timeout` setting of 4 minutes but the default timeout of HAProxy is 900 as 15 minutes, this would cause the problem of connection dropped. [#99](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/99)
@@ -159,3 +111,21 @@
     1. Increase the data disk size in the manifest. Then run `bosh deploy`.
 
     1. (Optional) Downgrade the `instance_type` to the original VM size if you want. Then run `bosh deploy`.
+
+1. Hanging VMs with BOSH Persistent Disks
+
+    Cloud Foundry deployment might fail occasionally during data disk attaching. This only happens when you set `use_root_disk` to `true` in `vm_type` for the VM so it does not have a dedicated ephemeral disk.
+
+    This is a platform bug, you will see error message like `Timed out sending 'list_disk' to ...` when updating an instance. You will also notice that the VM cannot response and the deploment will fail finally.
+
+    Error example:
+    ```
+    Started updating instance mysql
+    Started updating instance mysql > mysql/33e8e561-233c-4a26-9f7e-4a6fbf978ce4 (0) (canary). Failed: Timed out sending 'list_disk' to c4e6e2ff-8ee2-463b-a1d2-f1190b4e21e1 after 45 seconds (00:18:15)
+   
+    Error 450002: Timed out sending 'list_disk' to c4e6e2ff-8ee2-463b-a1d2-f1190b4e21e1 after 45 seconds
+    ```
+
+    The fix is already on the way but it needs some time to rollout to all Azure regions.
+
+    Workaround: A workaround has been included in Azure CPI [v33](https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=33) to mitigate the issue. You can pick up this version before the formal platform fix is rolled out to your region.
