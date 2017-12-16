@@ -119,8 +119,8 @@ module Bosh::AzureCloud
         :name                         => availability_set_name,
         :location                     => location,
         :tags                         => AZURE_TAGS,
-        :platform_update_domain_count => resource_pool['platform_update_domain_count'] || 5,
-        :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || (@use_managed_disks ? 2 : 3),
+        :platform_update_domain_count => resource_pool['platform_update_domain_count'] || default_update_domain_count,
+        :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || default_fault_domain_count,
         :managed                      => @use_managed_disks
       }
 
@@ -472,6 +472,20 @@ module Bosh::AzureCloud
       end
 
       availability_set_name
+    end
+
+    # In AzureStack, availability sets can only be configured with 1 fault domain and 1 update domain.
+    # In Azure, the max fault domain count of an unmanaged availability set is 3;
+    #           the max fault domain count of a managed availability set is 2 in some regions.
+    #           When all regions support 3 fault domains, the default value should be changed to 3.
+    def default_fault_domain_count
+      @azure_properties['environment'] == ENVIRONMENT_AZURESTACK ? 1 : (@use_managed_disks ? 2 : 3)
+    end
+
+    # In AzureStack, availability sets can only be configured with 1 update domain.
+    # In Azure, the max update domain count of a managed/unmanaged availability set is 5.
+    def default_update_domain_count
+      @azure_properties['environment'] == ENVIRONMENT_AZURESTACK ? 1 : 5
     end
 
     def create_availability_set(resource_group_name, availability_set_params)
