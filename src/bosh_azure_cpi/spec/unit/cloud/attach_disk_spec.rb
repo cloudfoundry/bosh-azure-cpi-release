@@ -74,17 +74,38 @@ describe Bosh::AzureCloud::Cloud do
               and_return(true)
           end
 
-          it "attaches the managed disk to the vm" do
-            expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object).
-              and_return(lun)
-            expect(registry).to receive(:read_settings).with(instance_id).
-              and_return(old_settings)
-            expect(registry).to receive(:update_settings).
-              with(instance_id, new_settings).and_return(true)
+          context "and disk exists" do
+            before do
+              allow(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object).
+                and_return(lun)
+            end
 
-            expect {
-              managed_cloud.attach_disk(instance_id, disk_id)
-            }.not_to raise_error
+            it "attaches the managed disk to the vm" do
+              expect(registry).to receive(:read_settings).with(instance_id).
+                and_return(old_settings)
+              expect(registry).to receive(:update_settings).
+                with(instance_id, new_settings).and_return(true)
+
+              expect {
+                managed_cloud.attach_disk(instance_id, disk_id)
+              }.not_to raise_error
+            end
+          end
+
+          context "and disk does not exist" do
+            before do
+              allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(nil)
+              allow(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object).
+                and_raise("disk not found")
+            end
+
+            it "should not migrate the disk" do
+              expect(disk_manager2).not_to receive(:create_disk_from_blob)
+
+              expect {
+                managed_cloud.attach_disk(instance_id, disk_id)
+              }.to raise_error "disk not found"
+            end
           end
         end
 
@@ -150,6 +171,7 @@ describe Bosh::AzureCloud::Cloud do
       context "when the disk is an unmanaged disk" do
         before do
           allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(nil)
+          allow(disk_id_object).to receive(:disk_name).and_return("bosh-data-abc")
         end
 
         context "when the vm is a vm with managed disks" do
