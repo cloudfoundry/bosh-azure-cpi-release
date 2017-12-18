@@ -14,7 +14,12 @@ az cloud set --name ${AZURE_ENVIRONMENT}
 az login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
 az account set -s ${AZURE_SUBSCRIPTION_ID}
 
-set +e
+# In most cases, terraform can destroy the environment successfully
+if [ ! -f ${METADATA_FILE} ]; then
+  echo "The environment has been destroyed. Exit 0."
+  exit 0
+fi
+
 metadata=$(cat ${METADATA_FILE})
 
 integration_additional_resource_group_name=$(echo ${metadata} | jq -e --raw-output ".additional_resource_group_name")
