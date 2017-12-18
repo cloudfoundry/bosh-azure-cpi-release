@@ -9,10 +9,9 @@ source bosh-cpi-src/ci/utils.sh
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}
 
-# Creates an integer version number from the semantic version format
-# May be changed when we decide to fully use semantic versions for releases
-integer_version=`cut -d "." -f1 release-version-semver/number`
-echo ${integer_version} > promoted/integer_version
+# Version info
+semver_version=`cat release-version-semver/number`
+echo $semver_version > promoted/semver_version
 
 cp -r bosh-cpi-src promoted/repo
 
@@ -30,7 +29,7 @@ blobstore:
 EOF
 
   echo "finalizing CPI release..."
-  bosh2 finalize-release ${dev_release} --version ${integer_version}
+  bosh2 finalize-release ${dev_release} --version ${semver_version}
 
   rm config/private.yml
 
@@ -39,5 +38,5 @@ EOF
 
   git config --global user.email cf-bosh-eng@pivotal.io
   git config --global user.name CI
-  git commit -m "New final release v${integer_version}"
+  git commit -m "New final release v${semver_version}"
 popd > /dev/null
