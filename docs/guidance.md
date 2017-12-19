@@ -2,7 +2,12 @@
 
 In Microsoft Azure, there are serveral different environments, such as AzureCloud for global Azure, AzureUSGovernment for Azure Government, and AzureChinaCloud for Azure operated by 21Vianet in China.
 
-This document describes how to deploy [BOSH](http://bosh.io/) and [Cloud Foundry](https://www.cloudfoundry.org/) on [AzureCloud](https://azure.microsoft.com/en-us/), [AzureChinaCloud](https://www.azure.cn/) and [AzureUSGovernment](http://www.azure.com/gov).
+This document describes how to deploy [BOSH](http://bosh.io/) and [Cloud Foundry](https://www.cloudfoundry.org/) on:
+* [AzureCloud](https://azure.microsoft.com/en-us/)
+* [AzureChinaCloud](https://www.azure.cn/)
+* [AzureGermanCloud](https://azure.microsoft.com/en-us/overview/clouds/germany/)
+* [AzureUSGovernment](http://www.azure.com/gov)
+* [AzureStack](https://azure.microsoft.com/en-us/overview/azure-stack/)
 
 # 1 Prerequisites
 
@@ -10,6 +15,7 @@ You can create an Azure account according to the environment where Cloud Foundry
 
 * [Creating an Azure account for AzureCloud](https://azure.microsoft.com/en-us/pricing/free-trial/)
 * [Creating an Azure account for AzureChinaCloud](https://www.azure.cn/pricing/pia/)
+* [Creating an Azure account for AzureGermanCloud](https://azure.microsoft.com/en-us/free/germany/)
 * [Creating an Azure account for AzureUSGovernment](https://azuregov.microsoft.com/trial/azuregovtrial)
 
 # 2 Get Started
@@ -48,6 +54,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Configure resource groups](./advanced/configure-resource-groups/)
   * [Deploy multiple network interfaces for a Cloud Foundry instance](./advanced/deploy-multiple-network-interfaces/)
   * [Use application security groups in Cloud Foundry](./advanced/application-security-groups/)
+  * [Deploy Cloud Foundry on Azure Stack](./advanced/azure-stack/)
 * Cloud Foundry Scenarios
   * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
   * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
