@@ -113,7 +113,7 @@ describe Bosh::AzureCloud::VMManager do
               and_return(nil)
           end
 
-          it "should create availability set and use value of availability_set as its name" do
+          it "should create availability set with the name specified in resource_pool" do
             expect(client2).to receive(:create_availability_set).
               with(resource_group_name, avset_params)
             expect(client2).to receive(:create_network_interface).twice
@@ -158,7 +158,7 @@ describe Bosh::AzureCloud::VMManager do
                 and_return(nil)
             end
 
-            it "should create availability set and use value of availability_set as its name" do
+            it "should create availability set with the name specified in resource_pool" do
               expect(client2).to receive(:create_availability_set).
                 with(resource_group_name, avset_params)
 
@@ -232,106 +232,10 @@ describe Bosh::AzureCloud::VMManager do
 
         context "when the availability set doesn't exist" do
           let(:availability_set_name) { "#{SecureRandom.uuid}" }
-
-          context "when the availability is unmanaged" do
-            let(:resource_pool) {
-              {
-                'instance_type' => 'Standard_D1',
-                'availability_set' => availability_set_name
-              }
-            }
-
-            let(:avset_params) {
-              {
-                :name                         => resource_pool['availability_set'],
-                :location                     => location,
-                :tags                         => {'user-agent' => 'bosh'},
-                :platform_update_domain_count => 5,
-                :platform_fault_domain_count  => 3,
-                :managed                      => false
-              }
-            }
-
-            before do
-              allow(client2).to receive(:get_availability_set_by_name).
-                with(resource_group_name, resource_pool['availability_set']).
-                and_return(nil)
-            end
-
-            it "should create the unmanaged availability set" do
-              expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
-              expect(client2).to receive(:create_network_interface).twice
-
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
-            end
-          end
-
-          context "when the availability is managed" do
-            let(:resource_pool) {
-              {
-                'instance_type' => 'Standard_D1',
-                'availability_set' => availability_set_name
-              }
-            }
-
-            let(:avset_params) {
-              {
-                :name                         => resource_pool['availability_set'],
-                :location                     => location,
-                :tags                         => {'user-agent' => 'bosh'},
-                :platform_update_domain_count => 5,
-                :platform_fault_domain_count  => 2,
-                :managed                      => true
-              }
-            }
-
-            before do
-              allow(client2).to receive(:get_availability_set_by_name).
-                with(resource_group_name, resource_pool['availability_set']).
-                and_return(nil)
-            end
-
-            it "should create the managed availability set" do
-              expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
-              expect(client2).to receive(:create_network_interface).twice
-
-              vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
-            end
-          end
-
-          context "when platform_update_domain_count and platform_fault_domain_count are not set" do
-            let(:resource_pool) {
-              {
-                'instance_type' => 'Standard_D1',
-                'availability_set' => availability_set_name
-              }
-            }
-
-            let(:avset_params) {
-              {
-                :name                         => resource_pool['availability_set'],
-                :location                     => location,
-                :tags                         => {'user-agent' => 'bosh'},
-                :platform_update_domain_count => 5,
-                :platform_fault_domain_count  => 2, # The default value of fault domains in managed availability set is 2
-                :managed                      => true
-              }
-            }
-
-            before do
-              allow(client2).to receive(:get_availability_set_by_name).
-                with(resource_group_name, resource_pool['availability_set']).
-                and_return(nil)
-            end
-
-            it "should create the availability set with the default values" do
-              expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
-
-              vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
-            end
+          before do
+            allow(client2).to receive(:get_availability_set_by_name).
+              with(resource_group_name, availability_set_name).
+              and_return(nil)
           end
 
           context "when platform_update_domain_count and platform_fault_domain_count are set" do
@@ -343,30 +247,119 @@ describe Bosh::AzureCloud::VMManager do
                 'platform_fault_domain_count' => 1
               }
             }
-
             let(:avset_params) {
               {
                 :name                         => resource_pool['availability_set'],
                 :location                     => location,
                 :tags                         => {'user-agent' => 'bosh'},
                 :platform_update_domain_count => 4,
-                :platform_fault_domain_count  => 1,
-                :managed                      => true # It does NOT matter whether it is managed or not for this case
+                :platform_fault_domain_count  => 1
               }
             }
 
-            before do
-              allow(client2).to receive(:get_availability_set_by_name).
-                with(resource_group_name, resource_pool['availability_set']).
-                and_return(nil)
+            context "when the availability set is unmanaged" do
+              before do
+                avset_params[:managed] = false
+              end
+
+              it "should create the unmanaged availability set" do
+                expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
+                expect(client2).to receive(:create_network_interface).twice
+
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(vm_name)
+              end
             end
 
-            it "should create the availability set with the specified values" do
-              expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
-              expect(client2).to receive(:create_network_interface).twice
+            context "when the availability set is managed" do
+              before do
+                avset_params[:managed] = true
+              end
 
-              vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
+              it "should create the managed availability set" do
+                expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
+                expect(client2).to receive(:create_network_interface).twice
+
+                vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                expect(vm_params[:name]).to eq(vm_name)
+              end
+            end
+          end
+
+          context "when platform_update_domain_count and platform_fault_domain_count are not set" do
+            let(:resource_pool) {
+              {
+                'instance_type' => 'Standard_D1',
+                'availability_set' => availability_set_name
+              }
+            }
+            let(:avset_params) {
+              {
+                :name     => resource_pool['availability_set'],
+                :location => location,
+                :tags     => {'user-agent' => 'bosh'}
+              }
+            }
+
+            context "when the environment is not AzureStack" do
+              context "when the availability set is unmanaged" do
+                before do
+                  avset_params[:platform_update_domain_count] = 5
+                  avset_params[:platform_fault_domain_count]  = 3
+                  avset_params[:managed]                      = false
+                end
+
+                it "should create the unmanaged availability set" do
+                  expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
+                  expect(client2).to receive(:create_network_interface).twice
+
+                  vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  expect(vm_params[:name]).to eq(vm_name)
+                end
+              end
+
+              context "when the availability set is managed" do
+                before do
+                  avset_params[:platform_update_domain_count] = 5
+                  avset_params[:platform_fault_domain_count]  = 2
+                  avset_params[:managed]                      = true
+                end
+
+                it "should create the managed availability set" do
+                  expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
+                  expect(client2).to receive(:create_network_interface).twice
+
+                  vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  expect(vm_params[:name]).to eq(vm_name)
+                end
+              end
+            end
+
+            context "when the environment is AzureStack" do
+              # VM manager for AzureStack
+              let(:azure_properties_azure_stack) {
+                mock_azure_properties_merge({
+                  'environment' => 'AzureStack'
+                })
+              }
+              let(:vm_manager_azure_stack) { Bosh::AzureCloud::VMManager.new(azure_properties_azure_stack, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+
+              # Only unmanaged availability set is supported on AzureStack
+              context "when the availability set is unmanaged" do
+                before do
+                  avset_params[:platform_update_domain_count] = 1
+                  avset_params[:platform_fault_domain_count]  = 1
+                  avset_params[:managed]                      = false
+                end
+
+                it "should create the unmanaged availability set" do
+                  expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
+                  expect(client2).to receive(:create_network_interface).twice
+
+                  vm_params = vm_manager_azure_stack.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  expect(vm_params[:name]).to eq(vm_name)
+                end
+              end
             end
           end
         end
