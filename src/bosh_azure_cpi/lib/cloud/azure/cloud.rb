@@ -446,28 +446,31 @@ module Bosh::AzureCloud
             @logger.debug("attach_disk - although use_managed_disks is enabled, will still attach the unmanaged disk `#{disk_name}' to the VM `#{vm_name}' with unmanaged disks")
           else
             if disk.nil?
-              begin
-                storage_account_name = disk_id.storage_account_name()
-                blob_uri = @disk_manager.get_data_disk_uri(disk_id)
-                storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
-                location = storage_account[:location]
-                # Can not use the type of the default storage account because only Standard_LRS and Premium_LRS are supported for managed disk.
-                account_type = (storage_account[:account_type] == STORAGE_ACCOUNT_TYPE_PREMIUM_LRS) ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
-                @logger.debug("attach_disk - Migrating the unmanaged disk `#{disk_name}' to a managed disk")
-                @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type, vm_zone)
+              # migrate only if the disk is an unmanaged disk
+              if disk_id.disk_name().start_with?(DATA_DISK_PREFIX)
+                begin
+                  storage_account_name = disk_id.storage_account_name()
+                  blob_uri = @disk_manager.get_data_disk_uri(disk_id)
+                  storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+                  location = storage_account[:location]
+                  # Can not use the type of the default storage account because only Standard_LRS and Premium_LRS are supported for managed disk.
+                  account_type = (storage_account[:account_type] == STORAGE_ACCOUNT_TYPE_PREMIUM_LRS) ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
+                  @logger.debug("attach_disk - Migrating the unmanaged disk `#{disk_name}' to a managed disk")
+                  @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type, vm_zone)
 
-                # Set below metadata but not delete it.
-                # Users can manually delete all blobs in container `bosh` whose names start with `bosh-data` after migration is finished.
-                @blob_manager.set_blob_metadata(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", METADATA_FOR_MIGRATED_BLOB_DISK)
-              rescue => e
-                if account_type # There are no other functions between defining account_type and @disk_manager2.create_disk_from_blob
-                  begin
-                    @disk_manager2.delete_data_disk(disk_id)
-                  rescue => err
-                    @logger.error("attach_disk - Failed to delete the created managed disk #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+                  # Set below metadata but not delete it.
+                  # Users can manually delete all blobs in container `bosh` whose names start with `bosh-data` after migration is finished.
+                  @blob_manager.set_blob_metadata(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", METADATA_FOR_MIGRATED_BLOB_DISK)
+                rescue => e
+                  if account_type # There are no other functions between defining account_type and @disk_manager2.create_disk_from_blob
+                    begin
+                      @disk_manager2.delete_data_disk(disk_id)
+                    rescue => err
+                      @logger.error("attach_disk - Failed to delete the created managed disk #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+                    end
                   end
+                  cloud_error("attach_disk - Failed to create the managed disk for #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
                 end
-                cloud_error("attach_disk - Failed to create the managed disk for #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
               end
             elsif disk[:zone].nil? && !vm_zone.nil? #Only for migration scenario: VM is recreated in a zone while its data disk is still a regional resource.
               begin
