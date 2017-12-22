@@ -62,12 +62,6 @@ properties:
   azure.azure_stack.endpoint_prefix:
     description: The endpoint prefix for your AzureStack deployment
     default: management
-  azure.azure_stack.skip_ssl_validation:
-    description: Toggles verification of the Azure Resource Manager REST API SSL certificate
-    default: false
-  azure.azure_stack.use_http_to_access_storage_account:
-    description: Flag for using HTTP to access storage account rather than the default HTTPS
-    default: false
   azure.azure_stack.ca_cert:
     description: All required custom CA certificates for AzureStack
     example:

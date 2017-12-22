@@ -2132,12 +2132,8 @@ module Bosh::AzureCloud
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
       if @azure_properties['environment'] == ENVIRONMENT_AZURESTACK
-        if @azure_properties['azure_stack']['skip_ssl_validation']
-          http.verify_mode = OpenSSL::SSL::VERIFY_NONE
-        else
-          # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
-          http.ca_file = get_ca_file_path if uri.host.include?(@azure_properties['azure_stack']['domain'])
-        end
+        # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
+        http.ca_file = get_ca_file_path if uri.host.include?(@azure_properties['azure_stack']['domain'])
       end
       # The default value for read_timeout is 60 seconds.
       # The default value for open_timeout is nil before ruby 2.3.0 so set it to 60 seconds here.

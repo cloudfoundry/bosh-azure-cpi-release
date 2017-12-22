@@ -193,20 +193,16 @@ describe 'cpi.json.erb' do
             'authentication'                     => 'AzureAD',
             'resource'                           => 'fake-token-resource',
             'endpoint_prefix'                    => 'management',
-            "skip_ssl_validation"                => false,
-            "use_http_to_access_storage_account" => false,
           })
         end
       end
 
       context 'when maximal properties are provided' do
         before do
-          manifest['properties']['azure']['azure_stack']['domain']                             = 'fake-domain'
-          manifest['properties']['azure']['azure_stack']['authentication']                     = 'fake-authentication'
-          manifest['properties']['azure']['azure_stack']['resource']                           = 'fake-token-resource'
-          manifest['properties']['azure']['azure_stack']['endpoint_prefix']                    = 'fake-endpoint-prefix'
-          manifest['properties']['azure']['azure_stack']['skip_ssl_validation']                = true
-          manifest['properties']['azure']['azure_stack']['use_http_to_access_storage_account'] = true
+          manifest['properties']['azure']['azure_stack']['domain']          = 'fake-domain'
+          manifest['properties']['azure']['azure_stack']['authentication']  = 'fake-authentication'
+          manifest['properties']['azure']['azure_stack']['resource']        = 'fake-token-resource'
+          manifest['properties']['azure']['azure_stack']['endpoint_prefix'] = 'fake-endpoint-prefix'
         end
 
         it 'parses the AzureStack properties' do
@@ -215,8 +211,6 @@ describe 'cpi.json.erb' do
             'authentication'                     => 'fake-authentication',
             'resource'                           => 'fake-token-resource',
             'endpoint_prefix'                    => 'fake-endpoint-prefix',
-            "skip_ssl_validation"                => true,
-            "use_http_to_access_storage_account" => true,
           })
         end
       end

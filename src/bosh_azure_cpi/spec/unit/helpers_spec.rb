@@ -407,64 +407,30 @@ describe Bosh::AzureCloud::Helpers do
 
     context "when the environment is AzureStack" do
       let(:azure_stack_domain) { "fake-azure-stack-domain" }
-
-      context "when http is used" do
-        let(:azure_properties) {
-          {
-            "environment" => "AzureStack",
-            "azure_stack" => {
-              "domain" => azure_stack_domain,
-              "use_http_to_access_storage_account" => true
-            }
+      let(:azure_properties) {
+        {
+          "environment" => "AzureStack",
+          "azure_stack" => {
+            "domain" => azure_stack_domain
           }
         }
-        let(:options) {
-          {
-            :storage_account_name       => storage_account_name,
-            :storage_access_key         => storage_account_key,
-            :storage_dns_suffix         => storage_dns_suffix,
-            :default_endpoints_protocol => "http",
-            :user_agent_prefix          => "BOSH-AZURE-CPI"
-          }
+      }
+      let(:options) {
+        {
+          :storage_account_name       => storage_account_name,
+          :storage_access_key         => storage_account_key,
+          :storage_dns_suffix         => storage_dns_suffix,
+          :ca_file                    => "/var/vcap/jobs/azure_cpi/config/azure_stack_ca_cert.pem",
+          :user_agent_prefix          => "BOSH-AZURE-CPI"
         }
+      }
 
-        it "should create the storage client with the correct options" do
-          expect(Azure::Storage::Client).to receive(:create).with(options).
-            and_return(azure_client)
-          expect(
-            helpers_tester.initialize_azure_storage_client(storage_account, azure_properties)
-          ).to eq(azure_client)
-        end
-      end
-
-      context "when https is used" do
-        let(:azure_properties) {
-          {
-            "environment" => "AzureStack",
-            "azure_stack" => {
-              "domain" => azure_stack_domain,
-              "use_http_to_access_storage_account" => false
-            }
-          }
-        }
-
-        let(:options) {
-          {
-            :storage_account_name       => storage_account_name,
-            :storage_access_key         => storage_account_key,
-            :storage_dns_suffix         => storage_dns_suffix,
-            :ca_file                    => "/var/vcap/jobs/azure_cpi/config/azure_stack_ca_cert.pem",
-            :user_agent_prefix          => "BOSH-AZURE-CPI"
-          }
-        }
-
-        it "should create the storage client with the correct options" do
-          expect(Azure::Storage::Client).to receive(:create).with(options).
-            and_return(azure_client)
-          expect(
-            helpers_tester.initialize_azure_storage_client(storage_account, azure_properties)
-          ).to eq(azure_client)
-        end
+      it "should create the storage client with the correct options" do
+        expect(Azure::Storage::Client).to receive(:create).with(options).
+          and_return(azure_client)
+        expect(
+          helpers_tester.initialize_azure_storage_client(storage_account, azure_properties)
+        ).to eq(azure_client)
       end
     end
   end
