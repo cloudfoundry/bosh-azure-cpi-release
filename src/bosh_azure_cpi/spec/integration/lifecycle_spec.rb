@@ -74,6 +74,14 @@ describe Bosh::AzureCloud::Cloud do
     described_class.new(cloud_options_with_location)
   end
 
+  subject(:cpi_without_default_nsg) do
+    cloud_options_without_default_nsg = cloud_options.dup
+    cloud_options_without_default_nsg['azure']['storage_account_name'] = storage_account_name unless storage_account_name.nil?
+    cloud_options_without_default_nsg['azure']['use_managed_disks'] = use_managed_disks
+    cloud_options_without_default_nsg['azure']['default_security_group'] = ""
+    described_class.new(cloud_options_without_default_nsg)
+  end
+
   before {
     Bosh::Clouds::Config.configure(double('delegate', task_checkpoint: nil))
   }
@@ -347,6 +355,39 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle
+    end
+  end
+
+  context 'when default_security_group is not specified' do
+    let(:network_spec) {
+      {
+        'network_a' => {
+          'type' => 'dynamic',
+          'cloud_properties' => {
+            'virtual_network_name' => vnet_name,
+            'subnet_name' => subnet_name
+          }
+        }
+      }
+    }
+
+    it 'should exercise the vm lifecycle' do
+      begin
+        logger.info("Creating VM with stemcell_id=`#{@stemcell_id}'")
+        instance_id = cpi_without_default_nsg.create_vm(
+          SecureRandom.uuid,
+          @stemcell_id,
+          resource_pool,
+          network_spec)
+        expect(instance_id).to be
+
+        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_properties)
+        network_interface = cpi_without_default_nsg.azure_client2.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
+        nsg = network_interface[:network_security_group]
+        expect(nsg).to be_nil
+      ensure
+        cpi_without_default_nsg.delete_vm(instance_id) unless instance_id.nil?
+      end
     end
   end
 

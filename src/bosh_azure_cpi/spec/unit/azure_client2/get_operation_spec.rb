@@ -766,6 +766,62 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
       end
 
+      context "when the network interface is bound to network security group" do
+        let(:nic_response_body) {
+          {
+            "id" => "fake-id",
+            "name" => "fake-name",
+            "location" => "fake-location",
+            "tags" => "fake-tags",
+            "properties" => {
+              "provisioningState" => "fake-state",
+              "networkSecurityGroup" => {
+                "id" => nsg_id
+              },
+              "dnsSettings" => {
+                "dnsServers" => ["168.63.129.16"]
+              },
+              "ipConfigurations" => [
+                {
+                  "id" => "fake-id",
+                  "properties" => {
+                    "privateIPAddress" => "10.0.0.100",
+                    "privateIPAllocationMethod" => "Dynamic"
+                  }
+                }
+              ]
+            }
+          }.to_json
+        }
+        let(:fake_nic) {
+          {
+            :id => "fake-id",
+            :name => "fake-name",
+            :location => "fake-location",
+            :tags => "fake-tags",
+            :provisioning_state => "fake-state",
+            :network_security_group => fake_nsg,
+            :dns_settings => ["168.63.129.16"],
+            :ip_configuration_id => "fake-id",
+            :private_ip => "10.0.0.100",
+            :private_ip_allocation_method => "Dynamic"
+          }
+        }
+        it "should return the network interface with network security group" do
+          stub_request(:get, nsg_uri).to_return(
+            :status => 200,
+            :body => nsg_response_body,
+            :headers => {})
+          stub_request(:get, nic_uri).to_return(
+            :status => 200,
+            :body => nic_response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+          ).to eq(fake_nic)
+        end
+      end
+
       context "when the network interface is bound to application security group" do
         let(:nic_response_body) {
           {

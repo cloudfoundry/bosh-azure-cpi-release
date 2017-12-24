@@ -335,6 +335,7 @@ module Bosh::AzureCloud
       # Network security group name can be specified in resource_pool, networks and global configuration (ordered by priority)
       network_security_group_name = resource_pool.fetch('security_group', network.security_group)
       network_security_group_name = @azure_properties["default_security_group"] if network_security_group_name.nil?
+      return nil if network_security_group_name.nil? || network_security_group_name.empty?
       # The resource group which the NSG belongs to can be specified in networks and global configuration (ordered by priority)
       resource_group_name = network.resource_group_name
       network_security_group = @azure_client2.get_network_security_group_by_name(resource_group_name, network_security_group_name)

@@ -50,7 +50,8 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
 
     context "when network interfaces are found and some of them have the keyword in the name" do
-      let(:result) {
+      # The first NIC's response body includes networkSecurityGroup, publicIPAddress, loadBalancerBackendAddressPools and applicationGatewayBackendAddressPools
+      let(:response_body) {
         {
           "value" => [
             {
@@ -65,7 +66,20 @@ describe Bosh::AzureCloud::AzureClient2 do
                     "id"  => "d0",
                     "properties"  => {
                       "privateIPAddress"  => "e0",
-                      "privateIPAllocationMethod"  => "f0"
+                      "privateIPAllocationMethod"  => "f0",
+                      "publicIPAddress" => {
+                        "id" => "j"
+                      },
+                      "loadBalancerBackendAddressPools" => [
+                        {
+                          "id" => "k"
+                        }
+                      ],
+                      "applicationGatewayBackendAddressPools" => [
+                        {
+                          "id" => "l"
+                        }
+                      ]
                     }
                   }
                 ],
@@ -74,6 +88,9 @@ describe Bosh::AzureCloud::AzureClient2 do
                       "g",
                       "h"
                    ]
+                },
+                "networkSecurityGroup" => {
+                  "id" => "i"
                 }
               }
             },
@@ -138,7 +155,11 @@ describe Bosh::AzureCloud::AzureClient2 do
           :dns_settings=>["g", "h"],
           :ip_configuration_id=>"d0",
           :private_ip=>"e0",
-          :private_ip_allocation_method=>"f0"
+          :private_ip_allocation_method=>"f0",
+          :network_security_group=>{:id=>"i"},
+          :public_ip=>{:id=>"j"},
+          :load_balancer=>{:id=>"k"},
+          :application_gateway=>{:id=>"l"}
         }
       }
       let(:network_interface_1) {
@@ -165,7 +186,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :headers => {})
         stub_request(:get, network_interfaces_url).to_return(
           :status => 200,
-          :body => result,
+          :body => response_body,
           :headers => {
           })
 
