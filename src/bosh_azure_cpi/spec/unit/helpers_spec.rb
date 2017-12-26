@@ -125,6 +125,25 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
+  describe "#bosh_jobs_dir" do
+    context "when the environment variable BOSH_JOBS_DIR exists" do
+      let(:bosh_jobs_dir) { ".bosh_init/installations/a3ee66ec-6f00-4aab-632d-f6d4c5dc5f5b/jobs" }
+      before do
+        allow(ENV).to receive(:[]).with("BOSH_JOBS_DIR").and_return(bosh_jobs_dir)
+      end
+
+      it "should return the environment variable BOSH_JOBS_DIR" do
+        expect(helpers_tester.bosh_jobs_dir).to eq(bosh_jobs_dir)
+      end
+    end
+
+    context "when the environment variable BOSH_JOBS_DIR doesn't exist" do
+      it "should return /var/vcap/jobs" do
+        expect(helpers_tester.bosh_jobs_dir).to eq("/var/vcap/jobs")
+      end
+    end
+  end
+
   describe "#get_arm_endpoint" do
     context "when environment is Azure" do
       let(:azure_properties) { {'environment' => 'AzureCloud'} }
@@ -303,30 +322,6 @@ describe Bosh::AzureCloud::Helpers do
         }
       }
 
-      context "when azure_stack.authentication is AzureStack" do
-        before do
-          azure_properties['azure_stack']['authentication'] = 'AzureStack'
-        end
-
-        it "should return AzureStack authentication endpoint and api version" do
-          expect(
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-          ).to eq(["https://fake-domain/oauth2/token", azure_stack_api_version])
-        end
-      end
-
-      context "when azure_stack.authentication is AzureStackAD" do
-        before do
-          azure_properties['azure_stack']['authentication'] = 'AzureStackAD'
-        end
-
-        it "should return AzureStack authentication endpoint and api version" do
-          expect(
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-          ).to eq(["https://fake-domain/fake-tenant-id/oauth2/token", azure_stack_api_version])
-        end
-      end
-
       context "when azure_stack.authentication is AzureAD" do
         before do
           azure_properties['azure_stack']['authentication'] = 'AzureAD'
@@ -336,6 +331,18 @@ describe Bosh::AzureCloud::Helpers do
           expect(
             helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
           ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", api_version])
+        end
+      end
+
+      context "when azure_stack.authentication is ADFS" do
+        before do
+          azure_properties['azure_stack']['authentication'] = 'ADFS'
+        end
+
+        it "should return ADFS authentication endpoint and api version" do
+          expect(
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          ).to eq(["https://adfs.fake-domain/adfs/oauth2/token", azure_stack_api_version])
         end
       end
 
@@ -364,6 +371,79 @@ describe Bosh::AzureCloud::Helpers do
         expect(
           helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
         ).to eq(["https://login.microsoftonline.de/fake-tenant-id/oauth2/token", azure_german_api_version])
+      end
+    end
+  end
+
+  describe "#get_service_principal_certificate_path" do
+    context "when the environment variable BOSH_JOBS_DIR exists" do
+      let(:bosh_jobs_dir) { ".bosh_init/installations/a3ee66ec-6f00-4aab-632d-f6d4c5dc5f5b/jobs" }
+      before do
+        allow(ENV).to receive(:[]).with("BOSH_JOBS_DIR").and_return(bosh_jobs_dir)
+      end
+
+      it "should return a path under BOSH_JOBS_DIR" do
+        expect(helpers_tester.get_service_principal_certificate_path).to eq("#{bosh_jobs_dir}/azure_cpi/config/service_principal_certificate.pem")
+      end
+    end
+
+    context "when the environment variable BOSH_JOBS_DIR doesn't exist" do
+      it "should return a path under /var/vcap/jobs" do
+        expect(helpers_tester.get_service_principal_certificate_path).to eq("/var/vcap/jobs/azure_cpi/config/service_principal_certificate.pem")
+      end
+    end
+  end
+
+  describe "#get_jwt_assertion" do
+    let(:authentication_endpoint) { "fake-endpoint" }
+    let(:client_id) { "3d343186-e27c-4db1-b59e-50bf7b366f61" }
+    let(:certificate_data) { "fake-cert-data" }
+    let(:cert) { instance_double(OpenSSL::X509::Certificate) }
+    let(:thumbprint) { "12f0d2b95eb4d0ad81892c9d9fcc45a89c324cbd" }
+    let(:x5t) { "EvDSuV600K2BiSydn8xFqJwyTL0=" } # x5t is the Base64 UrlEncoding of thumbprint
+    let(:now) { Time.now }
+    let(:jti) { "b55b54ac-7494-449b-94b2-d7bff0285837" }
+    let(:header) {
+      {
+        "alg": "RS256",
+        "typ": "JWT",
+        "x5t": x5t
+      }
+    }
+    let(:payload) {
+      {
+        "aud": authentication_endpoint,
+        "exp": (now + 3600).strftime("%s"),
+        "iss": client_id,
+        "jti": jti,
+        "nbf": (now - 90).strftime("%s"),
+        "sub": client_id
+      }
+    }
+    let(:rsa_private) { "fake-rsa-private" }
+    let(:jwt_assertion) { "fake-jwt-assertion" }
+
+    before do
+      allow(File).to receive(:read).and_return(certificate_data)
+      allow(OpenSSL::X509::Certificate).to receive(:new).with(certificate_data).and_return(cert)
+      allow(cert).to receive(:to_der)
+      allow(OpenSSL::Digest::SHA1).to receive(:new).and_return(thumbprint)
+      allow(SecureRandom).to receive(:uuid).and_return(jti)
+      allow(Time).to receive(:now).and_return(now)
+      allow(OpenSSL::PKey::RSA).to receive(:new).with(certificate_data).and_return(rsa_private)
+    end
+
+    it "should encode the payload with the private key" do
+      expect(JWT).to receive(:encode).with(payload, rsa_private, 'RS256', header).and_return(jwt_assertion)
+      expect(helpers_tester.get_jwt_assertion(authentication_endpoint, client_id)).to eq(jwt_assertion)
+    end
+
+    context "when JWT throws an error when encoding" do
+      it "should raise an error" do
+        expect(JWT).to receive(:encode).with(payload, rsa_private, 'RS256', header).and_raise("JWT-ENCODING-ERROR")
+        expect {
+          helpers_tester.get_jwt_assertion(authentication_endpoint, client_id)
+        }.to raise_error /Failed to get the jwt assertion: .*JWT-ENCODING-ERROR/
       end
     end
   end
@@ -435,7 +515,7 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
-  describe "#get_ca_file_path" do
+  describe "#get_ca_cert_path" do
     context "when the environment variable BOSH_JOBS_DIR exists" do
       let(:bosh_jobs_dir) { ".bosh_init/installations/a3ee66ec-6f00-4aab-632d-f6d4c5dc5f5b/jobs" }
       before do
@@ -443,13 +523,13 @@ describe Bosh::AzureCloud::Helpers do
       end
 
       it "should return a path under BOSH_JOBS_DIR" do
-        expect(helpers_tester.get_ca_file_path).to eq("#{bosh_jobs_dir}/azure_cpi/config/azure_stack_ca_cert.pem")
+        expect(helpers_tester.get_ca_cert_path).to eq("#{bosh_jobs_dir}/azure_cpi/config/azure_stack_ca_cert.pem")
       end
     end
 
     context "when the environment variable BOSH_JOBS_DIR doesn't exist" do
       it "should return a path under /var/vcap/jobs" do
-        expect(helpers_tester.get_ca_file_path).to eq("/var/vcap/jobs/azure_cpi/config/azure_stack_ca_cert.pem")
+        expect(helpers_tester.get_ca_cert_path).to eq("/var/vcap/jobs/azure_cpi/config/azure_stack_ca_cert.pem")
       end
     end
   end

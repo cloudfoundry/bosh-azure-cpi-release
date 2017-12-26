@@ -2133,7 +2133,7 @@ module Bosh::AzureCloud
       http.use_ssl = true
       if @azure_properties['environment'] == ENVIRONMENT_AZURESTACK
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
-        http.ca_file = get_ca_file_path if uri.host.include?(@azure_properties['azure_stack']['domain'])
+        http.ca_file = get_ca_cert_path if uri.host.include?(@azure_properties['azure_stack']['domain'])
       end
       # The default value for read_timeout is 60 seconds.
       # The default value for open_timeout is nil before ruby 2.3.0 so set it to 60 seconds here.
@@ -2142,6 +2142,7 @@ module Bosh::AzureCloud
       http
     end
 
+    # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service
     def get_token(force_refresh = false)
       if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.now) <= 0 || force_refresh
         @logger.info("get_token - trying to get/refresh Azure authentication token")
@@ -2152,12 +2153,20 @@ module Bosh::AzureCloud
         uri = URI(endpoint)
         uri.query = URI.encode_www_form(params)
 
-        params = {}
-        params['grant_type']    = 'client_credentials'
-        params['client_id']     = @azure_properties['client_id']
-        params['client_secret'] = @azure_properties['client_secret']
-        params['resource']      = get_token_resource(@azure_properties)
-        params['scope']         = 'user_impersonation'
+        client_id = @azure_properties['client_id']
+        params = {
+          'grant_type' => 'client_credentials',
+          'client_id'  => client_id,
+          'resource'   => get_token_resource(@azure_properties),
+          'scope'      => 'user_impersonation'
+        }
+
+        if @azure_properties.has_key?('client_secret')
+          params['client_secret'] = @azure_properties['client_secret']
+        else
+          params['client_assertion_type'] = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+          params['client_assertion']      = get_jwt_assertion(endpoint, client_id)
+        end
 
         retry_count = 0
         retry_after = 5
