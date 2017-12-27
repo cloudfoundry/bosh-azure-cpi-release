@@ -1418,9 +1418,7 @@ module Bosh::AzureCloud
         'location'   => nic_params[:location],
         'tags'       => nic_params[:tags],
         'properties' => {
-          'networkSecurityGroup' => {
-            'id' => nic_params[:network_security_group][:id]
-          },
+          'networkSecurityGroup' => nic_params[:network_security_group].nil? ? nil : { 'id' => nic_params[:network_security_group][:id] },
           'ipConfigurations' => [
             {
               'name'        => nic_params[:ipconfig_name],
@@ -2015,6 +2013,15 @@ module Bosh::AzureCloud
 
         properties = result['properties']
         interface[:provisioning_state] = properties['provisioningState']
+
+        unless properties['networkSecurityGroup'].nil?
+          if recursive
+            interface[:network_security_group] = get_network_security_group(properties['networkSecurityGroup']['id'])
+          else
+            interface[:network_security_group] = {:id => properties['networkSecurityGroup']['id']}
+          end
+        end
+
         unless properties['dnsSettings']['dnsServers'].nil?
           interface[:dns_settings] = []
           properties['dnsSettings']['dnsServers'].each { |dns| interface[:dns_settings].push(dns) }

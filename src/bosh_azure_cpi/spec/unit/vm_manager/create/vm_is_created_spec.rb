@@ -33,77 +33,97 @@ describe Bosh::AzureCloud::VMManager do
 
       # Network Security Group
       context "#network_security_group" do
-        context "when the network security group is specified in the global configuration" do
-          it "should assign the default network security group to the network interface" do
+        context "when the network security group is not specified in the global configuration" do
+          let(:azure_properties_without_default_security_group) {
+            mock_azure_properties_merge({
+              'default_security_group' => ''
+            })
+          }
+          let(:vm_manager_without_default_security_group) { Bosh::AzureCloud::VMManager.new(
+            azure_properties_without_default_security_group, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+
+          it "should not assign network security group to the network interface" do
             expect(client2).not_to receive(:delete_virtual_machine)
             expect(client2).not_to receive(:delete_network_interface)
             expect(client2).to receive(:create_network_interface).
-              with(resource_group_name, hash_including(:network_security_group => default_security_group), any_args).twice
+              with(resource_group_name, hash_including(:network_security_group => nil), any_args).twice
             expect {
-              vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              vm_manager_without_default_security_group.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             }.not_to raise_error
           end
 
-          context " and network specs" do
-            let(:nsg_name_in_network_spec) { "fake-nsg-name-specified-in-network-spec" }
-            let(:security_group_in_network_spec) {
-              {
-                :name => nsg_name_in_network_spec
-              }
-            }
-
-            before do
-              allow(manual_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
-              allow(dynamic_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
-              allow(client2).to receive(:get_network_security_group_by_name).
-                with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_network_spec).
-                and_return(security_group_in_network_spec)
-            end
-
-            it "should assign the network security group specified in network specs to the network interface" do
+          context "when the network security group is specified in the global configuration" do
+            it "should assign the default network security group to the network interface" do
               expect(client2).not_to receive(:delete_virtual_machine)
               expect(client2).not_to receive(:delete_network_interface)
               expect(client2).to receive(:create_network_interface).
-                with(resource_group_name, hash_including(:network_security_group => security_group_in_network_spec), any_args).twice
-              expect(client2).not_to receive(:create_network_interface).
-                with(resource_group_name, hash_including(:network_security_group => default_security_group), any_args)
+                with(resource_group_name, hash_including(:network_security_group => default_security_group), any_args).twice
               expect {
                 vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
               }.not_to raise_error
             end
 
-            context " and resource_pool" do
-              let(:nsg_name_in_resource_pool) { "fake-nsg-name-specified-in-resource-pool" }
-              let(:security_group_in_resource_pool) {
+            context " and network specs" do
+              let(:nsg_name_in_network_spec) { "fake-nsg-name-specified-in-network-spec" }
+              let(:security_group_in_network_spec) {
                 {
-                  :name => nsg_name_in_resource_pool
-                }
-              }
-              let(:resource_pool) {
-                {
-                  'instance_type'  => 'Standard_D1',
-                  'security_group' => nsg_name_in_resource_pool
+                  :name => nsg_name_in_network_spec
                 }
               }
 
               before do
+                allow(manual_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
+                allow(dynamic_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
                 allow(client2).to receive(:get_network_security_group_by_name).
-                  with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_resource_pool).
-                  and_return(security_group_in_resource_pool)
+                  with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_network_spec).
+                  and_return(security_group_in_network_spec)
               end
 
-              it "should assign the network security group specified in resource_pool to the network interface" do
+              it "should assign the network security group specified in network specs to the network interface" do
                 expect(client2).not_to receive(:delete_virtual_machine)
                 expect(client2).not_to receive(:delete_network_interface)
                 expect(client2).to receive(:create_network_interface).
-                  with(resource_group_name, hash_including(:network_security_group => security_group_in_resource_pool), any_args).twice
-                expect(client2).not_to receive(:create_network_interface).
-                  with(resource_group_name, hash_including(:network_security_group => security_group_in_network_spec), any_args)
+                  with(resource_group_name, hash_including(:network_security_group => security_group_in_network_spec), any_args).twice
                 expect(client2).not_to receive(:create_network_interface).
                   with(resource_group_name, hash_including(:network_security_group => default_security_group), any_args)
                 expect {
                   vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
                 }.not_to raise_error
+              end
+
+              context " and resource_pool" do
+                let(:nsg_name_in_resource_pool) { "fake-nsg-name-specified-in-resource-pool" }
+                let(:security_group_in_resource_pool) {
+                  {
+                    :name => nsg_name_in_resource_pool
+                  }
+                }
+                let(:resource_pool) {
+                  {
+                    'instance_type'  => 'Standard_D1',
+                    'security_group' => nsg_name_in_resource_pool
+                  }
+                }
+
+                before do
+                  allow(client2).to receive(:get_network_security_group_by_name).
+                    with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_resource_pool).
+                    and_return(security_group_in_resource_pool)
+                end
+
+                it "should assign the network security group specified in resource_pool to the network interface" do
+                  expect(client2).not_to receive(:delete_virtual_machine)
+                  expect(client2).not_to receive(:delete_network_interface)
+                  expect(client2).to receive(:create_network_interface).
+                    with(resource_group_name, hash_including(:network_security_group => security_group_in_resource_pool), any_args).twice
+                  expect(client2).not_to receive(:create_network_interface).
+                    with(resource_group_name, hash_including(:network_security_group => security_group_in_network_spec), any_args)
+                  expect(client2).not_to receive(:create_network_interface).
+                    with(resource_group_name, hash_including(:network_security_group => default_security_group), any_args)
+                  expect {
+                    vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  }.not_to raise_error
+                end
               end
             end
           end

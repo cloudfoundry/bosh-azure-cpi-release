@@ -180,6 +180,16 @@ describe 'cpi.json.erb' do
       end
     end
 
+    context 'when the default security group is not provided' do
+      before do
+        manifest['properties']['azure']['default_security_group'] = nil
+      end
+
+      it 'allows default_security_group to be empty string' do
+        expect(subject['cloud']['properties']['azure']['default_security_group']).to be_empty
+      end
+    end
+
     context 'when the storage account is not provided' do
       before do
         manifest['properties']['azure']['storage_account_name'] = nil
