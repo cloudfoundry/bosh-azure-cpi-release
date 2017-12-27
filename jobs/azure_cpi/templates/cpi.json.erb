@@ -11,7 +11,6 @@
           'client_id' => p('azure.client_id'),
           'ssh_user' => p('azure.ssh_user'),
           'parallel_upload_thread_num' => p('azure.parallel_upload_thread_num'),
-          'default_security_group' => p('azure.default_security_group'),
           'debug_mode' => p('azure.debug_mode'),
           'use_managed_disks' => p('azure.use_managed_disks'),
           'pip_idle_timeout_in_minutes' => p('azure.pip_idle_timeout_in_minutes'),
@@ -57,6 +56,10 @@
     params['cloud']['properties']['azure']['ssh_public_key'] = ssh_public_key
   end.else do
     raise '"ssh_public_key" is not set. Please read https://bosh.io/docs/azure-cpi.html.'
+  end
+
+  if_p('azure.default_security_group') do |default_security_group|
+    params['cloud']['properties']['azure']['default_security_group'] = default_security_group
   end
 
   if p('azure.environment') == 'AzureStack'

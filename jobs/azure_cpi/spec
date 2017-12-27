@@ -49,7 +49,6 @@ properties:
     default: 16
   azure.default_security_group:
     description: The name of the default security group that will be applied to all created VMs
-    default: ""
   azure.debug_mode:
     description: Enable debug mode to log all raw HTTP requests/responses
     default: false

@@ -36,7 +36,7 @@ describe Bosh::AzureCloud::VMManager do
         context "when the network security group is not specified in the global configuration" do
           let(:azure_properties_without_default_security_group) {
             mock_azure_properties_merge({
-              'default_security_group' => ''
+              'default_security_group' => nil
             })
           }
           let(:vm_manager_without_default_security_group) { Bosh::AzureCloud::VMManager.new(
@@ -50,6 +50,27 @@ describe Bosh::AzureCloud::VMManager do
             expect {
               vm_manager_without_default_security_group.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
             }.not_to raise_error
+          end
+
+          context "when the network security group is an empty string in the global configuration" do
+            let(:azure_properties_without_default_security_group) {
+              mock_azure_properties_merge({
+                'default_security_group' => ''
+              })
+            }
+            let(:vm_manager_without_default_security_group) { Bosh::AzureCloud::VMManager.new(
+              azure_properties_without_default_security_group, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+
+            it "should raise an error" do
+              expect(client2).not_to receive(:get_network_security_group_by_name)
+              expect(client2).not_to receive(:create_network_interface)
+              expect(client2).to receive(:list_network_interfaces_by_keyword).and_return([])
+              expect(client2).not_to receive(:delete_network_interface)
+              expect(client2).not_to receive(:delete_virtual_machine)
+              expect {
+                vm_manager_without_default_security_group.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              }.to raise_error /Cannot specify an empty string to the network security group/
+            end
           end
 
           context "when the network security group is specified in the global configuration" do
