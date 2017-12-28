@@ -7,8 +7,6 @@
           'environment' => p('azure.environment'),
           'subscription_id' => p('azure.subscription_id'),
           'resource_group_name' => p('azure.resource_group_name'),
-          'tenant_id' => p('azure.tenant_id'),
-          'client_id' => p('azure.client_id'),
           'ssh_user' => p('azure.ssh_user'),
           'parallel_upload_thread_num' => p('azure.parallel_upload_thread_num'),
           'debug_mode' => p('azure.debug_mode'),
@@ -39,11 +37,22 @@
     params['cloud']['properties']['azure']['location'] = location
   end
 
-  if_p('azure.client_secret') do |client_secret|
-    params['cloud']['properties']['azure']['client_secret'] = client_secret
-  end.else do
-    certificate = p('azure.certificate', '')
-    raise 'both "client_secret" and "certificate" are not provided. Please specify at least one of them.' if certificate.empty?
+  if p('azure.managed_service_identity.enabled')
+    params['cloud']['properties']['azure']['managed_service_identity'] = {
+      "enabled" => true
+    }
+  else
+    params['cloud']['properties']['azure']['managed_service_identity'] = {
+      "enabled" => false
+    }
+    params['cloud']['properties']['azure']['tenant_id'] = p('azure.tenant_id')
+    params['cloud']['properties']['azure']['client_id'] = p('azure.client_id')
+    if_p('azure.client_secret') do |client_secret|
+      params['cloud']['properties']['azure']['client_secret'] = client_secret
+    end.else do
+      certificate = p('azure.certificate', '')
+      raise 'both "client_secret" and "certificate" are not provided. Please specify at least one of them.' if certificate.empty?
+    end
   end
 
   if_p('azure.storage_account_name') do |storage_account_name|

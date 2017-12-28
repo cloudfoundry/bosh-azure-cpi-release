@@ -65,6 +65,9 @@ def mock_cloud_options
         'tenant_id'                  => MOCK_AZURE_TENANT_ID,
         'client_id'                  => MOCK_AZURE_CLIENT_ID,
         'client_secret'              => MOCK_AZURE_CLIENT_SECRET,
+        'managed_service_identity'   => {
+          'enabled' => false
+        },
         'ssh_user'                   => 'vcap',
         'ssh_public_key'             => MOCK_SSH_PUBLIC_KEY,
         'parallel_upload_thread_num' => 16,
