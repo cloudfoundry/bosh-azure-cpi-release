@@ -78,7 +78,7 @@ describe Bosh::AzureCloud::Cloud do
     cloud_options_without_default_nsg = cloud_options.dup
     cloud_options_without_default_nsg['azure']['storage_account_name'] = storage_account_name unless storage_account_name.nil?
     cloud_options_without_default_nsg['azure']['use_managed_disks'] = use_managed_disks
-    cloud_options_without_default_nsg['azure']['default_security_group'] = ""
+    cloud_options_without_default_nsg['azure']['default_security_group'] = nil
     described_class.new(cloud_options_without_default_nsg)
   end
 

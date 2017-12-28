@@ -186,7 +186,7 @@ describe 'cpi.json.erb' do
       end
 
       it 'allows default_security_group to be empty string' do
-        expect(subject['cloud']['properties']['azure']['default_security_group']).to be_empty
+        expect(subject['cloud']['properties']['azure']['default_security_group']).to be_nil
       end
     end
 
