@@ -9,7 +9,9 @@ groups:
       - integration-windows-managed-disks
       - bats-unmanaged-disks
       - bats-managed-disks
-      - promote-candidate
+      - promote-candidate-major
+      - promote-candidate-minor
+      - promote-candidate-patch
 
 shared:
   - &azure-environment-params
@@ -319,7 +321,7 @@ jobs:
           do:
             - <<: *ensure-cleanup
 
-  - name: promote-candidate
+  - name: promote-candidate-major
     plan:
       - aggregate:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
@@ -333,7 +335,43 @@ jobs:
           S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
       - put: bosh-cpi-src
         resource: bosh-cpi-src-out
-        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/integer_version}
+        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
+      - put: release-version-semver
+        params: {file: release-version-semver/number}
+
+  - name: promote-candidate-minor
+    plan:
+      - aggregate:
+        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
+        - {trigger: false, get: release-version-semver, params: {bump: minor}}
+        - {trigger: false, get: bosh-cli}
+      - task: promote
+        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
+        params:
+          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
+          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
+      - put: bosh-cpi-src
+        resource: bosh-cpi-src-out
+        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
+      - put: release-version-semver
+        params: {file: release-version-semver/number}
+
+  - name: promote-candidate-patch
+    plan:
+      - aggregate:
+        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
+        - {trigger: false, get: release-version-semver, params: {bump: patch}}
+        - {trigger: false, get: bosh-cli}
+      - task: promote
+        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
+        params:
+          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
+          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
+      - put: bosh-cpi-src
+        resource: bosh-cpi-src-out
+        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
       - put: release-version-semver
         params: {file: release-version-semver/number}
 
