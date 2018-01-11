@@ -7,12 +7,10 @@
 Here we’ll create the following Azure resources that’s required for deploying BOSH and Cloud Foundry:
 
 * A default Storage Account
-* Three reserved public IPs
-  * For dev-box
-  * For Cloud Foundry
-* A Virtual Network
+* A Virtual Network and 3 Network Security Groups
 * A Virtual Machine as your dev-box
 * A Bosh director if you need
+* A Load Balancer and a Public IP which will be the entrypoint of the Cloud Foundry deployment
 * A Cloud Foundry deployment if you need
 
 The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup) ARM template can help you to deploy all the above resources on Azure. Just click the button below with the following parameters:
@@ -30,16 +28,21 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 | ubuntuOSVersion | NO | 16.04.0-LTS | OS version of Ubuntu |
 | adminUsername | **YES** | | Username for the Virtual Machines. **Never use root as the adminUsername**. |
 | sshKeyData | **YES** | | SSH **RSA** public key file as a string. |
-| environment | **YES**  | | Different environments in Azure. Choose AzureCloud for Global Azure, choose AzureChinaCloud for Azure China Cloud, choose AzureUSGovernment for Azure Government, choose AzureGermanCloud for German cloud. |
+| \_artifactsLocation | NO | https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/ | The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated. |
+| environment | **YES**  | | Different environments in Azure. Available values: `AzureCloud`, `AzureChinaCloud`, `AzureUSGovernment`, `AzureGermanCloud` and `AzureStack`. |
+| servicePrincipalType | NO  | Password | Service principal supports two types: with a password or with a certificate. Available values: `Password` and `Certificate`. |
 | tenantID | **YES**  | | ID of the tenant |
 | clientID | **YES**  | | ID of the client |
-| clientSecret | **YES** | | secret of the client |
+| clientSecret | NO | "" | secret of the client |
+| certificate | NO | "" | Base64-encoded Certificate of the service principal. You can run `cat <PATH_TO_YOUR_PEM_CERTIFICATE> \| base64 -w 0`, and input the result. Check how to [create a service principal with a certificate](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?toc=%2Fazure%2Fazure-resource-manager%2Ftoc.json&view=azure-cli-latest#create-a-service-principal-for-your-application). |
+| azureStackDomain | NO | NotApplicableIfEnvironmentIsNotAzureStack | Azure Stack deployment domain. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
+| azureStackResource | NO | NotApplicableIfEnvironmentIsNotAzureStack | Azure Stack Active Directory Service Endpoint Resource ID. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
+| azureStackAuthentication | NO | AzureAD | Azure Stack Authentication. Available values: `AzureAD` and `ADFS`. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
+| azureStackCARootCertificate | NO | "" | Azure Stack CA root certificate, which is base64 encoded. Get the Azure Stack CA root certificate from the Azure Stack operator, run `cat <PATH_TO_YOUR_PEM_CERTIFICATE> \| base64 -w 0`, and input the result. If not provided, `/var/lib/waagent/Certificates.pem` will be used. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack#azure-stack-properties). |
+| useAvailabilityZones | NO | disabled | The flag to enable availability zones in cloud config. |
 | autoDeployBosh | NO | enabled | The flag allowing to deploy the Bosh director. |
-| autoDeployCloudFoundry | NO | enabled | The flag allowing to deploy Cloud Foundry automatically or not. |
 | boshVmSize | NO | Standard_D2_v2 | The VM size of the BOSH director VM. Please check if the region support this VM size https://azure.microsoft.com/en-us/regions/#services. For more information about virtual machine sizes, see https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/ |
-| \_artifactsLocation | NO | https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/ | The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated. |
-| azureStackDomain | NO | NotApplicableIfEnvironmentIsNotAzureStack | Domain of the Azure Stack deployment. |
-| azureStackResource | NO | NotApplicableIfEnvironmentIsNotAzureStack | Resource of the Azure Stack deployment. Use Azure Powershell command: (Invoke-RestMethod -Uri https://api.azurestack.local/metadata/endpoints?api-version=1.0 -Method Get).authentication.audiences[0] |
+| autoDeployCloudFoundry | NO | disabled | The flag allowing to deploy Cloud Foundry automatically or not. |
 
 **NOTE:**
   * Currently BOSH can be only deployed from a Virtual Machine (dev-box) in the same virtual network on Azure.
