@@ -80,28 +80,9 @@ azure:
         authentication: ADFS
     ```
 
-* CA Cert
+* CA Root Certificate
 
-  If you use a self-signed root certificate when deploying Azure Stack, you need to specify the cert so that CPI can verify and establish the https connection with Azure Stack endpoints. The Azure Stack CA root certificate is available on the development kit. Sign in to your development kit and run the following Powershell script to export the Azure Stack root certificate in PEM format:
-
-  ```
-  $label = "AzureStackSelfSignedRootCert"
-  Write-Host "Getting certificate from the current user trusted store with subject CN=$label"
-  $root = Get-ChildItem Cert:\CurrentUser\Root | Where-Object Subject -eq "CN=$label" | select -First 1
-  if (-not $root)
-  {
-      Log-Error "Cerficate with subject CN=$label not found"
-      return
-  }
-  
-  Write-Host "Exporting certificate"
-  Export-Certificate -Type CERT -FilePath root.cer -Cert $root
-  
-  Write-Host "Converting certificate to PEM format"
-  certutil -encode root.cer root.pem
-  ```
-
-  Please specify the `ca_cert` in the global configuration.
+  If the Azure Stack is deployed with a trusted certificate, then there is no need to specify the CA Root Certificate. If you use a self-signed root certificate when deploying Azure Stack, you need to specify the cert so that CPI can verify and establish the https connection with Azure Stack endpoints. You need to specify the `ca_cert` in the global configuration.
 
   ```
   azure:
@@ -111,3 +92,28 @@ azure:
         MII...
         -----END CERTIFICATE-----
   ```
+
+  How to get the CA root certificate:
+
+  * Option 1: Get the CA root certificate from the Azure Stack operator. It's recommended.
+
+  * Option 2: Follow the [doc](https://docs.microsoft.com/en-us/azure/azure-stack/user/azure-stack-connect-cli#trust-the-azure-stack-ca-root-certificate) to get the `/var/lib/waagent/Certificates.pem`, which is the CA root certificate.
+
+  * Option 3: Run the following Powershell script to export the CA root certificate in PEM format. Note, this option is only available for Azure Stack Development Kit. 
+
+    ```
+    $label = "AzureStackSelfSignedRootCert"
+    Write-Host "Getting certificate from the current user trusted store with subject CN=$label"
+    $root = Get-ChildItem Cert:\CurrentUser\Root | Where-Object Subject -eq "CN=$label" | select -First 1
+    if (-not $root)
+    {
+        Log-Error "Cerficate with subject CN=$label not found"
+        return
+    }
+    
+    Write-Host "Exporting certificate"
+    Export-Certificate -Type CERT -FilePath root.cer -Cert $root
+    
+    Write-Host "Converting certificate to PEM format"
+    certutil -encode root.cer root.pem
+    ```
