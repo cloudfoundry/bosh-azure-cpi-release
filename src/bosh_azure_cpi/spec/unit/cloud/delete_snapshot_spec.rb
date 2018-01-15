@@ -5,6 +5,11 @@ describe Bosh::AzureCloud::Cloud do
   include_context "shared stuff"
 
   describe "#delete_snapshot" do
+    before do
+      allow(telemetry_manager).to receive(:monitor).
+        with("delete_snapshot", id: snapshot_id).and_call_original
+    end
+
     context "when the snapshot is a managed snapshot" do
       let(:snapshot_id) { 'fake-snapshot-id' }
       let(:snapshot_id_object) { instance_double(Bosh::AzureCloud::DiskId) }

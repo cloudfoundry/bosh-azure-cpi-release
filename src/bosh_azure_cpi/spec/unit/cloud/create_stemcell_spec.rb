@@ -12,6 +12,10 @@ describe Bosh::AzureCloud::Cloud do
       let(:stemcell_properties) { { 'image' => 'fake-image' } }
 
       it 'should succeed' do
+        expect(telemetry_manager).to receive(:monitor).
+          with('create_stemcell', extras: {'stemcell' => 'unknown_name-unknown_version'}).
+          and_call_original
+
         expect(light_stemcell_manager).to receive(:create_stemcell).
           with(stemcell_properties).and_return(stemcell_id)
 
@@ -26,6 +30,10 @@ describe Bosh::AzureCloud::Cloud do
 
       context 'and use_managed_disks is false' do
         it 'should succeed' do
+          expect(telemetry_manager).to receive(:monitor).
+            with('create_stemcell', extras: {'stemcell' => 'unknown_name-unknown_version'}).
+            and_call_original
+
           expect(stemcell_manager).to receive(:create_stemcell).
             with(image_path, stemcell_properties).and_return(stemcell_id)
 
@@ -37,6 +45,10 @@ describe Bosh::AzureCloud::Cloud do
 
       context 'and use_managed_disks is true' do
         it 'should succeed' do
+          expect(telemetry_manager).to receive(:monitor).
+            with('create_stemcell', extras: {'stemcell' => 'unknown_name-unknown_version'}).
+            and_call_original
+
           expect(stemcell_manager2).to receive(:create_stemcell).
             with(image_path, stemcell_properties).and_return(stemcell_id)
 
@@ -44,6 +56,30 @@ describe Bosh::AzureCloud::Cloud do
             managed_cloud.create_stemcell(image_path, stemcell_properties)
           ).to eq(stemcell_id)
         end
+      end
+    end
+
+    context 'when a stcmell name ane version are specified in stemcell_properties' do
+      let(:stemcell_name) { 'fake-name' }
+      let(:stemcell_version) { 'fake-version' }
+      let(:stemcell_properties) {
+        {
+          'name' => stemcell_name,
+          'version' => stemcell_version
+        }
+      }
+
+      it 'should pass the correct stemcell info to telemetry' do
+        expect(telemetry_manager).to receive(:monitor).
+          with('create_stemcell', extras: {'stemcell' => "#{stemcell_name}-#{stemcell_version}"}).
+          and_call_original
+
+        expect(stemcell_manager).to receive(:create_stemcell).
+          with(image_path, stemcell_properties).and_return(stemcell_id)
+
+        expect(
+          cloud.create_stemcell(image_path, stemcell_properties)
+        ).to eq(stemcell_id)
       end
     end
   end

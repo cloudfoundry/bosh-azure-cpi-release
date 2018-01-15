@@ -5,6 +5,11 @@ describe Bosh::AzureCloud::Cloud do
   include_context "shared stuff"
 
   describe '#calculate_vm_cloud_properties' do
+    before do
+      allow(telemetry_manager).to receive(:monitor).
+        with('calculate_vm_cloud_properties').and_call_original
+    end
+
     context "when the location is not specified in the global configuration" do
       it "should raise an error" do
         expect {

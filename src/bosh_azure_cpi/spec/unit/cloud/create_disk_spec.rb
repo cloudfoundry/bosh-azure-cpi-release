@@ -20,6 +20,9 @@ describe Bosh::AzureCloud::Cloud do
         and_return(resource_group_name)
       allow(instance_id_object).to receive(:vm_name).
         and_return(vm_name)
+      allow(telemetry_manager).to receive(:monitor).
+        with("create_disk", id: instance_id, extras: {"disk_size"=>disk_size}).
+        and_call_original
     end
 
     context 'validating disk size' do
@@ -94,6 +97,9 @@ describe Bosh::AzureCloud::Cloud do
             and_return(disk_id_object)
           expect(disk_manager2).to receive(:create_disk).
             with(disk_id_object, rg_location, disk_size_in_gib, "Standard_LRS", zone)
+          expect(telemetry_manager).to receive(:monitor).
+            with("create_disk", id: "", extras: {"disk_size"=>disk_size}).
+            and_call_original
 
           expect {
             managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
@@ -212,6 +218,9 @@ describe Bosh::AzureCloud::Cloud do
             and_return(disk_id_object)
           expect(disk_manager).to receive(:create_disk).
             with(disk_id_object, disk_size_in_gib)
+          expect(telemetry_manager).to receive(:monitor).
+            with("create_disk", id: "", extras: {"disk_size"=>disk_size}).
+            and_call_original
 
           expect {
             cloud.create_disk(disk_size, cloud_properties, instance_id)

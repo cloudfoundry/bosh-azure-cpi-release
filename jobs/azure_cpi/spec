@@ -61,6 +61,9 @@ properties:
   azure.keep_failed_vms:
     description: Enable keeping the VM which failed in provisioning for troubleshooting
     default: false
+  azure.enable_telemetry:
+    description: Enable telemetry on CPI calls
+    default: true
   azure.azure_stack.domain:
     description: The domain for your AzureStack deployment
     default: local.azurestack.external

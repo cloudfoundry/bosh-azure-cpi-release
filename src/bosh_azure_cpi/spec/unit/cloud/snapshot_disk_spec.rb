@@ -24,6 +24,9 @@ describe Bosh::AzureCloud::Cloud do
         and_return(resource_group_name)
       allow(disk_id_object).to receive(:caching).
         and_return(caching)
+
+      allow(telemetry_manager).to receive(:monitor).
+        with("snapshot_disk", id: disk_id).and_call_original
     end
 
     context "when the disk is a managed disk" do
