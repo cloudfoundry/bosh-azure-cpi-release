@@ -15,9 +15,8 @@ module Bosh::AzureCloud
   class AzureAsynchronousError < AzureError
     attr_accessor :status, :error
 
-    def initialize(status = nil, error = nil)
+    def initialize(status = nil)
       @status = status
-      @error = error
     end
   end
 
@@ -1789,7 +1788,7 @@ module Bosh::AzureCloud
                   sleep(retry_after)
                   raise AzureAsynInternalError, error
                 end
-                raise AzureAsynchronousError.new(result['status'], result['error']), error
+                raise AzureAsynchronousError.new(result['status']), error
               end
             end
             return true
@@ -1797,7 +1796,7 @@ module Bosh::AzureCloud
             error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
             @logger.warn(error)
           elsif status_code != HTTP_CODE_ACCEPTED
-            raise AzureAsynchronousError.new(nil, "create_storage_account - http code: #{response.code}. Error message: #{response.body}")
+            raise AzureAsynchronousError.new(), "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
           end
         end
       rescue AzureAsynInternalError => e
@@ -2371,13 +2370,13 @@ module Bosh::AzureCloud
         response = http_get_response(uri, request, retry_after)
         status_code = response.code.to_i
         if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
-          raise AzureAsynchronousError.new(nil, "check_completion - http code: #{response.code}. Error message: #{response.body}")
+          raise AzureAsynchronousError.new(), "check_completion - http code: #{response.code}. Error message: #{response.body}"
         end
 
-        raise AzureAsynchronousError.new(nil, 'The body of the asynchronous response is empty') if response.body.nil?
+        raise AzureAsynchronousError.new(), 'The body of the asynchronous response is empty' if response.body.nil?
         result = JSON(response.body)
         if result['status'].nil?
-          raise AzureAsynchronousError.new(nil, "The body of the asynchronous response does not contain `status'. Response: #{response.body}")
+          raise AzureAsynchronousError.new(), "The body of the asynchronous response does not contain `status'. Response: #{response.body}"
         end
 
         status = result['status']
@@ -2397,7 +2396,7 @@ module Bosh::AzureCloud
             raise AzureAsynInternalError, error
           end
 
-          raise AzureAsynchronousError.new(status, error)
+          raise AzureAsynchronousError.new(status), error
         end
       end
     end

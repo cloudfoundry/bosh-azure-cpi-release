@@ -630,9 +630,11 @@ module Bosh::AzureCloud
           rescue => error
             retry if (retry_delete_count += 1) <= max_retries
             @keep_failed_vms = true # If the cleanup fails, then the VM resources have to be kept
-            error_message = 'The VM fails in provisioning but an error is thrown in cleanuping VM, os disk or ephemeral disk before retry.\n'
-            error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
-            raise e, error_message
+            error_message = "The VM fails in provisioning.\n"
+            error_message += "#{e.inspect}\n#{e.backtrace.join('\n')}\n\n"
+            error_message += "And an error is thrown in cleanuping VM, os disk or ephemeral disk before retry.\n"
+            error_message += "#{error.inspect}\n#{error.backtrace.join('\n')}"
+            raise Bosh::Clouds::CloudError, error_message
           end
         end
 
