@@ -271,7 +271,6 @@ module Bosh::AzureCloud
     def attach_disk(instance_id, disk_id)
       @logger.info("attach_disk(#{instance_id}, #{disk_id})")
       disk_name = disk_id.disk_name()
-      disk_id_tag = {"#{DISK_ID_TAG_PREFIX}-#{disk_name}" => disk_id}
       if instance_id.use_managed_disks?()
         disk_params = {
           :disk_name     => disk_name,
