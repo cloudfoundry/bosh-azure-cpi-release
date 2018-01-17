@@ -219,7 +219,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
           expect {
             azure_client2.delete_virtual_machine(resource_group, vm_name)
-          }.to raise_error { |error| expect(error.error).to match(/The body of the asynchronous response is empty/) }
+          }.to raise_error /The body of the asynchronous response is empty/
         end
 
         it "should raise an error if the body of the asynchronous response does not contain 'status'" do
@@ -239,7 +239,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
           expect {
             azure_client2.delete_virtual_machine(resource_group, vm_name)
-          }.to raise_error { |error| expect(error.error).to match(/The body of the asynchronous response does not contain `status'/) }
+          }.to raise_error /The body of the asynchronous response does not contain `status'/
         end
 
         it "should raise an error if check completion operation is not accepeted" do
@@ -256,7 +256,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
           expect {
             azure_client2.delete_virtual_machine(resource_group, vm_name)
-          }.to raise_error { |error| expect(error.error).to match(/check_completion - http code: 404/) }
+          }.to raise_error /check_completion - http code: 404/
         end
 
         it "should raise an error if create peration failed" do

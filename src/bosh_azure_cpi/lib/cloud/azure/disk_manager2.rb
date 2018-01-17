@@ -203,7 +203,7 @@ module Bosh::AzureCloud
       else
         error_message = "migrate_to_zone - Can'n find snapshot `#{snapshot_name}' in resource group `#{resource_group_name}', abort migration.\n"
         error_message += "You need to migrate `#{disk_id}' to zone `#{zone}' manually."
-        raise error_message
+        raise Bosh::Clouds::CloudError, error_message
       end
 
       disk_params = {
@@ -229,7 +229,7 @@ module Bosh::AzureCloud
         error_message += "You need to recover `#{disk_id}' mannually from snapshot `#{snapshot_name}' and put it in zone `#{zone}'. Try:\n"
         error_message += "    `az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
         error_message += "#{e.inspect}\n#{e.backtrace.join("\n")}"
-        raise error_message
+        raise Bosh::Clouds::CloudError, error_message
       end
 
       if has_data_disk?(disk_id)
@@ -239,7 +239,7 @@ module Bosh::AzureCloud
         error_message = "migrate_to_zone - Can'n find disk `#{disk_name}' in resource group `#{resource_group_name}' after migration.\n"
         error_message += "You need to recover `#{disk_id}' manually from snapshot `#{snapshot_name}' and put it in zone `#{zone}'. Try:\n"
         error_message += "    `az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
-        raise error_message
+        raise Bosh::Clouds::CloudError, error_message
       end
     end
   end

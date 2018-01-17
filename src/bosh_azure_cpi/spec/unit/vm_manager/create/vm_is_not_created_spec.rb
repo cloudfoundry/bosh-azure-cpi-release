@@ -77,7 +77,7 @@ describe Bosh::AzureCloud::VMManager do
         context "and AzureAsynchronousError.status is Failed" do
           before do
             allow(client2).to receive(:create_virtual_machine).
-              and_raise(Bosh::AzureCloud::AzureAsynchronousError.new('Failed'))
+              and_raise(Bosh::AzureCloud::AzureAsynchronousError.new('Failed'), 'fake error message')
           end
 
           context "and keep_failed_vms is false in global configuration" do
@@ -144,8 +144,10 @@ describe Bosh::AzureCloud::VMManager do
                     expect {
                       vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
                     }.to raise_error { |error|
+                      expect(error.inspect).to match(/The VM fails in provisioning./)
+                      expect(error.inspect).to match(/fake error message/)
+                      expect(error.inspect).to match(/And an error is thrown in cleanuping VM, os disk or ephemeral disk before retry./)
                       expect(error.inspect).to match(/cannot delete the vm/)
-                      expect(error.inspect).to match(/The VM fails in provisioning but an error is thrown in cleanuping VM/)
                       # If the cleanup fails, then the VM resources have to be kept
                       expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
                     }
@@ -301,8 +303,10 @@ describe Bosh::AzureCloud::VMManager do
                     expect {
                       vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
                     }.to raise_error { |error|
+                      expect(error.inspect).to match(/The VM fails in provisioning./)
+                      expect(error.inspect).to match(/fake error message/)
+                      expect(error.inspect).to match(/And an error is thrown in cleanuping VM, os disk or ephemeral disk before retry./)
                       expect(error.inspect).to match(/cannot delete the vm/)
-                      expect(error.inspect).to match(/The VM fails in provisioning but an error is thrown in cleanuping VM/)
                       # If the cleanup fails, then the VM resources have to be kept
                       expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
                     }
