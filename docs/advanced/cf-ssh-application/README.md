@@ -10,7 +10,7 @@
 
 1. Create a load balancer and a public IP using the [script](./create-load-balancer.sh).
 
-    For exmaple, the load balancer is called `cf-ssh-lb`, and the public IP has an address `1.1.1.1`. In your domain provider, set your domain to resolve to the IP address.
+    For exmaple, the load balancer is called `cf-ssh-lb`, and the public IP has an address `1.1.1.1`. In your domain provider, you need to resolve the domain `ssh.<YOUR-SYSTEM-DOMAIN>` to the IP address `1.1.1.1`.
 
 1. Update the cloud config `example_manifests/cloud-config.yml`.
 

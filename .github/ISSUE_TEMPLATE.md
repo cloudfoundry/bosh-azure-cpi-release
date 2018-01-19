@@ -25,6 +25,7 @@ Distro:
   - [ ] AzureUSGovernment
   - [ ] AzureGermanCloud
   - [ ] AzureStack
+    - Version: (e.g. 1712 update or build number 180106.1)
   - [ ] Others:
 - Location: (e.g. East US)
 - Subscription ID:
