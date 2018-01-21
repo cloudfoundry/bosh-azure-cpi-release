@@ -1730,7 +1730,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_CheckNameAvailability
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2015-06-15/storage.json
     #
     def check_storage_account_name_availability(name)
       url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
@@ -1740,9 +1740,8 @@ module Bosh::AzureCloud
         'name' => name,
         'type' => "#{REST_API_PROVIDER_STORAGE}/#{REST_API_STORAGE_ACCOUNTS}",
       }
-
       result = http_post(url, storage_account)
-      raise AzureError, "Cannot check the availability of the storage account name \"#{name}\"." if result.nil?
+      raise AzureError, "Cannot check the availability of the storage account name `#{name}'" unless result.is_a?(Hash)
       ret = {
         :available => result['nameAvailable'],
         :reason    => result['reason'],
