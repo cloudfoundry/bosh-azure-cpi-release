@@ -16,7 +16,7 @@ pushd bosh-cpi-src > /dev/null
     # to make sure Azure::Storage::Client is mocked successfully in unit tests.
     # After https://github.com/Azure/azure-storage-ruby/issues/87 is resolved, they can be removed.
     # echo "bar" | base64 => YmFyCg==
-    AZURE_STORAGE_ACCOUNT="foo" AZURE_STORAGE_ACCESS_KEY="YmFyCg==" bundle exec rspec spec/unit/*
+    AZURE_STORAGE_ACCOUNT="foo" AZURE_STORAGE_ACCESS_KEY="YmFyCg==" bundle exec rspec spec/unit/* --format documentation
   popd > /dev/null
 
   cpi_release_name="bosh-azure-cpi"
