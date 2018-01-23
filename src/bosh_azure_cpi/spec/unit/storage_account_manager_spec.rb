@@ -69,7 +69,6 @@ describe Bosh::AzureCloud::StorageAccountManager do
           :message => 'fake-message'
         }
       }
-
       before do
         allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name).and_return(result)
       end
@@ -87,7 +86,6 @@ describe Bosh::AzureCloud::StorageAccountManager do
           :available => true
         }
       }
-
       before do
         allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name).and_return(result)
       end
@@ -256,6 +254,10 @@ describe Bosh::AzureCloud::StorageAccountManager do
         :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME
       }
     }
+    before do
+      allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
+    end
+
     let(:storage_account_name) { 'fake-storage-account-name-in-resource-pool' }
     let(:storage_account) {
       {
@@ -269,10 +271,6 @@ describe Bosh::AzureCloud::StorageAccountManager do
           'instance_type' => 'fake-vm-size'
         }
       }
-
-      before do
-        allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
-      end
 
       it 'should return the default storage account' do
         storage_account_manager.default_storage_account_name()
@@ -292,34 +290,96 @@ describe Bosh::AzureCloud::StorageAccountManager do
           }
         }
 
-        context 'when the storage account exists' do
+        let(:lock_creating_storage_account) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
+        before do
+          allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_creating_storage_account)
+          allow(lock_creating_storage_account).to receive(:lock).and_return(true)
+        end
+
+        context 'when the lock of creating storage account is not acquired' do
           before do
-            allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
+            allow(lock_creating_storage_account).to receive(:lock).and_return(false)
             allow(client2).to receive(:get_storage_account_by_name).with(storage_account_name).and_return(storage_account)
           end
 
-          it 'should return the existing storage account' do
+          it 'should wait until the storage account is created, and return the storage account' do
             storage_account_manager.default_storage_account_name()
 
+            expect(lock_creating_storage_account).not_to receive(:unlock)
+            expect(lock_creating_storage_account).to receive(:wait)
             expect(
               storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
             ).to be(storage_account)
           end
         end
 
-        context 'when the storage account does not exist' do
+        context 'when the lock of creating storage account is acquired' do
           before do
-            allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
-            allow(client2).to receive(:get_storage_account_by_name).with(storage_account_name).and_return(nil)
+            allow(lock_creating_storage_account).to receive(:lock).and_return(true)
           end
 
-          context 'when resource_pool does not contain storage_account_type' do
-            it 'should raise an error' do
+          context 'when the storage account exists' do
+            before do
+              allow(client2).to receive(:get_storage_account_by_name).with(storage_account_name).and_return(storage_account)
+            end
+
+            it 'should return the existing storage account' do
               storage_account_manager.default_storage_account_name()
 
-              expect {
+              expect(lock_creating_storage_account).to receive(:unlock)
+              expect(
                 storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
-              }.to raise_error(/missing required cloud property `storage_account_type'/)
+              ).to be(storage_account)
+            end
+          end
+
+          context 'when the storage account does not exist' do
+            context 'when resource_pool does not contain storage_account_type' do
+              before do
+                allow(client2).to receive(:get_storage_account_by_name).with(storage_account_name).and_return(nil)
+              end
+
+              it 'should raise an error' do
+                storage_account_manager.default_storage_account_name()
+
+                expect(lock_creating_storage_account).not_to receive(:unlock)
+                expect(File).to receive(:open).with("/tmp/azure_cpi/DELETING-LOCKS", "wb")
+                expect {
+                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
+                }.to raise_error(/missing required cloud property `storage_account_type'/)
+              end
+            end
+
+            context 'when resource_pool contains storage_account_type' do
+              let(:storage_account_type) { "Standard_LRS" }
+              let(:resource_pool) {
+                {
+                  'instance_type' => 'fake-vm-size',
+                  'storage_account_name' => storage_account_name,
+                  'storage_account_type' => storage_account_type
+                }
+              }
+              let(:availability_result) {
+                {
+                  :available => true
+                }
+              }
+              before do
+                allow(client2).to receive(:get_storage_account_by_name).with(storage_account_name).and_return(nil, storage_account)
+              end
+
+              it 'should create the storage account' do
+                storage_account_manager.default_storage_account_name()
+
+                expect(client2).to receive(:check_storage_account_name_availability).with(storage_account_name).and_return(availability_result)
+                expect(client2).to receive(:create_storage_account).with(storage_account_name, location, storage_account_type, {})
+                expect(blob_manager).to receive(:prepare).with(storage_account_name, {:is_default_storage_account=>false})
+                expect(lock_creating_storage_account).to receive(:unlock)
+                expect(File).not_to receive(:open).with("/tmp/azure_cpi/DELETING-LOCKS", "wb")
+                expect(
+                  storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
+                ).to be(storage_account)
+              end
             end
           end
         end
