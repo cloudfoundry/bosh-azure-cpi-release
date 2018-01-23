@@ -1659,7 +1659,7 @@ module Bosh::AzureCloud
       }
 
       uri = http_url(url)
-      @logger.info("create_storage_account - trying to put #{uri}")
+      @logger.info("create_storage_account - trying to put `#{uri}'")
 
       request = Net::HTTP::Put.new(uri.request_uri)
       request_body = storage_account.to_json
@@ -1674,10 +1674,9 @@ module Bosh::AzureCloud
         if response.code.to_i == HTTP_CODE_OK
           return true
         elsif response.code.to_i != HTTP_CODE_ACCEPTED
-          raise AzureError, "create_storage_account - Cannot create the storage account \"#{name}\". http code: #{response.code}. Error message: #{response.body}"
+          raise AzureError, "create_storage_account - Cannot create the storage account `#{name}'. http code: #{response.code}. Error message: #{response.body}"
         end
 
-        @logger.debug("create_storage_account - storage asynchronous operation: #{response['Location']}")
         uri = URI(response['Location'])
         api_version = get_api_version(@azure_properties, AZURE_RESOURCE_PROVIDER_STORAGE)
         request = Net::HTTP::Get.new(uri.request_uri)
@@ -1685,35 +1684,35 @@ module Bosh::AzureCloud
         while true
           retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
           sleep(retry_after)
-
-          @logger.debug("create_storage_account - trying to get the status of asynchronous operation: #{uri}")
+          @logger.debug("create_storage_account - Checking the status of the asynchronous operation using `#{uri}' after `#{retry_after}' seconds.")
           response = http_get_response(uri, request, retry_after)
 
           status_code = response.code.to_i
           if status_code == HTTP_CODE_OK
             # Need to check status in response body for asynchronous operation even if status_code is HTTP_CODE_OK.
             # Ignore exception if the body of the response is not JSON format
-            ignore_exception do
-              result = JSON(response.body)
-              if result['status'] == PROVISIONING_STATE_FAILED
-                error = "create_storage_account - http code: #{response.code}\n"
-                error += get_http_common_headers(response)
-                error += "Error message: #{response.body}"
-                if response.key?('Retry-After')
-                  retry_after = response['Retry-After'].to_i
-                  @logger.warn("create_storage_account - Fail for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
-                  sleep(retry_after)
-                  raise AzureAsynInternalError, error
-                end
-                raise AzureAsynchronousError.new(result['status']), error
+            result = nil
+            ignore_exception{ result = JSON(response.body) } unless response.body.nil? || response.body.empty?
+            if !result.nil? && result['status'] == PROVISIONING_STATE_FAILED
+              error = "create_storage_account - http code: #{response.code}\n"
+              error += get_http_common_headers(response)
+              error += "Error message: #{response.body}"
+              if response.key?('Retry-After')
+                retry_after = response['Retry-After'].to_i
+                @logger.warn("create_storage_account - Fail for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
+                sleep(retry_after)
+                raise AzureAsynInternalError, error
               end
+              raise AzureAsynchronousError.new(result['status']), error
             end
             return true
           elsif status_code == HTTP_CODE_INTERNALSERVERERROR
             error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
             @logger.warn(error)
           elsif status_code != HTTP_CODE_ACCEPTED
-            raise AzureAsynchronousError.new(), "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
+            error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
+            @logger.error(error)
+            raise AzureAsynchronousError.new(), error
           end
         end
       rescue AzureAsynInternalError => e
@@ -2252,7 +2251,7 @@ module Bosh::AzureCloud
 
     def check_completion(response, options)
       operation_status_link = response['azure-asyncoperation']
-      @logger.debug("check_completion - azure-asyncoperation: #{operation_status_link}")
+      @logger.debug("check_completion - checking the status of the asynchronous operation using `#{operation_status_link}'")
       if options[:return_code].include?(response.code.to_i)
         if operation_status_link.nil?
           result = true
