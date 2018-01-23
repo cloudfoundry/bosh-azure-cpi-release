@@ -1237,76 +1237,6 @@ module Bosh::AzureCloud
 
     # Network/Load Balancer
 
-    # Create a load balancer
-    # @param [String] name         - Name of load balancer.
-    # @param [Hash] public_ip      - Public IP to associate.
-    # @param [Hash] tags           - Tags of load balancer.
-    # @param [Array] tcp_endpoints - TCP endpoints of load balancer.
-    # @param [Array] udp_endpoints - UDP endpoints of load balancer.
-    #
-    # @return [Boolean]
-    #
-    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/create-or-update-a-load-balancer
-    #
-    def create_load_balancer(name,  public_ip, tags, tcp_endpoints = [], udp_endpoints = [])
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, name: name)
-      load_balancer = {
-        'name'       => name,
-        'location'   => public_ip[:location],
-        'tags'       => tags,
-        'properties' => {
-          'frontendIPConfigurations' => [
-            'name'        => 'LBFE',
-            'properties'  => {
-              'publicIPAddress'           => {
-                'id' => public_ip[:id]
-              }
-            }
-          ],
-          'backendAddressPools'      => [
-            'name'        => 'LBBE'
-          ],
-          'inboundNatRules'          => [],
-        }
-      }
-
-      frontend_ip_configuration_id = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, name: name, others: 'frontendIPConfigurations/LBFE')
-      tcp_endpoints.each do |endpoint|
-        ports = endpoint.split(':')
-        inbound_nat_rules = {
-          'name'        => "NatRule-TcpEndPoints-#{ports[0]}",
-          'properties'  => {
-            'frontendPort'        => ports[0],
-            'backendPort'         => ports[1],
-            'enableFloatingIP'    => false,
-            'protocol'            => 'Tcp',
-            'frontendIPConfiguration' => {
-              "id" => frontend_ip_configuration_id
-            }
-          }
-        }
-        load_balancer['properties']['inboundNatRules'].push(inbound_nat_rules)
-      end
-      udp_endpoints.each do |endpoint|
-        ports = endpoint.split(':')
-        inbound_nat_rules = {
-          'name' => "NatRule-UdpEndPoints-#{ports[0]}",
-          'properties'  => {
-            'frontendPort'        => ports[0],
-            'backendPort'         => ports[1],
-            'enableFloatingIP'    => false,
-            'protocol'            => 'Udp',
-            'frontendIPConfiguration' => {
-              "id" => frontend_ip_configuration_id
-            }
-          }
-        }
-        load_balancer['properties']['inboundNatRules'].push(inbound_nat_rules)
-      end
-
-      http_put(url, load_balancer)
-    end
-
     # Get a load balancer's information
     # @param [String] name - Name of load balancer.
     #
@@ -1365,19 +1295,6 @@ module Bosh::AzureCloud
         end
       end
       load_balancer
-    end
-
-    # Delete a load balancer
-    # @param [String] name - Name of load balancer.
-    #
-    # @return [Boolean]
-    #
-    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/delete-a-load-balancer
-    #
-    def delete_load_balancer(name)
-      @logger.debug("delete_load_balancer - trying to delete #{name}")
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, name: name)
-      http_delete(url)
     end
 
     # Network/Network Interface
