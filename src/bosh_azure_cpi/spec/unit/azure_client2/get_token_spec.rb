@@ -25,7 +25,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       }.to_json
     }
 
-    context "when the client secret is provided" do
+    context "when the client_secret is provided" do
       let(:azure_client2) {
         Bosh::AzureCloud::AzureClient2.new(
           mock_azure_properties,
@@ -42,7 +42,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         }
       }
 
-      it "should use the service principal with certificate to get the token" do
+      it "should use the service principal with password to get the token" do
         stub_request(:post, token_uri).with(body: URI.encode_www_form(token_params)).to_return(
           :status => 200,
           :body => {
@@ -60,7 +60,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
     end
 
-    context "when the client secret is not provided" do
+    context "when the client_secret is not provided" do
       let(:azure_properties_without_client_secret) {
         properties = mock_azure_properties.clone
         properties.delete('client_secret')

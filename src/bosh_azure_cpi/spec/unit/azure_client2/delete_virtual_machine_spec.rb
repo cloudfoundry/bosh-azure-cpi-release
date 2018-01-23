@@ -278,48 +278,6 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
     end
 
-    context "when token is invalid" do
-      it "should raise an error if token is not gotten" do
-        stub_request(:post, token_uri).to_return(
-          :status => 404,
-          :body => '',
-          :headers => {})
-
-        expect {
-          azure_client2.delete_virtual_machine(resource_group, vm_name)
-        }.to raise_error /get_token - http code: 404/
-      end
-
-      it "should raise an error if tenant id, client id or client secret is invalid" do
-        stub_request(:post, token_uri).to_return(
-          :status => 401,
-          :body => '',
-          :headers => {})
-
-        expect {
-          azure_client2.delete_virtual_machine(resource_group, vm_name)
-        }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
-      end
-
-      it "should raise an error if authentication retry fails" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:delete, vm_uri).to_return(
-          :status => 401,
-          :body => '',
-          :headers => {})
-
-        expect {
-          azure_client2.delete_virtual_machine(resource_group, vm_name)
-        }.to raise_error /Azure authentication failed: Token is invalid./
-      end
-    end
-
     context "when token expired" do
       context "when authentication retry succeeds" do
         before do
@@ -330,7 +288,8 @@ describe Bosh::AzureCloud::AzureClient2 do
               "expires_on" => expires_on
             }.to_json,
             :headers => {})
-          stub_request(:delete, vm_uri).to_return({
+          stub_request(:delete, vm_uri).to_return(
+            {
               :status => 401,
               :body => 'The token expired'
             }, {
@@ -354,28 +313,22 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
 
       context "when authentication retry fails" do
-        before do
-          stub_request(:post, token_uri).to_return({
-              :status => 200,
-              :body => {
-                "access_token" => valid_access_token,
-                "expires_on" => expires_on
-              }.to_json,
-              :headers => {}
-            }, {
-              :status => 401,
-              :body => ''
-            })
-          stub_request(:delete, vm_uri).to_return(
-              :status => 401,
-              :body => 'The token expired'
-            )
-        end
-
         it "should raise an error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:delete, vm_uri).to_return(
+            :status => 401,
+            :body => '',
+            :headers => {})
+
           expect {
             azure_client2.delete_virtual_machine(resource_group, vm_name)
-          }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
+          }.to raise_error /Azure authentication failed: Token is invalid./
         end
       end
     end
