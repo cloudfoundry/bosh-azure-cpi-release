@@ -22,5 +22,5 @@ pushd bosh-cpi-src > /dev/null
   cpi_release_name="bosh-azure-cpi"
 
   echo "building CPI release..."
-  bosh2 create-release --name $cpi_release_name --version $semver --tarball ../candidate/$cpi_release_name-$semver.tgz
+  bosh create-release --name $cpi_release_name --version $semver --tarball ../candidate/$cpi_release_name-$semver.tgz
 popd > /dev/null
