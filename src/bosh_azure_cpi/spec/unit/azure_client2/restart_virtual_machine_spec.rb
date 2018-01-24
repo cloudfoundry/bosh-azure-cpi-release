@@ -87,48 +87,6 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
     end
 
-    context "when token is invalid" do
-      it "should raise an error if token is not gotten" do
-        stub_request(:post, token_uri).to_return(
-          :status => 404,
-          :body => '',
-          :headers => {})
-
-        expect {
-          azure_client2.restart_virtual_machine(resource_group, vm_name)
-        }.to raise_error /get_token - http code: 404/
-      end
-
-      it "should raise an error if tenant id, client id or client secret is invalid" do
-        stub_request(:post, token_uri).to_return(
-          :status => 401,
-          :body => '',
-          :headers => {})
-
-        expect {
-          azure_client2.restart_virtual_machine(resource_group, vm_name)
-        }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
-      end
-
-      it "should raise an error if authentication retry fails" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:post, vm_restart_uri).to_return(
-          :status => 401,
-          :body => '',
-          :headers => {})
-
-        expect {
-          azure_client2.restart_virtual_machine(resource_group, vm_name)
-        }.to raise_error /Azure authentication failed: Token is invalid./
-      end
-    end
-
     context "when token is valid but the VM cannot be found" do
       it "should raise AzureNotFoundError" do
         stub_request(:post, token_uri).to_return(
@@ -197,10 +155,6 @@ describe Bosh::AzureCloud::AzureClient2 do
           azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error { |error| expect(error.status).to eq('Cancelled') }
       end
-
-      # TODO
-      it "should cause an endless loop if restart operation is always InProgress" do
-      end
     end
 
     context "when token expired" do
@@ -213,10 +167,12 @@ describe Bosh::AzureCloud::AzureClient2 do
               "expires_on" => expires_on
             }.to_json,
             :headers => {})
-          stub_request(:post, vm_restart_uri).to_return({
+          stub_request(:post, vm_restart_uri).to_return(
+            {
               :status => 401,
               :body => 'The token expired'
-            }, {
+            },
+            {
               :status => 202,
               :body => '{}',
               :headers => {
@@ -237,29 +193,22 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
 
       context "when authentication retry fails" do
-        before do
-          stub_request(:post, token_uri).to_return({
-              :status => 200,
-              :body => {
-                "access_token" => valid_access_token,
-                "expires_on" => expires_on
-              }.to_json,
-              :headers => {}
-            }, {
-              :status => 401,
-              :body => '',
-              :headers => {}
-            })
-          stub_request(:post, vm_restart_uri).to_return({
-              :status => 401,
-              :body => 'The token expired'
-            })
-        end
-
         it "should raise an error" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:post, vm_restart_uri).to_return(
+            :status => 401,
+            :body => '',
+            :headers => {})
+
           expect {
             azure_client2.restart_virtual_machine(resource_group, vm_name)
-          }.to raise_error /get_token - http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret./
+          }.to raise_error /Azure authentication failed: Token is invalid./
         end
       end
     end
