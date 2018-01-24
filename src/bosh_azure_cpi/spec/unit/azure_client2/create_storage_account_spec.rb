@@ -178,43 +178,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
       end
 
-      context "when the status code of the response to the asynchronous operation is 500" do
-        it "should create the storage account after retry" do
-          stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
-            }.to_json,
-            :headers => {})
-          stub_request(:put, storage_account_uri).with(body: request_body).to_return(
-            :status => 202,
-            :body => '',
-            :headers => {
-              "Location" => operation_status_link
-            })
-          stub_request(:get, operation_status_link).to_return(
-            {
-              :status => 500,
-              :body => '',
-              :headers => {}
-            },
-            {
-              :status => 200,
-              :body => '{"status":"Succeeded"}',
-              :headers => {}
-            }
-          )
-
-          expect(azure_client2).to receive(:sleep).with(10).twice
-          expect(
-            azure_client2.create_storage_account(storage_account_name, location, account_type, tags)
-          ).to be(true)
-        end
-      end
-
-      context "when the status code of the response to the asynchronous operation is not one of 200, 500 and 202" do
-        it "should create the storage account after retry" do
+      context "when the status code of the response to the asynchronous operation is not one of 200 and 202" do
+        it "should raise an error" do
           stub_request(:post, token_uri).to_return(
             :status => 200,
             :body => {

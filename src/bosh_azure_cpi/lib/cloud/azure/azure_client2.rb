@@ -35,7 +35,6 @@ module Bosh::AzureCloud
     HTTP_CODE_CONFLICT            = 409
     HTTP_CODE_LENGTHREQUIRED      = 411
     HTTP_CODE_PRECONDITIONFAILED  = 412
-    HTTP_CODE_INTERNALSERVERERROR = 500
 
     # https://azure.microsoft.com/en-us/documentation/articles/best-practices-retry-service-specific/#more-information-6
     # Error code 429 is not documented in the url above, but it is a code for throttling error. Add it for issue https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/179
@@ -1706,9 +1705,6 @@ module Bosh::AzureCloud
               raise AzureAsynchronousError.new(result['status']), error
             end
             return true
-          elsif status_code == HTTP_CODE_INTERNALSERVERERROR
-            error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
-            @logger.warn(error)
           elsif status_code != HTTP_CODE_ACCEPTED
             error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
             @logger.error(error)
