@@ -140,7 +140,7 @@ describe 'the azure_cpi executable' do
         result = run_cpi({'method'=>'ping', 'arguments'=>[], 'context'=>{'director_uuid' => 'abc123'}})
         expect(result.keys).to eq(%w(result error log))
         expect(result['result']).to be_nil
-        expect(result['error']['message']).to match(/http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant id, client id or client secret/)
+        expect(result['error']['message']).to match(/http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret\/certificate/)
         expect(result['error']['ok_to_retry']).to be(false)
         expect(result['error']['type']).to eq("Bosh::Clouds::CloudError")
         expect(result['log']).to include('backtrace')
@@ -179,7 +179,7 @@ describe 'the azure_cpi executable' do
         result = run_cpi({'method'=>'ping', 'arguments'=>[], 'context'=>{'director_uuid' => 'abc123'}})
         expect(result.keys).to eq(%w(result error log))
         expect(result['result']).to be_nil
-        expect(result['error']['message']).to match(/http code: 401. Azure authentication failed: Invalid tenant id, client id or client secret/)
+        expect(result['error']['message']).to match(/http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate/)
         expect(result['error']['ok_to_retry']).to be(false)
         expect(result['error']['type']).to eq("Bosh::Clouds::CloudError")
         expect(result['log']).to include('backtrace')
