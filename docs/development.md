@@ -98,7 +98,8 @@ With bundler installed, switch to `./src/bosh_azure_cpi` and run:
   gem install bosh_cli
   # Assume that you have cloned https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release.git into ~/workspace/bosh-azure-cpi-release
   cd ~/workspace/bosh-azure-cpi-release
-  bosh create release --force --with-tarball --name bosh-azure-cpi
+  cpi_dev_version=35.0.1.dev
+  bosh create-release --name=bosh-azure-cpi --version=${cpi_dev_version} --tarball=/tmp/bosh-azure-cpi-release-${cpi_dev_version}.tgz
   ```
 
 The release is now ready for use. If everything works, commit the changes including the updated gems.
