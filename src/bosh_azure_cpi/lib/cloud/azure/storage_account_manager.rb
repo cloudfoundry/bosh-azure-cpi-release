@@ -109,12 +109,23 @@ module Bosh::AzureCloud
           cloud_error("get_storage_account_from_resource_pool - Cannot find an available storage account.\n#{result.inspect}")
         else
           storage_account_name = resource_pool['storage_account_name']
-          storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
           # Create the storage account automatically if the storage account in resource_pool does not exist
-          if storage_account.nil?
-            storage_account_type = resource_pool['storage_account_type']
-            cloud_error("missing required cloud property `storage_account_type' in the resource pool.") if storage_account_type.nil?
-            create_storage_account(storage_account_name, storage_account_type, location)
+          mutex = FileMutex.new("#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{storage_account_name}", @logger)
+          begin
+            if mutex.lock
+              storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+              if storage_account.nil?
+                storage_account_type = resource_pool['storage_account_type']
+                cloud_error("get_storage_account_from_resource_pool - missing required cloud property `storage_account_type' in the resource pool.") if storage_account_type.nil?
+                create_storage_account(storage_account_name, storage_account_type, location)
+              end
+              mutex.unlock
+            else
+              mutex.wait
+            end
+          rescue => e
+            mark_deleting_locks
+            cloud_error("Failed to finish the creation of the storage account `#{storage_account_name}', `#{storage_account_type}' in location `#{location}': #{e.inspect}\n#{e.backtrace.join("\n")}")
           end
         end
       end
