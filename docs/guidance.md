@@ -76,3 +76,4 @@ If you hit some issues when you deploy BOSH and Cloud Foundry, you can refer to 
 
 * [Known issues](./additional-information/known-issues.md)
 * [Troubleshooting](./additional-information/troubleshooting.md)
+* [Collect deployment error logs](./additional-information/collect-deployment-err-logs.md)
