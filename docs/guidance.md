@@ -58,17 +58,17 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Use service principal with certificate](./advanced/use-service-principal-with-certificate/)
   * [Calculate correct VM cloud properties based on `vm_resources`](./advanced/calculate-vm-cloud-properties/)
 * Cloud Foundry Scenarios
-  * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
+  * [Configure Cloud Foundry external databases using Azure MySQL/Postgres Service](./advanced/configure-cf-external-databases-using-azure-mysql-postgres-service)
+  * [Integrating Application Gateway](./advanced/application-gateway/)
   * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
   * [Backup and restore Cloud Foundry](./advanced/backup-and-restore-cloud-foundry/)
   * [SSH into the application](./advanced/cf-ssh-application/)
+  * [Deploy multiple HAProxy instances behind Azure Load Balancer](./advanced/deploy-multiple-haproxy/)
+  * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
+  * [Azure DNS](./advanced/deploy-azuredns/)
 * Service Brokers
   * [Meta Azure Service Broker](https://github.com/Azure/meta-azure-service-broker)
   * [MySQL Service](./advanced/deploy-mysql/)
-* Integrate Azure Services with Cloud Foundry on Azure
-  * [Azure DNS](./advanced/deploy-azuredns/)
-  * [Deploy multiple HAProxy instances behind Azure Load Balancer](./advanced/deploy-multiple-haproxy/)
-  * [Integrating Application Gateway](./advanced/application-gateway/)
 
 # 4 Additional Information
 
