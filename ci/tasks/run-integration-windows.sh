@@ -9,8 +9,6 @@ set -e
 : ${AZURE_CLIENT_SECRET:?}
 : ${SSH_PUBLIC_KEY:?}
 : ${AZURE_APPLICATION_GATEWAY_NAME:?}
-: ${AZURE_APPLICATION_SECURITY_GROUP_NAME:?}
-: ${AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED:?}
 
 : ${METADATA_FILE:=environment/metadata}
 
@@ -32,9 +30,9 @@ export BOSH_AZURE_SECOND_SUBNET_NAME=$(echo ${metadata} | jq -e --raw-output ".s
 export BOSH_AZURE_DEFAULT_SECURITY_GROUP=$(echo ${metadata} | jq -e --raw-output ".default_security_group")
 export BOSH_AZURE_PRIMARY_PUBLIC_IP=$(echo ${metadata} | jq -e --raw-output ".public_ip_in_default_rg")
 export BOSH_AZURE_SECONDARY_PUBLIC_IP=$(echo ${metadata} | jq -e --raw-output ".public_ip_in_additional_rg")
+export BOSH_AZURE_APPLICATION_SECURITY_GROUP=$(echo ${metadata} | jq -e --raw-output ".asg_name")
 export BOSH_AZURE_SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
 export BOSH_AZURE_APPLICATION_GATEWAY_NAME=${AZURE_APPLICATION_GATEWAY_NAME}
-export BOSH_AZURE_APPLICATION_SECURITY_GROUP=${AZURE_APPLICATION_SECURITY_GROUP_NAME}
 
 az cloud set --name ${AZURE_ENVIRONMENT}
 az login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
@@ -96,10 +94,6 @@ pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   bundle install
 
   tags="--tag ~heavy_stemcell"
-  if [ "${AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED}" == "false" ]; then
-    echo "Azure Application Security Group related tests are disabled."
-    tags+=" --tag ~application_security_group"
-  fi
   export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
   if [ "${AZURE_USE_MANAGED_DISKS}" == "true" ]; then
     tags+=" --tag ~unmanaged_disks"

@@ -21,5 +21,3 @@ params:
   SSH_PUBLIC_KEY:                                 ""
   AZURE_USE_MANAGED_DISKS:                        false
   AZURE_APPLICATION_GATEWAY_NAME:                 ""
-  AZURE_APPLICATION_SECURITY_GROUP_NAME:          ""
-  AZURE_APPLICATION_SECURITY_GROUP_TESTS_ENABLED: true
