@@ -168,6 +168,12 @@ resource "azurerm_public_ip" "azure_ip_integration_in_default_rg" {
   public_ip_address_allocation = "static"
 }
 
+resource "azurerm_application_security_group" "azure_asg" {
+  name                         = "azure_asg"
+  location                     = "${var.location}"
+  resource_group_name          = "${azurerm_resource_group.azure_default_rg.name}"
+}
+
 # Create an additional resource group
 resource "azurerm_resource_group" "azure_additional_rg" {
   name     = "${var.env_name}-additional-rg"
@@ -292,4 +298,7 @@ output "public_ip_in_default_rg" {
 }
 output "public_ip_in_additional_rg" {
   value = "${azurerm_public_ip.azure_ip_integration_in_additional_rg.ip_address}"
+}
+output "asg_name" {
+  value = "${azurerm_application_security_group.azure_asg.name}"
 }
