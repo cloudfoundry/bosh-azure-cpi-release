@@ -112,7 +112,7 @@ module Bosh::AzureCloud
           # Create containers if they are missing.
           # Background: When users create a storage account without containers in it, and use that storage account for a resource pool,
           #             CPI will try to create related containers when copying stemcell to that storage account.
-          @blob_manager.prepare(storage_account_name)
+          @blob_manager.prepare_containers(storage_account_name, [DISK_CONTAINER, STEMCELL_CONTAINER], false)
 
           @logger.info("Copying stemcell #{name} to #{storage_account_name}")
           source_blob_uri = get_stemcell_uri(@default_storage_account_name, name)

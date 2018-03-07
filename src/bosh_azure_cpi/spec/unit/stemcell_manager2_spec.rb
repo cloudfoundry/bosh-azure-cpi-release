@@ -229,17 +229,19 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
           context "when the storage account with tags exists in the specified location" do
             let(:existing_storage_account_name) { "existing-storage-account-name-other-than-default-storage-account" }
-            let(:storage_accounts) {
-              [
-                {
-                  :name => existing_storage_account_name,
-                  :location => location,
-                  :tags => STEMCELL_STORAGE_ACCOUNT_TAGS
-                }
-              ]
+            let(:storage_account) {
+              {
+                :name => existing_storage_account_name,
+                :location => location,
+                :tags => STEMCELL_STORAGE_ACCOUNT_TAGS
+              }
             }
+            let(:lock_copy_blob) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
+
             before do
-              allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
+              allow(storage_account_manager).to receive(:find_storage_account_by_tags).
+                with(STEMCELL_STORAGE_ACCOUNT_TAGS, location).
+                and_return(storage_account)
               # The following two allows are for get_stemcell_info of stemcell_manager.rb
               allow(blob_manager).to receive(:get_blob_uri).
                 with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd").
@@ -247,14 +249,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
               allow(blob_manager).to receive(:get_blob_metadata).
                 with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd").
                 and_return(stemcell_blob_metadata)
-            end
-
-            let(:lock_creating_storage_account) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-            let(:lock_copy_blob) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-            before do
-              allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_creating_storage_account, lock_copy_blob)
-              allow(lock_creating_storage_account).to receive(:lock).and_return(true)
-              allow(lock_creating_storage_account).to receive(:unlock)
+              allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_copy_blob)
             end
 
             context "when the lock of copying blob is not acquired" do
@@ -364,44 +359,17 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
           context "when the storage account with tags doesn't exist in the specified location" do
             context "when it fails to create the new storage account" do
-              let(:lock_creating_storage_account) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-              before do
-                allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).with("bosh-lock-create-storage-account-#{location}", anything).
-                  and_return(lock_creating_storage_account)
-              end
-
               context "when an error is thrown when creating the new storage account" do
                 before do
-                  allow(lock_creating_storage_account).to receive(:lock).and_return(true)
-                  allow(client2).to receive(:list_storage_accounts).and_return([])
-                  allow(storage_account_manager).to receive(:generate_storage_account_name)
-                  allow(storage_account_manager).to receive(:create_storage_account).
+                  allow(storage_account_manager).to receive(:find_storage_account_by_tags).and_return(nil)
+                  allow(storage_account_manager).to receive(:create_storage_account_by_tags).
                     and_raise("Error when creating storage account")
                 end
 
                 it "raise an error" do
-                  expect(lock_creating_storage_account).not_to receive(:unlock)
-                  expect(File).to receive(:open).with("/tmp/azure_cpi/DELETING-LOCKS", "wb")
                   expect {
                     stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                  }.to raise_error /get_user_image: Failed to finish the creation of the storage account/
-                end
-              end
-
-              context "when it timeouts to create the new storage account" do
-                before do
-                  allow(lock_creating_storage_account).to receive(:lock).and_return(false)
-                  allow(lock_creating_storage_account).to receive(:wait).
-                    and_raise(Bosh::AzureCloud::Helpers::LockTimeoutError)
-                  allow(lock_creating_storage_account).to receive(:expired).and_return("fake-expired-value")
-                end
-
-                it "raise an error" do
-                  expect(lock_creating_storage_account).not_to receive(:unlock)
-                  expect(File).to receive(:open).with(Bosh::AzureCloud::Helpers::CPI_LOCK_DELETE, "wb")
-                  expect {
-                    stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                  }.to raise_error /Failed to finish the creation of the storage account/
+                  }.to raise_error /Error when creating storage account/
                 end
               end
             end
@@ -409,27 +377,19 @@ describe Bosh::AzureCloud::StemcellManager2 do
             context "when it creates the new storage account successfully, and copies the stemcell from default storage account to the new storage account" do
               let(:new_storage_account_name) { "54657da5936725e199fd616e" }
               let(:storage_account) {
-                [
-                  {
-                    :name => new_storage_account_name,
-                    :location => location,
-                    :tags => STEMCELL_STORAGE_ACCOUNT_TAGS
-                  }
-                ]
+                {
+                  :name => new_storage_account_name,
+                  :location => location,
+                  :tags => STEMCELL_STORAGE_ACCOUNT_TAGS
+                }
               }
-              let(:lock_creating_storage_account) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
               let(:lock_copy_blob) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
 
               before do
-                allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_creating_storage_account, lock_copy_blob)
+                allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_copy_blob)
 
-                # Create a new storage account
-                allow(lock_creating_storage_account).to receive(:lock).and_return(true)
-                allow(lock_creating_storage_account).to receive(:unlock)
-                allow(storage_account_manager).to receive(:generate_storage_account_name).and_return(new_storage_account_name)
-                allow(storage_account_manager).to receive(:create_storage_account).
-                  with(new_storage_account_name, storage_account_type, location, STEMCELL_STORAGE_ACCOUNT_TAGS)
-                allow(client2).to receive(:list_storage_accounts).and_return([], storage_account) # The first return value nil means the storage account doesn't exist, the second value is returned after the storage account is created.
+                # check storage account
+                allow(storage_account_manager).to receive(:find_storage_account_by_tags).and_return(nil)
 
                 # The following two allows are for get_stemcell_info of stemcell_manager.rb
                 allow(blob_manager).to receive(:get_blob_uri).
@@ -453,6 +413,9 @@ describe Bosh::AzureCloud::StemcellManager2 do
               end
 
               it "should create a new user image and return the user image information" do
+                expect(storage_account_manager).to receive(:create_storage_account_by_tags).
+                  with(STEMCELL_STORAGE_ACCOUNT_TAGS, storage_account_type, location, ['stemcell'], false).
+                  and_return(storage_account)
                 stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
                 expect(stemcell_info.uri).to eq(user_image_id)
                 expect(stemcell_info.metadata).to eq(tags)

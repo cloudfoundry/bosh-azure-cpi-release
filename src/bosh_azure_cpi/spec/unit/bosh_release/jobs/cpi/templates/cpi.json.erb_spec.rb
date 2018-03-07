@@ -71,7 +71,8 @@ describe 'cpi.json.erb' do
             'keep_failed_vms'             => false,
             'enable_telemetry'            => true,
             'use_managed_disks'           => false,
-            'pip_idle_timeout_in_minutes' => 4
+            'pip_idle_timeout_in_minutes' => 4,
+            'enable_vm_boot_diagnostics'  => true
           },
           'registry'=>{
             'address'=>'registry-host.example.com',
@@ -230,6 +231,16 @@ describe 'cpi.json.erb' do
 
       it 'is able to render enable_telemetry to false' do
         expect(subject['cloud']['properties']['azure']['enable_telemetry']).to be(false)
+      end
+    end
+
+    context 'when the enable_vm_boot_diagnostics is disabled' do
+      before do
+        manifest['properties']['azure']['enable_vm_boot_diagnostics'] = false
+      end
+
+      it 'is able to render enable_vm_boot_diagnostics to false' do
+        expect(subject['cloud']['properties']['azure']['enable_vm_boot_diagnostics']).to be(false)
       end
     end
 

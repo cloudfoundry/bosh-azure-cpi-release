@@ -91,6 +91,9 @@ module Bosh::AzureCloud
     STEMCELL_STORAGE_ACCOUNT_TAGS     = AZURE_TAGS.merge({
       'type' => 'stemcell'
     })
+    DIAGNOSTICS_STORAGE_ACCOUNT_TAGS  = AZURE_TAGS.merge({
+      'type' => 'bootdiagnostics'
+    })
     DISK_CONTAINER                    = 'bosh'
     STEMCELL_CONTAINER                = 'stemcell'
     STEMCELL_TABLE                    = 'stemcells'
