@@ -20,6 +20,7 @@ shared_context "shared stuff" do
   let(:light_stemcell_manager) { instance_double('Bosh::AzureCloud::LightStemcellManager') }
   let(:vm_manager) { instance_double('Bosh::AzureCloud::VMManager') }
   let(:instance_type_mapper) { instance_double('Bosh::AzureCloud::InstanceTypeMapper') }
+  let(:telemetry_manager) { MockTelemetryManager.new }
 
   before do
     allow(Bosh::AzureCloud::AzureClient2).to receive(:new).
@@ -44,5 +45,9 @@ shared_context "shared stuff" do
       and_return(vm_manager)
     allow(Bosh::AzureCloud::InstanceTypeMapper).to receive(:new).
       and_return(instance_type_mapper)
+    allow(Bosh::AzureCloud::TelemetryManager).to receive(:new).
+      and_return(telemetry_manager)
+    allow(telemetry_manager).to receive(:monitor).
+      with("initialize").and_call_original
   end
 end

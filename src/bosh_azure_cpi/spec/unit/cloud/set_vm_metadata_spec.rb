@@ -12,6 +12,8 @@ describe Bosh::AzureCloud::Cloud do
       allow(Bosh::AzureCloud::InstanceId).to receive(:parse).
         with(instance_id, azure_properties).
         and_return(instance_id_object)
+      allow(telemetry_manager).to receive(:monitor).
+        with("set_vm_metadata", id: instance_id).and_call_original
     end
 
     context "when the metadata is not encoded" do

@@ -128,6 +128,7 @@ module Bosh::AzureCloud
     CPI_LOCK_CREATE_USER_IMAGE           = "#{CPI_LOCK_PREFIX}-create-user-image"
     CPI_LOCK_PREFIX_AVAILABILITY_SET     = "#{CPI_LOCK_PREFIX}-availability-set"
     CPI_LOCK_DELETE                      = "#{CPI_LOCK_DIR}/DELETING-LOCKS"
+    CPI_LOCK_EVENT_HANDLER               = "#{CPI_LOCK_PREFIX}-event-handler"
     class LockError < Bosh::Clouds::CloudError; end
     class LockTimeoutError < LockError; end
     class LockNotFoundError < LockError; end
@@ -151,6 +152,9 @@ module Bosh::AzureCloud
     SERVICE_PRINCIPAL_CERTIFICATE_RELATIVE_PATH = 'azure_cpi/config/service_principal_certificate.pem'
 
     AVAILABILITY_ZONES = ['1', '2', '3']
+
+    CPI_EVENTS_DIR                        = "/tmp/azure_cpi_events"
+    CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP = "/tmp/azure_cpi_events_last_update"
 
     ##
     # Raises CloudError exception

@@ -69,6 +69,7 @@ describe 'cpi.json.erb' do
             'parallel_upload_thread_num'  => 16,
             'debug_mode'                  => false,
             'keep_failed_vms'             => false,
+            'enable_telemetry'            => true,
             'use_managed_disks'           => false,
             'pip_idle_timeout_in_minutes' => 4
           },
@@ -219,6 +220,16 @@ describe 'cpi.json.erb' do
 
       it 'raises an error of missing ssh_public_key' do
         expect { subject }.to raise_error(/"ssh_public_key" is not set/)
+      end
+    end
+
+    context 'when the enable_telemetry is disabled' do
+      before do
+        manifest['properties']['azure']['enable_telemetry'] = false
+      end
+
+      it 'is able to render enable_telemetry to false' do
+        expect(subject['cloud']['properties']['azure']['enable_telemetry']).to be(false)
       end
     end
 

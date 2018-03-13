@@ -127,6 +127,12 @@ def mock_cloud(options = nil)
   Bosh::AzureCloud::Cloud.new(options || mock_cloud_options['properties'])
 end
 
+class MockTelemetryManager
+  def monitor(operation, id: "", extras: {})
+    yield
+  end
+end
+
 RSpec.configure do |config|
   config.before do
     logger = Logger.new('/dev/null')

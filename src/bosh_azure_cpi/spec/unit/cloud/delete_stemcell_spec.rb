@@ -5,6 +5,11 @@ describe Bosh::AzureCloud::Cloud do
   include_context "shared stuff"
 
   describe '#delete_stemcell' do
+    before do
+      allow(telemetry_manager).to receive(:monitor).
+        with("delete_stemcell", id: stemcell_id).and_call_original
+    end
+
     context 'when a light stemcell is used' do
       let(:stemcell_id) { "bosh-light-stemcell-xxx" }
 

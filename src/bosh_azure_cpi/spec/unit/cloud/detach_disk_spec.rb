@@ -16,6 +16,9 @@ describe Bosh::AzureCloud::Cloud do
         and_return(disk_id_object)
       allow(Bosh::AzureCloud::InstanceId).to receive(:parse).
         and_return(instance_id_object)
+
+      allow(telemetry_manager).to receive(:monitor).
+        with("detach_disk", id: instance_id).and_call_original
     end
 
     it 'detaches the disk from the vm' do
