@@ -126,7 +126,7 @@ Azure CPI supports migration from regional deployment to zonal deployment. If yo
     * if the data disk is removed, it should have a snapshot available. You need to get the snapshot and disk name from bosh error log, and follow steps c to e in previous condition to do migration.
 
 As `Basic SKU` resources don't work with AZs, you need to use the `Standard SKU` resources to replace them before redeployment. See how to create those `Standard SKU` resources in [Pre-requisites](#pre-requisites).
-1. You need replace IP address of vip with a `Standard SKU` public IP if it is specified.
-1. You need replace load_balancer with a `Standard SKU` load balancer if it is specified.
+1. You need to replace IP address of vip with a `Standard SKU` public IP if it is specified.
+1. You need to replace load_balancer with a `Standard SKU` load balancer if it is specified.
 1. You need to remove the `availability_set` if it is specified.
 
