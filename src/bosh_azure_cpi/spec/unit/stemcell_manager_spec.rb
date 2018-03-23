@@ -274,8 +274,8 @@ describe Bosh::AzureCloud::StemcellManager do
           allow(table_manager).to receive(:query_entities).
             and_return(entities_query_before_insert, entities_query_after_insert)
 
-          expect(blob_manager).to receive(:prepare).
-            with(storage_account_name)
+          expect(blob_manager).to receive(:prepare_containers).
+            with(storage_account_name, ['bosh', 'stemcell'], false)
           expect(blob_manager).to receive(:copy_blob).
             with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
           expect(table_manager).to receive(:update_entity).

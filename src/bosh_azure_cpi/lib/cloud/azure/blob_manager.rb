@@ -282,8 +282,14 @@ module Bosh::AzureCloud
       end
     end
 
-    def prepare(storage_account_name, containers: [DISK_CONTAINER, STEMCELL_CONTAINER], is_default_storage_account: false)
-      @logger.info("prepare(#{storage_account_name}, #{containers})")
+    # Prepare containers in the storage account
+    # @param [string]  storage_account_name       - storage account name
+    # @param [Array]   containers                 - container names to be created
+    # @param [Boolean] is_default_storage_account - the storage account is the default storage account
+    # @return [void]
+    #
+    def prepare_containers(storage_account_name, containers, is_default_storage_account)
+      @logger.info("prepare_containers(#{storage_account_name}, #{containers}, #{is_default_storage_account})")
       containers.each do |container|
         @logger.debug("Creating the container `#{container}' in the storage account `#{storage_account_name}'")
         create_container(storage_account_name, container)

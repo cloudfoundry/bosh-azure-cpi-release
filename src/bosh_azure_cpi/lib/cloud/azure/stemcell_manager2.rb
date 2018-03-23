@@ -81,29 +81,13 @@ module Bosh::AzureCloud
       if location == default_storage_account[:location]
         storage_account_name = default_storage_account_name
       else
-        mutex = FileMutex.new("#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{location}", @logger)
-        begin
-          if mutex.lock
-            storage_account = @azure_client2.list_storage_accounts().find{ |s|
-              s[:location] == location && is_stemcell_storage_account?(s[:tags])
-            }
-            if storage_account.nil?
-              storage_account_name = @storage_account_manager.generate_storage_account_name()
-              @logger.info("get_user_image: Creating a storage account `#{storage_account_name}' with the tags `#{STEMCELL_STORAGE_ACCOUNT_TAGS}' in the location `#{location}'")
-              @storage_account_manager.create_storage_account(storage_account_name, storage_account_type, location, STEMCELL_STORAGE_ACCOUNT_TAGS)
-            end
-            mutex.unlock
-          else
-            mutex.wait
-          end
-          storage_account = @azure_client2.list_storage_accounts().find{ |s|
-            s[:location] == location && is_stemcell_storage_account?(s[:tags])
-          }
-          storage_account_name = storage_account[:name]
-        rescue => e
-          mark_deleting_locks
-          cloud_error("get_user_image: Failed to finish the creation of the storage account `#{storage_account_name}', `#{storage_account_type}' in location `#{location}': #{e.inspect}\n#{e.backtrace.join("\n")}")
+        storage_account = @storage_account_manager.find_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, location)
+        if storage_account.nil?
+          # The storage account will only be used when preparing a stemcell in the target location for user image, ANY storage account type is ok.
+          # To make it consistent, `Standard_LRS' is used.
+          storage_account = @storage_account_manager.create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [STEMCELL_CONTAINER], false)
         end
+        storage_account_name = storage_account[:name]
 
         mutex = FileMutex.new("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", @logger, CPI_LOCK_COPY_STEMCELL_TIMEOUT)
         begin

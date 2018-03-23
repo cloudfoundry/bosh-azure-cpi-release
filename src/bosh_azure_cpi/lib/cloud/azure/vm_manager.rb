@@ -96,13 +96,9 @@ module Bosh::AzureCloud
         vm_params[:zone] = zone.to_s
       end
 
-      if is_debug_mode(@azure_properties)
-        default_storage_account = @storage_account_manager.default_storage_account
-        if default_storage_account[:location] == location
-          vm_params[:diag_storage_uri] = default_storage_account[:storage_blob_host]
-        else
-          @logger.warn("Default storage account `#{default_storage_account[:name]}' is in different region `#{default_storage_account[:location]}', ignore boot diagnostics.")
-        end
+      if @azure_properties['enable_vm_boot_diagnostics'] && (@azure_properties['environment'] != ENVIRONMENT_AZURESTACK)
+        diagnostics_storage_account = @storage_account_manager.get_or_create_diagnostics_storage_account(location)
+        vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host]
       end
 
       primary_nic_tags = AZURE_TAGS.clone

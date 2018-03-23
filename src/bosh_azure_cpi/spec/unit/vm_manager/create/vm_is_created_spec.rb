@@ -747,52 +747,48 @@ describe Bosh::AzureCloud::VMManager do
         end
       end
 
-      context "when debug mode is on" do
-        let(:azure_properties_debug) {
-          mock_azure_properties_merge({
-            'debug_mode' => true
-          })
-        }
-        let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
-
-        context 'when vm and default storage account are in different locations' do
-          let(:vm_location) { 'fake-vm-location' }
-          let(:default_storage_account) {
-            {
-              :location          => 'fake-storage-account-location',
-              :storage_blob_host => 'fake-storage-blob-host'
-            }
+      # Boot diagnostics
+      context "when enable_vm_boot_diagnostics is enabled" do
+        context 'and when environment is not AzureStack' do
+          let(:azure_properties_debug) {
+            mock_azure_properties_merge({
+              'enable_vm_boot_diagnostics' => true
+            })
           }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
 
-          before do
-            allow(storage_account_manager).to receive(:default_storage_account).
-              and_return(default_storage_account)
-          end
-
-          it "should not enable diagnostics" do
-            vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, resource_pool, network_configurator, env)
-            expect(vm_params[:diag_storage_uri]).to be(nil)
-          end
-        end
-
-        context 'when vm and default storage account are in same location' do
           let(:vm_location) { location }
           let(:diag_storage_uri) { 'fake-diag-storage-uri' }
-          let(:default_storage_account) {
+          let(:storage_account) {
             {
               :location          => location,
               :storage_blob_host => diag_storage_uri
             }
           }
 
-          before do
-            allow(storage_account_manager).to receive(:default_storage_account).
-              and_return(default_storage_account)
-          end
-
           it "should enable diagnostics" do
+            expect(storage_account_manager).to receive(:get_or_create_diagnostics_storage_account).
+              with(location).
+              and_return(storage_account)
             vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, resource_pool, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to eq(diag_storage_uri)
+          end
+        end
+
+        context 'and when environment is AzureStack' do
+          let(:azure_properties_debug) {
+            mock_azure_properties_merge({
+              'enable_vm_boot_diagnostics' => true,
+              'environment' => 'AzureStack'
+            })
+          }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+
+          let(:vm_location) { location }
+
+          it "should not enable diagnostics" do
+            vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, resource_pool, network_configurator, env)
+            expect(vm_params[:diag_storage_uri]).to be(nil)
           end
         end
       end

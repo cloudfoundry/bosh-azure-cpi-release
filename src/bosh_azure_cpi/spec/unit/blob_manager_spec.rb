@@ -652,8 +652,9 @@ describe Bosh::AzureCloud::BlobManager do
     end
   end
 
-  describe "#prepare" do
+  describe "#prepare_containers" do
     let(:another_storage_account_name) { "another-storage-account-name" }
+    let(:containers) { [container_name] }
     let(:another_storage_account) {
       {
         :id => "foo",
@@ -679,7 +680,7 @@ describe Bosh::AzureCloud::BlobManager do
         expect(blob_service).to receive(:set_container_acl).with('stemcell', 'blob', options)
 
         expect {
-          blob_manager.prepare(another_storage_account_name, containers: [container_name], is_default_storage_account: true)
+          blob_manager.prepare_containers(another_storage_account_name, containers, true)
         }.not_to raise_error
       end
     end
@@ -692,7 +693,7 @@ describe Bosh::AzureCloud::BlobManager do
         expect(blob_service).not_to receive(:set_container_acl)
 
         expect {
-          blob_manager.prepare(another_storage_account_name, containers: [container_name])
+          blob_manager.prepare_containers(another_storage_account_name, containers, false)
         }.not_to raise_error
       end
     end
