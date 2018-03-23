@@ -25,6 +25,10 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:valid_access_token) { "valid-access-token" }
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
+  before do
+    allow(azure_client2).to receive(:sleep)
+  end
+
   describe "#create_availability_set" do
     let(:avset_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/availabilitySets/#{avset_name}?api-version=#{api_version_compute}" }
 

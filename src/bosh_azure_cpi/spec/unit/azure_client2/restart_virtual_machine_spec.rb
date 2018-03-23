@@ -26,6 +26,10 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
+  before do
+    allow(azure_client2).to receive(:sleep)
+  end
+
   describe "#restart_virtual_machine" do
     let(:vm_restart_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}/restart?api-version=#{api_version_compute}" }
 
@@ -230,6 +234,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           }
         )
 
+        expect(azure_client2).to receive(:sleep).exactly(AZURE_MAX_RETRY_COUNT).times
         expect {
           azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.to raise_error Bosh::AzureCloud::AzureInternalError
@@ -262,6 +267,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           :body => '{"status":"Succeeded"}',
           :headers => {})
 
+        expect(azure_client2).to receive(:sleep).twice
         expect {
           azure_client2.restart_virtual_machine(resource_group, vm_name)
         }.not_to raise_error
