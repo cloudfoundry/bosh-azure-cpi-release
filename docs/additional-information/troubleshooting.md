@@ -60,6 +60,10 @@
             director:
               debug:
                 keep_unreachable_vms: true
+              ...
+            azure:
+              keep_failed_vms: true
+              ...
             ```
 
         1. Re-deploy BOSH.
@@ -76,3 +80,44 @@
             ```
 
         1. If the deployment failed, the unreachable VMs will be kept for further investigations.
+
+        > **Note**: the resources related with the unreachable VMs become unmanaged by BOSH when `keep_unreachable_vms` or `keep_failed_vms` is `true`, so you need to clean up them manually once investigation is done. Typical unmanaged resources are listed as below. Go to Azure portal and delete the resources related to the failed VM accordinly.
+        > * Virtual Machine.
+        > * Network Interface.
+        > * Dynamic public IP that attached to the VM.
+        > * OS disk.
+        > * Data disks that attached to the VM.
+
+1. Enable VM boot diagnostics. The feature is enabled since CPI v26. With the feature, you will be able to get console output and screenshot of the VM. **Note**: AzureStack does not support VM boot diagnostics.
+
+    - For CPI v26~v35.1.0.
+
+        VM boot diagnostics is enabled when `debug_mode` is enabled in global CPI settings. Example:
+
+        ```yaml
+        properties:
+          azure: &azure
+            environment: AzureCloud
+            subscription_id: ...
+            ...
+            debug_mode: true
+        ```
+
+    - For CPI v35.2.0+.
+
+        Since v35.2.0, VM boot diagnostics will NOT be configured by `debug_mode` any more, a new configuration parameter `enable_vm_boot_diagnostics` is added to global CPI settings to turn on/off this feature, the default value is `true`. If you want to turn off the feature, you need to change its value to `false`. Example of enabling boot diagnostics:
+
+        ```yaml
+        properties:
+          azure: &azure
+            environment: AzureCloud
+            subscription_id: ...
+            ...
+            enable_vm_boot_diagnostics: true
+        ```
+
+    > **Note**: VM boot diagnostics logs won't be cleaned up on VM delete, you can delete the logs manually if you want. When VM boot diagnostics is enabled, a storage account with tags `{'user-agent' => 'bosh', 'type' => 'bootdiagnostics'}` is created in the default resource group, and the boot diagnostics logs are stored in containers named as `bootdiagnostics-$vm_name[0:8]*` in that storage account.
+    > You can use [cleanup-boot-diagnostics-logs.sh](./cleanup-boot-diagnostics-logs.sh) to clean up the diagnostics logs created by CPI v35.2.0+. Example:
+    >   ```
+    >     bash cleanup-boot-diagnostics-logs.sh my-cf-resource-group
+    >   ```

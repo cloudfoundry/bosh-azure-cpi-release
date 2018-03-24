@@ -126,6 +126,4 @@
     Error 450002: Timed out sending 'list_disk' to c4e6e2ff-8ee2-463b-a1d2-f1190b4e21e1 after 45 seconds
     ```
 
-    The fix is already on the way but it needs some time to rollout to all Azure regions.
-
-    Workaround: A workaround has been included in Azure CPI [v33](https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=33) to mitigate the issue. You can pick up this version before the formal platform fix is rolled out to your region.
+    A workaround has been included in Azure CPI [v33](https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=33) to mitigate the issue. Since January, 2018, the issue was fixed on Azure, but the workaround will be kept for while until the fix is fully tested.
