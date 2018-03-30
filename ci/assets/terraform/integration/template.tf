@@ -17,6 +17,10 @@ variable "environments" {
     AzureChinaCloud   = "china"
   }
 }
+variable "resource_group_prefix" {
+  type    = "string"
+  default = ""
+}
 
 # Configure the Microsoft Azure Provider
 provider "azurerm" {
@@ -29,7 +33,7 @@ provider "azurerm" {
 
 # Create a default resource group
 resource "azurerm_resource_group" "azure_default_rg" {
-  name     = "${var.env_name}-default-rg"
+  name     = "${var.resource_group_prefix}${var.env_name}-default-rg"
   location = "${var.location}"
 }
 
@@ -176,7 +180,7 @@ resource "azurerm_application_security_group" "azure_asg" {
 
 # Create an additional resource group
 resource "azurerm_resource_group" "azure_additional_rg" {
-  name     = "${var.env_name}-additional-rg"
+  name     = "${var.resource_group_prefix}${var.env_name}-additional-rg"
   location = "${var.location}"
 }
 
