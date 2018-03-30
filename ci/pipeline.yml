@@ -29,12 +29,28 @@ shared:
       generate_random_name: true
       terraform_source: pipelines/azure/assets/terraform
 
+  - &create-az-bats-environment
+    put: environment
+    params:
+      delete_on_failure: true
+      generate_random_name: true
+      terraform_source: bosh-cpi-src/ci/assets/terraform/az_bats
+
   - &destroy-bats-environment
     put: environment
     params:
       action: destroy
       env_name_file: environment/name
       terraform_source: pipelines/azure/assets/terraform
+    get_params:
+      action: destroy
+
+  - &destroy-az-bats-environment
+    put: environment
+    params:
+      action: destroy
+      env_name_file: environment/name
+      terraform_source: bosh-cpi-src/ci/assets/terraform/az_bats
     get_params:
       action: destroy
 
@@ -113,21 +129,6 @@ shared:
     params:
       <<: *azure-environment-params
 
-  - &create-bats-standard-public-ip
-    task: create-bats-standard-public-ip
-    file: bosh-cpi-src/ci/tasks/create-bats-standard-public-ip.yml
-    params:
-      <<: *azure-environment-params
-      AZURE_LOCATION:                        {{azure_location}}
-      AZURE_BATS_STANDARD_PUBLIC_IP_NAME:    {{azure_bats_standard_public_ip_name}}
-
-  - &delete-bats-standard-public-ip
-    task: delete-bats-standard-public-ip
-    file: bosh-cpi-src/ci/tasks/delete-bats-standard-public-ip.yml
-    params:
-      <<: *azure-environment-params
-      AZURE_BATS_STANDARD_PUBLIC_IP_NAME:    {{azure_bats_standard_public_ip_name}}
-
   - &run-az-bats
     task: run-az-bats
     file: bosh-cpi-src/ci/tasks/run-az-bats.yml
@@ -137,7 +138,6 @@ shared:
       BAT_INFRASTRUCTURE:                 azure
       BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
-      AZURE_BATS_STANDARD_PUBLIC_IP_NAME: {{azure_bats_standard_public_ip_name}}
       AZURE_BATS_ZONE:                    {{azure_bats_zone}}
 
 jobs:
@@ -275,8 +275,7 @@ jobs:
         - {get: pipelines,       trigger: false}
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
-      - <<: *create-bats-environment
-      - <<: *create-bats-standard-public-ip
+      - <<: *create-az-bats-environment
       - <<: *prepare-director
         params:
           <<: *prepare-director-params
@@ -288,8 +287,7 @@ jobs:
       - <<: *run-az-bats
       - do:
         - <<: *teardown
-        - <<: *delete-bats-standard-public-ip
-        - <<: *destroy-bats-environment
+        - <<: *destroy-az-bats-environment
         ensure:
           do:
             - <<: *ensure-cleanup
@@ -407,6 +405,7 @@ resources:
         azure_client_id:       {{azure_client_id}}
         azure_client_secret:   {{azure_client_secret}}
         azure_tenant_id:       {{azure_tenant_id}}
+        resource_group_prefix: {{resource_group_prefix}}
   - name: bosh-cli
     type: s3
     source:

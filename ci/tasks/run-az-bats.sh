@@ -7,8 +7,6 @@ set -e
 : ${BAT_INFRASTRUCTURE:?}
 : ${BAT_NETWORKING:?}
 : ${BAT_RSPEC_FLAGS:?}
-
-: ${AZURE_BATS_STANDARD_PUBLIC_IP_NAME:?}
 : ${AZURE_BATS_ZONE:?}
 
 source pipelines/shared/utils.sh
@@ -16,14 +14,10 @@ source /etc/profile.d/chruby.sh
 chruby 2.1.7
 
 metadata="$( cat environment/metadata )"
-
-standard_public_ip="$( cat ipaddrs/ipaddr_${AZURE_BATS_STANDARD_PUBLIC_IP_NAME} )"
-
 mkdir -p bats-config
-bosh int bosh-cpi-src/ci/tasks/bats-spec.yml \
+bosh int bosh-cpi-src/ci/tasks/az-bats-spec.yml \
   -v "stemcell_name=${STEMCELL_NAME}" \
   -v "availability_zone=${AZURE_BATS_ZONE}"  \
-  -v "bats_public_ip=${standard_public_ip}" \
   -l environment/metadata > bats-config/bats-config.yml
 
 source director-state/director.env
