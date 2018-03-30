@@ -334,6 +334,18 @@ describe Bosh::AzureCloud::Helpers do
         end
       end
 
+      context "when azure_stack.authentication is AzureChinaClouadAD" do
+        before do
+          azure_properties['azure_stack']['authentication'] = 'AzureChinaCloudAD'
+        end
+
+        it "should return Azure China Cloud authentication endpoint and api version" do
+          expect(
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          ).to eq(["https://login.chinacloudapi.cn/fake-tenant-id/oauth2/token", api_version])
+        end
+      end
+
       context "when azure_stack.authentication is ADFS" do
         before do
           azure_properties['azure_stack']['authentication'] = 'ADFS'
