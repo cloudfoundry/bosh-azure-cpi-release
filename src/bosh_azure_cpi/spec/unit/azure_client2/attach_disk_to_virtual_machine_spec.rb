@@ -28,6 +28,10 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
+  before do
+    allow(azure_client2).to receive(:sleep)
+  end
+
   describe "#attach_disk_to_virtual_machine" do
     let(:disk_name) { "fake-disk-name" }
     let(:caching) { "ReadWrite" }
@@ -385,6 +389,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             }
           )
 
+          expect(azure_client2).to receive(:sleep).exactly(AZURE_MAX_RETRY_COUNT).times
           expect {
             azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
           }.to raise_error Bosh::AzureCloud::AzureInternalError
@@ -422,6 +427,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :body => '{"status":"Succeeded"}',
             :headers => {})
 
+          expect(azure_client2).to receive(:sleep).twice
           expect {
             azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
           }.not_to raise_error

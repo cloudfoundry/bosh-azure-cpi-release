@@ -203,6 +203,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it "should return the resource if response body is not null" do
+            expect(azure_client2).to receive(:sleep).once
             expect(
               azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
             ).not_to be_nil
@@ -227,6 +228,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it "should return the resource if response body is not null" do
+            expect(azure_client2).to receive(:sleep).once
             expect(
               azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
             ).not_to be_nil
@@ -251,6 +253,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it "should return the resource if response body is not null" do
+            expect(azure_client2).to receive(:sleep).once
             expect(
               azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
             ).not_to be_nil
@@ -275,6 +278,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it "should return the resource if response body is not null" do
+            expect(azure_client2).to receive(:sleep).once
             expect(
               azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
             ).not_to be_nil
@@ -299,6 +303,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it "should return the resource if response body is not null" do
+            expect(azure_client2).to receive(:sleep).once
             expect(
               azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
             ).not_to be_nil
@@ -323,6 +328,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it "should return the resource if response body is not null" do
+            expect(azure_client2).to receive(:sleep).once
             expect(
               azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
             ).not_to be_nil
@@ -347,6 +353,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it "should return the resource if response body is not null" do
+            expect(azure_client2).to receive(:sleep).once
             expect(
               azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
             ).not_to be_nil

@@ -26,6 +26,10 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
+  before do
+    allow(azure_client2).to receive(:sleep)
+  end
+
   describe "#create_virtual_machine" do
     let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}&validating=true" }
 

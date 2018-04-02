@@ -366,6 +366,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:storage_account_name) { "fake-name" }
 
   before do
+    allow(azure_client2).to receive(:sleep)
     stub_request(:post, token_uri).to_return(
       :status => 200,
       :body => {
@@ -949,7 +950,8 @@ describe Bosh::AzureCloud::AzureClient2 do
             :headers => {}
           }
         )
-
+ 
+        expect(azure_client2).to receive(:sleep).exactly(AZURE_MAX_RETRY_COUNT).times
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.to raise_error Bosh::AzureCloud::AzureInternalError
@@ -976,6 +978,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           }
         )
 
+        expect(azure_client2).to receive(:sleep).once
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
@@ -1022,6 +1025,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               }
             )
 
+        expect(azure_client2).to receive(:sleep).once
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
@@ -1045,6 +1049,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               }
             )
 
+        expect(azure_client2).to receive(:sleep).once
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
@@ -1068,6 +1073,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               }
             )
 
+        expect(azure_client2).to receive(:sleep).once
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
@@ -1091,6 +1097,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               }
             )
 
+        expect(azure_client2).to receive(:sleep).once
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
@@ -1146,6 +1153,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               }
             )
 
+        expect(azure_client2).to receive(:sleep).once
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error
@@ -1169,6 +1177,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               }
             )
 
+        expect(azure_client2).to receive(:sleep).once
         expect {
           azure_client2.get_storage_account_by_name(storage_account_name)
         }.not_to raise_error

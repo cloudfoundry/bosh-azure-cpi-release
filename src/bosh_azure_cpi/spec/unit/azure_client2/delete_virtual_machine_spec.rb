@@ -26,6 +26,10 @@ describe Bosh::AzureCloud::AzureClient2 do
 
   let(:expires_on) { (Time.now+1800).to_i.to_s }
 
+  before do
+    allow(azure_client2).to receive(:sleep)
+  end
+
   describe "#delete_virtual_machine" do
     let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
 
@@ -88,6 +92,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               }
             })
 
+          expect(azure_client2).to receive(:sleep).exactly(AZURE_MAX_RETRY_COUNT).times
           expect {
             azure_client2.delete_virtual_machine(resource_group, vm_name)
           }.to raise_error Bosh::AzureCloud::AzureInternalError
@@ -109,6 +114,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             }
           )
 
+          expect(azure_client2).to receive(:sleep).once
           expect {
             azure_client2.delete_virtual_machine(resource_group, vm_name)
           }.not_to raise_error
@@ -178,6 +184,8 @@ describe Bosh::AzureCloud::AzureClient2 do
             }
           )
 
+          expect(azure_client2).to receive(:sleep).with(1)
+          expect(azure_client2).to receive(:sleep).with(5).twice
           expect {
             azure_client2.delete_virtual_machine(resource_group, vm_name)
           }.not_to raise_error
