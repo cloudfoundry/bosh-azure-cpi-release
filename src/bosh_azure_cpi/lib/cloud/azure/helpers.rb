@@ -11,7 +11,7 @@ module Bosh::AzureCloud
     ENVIRONMENT_AZURECHINACLOUD   = 'AzureChinaCloud'
     ENVIRONMENT_AZUREUSGOVERNMENT = 'AzureUSGovernment'
     ENVIRONMENT_AZURESTACK        = 'AzureStack'
-    ENVIRONMENT_AZUREGermanCloud  = 'AzureGermanCloud'
+    ENVIRONMENT_AZUREGERMANCLOUD  = 'AzureGermanCloud'
 
     AZURE_ENVIRONMENTS = {
       ENVIRONMENT_AZURECLOUD => {
@@ -56,7 +56,7 @@ module Bosh::AzureCloud
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       },
-      ENVIRONMENT_AZUREGermanCloud => {
+      ENVIRONMENT_AZUREGERMANCLOUD => {
         'resourceManagerEndpointUrl' => 'https://management.microsoftazure.de/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.de',
         'apiVersion' => {
@@ -147,8 +147,9 @@ module Bosh::AzureCloud
     WINDOWS_VM_NAME_LENGTH        = 15
 
     # Azure Stack Authentication Type
-    AZURESTACK_AUTHENTICATION_TYPE_AZUREAD      = 'AzureAD'
-    AZURESTACK_AUTHENTICATION_TYPE_ADFS         = 'ADFS'
+    AZURESTACK_AUTHENTICATION_TYPE_AZUREAD           = 'AzureAD'
+    AZURESTACK_AUTHENTICATION_TYPE_AZURECHINACLOUDAD = 'AzureChinaCloudAD'
+    AZURESTACK_AUTHENTICATION_TYPE_ADFS              = 'ADFS'
 
     BOSH_JOBS_DIR = '/var/vcap/jobs'
     AZURESTACK_CA_CERT_RELATIVE_PATH            = 'azure_cpi/config/azure_stack_ca_cert.pem'
@@ -228,6 +229,9 @@ module Bosh::AzureCloud
         if authentication == AZURESTACK_AUTHENTICATION_TYPE_AZUREAD
           url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
           api_version = AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
+        elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_AZURECHINACLOUDAD
+          url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECHINACLOUD]['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
+          api_version = AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECHINACLOUD]['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
         elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_ADFS
           url = "https://adfs.#{domain}/adfs/oauth2/token"
         else

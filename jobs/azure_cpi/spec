@@ -13,7 +13,7 @@ packages:
 
 properties:
   azure.environment:
-    description: The environment for Azure Management Service. AzureCloud, AzureChinaCloud, AzureUSGovernment or AzureStack
+    description: The environment for Azure Management Service. AzureCloud, AzureChinaCloud, AzureUSGovernment, AzureGermanCloud or AzureStack
     default: AzureCloud
   azure.location:
     description: Azure region name
@@ -71,7 +71,7 @@ properties:
     description: The domain for your AzureStack deployment
     default: local.azurestack.external
   azure.azure_stack.authentication:
-    description: The authentication type for your AzureStack deployment. AzureAD or ADFS
+    description: The authentication type for your AzureStack deployment. AzureAD, AzureChinaCloudAD or ADFS
     default: AzureAD
   azure.azure_stack.resource:
     description: The token resource for your AzureStack deployment
