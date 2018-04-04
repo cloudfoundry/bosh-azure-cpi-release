@@ -365,6 +365,13 @@ module Bosh::AzureCloud
       application_security_groups
     end
 
+    def get_ip_forwarding(resource_pool, network)
+      ip_forwarding = false
+      # ip_forwarding can be specified in resource_pool and networks (ordered by priority)
+      ip_forwarding = resource_pool.fetch('ip_forwarding', network.ip_forwarding)
+      ip_forwarding
+    end
+
     def get_public_ip(vip_network)
       public_ip = nil
       unless vip_network.nil?
@@ -416,6 +423,7 @@ module Bosh::AzureCloud
       networks.each_with_index do |network, index|
         network_security_group = get_network_security_group(resource_pool, network)
         application_security_groups = get_application_security_groups(resource_pool, network)
+        ip_forwarding = get_ip_forwarding(resource_pool, network)
         nic_name = "#{vm_name}-#{index}"
         nic_params = {
           :name                        => nic_name,
@@ -423,7 +431,8 @@ module Bosh::AzureCloud
           :private_ip                  => (network.is_a? ManualNetwork) ? network.private_ip : nil,
           :network_security_group      => network_security_group,
           :application_security_groups => application_security_groups,
-          :ipconfig_name               => "ipconfig#{index}"
+          :ipconfig_name               => "ipconfig#{index}",
+          :enable_ip_forwarding        => ip_forwarding
         }
         nic_params[:subnet] = get_network_subnet(network)
         if index == 0

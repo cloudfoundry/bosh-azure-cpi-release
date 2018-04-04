@@ -46,6 +46,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :ipconfig_name => "fake-ipconfig-name",
             :subnet => {:id => subnet[:id]},
             :tags => {},
+            :enable_ip_forwarding => false,
             :private_ip => "10.0.0.100",
             :dns_servers => ["168.63.129.16"],
             :public_ip => {:id => "fake-public-id"},
@@ -64,6 +65,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :networkSecurityGroup => {
                 :id => nic_params[:network_security_group][:id]
               },
+              :enableIPForwarding => false,
               :ipConfigurations => [{
                 :name        => nic_params[:ipconfig_name],
                 :properties  => {
@@ -118,6 +120,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :ipconfig_name => "fake-ipconfig-name",
             :subnet => {:id => subnet[:id]},
             :tags => {},
+            :enable_ip_forwarding => false,
             :network_security_group => {:id => nsg_id},
             :application_security_groups => [],
             :load_balancer => nil,
@@ -133,6 +136,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :networkSecurityGroup => {
                 :id => nic_params[:network_security_group][:id]
               },
+              :enableIPForwarding => false,
               :ipConfigurations => [{
                 :name        => nic_params[:ipconfig_name],
                 :properties  => {
@@ -187,6 +191,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :ipconfig_name => "fake-ipconfig-name",
             :subnet => {:id => subnet[:id]},
             :tags => {},
+            :enable_ip_forwarding => false,
             :private_ip => "10.0.0.100",
             :dns_servers => ["168.63.129.16"],
             :public_ip => {:id => "fake-public-id"},
@@ -203,6 +208,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :tags     => {},
             :properties => {
               :networkSecurityGroup => nil,
+              :enableIPForwarding => false,
               :ipConfigurations => [{
                 :name        => nic_params[:ipconfig_name],
                 :properties  => {
@@ -257,6 +263,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :ipconfig_name => "fake-ipconfig-name",
             :subnet => {:id => subnet[:id]},
             :tags => {},
+            :enable_ip_forwarding => false,
             :private_ip => "10.0.0.100",
             :dns_servers => ["168.63.129.16"],
             :public_ip => {:id => "fake-public-id"},
@@ -287,6 +294,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :networkSecurityGroup => {
                 :id => nic_params[:network_security_group][:id]
               },
+              :enableIPForwarding => false,
               :ipConfigurations => [{
                 :name        => nic_params[:ipconfig_name],
                 :properties  => {
@@ -347,6 +355,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :ipconfig_name => "fake-ipconfig-name",
             :subnet => {:id => subnet[:id]},
             :tags => {},
+            :enable_ip_forwarding => false,
             :private_ip => "10.0.0.100",
             :dns_servers => ["168.63.129.16"],
             :public_ip => {:id => "fake-public-id"},
@@ -365,6 +374,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :networkSecurityGroup => {
                 :id => nic_params[:network_security_group][:id]
               },
+              :enableIPForwarding => false,
               :ipConfigurations => [{
                 :name        => nic_params[:ipconfig_name],
                 :properties  => {
@@ -427,6 +437,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             :ipconfig_name => "fake-ipconfig-name",
             :subnet => {:id => subnet[:id]},
             :tags => {},
+            :enable_ip_forwarding => false,
             :private_ip => "10.0.0.100",
             :dns_servers => ["168.63.129.16"],
             :public_ip => {:id => "fake-public-id"},
@@ -451,6 +462,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               :networkSecurityGroup => {
                 :id => nic_params[:network_security_group][:id]
               },
+              :enableIPForwarding => false,
               :ipConfigurations => [{
                 :name        => nic_params[:ipconfig_name],
                 :properties  => {
