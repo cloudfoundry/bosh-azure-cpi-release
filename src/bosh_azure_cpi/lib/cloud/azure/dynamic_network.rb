@@ -3,11 +3,27 @@ module Bosh::AzureCloud
   class DynamicNetwork < Network
     include Helpers
 
-    attr_reader :virtual_network_name, :subnet_name, :security_group, :application_security_groups
+    attr_reader :virtual_network_name, :subnet_name, :security_group, :application_security_groups, :ip_forwarding
 
     # create dynamic network
     # @param [String] name Network name
     # @param [Hash] spec Raw network spec
+    # {
+    #   "my-dynamic-network" => {
+    #     "netmask" => nil,
+    #     "gateway" => nil,
+    #     "dns"     => ["168.63.129.16"],
+    #     "type"    => "dynamic",
+    #     "cloud_properties" => {
+    #       "virtual_network_name" => "boshvnet",
+    #       "subnet_name"          => "Bosh",
+    #       "resource_group_name"  => "rg-name",
+    #       "ip_forwarding"        => false,
+    #       "security_group"       => "nsg-bosh",
+    #       "application_security_groups" => []
+    #     }
+    #   }
+    # }
     def initialize(azure_properties, name, spec)
       super
 
@@ -30,6 +46,8 @@ module Bosh::AzureCloud
       @security_group = @cloud_properties["security_group"]
 
       @application_security_groups = @cloud_properties.fetch("application_security_groups", [])
+
+      @ip_forwarding = @cloud_properties.fetch("ip_forwarding", false)
     end
 
     def dns

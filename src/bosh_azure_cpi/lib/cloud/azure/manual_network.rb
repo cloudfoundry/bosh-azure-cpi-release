@@ -3,11 +3,29 @@ module Bosh::AzureCloud
   class ManualNetwork < Network
     include Helpers
 
-    attr_reader :virtual_network_name, :subnet_name, :security_group, :application_security_groups
+    attr_reader :virtual_network_name, :subnet_name, :security_group, :application_security_groups, :ip_forwarding
 
     # create manual network
     # @param [String] name Network name
     # @param [Hash] spec Raw network spec
+    # {
+    #   "my-manual-network" => {
+    #     "netmask" => nil,
+    #     "gateway" => nil,
+    #     "type"    => "manual",
+    #     "ip"      => "10.0.0.4",
+    #     "dns"     => ["168.63.129.16"],
+    #     "default" => ["dns", "gateway"],
+    #     "cloud_properties" => {
+    #       "virtual_network_name" => "boshvnet",
+    #       "subnet_name"          => "Bosh",
+    #       "resource_group_name"  => "rg-name",
+    #       "ip_forwarding"        => false,
+    #       "security_group"       => "nsg-bosh",
+    #       "application_security_groups" => []
+    #     }
+    #   }
+    # }
     def initialize(azure_properties, name, spec)
       super
 
@@ -34,6 +52,8 @@ module Bosh::AzureCloud
       @security_group = @cloud_properties["security_group"]
 
       @application_security_groups = @cloud_properties.fetch("application_security_groups", [])
+
+      @ip_forwarding = @cloud_properties.fetch("ip_forwarding", false)
     end
 
     def private_ip

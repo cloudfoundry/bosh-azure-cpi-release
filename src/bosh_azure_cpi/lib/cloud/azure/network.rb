@@ -3,15 +3,10 @@ module Bosh::AzureCloud
 
     attr_reader :resource_group_name
 
-    # {
-    # "bosh"=>{"netmask"=>nil, "gateway"=>nil, "ip"=>"10.0.0.4", "dns"=>["168.63.129.16"], "type"=>"manual", "default"=>["dns", "gateway"], "cloud_properties"=>{"resource_group_name"=>"rg-name", "virtual_network_name"=>"boshvnet", "subnet_name"=>"Bosh", "security_group"=>"nsg-bosh"}, "application_security_groups"=>[]},
-    # "vip"=>{"ip"=>"23.101.15.75", "type"=>"vip", "cloud_properties"=>{"resource_group_name"=>"rg-name"}}
-    #}
-
     ##
     # Creates a new network
     #
-    # @azure_properties global Azure properties
+    # @azure_properties Azure global configurations
     # @param [String] name Network name
     # @param [Hash] spec Raw network spec
     def initialize(azure_properties, name, spec)
@@ -29,7 +24,7 @@ module Bosh::AzureCloud
       unless @cloud_properties.nil? || @cloud_properties["resource_group_name"].nil?
         @resource_group_name = @cloud_properties["resource_group_name"]
       else
-        @resource_group_name =  @azure_properties["resource_group_name"]
+        @resource_group_name = @azure_properties["resource_group_name"]
       end
     end
 

@@ -139,6 +139,8 @@ shared_context "shared stuff for vm manager" do
       and_return(nil)
     allow(manual_network).to receive(:application_security_groups).
       and_return([])
+    allow(manual_network).to receive(:ip_forwarding).
+      and_return(false)
 
     allow(dynamic_network).to receive(:resource_group_name).
       and_return(MOCK_RESOURCE_GROUP_NAME)
@@ -150,6 +152,8 @@ shared_context "shared stuff for vm manager" do
       and_return(nil)
     allow(dynamic_network).to receive(:application_security_groups).
       and_return([])
+    allow(dynamic_network).to receive(:ip_forwarding).
+      and_return(false)
   end
 
   # Disk

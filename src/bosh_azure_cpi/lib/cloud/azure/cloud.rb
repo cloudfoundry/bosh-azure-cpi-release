@@ -88,7 +88,14 @@ module Bosh::AzureCloud
     #      "gateway"          => "172.30.40.1",
     #      "dns"              => ["172.30.22.153", "172.30.22.154"],
     #      "default"          => ["dns", "gateway"],
-    #      "cloud_properties" => {"virtual_network_name"=>"boshvnet", "subnet_name"=>"BOSH"}
+    #      "cloud_properties" => {
+    #        "virtual_network_name"        => "boshvnet",
+    #        "subnet_name"                 => "BOSH",
+    #        "resource_group_name"         => "rg1",
+    #        "security_group"              => "nsg-bosh",
+    #        "application_security_groups" => ["asg1", "asg2"],
+    #        "ip_forwarding"               => true
+    #      }
     #    }
     #  }
     #
@@ -96,17 +103,6 @@ module Bosh::AzureCloud
     #  {"instance_type" => "Standard_D1"}
     #  {
     #    "instance_type" => "Standard_D1",
-    #    # storage_account_name may not exist. The default storage account will be used.
-    #    # storage_account_name may be a complete name. It will be used to create the VM.
-    #    # storage_account_name may be a pattern '*xxx*'. CPI will filter all storage accounts under the resource group
-    #      by the pattern and pick one storage account which has less than 30 disks to create the VM.
-    #    "storage_account_name" => "xxx",
-    #    "storage_account_type" => "Standard_LRS",
-    #    "storage_account_max_disk_number" => 30,
-    #    "availability_set" => "DEA_set",
-    #    "platform_update_domain_count" => 5,
-    #    "platform_fault_domain_count" => 3,
-    #    "security_group" => "nsg-bosh",
     #    "root_disk" => {
     #      "size" => 50120, # disk size in MiB
     #    },
@@ -114,9 +110,22 @@ module Bosh::AzureCloud
     #      "use_root_disk" => false, # Whether to use OS disk to store the ephemeral data
     #      "size" => 30720, # disk size in MiB
     #    },
-    #    "assign_dynamic_public_ip" => true,
+    #    # storage_account_name may not exist. The default storage account will be used.
+    #    # storage_account_name may be a complete name. It will be used to create the VM.
+    #    # storage_account_name may be a pattern '*xxx*'. CPI will filter all storage accounts under the resource group
+    #    # by the pattern and pick one storage account which has less than 30 disks to create the VM.
+    #    "storage_account_name" => "xxx",
+    #    "storage_account_type" => "Standard_LRS",
+    #    "storage_account_max_disk_number" => 30,
+    #    "availability_zone" => "1",
+    #    "availability_set" => "DEA_set",
+    #    "platform_update_domain_count" => 5,
+    #    "platform_fault_domain_count" => 3,
     #    "resource_group_name" => "rg1",
-    #    "availability_zone" => "1"
+    #    "assign_dynamic_public_ip" => true,
+    #    "security_group" => "nsg-bosh",
+    #    "application_security_groups" => ["asg1", "asg2"],
+    #    "ip_forwarding" => true
     #  }
     #
     # Sample env config:
