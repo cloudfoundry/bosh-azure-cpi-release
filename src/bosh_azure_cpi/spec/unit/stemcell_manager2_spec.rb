@@ -239,8 +239,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
             let(:lock_copy_blob) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
 
             before do
-              allow(storage_account_manager).to receive(:find_storage_account_by_tags).
-                with(STEMCELL_STORAGE_ACCOUNT_TAGS, location).
+              allow(storage_account_manager).to receive(:get_or_create_storage_account_by_tags).
                 and_return(storage_account)
               # The following two allows are for get_stemcell_info of stemcell_manager.rb
               allow(blob_manager).to receive(:get_blob_uri).
@@ -362,7 +361,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
               context "when an error is thrown when creating the new storage account" do
                 before do
                   allow(storage_account_manager).to receive(:find_storage_account_by_tags).and_return(nil)
-                  allow(storage_account_manager).to receive(:create_storage_account_by_tags).
+                  allow(storage_account_manager).to receive(:get_or_create_storage_account_by_tags).
                     and_raise("Error when creating storage account")
                 end
 
@@ -413,7 +412,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
               end
 
               it "should create a new user image and return the user image information" do
-                expect(storage_account_manager).to receive(:create_storage_account_by_tags).
+                expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags).
                   with(STEMCELL_STORAGE_ACCOUNT_TAGS, storage_account_type, location, ['stemcell'], false).
                   and_return(storage_account)
                 stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)

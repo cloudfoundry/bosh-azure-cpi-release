@@ -81,12 +81,9 @@ module Bosh::AzureCloud
       if location == default_storage_account[:location]
         storage_account_name = default_storage_account_name
       else
-        storage_account = @storage_account_manager.find_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, location)
-        if storage_account.nil?
-          # The storage account will only be used when preparing a stemcell in the target location for user image, ANY storage account type is ok.
-          # To make it consistent, `Standard_LRS' is used.
-          storage_account = @storage_account_manager.create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [STEMCELL_CONTAINER], false)
-        end
+        # The storage account will only be used when preparing a stemcell in the target location for user image, ANY storage account type is ok.
+        # To make it consistent, `Standard_LRS' is used.
+        storage_account = @storage_account_manager.get_or_create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [STEMCELL_CONTAINER], false)
         storage_account_name = storage_account[:name]
 
         mutex = FileMutex.new("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", @logger, CPI_LOCK_COPY_STEMCELL_TIMEOUT)
