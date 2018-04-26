@@ -1044,130 +1044,6 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
-  describe "#has_light_stemcell_property?" do
-    context "with 'image'" do
-      let(:stemcell_properties) {
-        {
-          'image' => 'fake-image'
-        }
-      }
-
-      it "should return true" do
-        expect(
-          helpers_tester.has_light_stemcell_property?(stemcell_properties)
-        ).to be(true)
-      end
-    end
-
-    context "without 'image'" do
-      let(:stemcell_properties) {
-        {
-          'a' => 'b'
-        }
-      }
-
-      it "should return false" do
-        expect(
-          helpers_tester.has_light_stemcell_property?(stemcell_properties)
-        ).to be(false)
-      end
-    end
-  end
-
-  describe "#is_light_stemcell_id?" do
-    context "when stemcell is light" do
-      let(:stemcell_id) { 'bosh-light-stemcell-xxx' }
-
-      it "should return true" do
-        expect(
-          helpers_tester.is_light_stemcell_id?(stemcell_id)
-        ).to be(true)
-      end
-    end
-
-    context "when stemcell is heavy" do
-      let(:stemcell_id) { 'bosh-stemcell-xxx' }
-
-      it "should return false" do
-        expect(
-          helpers_tester.is_light_stemcell_id?(stemcell_id)
-        ).to be(false)
-      end
-    end
-  end
-
-  describe "#generate_windows_computer_name" do
-    let(:process) { class_double(Process).as_stubbed_const }
-
-    context "when generated raw string is shorter than expect length" do
-      before do
-        expect_any_instance_of(Time).to receive(:to_f).and_return(1482829740.3734238) #1482829740.3734238 -> 'd5e883lv66u'
-        expect(process).to receive(:pid).and_return(6)                                #6 -> '6'
-      end
-
-      it "should return string padded with '0' for raw string to make its length eq WINDOWS_VM_NAME_LENGTH" do
-        computer_name = helpers_tester.generate_windows_computer_name
-        expect(computer_name).to eq('d5e883lv66u0006')
-        expect(computer_name.length).to eq(WINDOWS_VM_NAME_LENGTH)
-      end
-    end
-
-    context "when generated raw string is longer than expect length" do
-      before do
-        expect_any_instance_of(Time).to receive(:to_f).and_return(1482829740.3734238) #1482829740.3734238 -> 'd5e883lv66u'
-        expect(process).to receive(:pid).and_return(6553600)                          #6553600 -> '68000'
-      end
-
-      it "should get tail of the string to make its length eq WINDOWS_VM_NAME_LENGTH" do
-        computer_name = helpers_tester.generate_windows_computer_name
-        expect(computer_name).to eq('5e883lv66u68000')
-        expect(computer_name.length).to eq(WINDOWS_VM_NAME_LENGTH)
-      end
-    end
-  end
-
-  describe "#validate_idle_timeout" do
-    context "idle_timeout_in_minutes is not an integer" do
-      let(:idle_timeout_in_minutes) { "fake-idle-timeout" }
-
-      it "should raise an error" do
-        expect {
-          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
-        }.to raise_error "idle_timeout_in_minutes needs to be an integer"
-      end
-    end
-
-    context "idle_timeout_in_minutes is smaller than 4 minutes" do
-      let(:idle_timeout_in_minutes) { 3 }
-
-      it "should raise an error" do
-        expect {
-          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
-        }.to raise_error "Minimum idle_timeout_in_minutes is 4 minutes"
-      end
-    end
-
-    context "idle_timeout_in_minutes is larger than 30 minutes" do
-      let(:idle_timeout_in_minutes) { 31 }
-
-      it "should raise an error" do
-        expect {
-          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
-        }.to raise_error "Maximum idle_timeout_in_minutes is 30 minutes"
-      end
-    end
-
-    context "idle_timeout_in_minutes is a correct value" do
-      let(:idle_timeout_in_minutes) { 20 }
-
-      it "should not raise an error" do
-        expect {
-          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
-        }.not_to raise_error
-      end
-    end
-  end
-
   describe "#ReadersWriterLock" do
     let(:lock_name)            { "fake-readers-writer-lock-name" }
     let(:logger)               { Logger.new('/dev/null') }
@@ -1361,6 +1237,239 @@ describe Bosh::AzureCloud::Helpers do
       it "should release the writer lock" do
         expect {
           rwlock.release_write_lock
+        }.not_to raise_error
+      end
+    end
+  end
+
+  describe "#get_storage_account_type_by_instance_type" do
+    context "when the instance type is UPCASE" do
+      let(:instance_type) { "STANDARD_DS1" }
+
+      it "should return Premium_LRS" do
+        expect(
+          helpers_tester.get_storage_account_type_by_instance_type(instance_type)
+        ).to be(Bosh::AzureCloud::Helpers::STORAGE_ACCOUNT_TYPE_PREMIUM_LRS)
+      end
+    end
+
+    context "when the instance type is DOWNCASE" do
+      let(:instance_type) { "standard_ds1" }
+
+      it "should return Premium_LRS" do
+        expect(
+          helpers_tester.get_storage_account_type_by_instance_type(instance_type)
+        ).to be(Bosh::AzureCloud::Helpers::STORAGE_ACCOUNT_TYPE_PREMIUM_LRS)
+      end
+    end
+
+    context "when the instance type doesn't support SSD disk" do
+      let(:instance_type) { "Standard_D1" }
+
+      it "should return Standard_LRS" do
+        expect(
+          helpers_tester.get_storage_account_type_by_instance_type(instance_type)
+        ).to be(Bosh::AzureCloud::Helpers::STORAGE_ACCOUNT_TYPE_STANDARD_LRS)
+      end
+    end
+
+    context "when the instance type supports SSD disk" do
+      let(:instance_types) {
+        [
+          "Standard_DS1", "Standard_DS2", "Standard_DS3", "Standard_DS4",
+          "Standard_DS1_v2", "Standard_DS2_v2", "Standard_DS3_v2", "Standard_DS4_v2", "Standard_DS5_v2",
+          "Standard_D2s_v3", "Standard_D4s_v3", "Standard_D8s_v3", "Standard_D16s_v3", "Standard_D32s_v3", "Standard_D64s_v3",
+          "Standard_GS1", "Standard_GS2", "Standard_GS3", "Standard_GS4", "Standard_GS5",
+          "Standard_B1s", "Standard_B1ms", "Standard_B2s", "Standard_B2ms", "Standard_B4ms", "Standard_B8ms",
+          "Standard_F1s", "Standard_F2s", "Standard_F4s", "Standard_F8s", "Standard_F16s",
+          "Standard_E2s_v3", "Standard_E4s_v3", "Standard_E8s_v3", "Standard_E16s_v3", "Standard_E32s_v3", "Standard_E64s_v3", "Standard_E64is_v3",
+          "Standard_L4s", "Standard_L8s", "Standard_L16s", "Standard_L32s",
+        ]
+      }
+
+      it "should return Premium_LRS" do
+        instance_types.each do |instance_type|
+          expect(
+            helpers_tester.get_storage_account_type_by_instance_type(instance_type)
+          ).to be(Bosh::AzureCloud::Helpers::STORAGE_ACCOUNT_TYPE_PREMIUM_LRS)
+        end
+      end
+    end
+  end
+
+  describe "#is_stemcell_storage_account?" do
+    context "when the tags are exactly same with the stemcell storage account tags" do
+      let(:tags) { Bosh::AzureCloud::Helpers::STEMCELL_STORAGE_ACCOUNT_TAGS }
+
+      it "should return true" do
+        expect(
+          helpers_tester.is_stemcell_storage_account?(tags)
+        ).to be(true)
+      end
+    end
+
+    context "when the tags are a superset of the stemcell storage account tags" do
+      let(:tags) { Bosh::AzureCloud::Helpers::STEMCELL_STORAGE_ACCOUNT_TAGS.clone.merge({'foo'=>'bar'}) }
+
+      it "should return true" do
+        expect(
+          helpers_tester.is_stemcell_storage_account?(tags)
+        ).to be(true)
+      end
+    end
+
+    context "when the tags don't include the stemcell storage account tags" do
+      let(:tags) { {'foo'=>'bar'} }
+
+      it "should return false" do
+        expect(
+          helpers_tester.is_stemcell_storage_account?(tags)
+        ).to be(false)
+      end
+    end
+  end
+
+  describe "#is_ephemeral_disk?" do
+    context "when the disk name ends with the ephemeral disk postfix" do
+      let(:disk_name) { "fake-#{Bosh::AzureCloud::Helpers::EPHEMERAL_DISK_POSTFIX}" }
+
+      it "should return true" do
+        expect(
+          helpers_tester.is_ephemeral_disk?(disk_name)
+        ).to be(true)
+      end
+    end
+
+    context "when the disk name doesn't end with the ephemeral disk postfix" do
+      let(:disk_name) { "fake-disk-name" }
+
+      it "should return false" do
+        expect(
+          helpers_tester.is_ephemeral_disk?(disk_name)
+        ).to be(false)
+      end
+    end
+  end
+
+  describe "#has_light_stemcell_property?" do
+    context "with 'image'" do
+      let(:stemcell_properties) {
+        {
+          'image' => 'fake-image'
+        }
+      }
+
+      it "should return true" do
+        expect(
+          helpers_tester.has_light_stemcell_property?(stemcell_properties)
+        ).to be(true)
+      end
+    end
+
+    context "without 'image'" do
+      let(:stemcell_properties) {
+        {
+          'a' => 'b'
+        }
+      }
+
+      it "should return false" do
+        expect(
+          helpers_tester.has_light_stemcell_property?(stemcell_properties)
+        ).to be(false)
+      end
+    end
+  end
+
+  describe "#is_light_stemcell_id?" do
+    context "when stemcell is light" do
+      let(:stemcell_id) { 'bosh-light-stemcell-xxx' }
+
+      it "should return true" do
+        expect(
+          helpers_tester.is_light_stemcell_id?(stemcell_id)
+        ).to be(true)
+      end
+    end
+
+    context "when stemcell is heavy" do
+      let(:stemcell_id) { 'bosh-stemcell-xxx' }
+
+      it "should return false" do
+        expect(
+          helpers_tester.is_light_stemcell_id?(stemcell_id)
+        ).to be(false)
+      end
+    end
+  end
+
+  describe "#generate_windows_computer_name" do
+    let(:process) { class_double(Process).as_stubbed_const }
+
+    context "when generated raw string is shorter than expect length" do
+      before do
+        expect_any_instance_of(Time).to receive(:to_f).and_return(1482829740.3734238) #1482829740.3734238 -> 'd5e883lv66u'
+        expect(process).to receive(:pid).and_return(6)                                #6 -> '6'
+      end
+
+      it "should return string padded with '0' for raw string to make its length eq WINDOWS_VM_NAME_LENGTH" do
+        computer_name = helpers_tester.generate_windows_computer_name
+        expect(computer_name).to eq('d5e883lv66u0006')
+        expect(computer_name.length).to eq(WINDOWS_VM_NAME_LENGTH)
+      end
+    end
+
+    context "when generated raw string is longer than expect length" do
+      before do
+        expect_any_instance_of(Time).to receive(:to_f).and_return(1482829740.3734238) #1482829740.3734238 -> 'd5e883lv66u'
+        expect(process).to receive(:pid).and_return(6553600)                          #6553600 -> '68000'
+      end
+
+      it "should get tail of the string to make its length eq WINDOWS_VM_NAME_LENGTH" do
+        computer_name = helpers_tester.generate_windows_computer_name
+        expect(computer_name).to eq('5e883lv66u68000')
+        expect(computer_name.length).to eq(WINDOWS_VM_NAME_LENGTH)
+      end
+    end
+  end
+
+  describe "#validate_idle_timeout" do
+    context "idle_timeout_in_minutes is not an integer" do
+      let(:idle_timeout_in_minutes) { "fake-idle-timeout" }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
+        }.to raise_error "idle_timeout_in_minutes needs to be an integer"
+      end
+    end
+
+    context "idle_timeout_in_minutes is smaller than 4 minutes" do
+      let(:idle_timeout_in_minutes) { 3 }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
+        }.to raise_error "Minimum idle_timeout_in_minutes is 4 minutes"
+      end
+    end
+
+    context "idle_timeout_in_minutes is larger than 30 minutes" do
+      let(:idle_timeout_in_minutes) { 31 }
+
+      it "should raise an error" do
+        expect {
+          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
+        }.to raise_error "Maximum idle_timeout_in_minutes is 30 minutes"
+      end
+    end
+
+    context "idle_timeout_in_minutes is a correct value" do
+      let(:idle_timeout_in_minutes) { 20 }
+
+      it "should not raise an error" do
+        expect {
+          helpers_tester.validate_idle_timeout(idle_timeout_in_minutes)
         }.not_to raise_error
       end
     end

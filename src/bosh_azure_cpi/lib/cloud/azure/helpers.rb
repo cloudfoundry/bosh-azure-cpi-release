@@ -772,7 +772,16 @@ module Bosh::AzureCloud
     def get_storage_account_type_by_instance_type(instance_type)
       instance_type = instance_type.downcase
       storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
-      if instance_type.start_with?("standard_ds") || instance_type.start_with?("standard_gs") || ((instance_type =~ /^standard_f(\d)+s/) == 0)
+      if ((instance_type =~ /^standard_ds/) == 0) || # including DS and DSv2, e.g. Standard_DS1, Standard_DS1_v2
+        ((instance_type =~ /^standard_d(\d)+s_v3/) == 0) ||
+        ((instance_type =~ /^standard_gs/) == 0) ||
+        ((instance_type =~ /^standard_b(\d)+s/) == 0) ||
+        ((instance_type =~ /^standard_b(\d)+ms/) == 0) ||
+        ((instance_type =~ /^standard_f(\d)+s/) == 0) ||
+        ((instance_type =~ /^standard_e(\d)+s_v3/) == 0) ||
+        ((instance_type =~ /^standard_e(\d)+is_v3/) == 0) ||
+        ((instance_type =~ /^standard_l(\d)+s/) == 0)
+      then
         storage_account_type = STORAGE_ACCOUNT_TYPE_PREMIUM_LRS
       end
       storage_account_type
