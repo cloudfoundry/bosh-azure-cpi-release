@@ -61,6 +61,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Configure Cloud Foundry external databases using Azure MySQL/Postgres Service](./advanced/configure-cf-external-databases-using-azure-mysql-postgres-service)
   * [Integrating Application Gateway](./advanced/application-gateway/)
   * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
+  * [Integrating Traffic Manager](./advanced/traffic-manager/)
   * [Backup and restore Cloud Foundry](./advanced/backup-and-restore-cloud-foundry/)
   * [SSH into the application](./advanced/cf-ssh-application/)
   * [Deploy multiple HAProxy instances behind Azure Load Balancer](./advanced/deploy-multiple-haproxy/)
