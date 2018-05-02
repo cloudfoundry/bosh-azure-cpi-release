@@ -8,6 +8,8 @@ Due to these limits, the IP address of the Cloud Foundry API endpoint will **CHA
 
 In addition, this guidance works no matter you use availability zones or availability sets.
 
+>Note: In a cf-deployment, different load balancers for different roles (e.g. router, tcp-router, web-socket, ssh-propy) may exist. This guidance is only for the load balancer of router.
+
 ## Pre-requisites
 
 You have an existing CF deployment which is deployed with availability sets and Basic SKU LB. There are multiple routers in the availability set. You can either refer to this [ARM template](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md) or [cf-deployment](https://github.com/cloudfoundry/cf-deployment) to get a CF deployment manifest.
@@ -17,6 +19,15 @@ You have an existing CF deployment which is deployed with availability sets and 
 Follow the [doc](../availability-zone/README.md#create-standard-sku-load-balancer) to create [Standard SKU public IP address](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-public-ip-address) and a [Standard SKU load balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview). Please note down the load balancer name and the public IP address in the output.
 
 ## Migration Steps
+
+We provide two solutions you can refer to. You can choose either of them.
+
+| Solution | Downtime | Needs additional appliance | BOSH-managed | Needs to specify a new availability set name | Needs to change cf-deployment manifest |
+| --- | --- | --- | --- | --- | --- |
+| Use a new instance group for router | Zero | No | Yes | No, BOSH will generate a new name automatically | Yes |
+| Use a proxy | Depends on the timing of starting proxy | Needs a HaProxy VM | No | Yes | No, only needs update cloud config |
+
+### Use a new instance group for router
 
 1. Update `vm_extensions` of your cloud config by adding the following contents in `example_manifests/cloud-config.yml`.
  
@@ -165,3 +176,43 @@ Follow the [doc](../availability-zone/README.md#create-standard-sku-load-balance
 1. Resolve your system domain to the public IP address of the standard SKU load balancer.
 
 1. After DNS propagations are done, you can use the ops file [remove-old-router.yml](./remove-old-router.yml) to remove the instance group `router`.
+
+### Use a proxy
+
+1. Login Azure CLI.
+
+    ```
+    AZURE_SUBSCRIPTION_ID="<your-subscription-id>"
+    AZURE_TENANT_ID="<your-tenant-id>"
+    AZURE_CLIENT_ID="<your-client-id>"
+    AZURE_CLIENT_SECRET="<your-client-secret>"
+    az login --service-principal --tenant ${AZURE_TENANT_ID} -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET}
+    az account set -s ${AZURE_SUBSCRIPTION_ID}
+    ```
+
+1. Create a proxy VM.
+
+    ```
+    ./create-proxy.sh <your-resource-group-name> <availability-set-name-for-routers> <basic-load-balancer-name> <standard-lb-public-ip-address>
+    ```
+
+    You can get `<standard-lb-public-ip-address>` from the output of last step.
+
+1. Update `vm_extensions` of your cloud config by adding the following contents in `example_manifests/cloud-config.yml`.
+
+    ```
+    - name: cf-router2-network-properties
+      cloud_properties:
+        load_balancer: <your-standard-load-balancer-name>
+        availability_set: <new-availability-set-name>
+    ```
+
+1. Redeploy Cloud Foundry.
+
+    When one of the routers is recreated behind the Standard SKU LB, you can login the proxy VM and start a http server on the port 8080.
+
+    ```
+    python3 probe-server.py
+    ```
+
+    Then the proxy will be considered as a healthy backend server. The traffic to the Basic SKU LB will be forwarded to the Standard SKU LB.
