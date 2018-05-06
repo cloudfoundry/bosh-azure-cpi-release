@@ -185,10 +185,11 @@ describe Bosh::AzureCloud::AzureClient do
           let(:vm_params_managed) do
             vm_params_dupped = vm_params.dup
             vm_params_dupped.delete(:image_uri)
-            vm_params_dupped[:os_disk].delete(:disk_uri)
-            vm_params_dupped[:ephemeral_disk].delete(:disk_uri)
             vm_params_dupped[:image_id] = 'g'
             vm_params_dupped[:managed] = true
+            vm_params_dupped[:os_disk].delete(:disk_uri)
+            vm_params_dupped[:ephemeral_disk].delete(:disk_uri)
+            vm_params_dupped[:ephemeral_disk][:disk_type] = 'p'
             vm_params_dupped
           end
 
@@ -252,7 +253,10 @@ describe Bosh::AzureCloud::AzureClient do
                       lun: 0,
                       createOption: 'Empty',
                       diskSizeGB: 'o',
-                      caching: 'n'
+                      caching: 'n',
+                      managedDisk: {
+                        storageAccountType: 'p'
+                      }
                     }
                   ]
                 }
