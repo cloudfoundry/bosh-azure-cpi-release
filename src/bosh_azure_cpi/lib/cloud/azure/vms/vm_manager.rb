@@ -391,14 +391,12 @@ module Bosh::AzureCloud
     def _get_stemcell_info(stemcell_id, vm_props, location)
       stemcell_info = nil
       if @use_managed_disks
-        storage_account_type = vm_props.storage_account_type
-        storage_account_type = get_storage_account_type_by_instance_type(vm_props.instance_type) if storage_account_type.nil?
-
         if is_light_stemcell_id?(stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
           stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
         else
           begin
+            storage_account_type = _get_root_disk_type(vm_props)
             # Treat user_image_info as stemcell_info
             stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_id, storage_account_type, location)
           rescue StandardError => e

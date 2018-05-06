@@ -441,7 +441,7 @@ module Bosh::AzureCloud
 
           # Workaround for issue #280
           # Issue root cause: Attaching a data disk to a VM whose OS disk is busy might lead to OS hang.
-          #                   If 'use_root_disk' is true in 'resource_pools', release packages will be copied to OS disk before attaching data disk,
+          #                   If 'use_root_disk' is true in vm_types/vm_extensions, release packages will be copied to OS disk before attaching data disk,
           #                   it will continuously write the data to OS disk, that is why OS disk is busy.
           # Workaround: Sleep 30 seconds before attaching data disk, to wait for completion of data writing.
           has_ephemeral_disk = false
