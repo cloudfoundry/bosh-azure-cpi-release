@@ -58,10 +58,11 @@ module Bosh::AzureCloud
 
       root_disk_hash = vm_properties.fetch('root_disk', {})
       ephemeral_disk_hash = vm_properties.fetch('ephemeral_disk', {})
-      @root_disk = Bosh::AzureCloud::RootDisk.new(root_disk_hash['size'])
+      @root_disk = Bosh::AzureCloud::RootDisk.new(root_disk_hash['size'], root_disk_hash['type'])
       @ephemeral_disk = Bosh::AzureCloud::EphemeralDisk.new(
         ephemeral_disk_hash['use_root_disk'].nil? ? false : ephemeral_disk_hash['use_root_disk'],
-        ephemeral_disk_hash['size']
+        ephemeral_disk_hash['size'],
+        ephemeral_disk_hash['type']
       )
 
       @platform_update_domain_count = vm_properties['platform_update_domain_count'] || default_update_domain_count(global_azure_config)

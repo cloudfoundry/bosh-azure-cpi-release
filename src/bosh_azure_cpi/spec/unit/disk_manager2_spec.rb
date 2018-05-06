@@ -588,11 +588,12 @@ describe Bosh::AzureCloud::DiskManager2 do
 
         it 'should return correct values' do
           expect(
-            disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
+            disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
           ).to eq(
             disk_name: disk_name,
             disk_size: default_ephemeral_disk_size,
-            disk_caching: 'ReadWrite'
+            disk_caching: 'ReadWrite',
+            disk_type: nil
           )
         end
       end
@@ -606,11 +607,12 @@ describe Bosh::AzureCloud::DiskManager2 do
 
         it 'should return 30 as the default disk size' do
           expect(
-            disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
+            disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
           ).to eq(
             disk_name: disk_name,
             disk_size: 30,
-            disk_caching: 'ReadWrite'
+            disk_caching: 'ReadWrite',
+            disk_type: nil
           )
         end
       end
@@ -630,11 +632,12 @@ describe Bosh::AzureCloud::DiskManager2 do
 
           it 'should return correct values' do
             expect(
-              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
+              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
             ).to eq(
               disk_name: disk_name,
               disk_size: default_ephemeral_disk_size,
-              disk_caching: 'ReadWrite'
+              disk_caching: 'ReadWrite',
+              disk_type: nil
             )
           end
         end
@@ -651,13 +654,35 @@ describe Bosh::AzureCloud::DiskManager2 do
 
           it 'should return correct values' do
             expect(
-              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
+              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
             ).to be_nil
           end
         end
       end
 
       context 'without use_root_disk' do
+        context 'with type' do
+          let(:vm_props) do
+            props_factory.parse_vm_props(
+              'instance_type' => 'STANDARD_A1',
+              'ephemeral_disk' => {
+                'type' => 'Premium_LRS'
+              }
+            )
+          end
+
+          it 'should return correct values' do
+            expect(
+              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
+            ).to eq(
+              disk_name: disk_name,
+              disk_size: default_ephemeral_disk_size,
+              disk_caching: 'ReadWrite',
+              disk_type: 'Premium_LRS'
+            )
+          end
+        end
+
         context 'without size' do
           let(:vm_props) do
             props_factory.parse_vm_props(
@@ -668,11 +693,12 @@ describe Bosh::AzureCloud::DiskManager2 do
 
           it 'should return correct values' do
             expect(
-              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
+              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
             ).to eq(
               disk_name: disk_name,
               disk_size: default_ephemeral_disk_size,
-              disk_caching: 'ReadWrite'
+              disk_caching: 'ReadWrite',
+              disk_type: nil
             )
           end
         end
@@ -690,11 +716,12 @@ describe Bosh::AzureCloud::DiskManager2 do
 
             it 'should return the specified size' do
               expect(
-                disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
+                disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
               ).to eq(
                 disk_name: disk_name,
                 disk_size: 30,
-                disk_caching: 'ReadWrite'
+                disk_caching: 'ReadWrite',
+                disk_type: nil
               )
             end
           end
@@ -711,7 +738,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
             it 'should raise an error' do
               expect do
-                disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
+                disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
               end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is 'invalid-size'."
             end
           end
