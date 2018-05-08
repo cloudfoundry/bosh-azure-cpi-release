@@ -28,7 +28,7 @@ module Bosh::AzureCloud
       storage_account_name
     end
 
-    # Create storage account
+    # Create storage account. If the storage account exists, return the storage account directly.
     # @param [String]  name                        - Name of storage account.
     # @param [Hash]    tags                        - Tags for the storage account.
     # @param [String]  type                        - Type of storage account. Options: Standard_LRS, Standard_ZRS, Standard_GRS, Standard_RAGRS or Premium_LRS.
@@ -36,8 +36,8 @@ module Bosh::AzureCloud
     # @param [Array]   containers                  - Container that will be created in the storage account
     # @param [Boolean] is_default_storage_account  - The storage account will be created as the default storage account
     # @return [Hash]
-    def create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-      @logger.debug("create_storage_account(#{name}, #{tags}, #{type}, #{location}, #{containers}, #{is_default_storage_account})")
+    def get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+      @logger.debug("get_or_create_storage_account(#{name}, #{tags}, #{type}, #{location}, #{containers}, #{is_default_storage_account})")
       lock_file = "#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{name}"
       mutex = FileMutex.new(lock_file, @logger)
       begin
@@ -46,7 +46,7 @@ module Bosh::AzureCloud
           if storage_account.nil?
             @logger.debug("Cannot find any storage account with name `#{name}', creating a new one...")
             result = @azure_client2.check_storage_account_name_availability(name)
-            @logger.debug("create_storage_account - The result of check_storage_account_name_availability is #{result}")
+            @logger.debug("get_or_create_storage_account - The result of check_storage_account_name_availability is #{result}")
             unless result[:available]
               if result[:reason] == 'AccountNameInvalid'
                 raise "The storage account name `#{name}' is invalid. Storage account names must be between 3 and 24 characters in length and use numbers and lower-case letters only. #{result[:message]}"
@@ -57,11 +57,15 @@ module Bosh::AzureCloud
             end
 
             begin
+              raise "Require name to create a new storage account" if name.nil?
+              raise "Require type to create a new storage account. If you specify `storage_account_name' in resource pool to use & create a new storage account, please also provide `storage_account_type'" if type.nil?
+              raise "Require location to create a new storage account" if location.nil?
+
               @logger.debug("Creating storage account `#{name}' with the tags `#{tags}' in the location `#{location}'")
               created = @azure_client2.create_storage_account(name, location, type, tags)
               @blob_manager.prepare_containers(name, containers, is_default_storage_account) unless containers.empty?
             rescue => e
-              error_msg = "create_storage_account - "
+              error_msg = "get_or_create_storage_account - "
               if created
                 error_msg += "The storage account `#{name}' is created successfully.\n"
                 error_msg += "But it failed to prepare the containers `#{containers}'.\n"
@@ -94,8 +98,8 @@ module Bosh::AzureCloud
     # @param [Array]   containers                  - Container that will be created in the storage account
     # @param [Boolean] is_default_storage_account  - The storage account will be created as the default storage account
     # @return [Hash]
-    def create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
-      @logger.debug("create_storage_account_by_tags(#{tags}, #{type}, #{location}, #{containers}, #{is_default_storage_account})")
+    def get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
+      @logger.debug("get_or_create_storage_account_by_tags(#{tags}, #{type}, #{location}, #{containers}, #{is_default_storage_account})")
       lock_file = "#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{location}-#{Digest::MD5.hexdigest(tags.to_s)}"
       mutex = FileMutex.new(lock_file, @logger)
       begin
@@ -104,7 +108,7 @@ module Bosh::AzureCloud
           if storage_account.nil?
             @logger.debug("Cannot find any storage account in the location `#{location}' with tags `#{tags}', creating a new one...")
             name = generate_storage_account_name()
-            storage_account = create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+            storage_account = get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
           end
           mutex.unlock
         else
@@ -187,13 +191,9 @@ module Bosh::AzureCloud
           cloud_error("get_storage_account_from_resource_pool - Cannot find an available storage account.\n#{result.inspect}")
         else
           storage_account_name = resource_pool['storage_account_name']
+          storage_account_type = resource_pool['storage_account_type']
           # Create the storage account automatically if the storage account in resource_pool does not exist
-          storage_account = find_storage_account_by_name(storage_account_name)
-          if storage_account.nil?
-            storage_account_type = resource_pool['storage_account_type']
-            cloud_error("get_storage_account_from_resource_pool - missing required cloud property `storage_account_type' in the resource pool.") if storage_account_type.nil?
-            storage_account = create_storage_account(storage_account_name, {}, storage_account_type, location, [DISK_CONTAINER, STEMCELL_CONTAINER], false)
-          end
+          storage_account = get_or_create_storage_account(storage_account_name, {}, storage_account_type, location, [DISK_CONTAINER, STEMCELL_CONTAINER], false)
         end
       end
 
@@ -262,18 +262,14 @@ module Bosh::AzureCloud
         end
       end
 
-      storage_account = create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [DISK_CONTAINER, STEMCELL_CONTAINER], true)
+      storage_account = get_or_create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [DISK_CONTAINER, STEMCELL_CONTAINER], true)
       @logger.debug("The default storage account is `#{storage_account[:name]}'")
       @default_storage_account = storage_account
     end
 
     def get_or_create_diagnostics_storage_account(location)
       @logger.debug("get_or_create_diagnostics_storage_account(#{location})")
-      storage_account = find_storage_account_by_tags(DIAGNOSTICS_STORAGE_ACCOUNT_TAGS, location)
-      if storage_account.nil?
-        storage_account = create_storage_account_by_tags(DIAGNOSTICS_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [], false)
-      end
-      storage_account
+      get_or_create_storage_account_by_tags(DIAGNOSTICS_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [], false)
     end
 
     private
