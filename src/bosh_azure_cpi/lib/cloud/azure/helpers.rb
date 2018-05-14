@@ -38,7 +38,7 @@ module Bosh::AzureCloud
       },
       ENVIRONMENT_AZUREUSGOVERNMENT => {
         'resourceManagerEndpointUrl' => 'https://management.usgovcloudapi.net/',
-        'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
+        'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.us',
         'apiVersion' => {
           AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
