@@ -306,7 +306,7 @@ describe Bosh::AzureCloud::Helpers do
       it "should return AzureUSGovernment authentication endpoint and api version" do
         expect(
           helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-        ).to eq(["https://login.microsoftonline.com/fake-tenant-id/oauth2/token", azure_usgov_api_version])
+        ).to eq(["https://login.microsoftonline.us/fake-tenant-id/oauth2/token", azure_usgov_api_version])
       end
     end
 
