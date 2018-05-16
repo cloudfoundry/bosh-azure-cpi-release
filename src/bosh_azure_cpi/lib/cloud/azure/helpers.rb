@@ -556,7 +556,7 @@ module Bosh::AzureCloud
     #     # Please note, the mutex should NOT be unlocked, because other processes will end mutex.wait and continue to use the shared resource if unlocked.
     #     # If your work is a long-running task,
     #     #   you need to call mutex.update() in do_something() to update the lock before it timeouts (60s in the example).
-    #     do_something() 
+    #     do_something()
     #     mutex.unlock
     #   else
     #     mutex.wait

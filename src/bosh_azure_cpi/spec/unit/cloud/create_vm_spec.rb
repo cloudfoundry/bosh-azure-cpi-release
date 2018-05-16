@@ -37,6 +37,23 @@ describe Bosh::AzureCloud::Cloud do
         and_call_original
     end
 
+    context 'when instance_type is not provided' do
+      let(:resource_pool) { {} }
+
+      it 'should raise an error' do
+        expect {
+          cloud.create_vm(
+            agent_id,
+            stemcell_id,
+            resource_pool,
+            networks_spec,
+            disk_locality,
+            environment
+          )
+        }.to raise_error(/missing required cloud property `instance_type'./)
+      end
+    end
+
     context 'when vnet is not found' do
       before do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new).
