@@ -150,6 +150,7 @@ module Bosh::AzureCloud
       # env may contain credentials so we must not log it
       @logger.info("create_vm(#{agent_id}, #{stemcell_id}, #{resource_pool}, #{networks}, #{disk_locality}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
+        cloud_error("missing required cloud property `instance_type'.") if resource_pool['instance_type'].nil?
         extras = {"instance_type" => resource_pool.fetch("instance_type", 'unknown_instance_type')}
         @telemetry_manager.monitor("create_vm", id: agent_id, extras: extras) do
           # These resources should be in the same location for a VM: VM, NIC, disk(storage account or managed disk).
@@ -159,7 +160,7 @@ module Bosh::AzureCloud
           vnet = @azure_client2.get_virtual_network_by_name(network.resource_group_name, network.virtual_network_name)
           cloud_error("Cannot find the virtual network `#{network.virtual_network_name}' under resource group `#{network.resource_group_name}'") if vnet.nil?
           location = vnet[:location]
-          location_in_global_configuration = azure_properties['location'] 
+          location_in_global_configuration = azure_properties['location']
           if !location_in_global_configuration.nil? && location_in_global_configuration != location
             cloud_error("The location in the global configuration `#{location_in_global_configuration}' is different from the location of the virtual network `#{location}'")
           end

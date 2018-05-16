@@ -5,24 +5,6 @@ describe Bosh::AzureCloud::VMManager do
   include_context "shared stuff for vm manager"
 
   describe "#create" do
-    context "when instance_type is not provided" do
-      let(:resource_pool) { {} }
-
-      it "should raise an error" do
-        expect(client2).not_to receive(:delete_virtual_machine)
-        expect(client2).not_to receive(:delete_network_interface)
-        expect(client2).to receive(:list_network_interfaces_by_keyword).with(resource_group_name, vm_name).and_return([])
-        expect(client2).to receive(:get_public_ip_by_name).
-          with(resource_group_name, vm_name).
-          and_return({ :ip_address => "public-ip" })
-        expect(client2).to receive(:delete_public_ip).with(resource_group_name, vm_name)
-
-        expect {
-          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-        }.to raise_error /missing required cloud property `instance_type'/
-      end
-    end
-
     context "when both availability_zone and availability_set are specified" do
       let(:resource_pool) {
         {
@@ -68,27 +50,6 @@ describe Bosh::AzureCloud::VMManager do
         expect {
           vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
         }.to raise_error /`#{zone}' is not a valid zone/
-      end
-    end
-
-    context "when an error is thrown during cleanup" do
-      let(:resource_pool) { {} } # missing required cloud property `instance_type' causes a cleanup
-
-      before do
-        allow(client2).to receive(:get_public_ip_by_name).
-          with(resource_group_name, vm_name).
-          and_return({ :ip_address => "public-ip" })
-        allow(client2).to receive(:delete_public_ip).with(resource_group_name, vm_name).and_raise("Error during cleanup")
-      end
-
-      it "should raise an error" do
-        expect(client2).not_to receive(:delete_virtual_machine)
-        expect(client2).not_to receive(:delete_network_interface)
-        expect(client2).to receive(:list_network_interfaces_by_keyword).with(resource_group_name, vm_name).and_return([])
-
-        expect {
-          vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-        }.to raise_error /Error during cleanup/
       end
     end
 

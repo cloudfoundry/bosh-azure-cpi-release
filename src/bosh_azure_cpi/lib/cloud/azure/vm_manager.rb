@@ -19,7 +19,6 @@ module Bosh::AzureCloud
       resource_group_name = instance_id.resource_group_name()
       vm_name = instance_id.vm_name()
       vm_size = resource_pool.fetch('instance_type', nil)
-      cloud_error("missing required cloud property `instance_type'.") if vm_size.nil?
 
       # When both availability_zone and availability_set are specified, raise an error
       if !resource_pool['availability_zone'].nil? && !resource_pool['availability_set'].nil?
