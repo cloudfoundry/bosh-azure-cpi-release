@@ -33,6 +33,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
           expect(event_handler).to receive(:collect_events).once
           expect(event_handler).to receive(:send_events).once
           expect(event_handler).to receive(:update_last_post_timestamp).once
+          expect(mutex).to receive(:update)
           expect(mutex).to receive(:unlock)
           expect{
             event_handler.collect_and_send_events
@@ -53,6 +54,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
           expect(event_handler).to receive(:collect_events).once
           expect(event_handler).to receive(:send_events).once
           expect(event_handler).to receive(:update_last_post_timestamp).once
+          expect(mutex).to receive(:update)
           expect(mutex).to receive(:unlock)
           expect{
             event_handler.collect_and_send_events
@@ -76,6 +78,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
           expect(event_handler).not_to receive(:update_last_post_timestamp)
 
           expect(logger).to receive(:warn).with(/unexpected error/)
+          expect(mutex).to receive(:update)
           expect(mutex).to receive(:unlock)
 
           expect{
@@ -214,8 +217,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
     end
 
     it "should send the events" do
-      expect(event_list).to receive(:format_data_for_wire_server)
-      expect(wire_client).to receive(:post_data)
+      expect(wire_client).to receive(:post_data).with(event_list)
       expect{
         event_handler.send(:send_events, event_list)
       }.not_to raise_error

@@ -133,6 +133,7 @@ module Bosh::AzureCloud
     EVENTS_WITH_PROVIDER_FORMAT = "<Provider id=\"%{provider_id}\">%{event_xml_without_provider}</Provider>"
 
     def initialize(event_list)
+      raise "event_list must be an Array, but it is a #{event_list.class}" unless event_list.is_a?(Array)
       @event_list = event_list
     end
 
@@ -140,6 +141,10 @@ module Bosh::AzureCloud
     # <?xml version="1.0"?><TelemetryData version="1.0"><Provider id="69B669B9-4AF8-4C50-BDC4-6006FA76E975"><Event id="1"><![CDATA[<Param Name="Name" Value="BOSH-CPI" T="mt:wstr" /><Param Name="Version" Value="" T="mt:wstr" /><Param Name="Operation" Value="create_vm" T="mt:wstr" /><Param Name="OperationSuccess" Value="True" T="mt:bool" /><Param Name="Message" Value='{"msg":"Successed"}' T="mt:wstr" /><Param Name="Duration" Value="510.046195" T="mt:float64" /><Param Name="OSVersion" Value="Linux:ubuntu-14.04-trusty:4.4.0-53-generic" T="mt:wstr" /><Param Name="GAVersion" Value="WALinuxAgent-2.1.3" T="mt:wstr" /><Param Name="RAM" Value="6958" T="mt:uint64" /><Param Name="Processors" Value="2" T="mt:uint64" /><Param Name="VMName" Value="_b9c3354c-3275-4049-680f-3748ad0af496" T="mt:wstr" /><Param Name="TenantName" Value="8c1b2d76-a666-4958-a7ec-6ef464422ad1" T="mt:wstr" /><Param Name="RoleName" Value="_b9c3354c-3275-4049-680f-3748ad0af496" T="mt:wstr" /><Param Name="RoleInstanceName" Value="8c1b2d76-a666-4958-a7ec-6ef464422ad1._b9c3354c-3275-4049-680f-3748ad0af496" T="mt:wstr" /><Param Name="ContainerId" Value="edf9b1e3-90dd-4da5-9c23-6c9a2f419ddc" T="mt:wstr" />]]></Event></Provider></TelemetryData>
     def format_data_for_wire_server
       TELEMETRY_XML_FORMAT % {:events_string => to_xml}
+    end
+
+    def length
+      @event_list.length
     end
 
     private

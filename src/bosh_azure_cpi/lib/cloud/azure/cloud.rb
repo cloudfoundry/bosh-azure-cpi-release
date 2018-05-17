@@ -25,7 +25,7 @@ module Bosh::AzureCloud
       @use_managed_disks = azure_properties['use_managed_disks']
 
       init_cpi_lock_dir
-      @telemetry_manager = Bosh::AzureCloud::TelemetryManager.new(azure_properties, @logger)
+      @telemetry_manager = Bosh::AzureCloud::TelemetryManager.new(azure_properties)
       @telemetry_manager.monitor("initialize") do
         init_registry
         init_azure

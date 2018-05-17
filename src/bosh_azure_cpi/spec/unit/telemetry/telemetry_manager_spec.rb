@@ -2,7 +2,7 @@ require 'spec_helper'
 
 describe Bosh::AzureCloud::TelemetryManager do
   describe '#monitor' do
-    let(:logger) { instance_double(Logger) }
+    let(:logger) { instance_double(Bosh::Cpi::Logger) }
     let(:telemetry_event) { instance_double(Bosh::AzureCloud::TelemetryEvent) }
 
     let(:id) { 'fake-id' }
@@ -18,6 +18,8 @@ describe Bosh::AzureCloud::TelemetryManager do
     let(:event_param_duration) { instance_double(Bosh::AzureCloud::TelemetryEventParam) }
 
     before do
+      allow(Bosh::Cpi::Logger).to receive(:new).and_return(logger)
+
       allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new).
         with("Name", "BOSH-CPI").
         and_return(event_param_name)
@@ -55,7 +57,7 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when the block is executed successfully' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true}), logger) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true})) }
       let(:result) { 'fake-result' }
 
       context 'when operation is not initialize' do
@@ -94,7 +96,7 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when the block raises an error' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true}), logger) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true})) }
 
       context 'when length of the message exceeds 3.9 kB' do
         let(:error) { 'x'*3994 }
@@ -159,7 +161,7 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when telemetry is not enabled' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => false}), logger) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => false})) }
       let(:result) { 'fake-result' }
 
       it 'should return the result and does not report the event' do
@@ -173,7 +175,7 @@ describe Bosh::AzureCloud::TelemetryManager do
       end
     end
     context 'when environment is AzureStack' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true, 'environment' => 'AzureStack'}), logger) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true, 'environment' => 'AzureStack'})) }
       let(:result) { 'fake-result' }
 
       it 'should return the result and does not report the event' do
@@ -189,24 +191,41 @@ describe Bosh::AzureCloud::TelemetryManager do
   end
 
   describe '#report_event' do
-    let(:logger) { instance_double(Logger) }
-    let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties, logger) }
+    let(:logger) { instance_double(Bosh::Cpi::Logger) }
+    let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties) }
     let(:telemetry_event) { instance_double(Bosh::AzureCloud::TelemetryEvent) }
     let(:telemetry_event_handler) { instance_double(Bosh::AzureCloud::TelemetryEventHandler) }
     let(:file) { double('file')}
+    let(:event_handler) { instance_double(Bosh::AzureCloud::TelemetryEventHandler) }
+
+    before do
+      allow(Bosh::Cpi::Logger).to receive(:new).and_return(logger)
+      allow(Bosh::AzureCloud::TelemetryEventHandler).to receive(:new).and_return(event_handler)
+    end
 
     context 'when everything is ok' do
       before do
         allow(Open3).to receive(:capture3).and_return(['fake-stdout', 'fake-stderr', 0])
         allow(telemetry_event).to receive(:to_json).and_return('fake-event')
+        allow(logger).to receive(:warn)
       end
 
       it 'should collect and sent events' do
         expect(File).to receive(:open).and_call_original do |file|
           expect(file).to receive(:write)
         end
-        expect(telemetry_manager).to receive(:fork)
-        expect(Process).to receive(:detach)
+
+        expect(telemetry_manager).to receive(:fork).and_call_original do |block1|
+          expect(Process).to receive(:setsid)
+          expect(STDIN).to receive(:reopen)
+          expect(STDOUT).to receive(:reopen)
+          expect(STDERR).to receive(:reopen)
+
+          expect(telemetry_manager).to receive(:fork).and_call_original do |block2|
+            expect(event_handler).to receive(:collect_and_send_events)
+          end
+        end
+
         expect {
           telemetry_manager.send(:report_event, telemetry_event)
         }.not_to raise_error
