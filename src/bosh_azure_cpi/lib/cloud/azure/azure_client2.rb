@@ -2215,7 +2215,7 @@ module Bosh::AzureCloud
           retry
         end
         raise e
-      rescue AzureInternalError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET => e
+      rescue AzureInternalError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, EOFError => e
         if retry_count < AZURE_MAX_RETRY_COUNT
           @logger.warn("http_get_response - Fail for an error #{e.class.name}. Will retry after #{retry_after} seconds.")
           retry_count += 1
