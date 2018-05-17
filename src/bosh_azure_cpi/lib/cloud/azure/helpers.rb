@@ -155,10 +155,13 @@ module Bosh::AzureCloud
     AZURESTACK_CA_CERT_RELATIVE_PATH            = 'azure_cpi/config/azure_stack_ca_cert.pem'
     SERVICE_PRINCIPAL_CERTIFICATE_RELATIVE_PATH = 'azure_cpi/config/service_principal_certificate.pem'
 
+    # Availability Zones
     AVAILABILITY_ZONES = ['1', '2', '3']
 
+    # Telemetry
     CPI_EVENTS_DIR                        = "/tmp/azure_cpi_events"
     CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP = "/tmp/azure_cpi_events_last_update"
+    CPI_TELEMETRY_LOG_FILE                = "/tmp/azure_cpi_telemetry.log"
 
     ##
     # Raises CloudError exception

@@ -6,6 +6,13 @@ describe Bosh::AzureCloud::WireClient do
     let(:logger) { instance_double(Logger) }
     let(:wire_client) { Bosh::AzureCloud::WireClient.new(logger) }
     let(:event_data) { "fake-event-data" }
+    let(:event_list) { instance_double(Bosh::AzureCloud::TelemetryEventList) }
+    let(:event_length) { 1 }
+
+    before do
+      allow(event_list).to receive(:format_data_for_wire_server).and_return(event_data)
+      allow(event_list).to receive(:length).and_return(event_length)
+    end
 
     context "when it gets wire server endpoint successfully" do
       let(:endpoint) { "fake-endpoint" }
@@ -21,10 +28,10 @@ describe Bosh::AzureCloud::WireClient do
       it "should post the data one time if post request returns 200" do
         stub_request(:post, wire_server_uri).with(body: event_data, headers: headers).
           to_return(:status => 200)
-        expect(logger).to receive(:debug).with("[Telemetry] Data posted")
+        expect(logger).to receive(:debug).with("[Telemetry] Data posted: #{event_length} event(s)")
 
         expect {
-          wire_client.post_data(event_data)
+          wire_client.post_data(event_list)
         }.not_to raise_error
       end
 
@@ -36,7 +43,7 @@ describe Bosh::AzureCloud::WireClient do
         expect(wire_client).to receive(:sleep)
 
         expect {
-          wire_client.post_data(event_data)
+          wire_client.post_data(event_list)
         }.not_to raise_error
       end
 
@@ -46,7 +53,7 @@ describe Bosh::AzureCloud::WireClient do
         expect(logger).to receive(:warn).with(/Failed to POST request/)
 
         expect {
-          wire_client.post_data(event_data)
+          wire_client.post_data(event_list)
         }.not_to raise_error
       end
 
@@ -58,7 +65,7 @@ describe Bosh::AzureCloud::WireClient do
         expect(wire_client).to receive(:sleep)
 
         expect {
-          wire_client.post_data(event_data)
+          wire_client.post_data(event_list)
         }.not_to raise_error
       end
     end
@@ -74,7 +81,7 @@ describe Bosh::AzureCloud::WireClient do
         expect(logger).to receive(:warn).with("[Telemetry] Wire server endpoint is nil, drop data")
 
         expect {
-          wire_client.post_data(event_data)
+          wire_client.post_data(event_list)
         }.not_to raise_error
       end
     end

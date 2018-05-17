@@ -3,6 +3,7 @@ module Bosh::AzureCloud
     include Helpers
 
     COOLDOWN = 60 # seconds
+    LOCK_EXPIRED = 120
 
     def initialize(logger, events_dir = CPI_EVENTS_DIR)
       @logger = logger
@@ -18,10 +19,13 @@ module Bosh::AzureCloud
     # by the instance who got the lock.
     #
     def collect_and_send_events
-      mutex = FileMutex.new(CPI_LOCK_EVENT_HANDLER, @logger)
+      mutex = FileMutex.new(CPI_LOCK_EVENT_HANDLER, @logger, LOCK_EXPIRED)
       if mutex.lock
         begin
           while has_event?() do
+            # Update the lock, to notify other process (which tries to get this lock) that the lock is not expired.
+            mutex.update()
+
             last_post_timestamp = get_last_post_timestamp()
             unless last_post_timestamp.nil?
               duration = Time.now().round - last_post_timestamp
@@ -80,7 +84,7 @@ module Bosh::AzureCloud
     # @params [TelemetryEventList] event_list - events to be sent
     #
     def send_events(event_list)
-      @wire_client.post_data(event_list.format_data_for_wire_server)
+      @wire_client.post_data(event_list)
     end
 
     # Get the time when the last post happened

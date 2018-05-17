@@ -25,9 +25,9 @@ module Bosh::AzureCloud
 
     # Post data to wireserver
     #
-    # @param [String] event_data - Data formatted as XML string
+    # @param [TelemetryEventList] event_list - events to be sent
     #
-    def post_data(event_data)
+    def post_data(event_list)
       endpoint = get_endpoint()
 
       unless endpoint.nil?
@@ -35,7 +35,7 @@ module Bosh::AzureCloud
         retried = false
         begin
           request = Net::HTTP::Post.new(uri)
-          request.body = event_data
+          request.body = event_list.format_data_for_wire_server
           TELEMETRY_HEADER.keys.each do |key|
             request[key] = TELEMETRY_HEADER[key]
           end
@@ -43,7 +43,7 @@ module Bosh::AzureCloud
 
           status_code = res.code.to_i
           if status_code == 200
-            @logger.debug("[Telemetry] Data posted")
+            @logger.debug("[Telemetry] Data posted: #{event_list.length} event(s)")
           elsif RETRY_ERROR_CODES.include?(status_code)
             raise RetriableError, "POST response - code: #{res.code}\nbody:#{res.body}"
           else

@@ -6,9 +6,9 @@ module Bosh::AzureCloud
     PROVIDER_ID = "69B669B9-4AF8-4C50-BDC4-6006FA76E975"
     CPI_TELEMETRY_NAME = "BOSH-CPI"
 
-    def initialize(azure_properties, logger)
+    def initialize(azure_properties)
       @azure_properties = azure_properties
-      @logger = logger
+      @logger = Bosh::Cpi::Logger.new(CPI_TELEMETRY_LOG_FILE)
     end
 
     # Monitor the status of a block
@@ -84,10 +84,16 @@ module Bosh::AzureCloud
           @logger.warn("[Telemetry] Failed to move `#{filename}' to `#{CPI_EVENTS_DIR}', error: #{stderr}")
         else
           # trigger event handler to send the event in a different process
-          pid = fork {
-            Bosh::AzureCloud::TelemetryEventHandler.new(@logger).collect_and_send_events()
+          fork {
+            # create a new session and re-fork to make sure that exit of parent process won't kill the sub process.
+            Process.setsid
+            STDIN.reopen("/dev/null")
+            STDOUT.reopen("/dev/null")
+            STDERR.reopen(STDOUT)
+            fork {
+              Bosh::AzureCloud::TelemetryEventHandler.new(@logger).collect_and_send_events()
+            }
           }
-          Process.detach(pid)
         end
       rescue => e
         @logger.warn("[Telemetry] Failed to report event. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
