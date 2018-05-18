@@ -2104,7 +2104,7 @@ module Bosh::AzureCloud
           @logger.debug("get_token - request body:\n#{redact_credentials_in_request_body(request_body)}")
 
           response = http(uri).request(request)
-        rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET => e
+        rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, EOFError => e
           if retry_count < AZURE_MAX_RETRY_COUNT
             @logger.warn("get_token - Fail for an error #{e.class.name}. Will retry after #{retry_after} seconds.")
             retry_count += 1

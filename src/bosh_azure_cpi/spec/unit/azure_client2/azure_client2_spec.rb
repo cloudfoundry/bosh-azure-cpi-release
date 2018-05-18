@@ -260,6 +260,31 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
         end
 
+        context "when EOFError is raised at the first time but returns 200 at the second time" do
+          before do
+            stub_request(:post, token_uri).
+              to_raise(EOFError.new).then.
+              to_return(
+                :status => 200,
+                :body => {
+                  "access_token" => valid_access_token,
+                  "expires_on" => expires_on
+                }.to_json,
+                :headers => {})
+            stub_request(:get, resource_uri).to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+          end
+
+          it "should return the resource if response body is not null" do
+            expect(azure_client2).to receive(:sleep).once
+            expect(
+              azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+            ).not_to be_nil
+          end
+        end
+
         context "when 'Hostname not known' is raised at the first time but returns 200 at the second time" do
           before do
             stub_request(:post, token_uri).
@@ -284,7 +309,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             ).not_to be_nil
           end
         end
-        
+
         context "when 'Connection refused - connect(2) for \"xx.xxx.xxx.xx\" port 443'  is raised at the first time but returns 200 at the second time" do
           before do
             stub_request(:post, token_uri).
@@ -309,7 +334,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             ).not_to be_nil
           end
         end
-        
+
         context "when OpenSSL::SSL::SSLError with specified message 'SSL_connect' is raised at the first time but returns 200 at the second time" do
           before do
             stub_request(:post, token_uri).
@@ -579,39 +604,64 @@ describe Bosh::AzureCloud::AzureClient2 do
       }
     }
 
-    context "when token is valid, getting response succeeds" do
-      it "should return null if response body is null" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, resource_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {})
-        expect(
-          azure_client2.get_resource_group(resource_group)
-        ).to be_nil
+    context "when token is valid" do
+      context "getting response succeeds" do
+        it "should return null if response body is null" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, resource_uri).to_return(
+            :status => 200,
+            :body => '',
+            :headers => {})
+          expect(
+            azure_client2.get_resource_group(resource_group)
+          ).to be_nil
+        end
+
+        it "should return the resource if response body is not null" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, resource_uri).to_return(
+            :status => 200,
+            :body => response_body,
+            :headers => {})
+          expect(
+            azure_client2.get_resource_group(resource_group)
+          ).to eq(fake_resource_group)
+        end
       end
 
-      it "should return the resource if response body is not null" do
-        stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
-          }.to_json,
-          :headers => {})
-        stub_request(:get, resource_uri).to_return(
-          :status => 200,
-          :body => response_body,
-          :headers => {})
-        expect(
-          azure_client2.get_resource_group(resource_group)
-        ).to eq(fake_resource_group)
+      context "getting response fails for EOFError but retry returns 200" do
+        it "should return not null" do
+          stub_request(:post, token_uri).to_return(
+            :status => 200,
+            :body => {
+              "access_token" => valid_access_token,
+              "expires_on" => expires_on
+            }.to_json,
+            :headers => {})
+          stub_request(:get, resource_uri).
+            to_raise(EOFError.new).then.
+            to_return(
+              :status => 200,
+              :body => response_body,
+              :headers => {})
+
+          expect(azure_client2).to receive(:sleep).once
+          expect(
+            azure_client2.get_resource_group(resource_group)
+          ).to eq(fake_resource_group)
+        end
       end
     end
   end
