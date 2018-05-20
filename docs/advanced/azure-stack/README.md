@@ -2,6 +2,37 @@
 
 [Microsoft Azure Stack](https://azure.microsoft.com/en-us/overview/azure-stack/) is a hybrid cloud platform that lets you provide Azure services from your datacenter. Learn [how to deploy Azure Stack and offer services](https://docs.microsoft.com/en-us/azure/azure-stack/).
 
+## Pre-requisites
+
+  If the Azure Stack is deployed with a trusted certificate, then there is no need to specify the CA Root Certificate and you can skip the section.
+
+  If a self-signed root certificate is used when deploying Azure Stack, you need to specify the certificate so that the https connection to Azure Stack endpoints can be verified.
+
+  Three options to get the CA root certificate:
+
+  * Option 1: Get the CA root certificate from the Azure Stack operator. It's recommended.
+
+  * Option 2: Follow the [doc](https://docs.microsoft.com/en-us/azure/azure-stack/user/azure-stack-version-profiles-azurecli2#trust-the-azure-stack-ca-root-certificate) to get the `/var/lib/waagent/Certificates.pem`, which is the CA root certificate.
+
+  * Option 3: Run the following Powershell script to export the CA root certificate in PEM format. See more in [Export the Azure Stack CA root certificate](https://docs.microsoft.com/en-us/azure/azure-stack/azure-stack-cli-admin#export-the-azure-stack-ca-root-certificate).
+
+    ```
+    $label = "AzureStackSelfSignedRootCert"
+    Write-Host "Getting certificate from the current user trusted store with subject CN=$label"
+    $root = Get-ChildItem Cert:\CurrentUser\Root | Where-Object Subject -eq "CN=$label" | select -First 1
+    if (-not $root)
+    {
+        Log-Error "Cerficate with subject CN=$label not found"
+        return
+    }
+
+    Write-Host "Exporting certificate"
+    Export-Certificate -Type CERT -FilePath root.cer -Cert $root
+
+    Write-Host "Converting certificate to PEM format"
+    certutil -encode root.cer root.pem
+    ```
+
 ## Deploy BOSH director
 
 You need to update the [global configurations](http://bosh.io/docs/azure-cpi.html#global), including setting the `environment` to `AzureStack` and configuring the `azure_stack` properties.
@@ -97,7 +128,7 @@ azure:
 
 * CA Root Certificate
 
-  If the Azure Stack is deployed with a trusted certificate, then there is no need to specify the CA Root Certificate. If you use a self-signed root certificate when deploying Azure Stack, you need to specify the cert so that CPI can verify and establish the https connection with Azure Stack endpoints. You need to specify the `ca_cert` in the global configuration.
+  If a self-signed root certificate is used when deploying Azure Stack, you **MUST** specify the `ca_cert` in the global configuration to make CPI trust the Azure Stack CA root certificate.
 
   ```
   azure:
@@ -108,27 +139,25 @@ azure:
         -----END CERTIFICATE-----
   ```
 
-  How to get the CA root certificate:
+## Deploy Cloud Foundry
 
-  * Option 1: Get the CA root certificate from the Azure Stack operator. It's recommended.
+Deploying Cloud Foundry on Azure Stack is basically same with the deployment on Azure.
 
-  * Option 2: Follow the [doc](https://docs.microsoft.com/en-us/azure/azure-stack/user/azure-stack-version-profiles-azurecli2#trust-the-azure-stack-ca-root-certificate) to get the `/var/lib/waagent/Certificates.pem`, which is the CA root certificate.
+If you would like to replace local WebDAV blobstore with external Azure Stack Storage blobstore via [fog](https://github.com/fog/fog-azure-rm), you can use the ops file [use-azure-stack-storage-blobstore.yml](./use-azure-stack-storage-blobstore.yml), which introduces the following new variables for Azure Stack storage connection information and container names.
 
-  * Option 3: Run the following Powershell script to export the CA root certificate in PEM format. See more in [Export the Azure Stack CA root certificate](https://docs.microsoft.com/en-us/azure/azure-stack/azure-stack-cli-admin#export-the-azure-stack-ca-root-certificate).
+Variable examples of `use-azure-stack-storage-blobstore.yml` are:
 
-    ```
-    $label = "AzureStackSelfSignedRootCert"
-    Write-Host "Getting certificate from the current user trusted store with subject CN=$label"
-    $root = Get-ChildItem Cert:\CurrentUser\Root | Where-Object Subject -eq "CN=$label" | select -First 1
-    if (-not $root)
-    {
-        Log-Error "Cerficate with subject CN=$label not found"
-        return
-    }
-    
-    Write-Host "Exporting certificate"
-    Export-Certificate -Type CERT -FilePath root.cer -Cert $root
-    
-    Write-Host "Converting certificate to PEM format"
-    certutil -encode root.cer root.pem
-    ```
+```
+environment: AzureStack
+blobstore_storage_account_name: <your-storage-account-name>
+blobstore_storage_access_key: <your-storage-account-access-key>
+blobstore_storage_dns_suffix: <your-storage-account-dns-suffix>
+app_package_directory_key: example-apps-dir
+buildpack_directory_key: example-buildpacks-dir
+droplet_directory_key: example-droplets-dir
+resource_directory_key: example-resources-dir
+```
+
+`<your-storage-account-dns-suffix>` is the dns suffix of your storage account. For example, `local.azurestack.external` for Azure Stack Development Kit, and `<location>.<azure_stack_domain>` for Azure Stack integrated systems.
+
+If a self-signed root certificate is used when deploying Azure Stack, you **MUST** specify the `trusted_certs` in the [director configuration](https://bosh.io/docs/trusted-certs/) to make the API VM (Cloud Controller) trust the Azure Stack CA root certificate.
