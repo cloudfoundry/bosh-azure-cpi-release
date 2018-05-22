@@ -38,9 +38,8 @@ module Bosh::AzureCloud
     HTTP_CODE_LENGTHREQUIRED      = 411
     HTTP_CODE_PRECONDITIONFAILED  = 412
 
-    # https://azure.microsoft.com/en-us/documentation/articles/best-practices-retry-service-specific/#more-information-6
-    # Error code 429 is not documented in the url above, but it is a code for throttling error. Add it for issue https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/179
-    AZURE_RETRY_ERROR_CODES       = [408, 429, 500, 502, 503, 504].freeze
+    # https://docs.microsoft.com/en-us/azure/architecture/best-practices/retry-service-specific#general-rest-and-retry-guidelines
+    AZURE_GENERAL_RETRY_ERROR_CODES      = [408, 429, 500, 502, 503, 504].freeze
 
     REST_API_PROVIDER_COMPUTE            = 'Microsoft.Compute'
     REST_API_VIRTUAL_MACHINES            = 'virtualMachines'
@@ -2049,6 +2048,13 @@ module Bosh::AzureCloud
           'api-version' => api_version
         }
         uri.query = URI.encode_www_form(params)
+        @logger.debug("get_token - authentication_endpoint: #{uri}")
+
+        request = Net::HTTP::Post.new(uri.request_uri)
+        request['Content-Type'] = 'application/x-www-form-urlencoded'
+        request = merge_http_common_headers(request)
+        @logger.debug('get_token - request.header:')
+        request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
 
         client_id = @azure_properties['client_id']
         request_body = {
@@ -2063,54 +2069,10 @@ module Bosh::AzureCloud
           request_body['client_assertion_type'] = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
           request_body['client_assertion']      = get_jwt_assertion(endpoint, client_id)
         end
+        request.body = URI.encode_www_form(request_body)
+        @logger.debug("get_token - request body:\n#{redact_credentials_in_request_body(request_body)}")
 
-        retry_count = 0
-        retry_after = 5
-
-        begin
-          @logger.debug("get_token - authentication_endpoint: #{uri}")
-          request = Net::HTTP::Post.new(uri.request_uri)
-          request['Content-Type'] = 'application/x-www-form-urlencoded'
-          request = merge_http_common_headers(request)
-          @logger.debug('get_token - request.header:')
-          request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
-          request.body = URI.encode_www_form(request_body)
-          @logger.debug("get_token - request body:\n#{redact_credentials_in_request_body(request_body)}")
-
-          response = http(uri).request(request)
-        rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, EOFError => e
-          if retry_count < AZURE_MAX_RETRY_COUNT
-            @logger.warn("get_token - Fail for an error #{e.class.name}. Will retry after #{retry_after} seconds.")
-            retry_count += 1
-            sleep(retry_after)
-            retry
-          end
-          raise e
-        rescue OpenSSL::SSL::SSLError, OpenSSL::X509::StoreError => e
-          if retry_count < AZURE_MAX_RETRY_COUNT && e.inspect.include?(ERROR_OPENSSL_RESET)
-            @logger.warn("get_token - Fail for an error #{e.class.name}. Will retry after #{retry_after} seconds.")
-            retry_count += 1
-            sleep(retry_after)
-            retry
-          end
-          raise e
-        rescue StandardError => e
-          # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
-          if retry_count < AZURE_MAX_RETRY_COUNT
-            if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME)
-              @logger.warn("get_token - Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
-              retry_count += 1
-              sleep(retry_after)
-              retry
-            elsif e.inspect.include?(ERROR_CONNECTION_REFUSED)
-              @logger.warn("get_token - Fail for a connection refused error. Will retry after #{retry_after} seconds.")
-              retry_count += 1
-              sleep(retry_after)
-              retry
-            end
-          end
-          cloud_error("get_token - #{e.inspect}\n#{e.backtrace.join("\n")}")
-        end
+        response = http_get_response_with_network_retry(http(uri), request)
 
         message = get_http_common_headers(response)
         @logger.debug("get_token - #{message}")
@@ -2152,51 +2114,76 @@ module Bosh::AzureCloud
       refresh_token = false
       retry_count = 0
 
-      begin
+      while retry_count < AZURE_MAX_RETRY_COUNT
         request['Content-Type']  = 'application/json'
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
         request = merge_http_common_headers(request)
         @logger.debug("http_get_response - #{retry_count}: #{request.method}, x-ms-client-request-id: #{request['x-ms-client-request-id']}, URI: #{uri}")
-        response = http(uri).request(request)
+        response = http_get_response_with_network_retry(http(uri), request)
 
-        retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         status_code = response.code.to_i
-
+        response_body = response.body
         message = "http_get_response - #{retry_count}: #{status_code}\n"
         message += get_http_common_headers(response)
         message += if filter_credential_in_logs(uri)
                      'response.body cannot be logged because it may contain credentials.'
                    else
-                     "response.body: #{redact_credentials_in_response_body(response.body)}"
+                     "response.body: #{redact_credentials_in_response_body(response_body)}"
                    end
         @logger.debug(message)
 
-        raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid. Error message: #{response.body}" if status_code == HTTP_CODE_UNAUTHORIZED
+        if status_code == HTTP_CODE_UNAUTHORIZED
+          message = "http_get_response - Azure authentication failed: Token is invalid. Error message: #{response_body}"
+          if refresh_token
+            cloud_error(message)
+          else
+            @logger.debug(message)
+            refresh_token = true
+            next
+          end
+        end
+
+        break unless AZURE_GENERAL_RETRY_ERROR_CODES.include?(status_code)
+
+        retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
+        message = "http_get_response - Will retry after #{retry_after} seconds due to http code: #{status_code}\n"
+        message += get_http_common_headers(response)
+        message += "Error message: #{response_body}"
+        @logger.debug(message)
+        sleep(retry_after)
         refresh_token = false
-        if AZURE_RETRY_ERROR_CODES.include?(status_code)
-          error = "http_get_response - http code: #{response.code}\n"
-          error += get_http_common_headers(response)
-          error += "Error message: #{response.body}"
-          raise AzureInternalError, error
-        end
-      rescue AzureUnauthorizedError => e
-        unless refresh_token
-          refresh_token = true
-          retry
-        end
-        raise e
-      rescue AzureInternalError, Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, EOFError => e
+        retry_count += 1
+      end
+
+      if retry_count >= AZURE_MAX_RETRY_COUNT
+        message = "http_get_response - Failed to get http response after #{AZURE_MAX_RETRY_COUNT} times.\n"
+        message += get_http_common_headers(response)
+        message += "Error message: #{response_body}"
+        cloud_error(message)
+      end
+
+      response
+    end
+
+    # Retry for the network errors
+    def http_get_response_with_network_retry(http_handler, request)
+      retry_count = 0
+      retry_after = 5
+      error_msg_format = 'http_get_response_with_network_retry - %{retry_count}: Will retry after %{retry_after} seconds due to an error %{error}'
+      begin
+        response = http_handler.request(request)
+      rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, EOFError => e
         if retry_count < AZURE_MAX_RETRY_COUNT
-          @logger.warn("http_get_response - Fail for an error #{e.class.name}. Will retry after #{retry_after} seconds.")
           retry_count += 1
+          @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: e.class.name))
           sleep(retry_after)
           retry
         end
         raise e
       rescue OpenSSL::SSL::SSLError, OpenSSL::X509::StoreError => e
         if retry_count < AZURE_MAX_RETRY_COUNT && e.inspect.include?(ERROR_OPENSSL_RESET)
-          @logger.warn("http_get_response - Fail for an error #{e.class.name}. Will retry after #{retry_after} seconds.")
           retry_count += 1
+          @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: e.class.name))
           sleep(retry_after)
           retry
         end
@@ -2205,20 +2192,19 @@ module Bosh::AzureCloud
         # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
         if retry_count < AZURE_MAX_RETRY_COUNT
           if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME)
-            @logger.warn("http_get_response - Fail for a DNS resolve error. Will retry after #{retry_after} seconds.")
             retry_count += 1
+            @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: 'DNS resolve error'))
             sleep(retry_after)
             retry
           elsif e.inspect.include?(ERROR_CONNECTION_REFUSED)
-            @logger.warn("http_get_response - Fail for a connection refused error. Will retry after #{retry_after} seconds.")
             retry_count += 1
+            @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: 'connection refused error'))
             sleep(retry_after)
             retry
           end
         end
-        cloud_error("http_get_response - #{e.inspect}\n#{e.backtrace.join("\n")}")
+        raise e
       end
-      response
     end
 
     def check_completion(response, options)
