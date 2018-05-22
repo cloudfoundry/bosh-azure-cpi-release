@@ -409,6 +409,7 @@ module Bosh::AzureCloud
       @blob_client_mutex.synchronize do
         unless @storage_accounts.has_key?(storage_account_name)
           storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+          cloud_error("initialize_blob_client: Storage account `#{storage_account_name}' not found") if storage_account.nil?
           keys = @azure_client2.get_storage_account_keys_by_name(storage_account_name)
           storage_account[:key] = keys[0]
           @storage_accounts[storage_account_name] = storage_account
