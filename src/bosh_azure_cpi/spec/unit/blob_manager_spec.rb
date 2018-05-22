@@ -242,6 +242,20 @@ describe Bosh::AzureCloud::BlobManager do
   end
 
   describe "#get_blob_properties" do
+    context "when storage account does not exist" do
+      before do
+        allow(azure_client2).to receive(:get_storage_account_by_name).
+          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).
+          and_return(nil)
+      end
+
+      it "should raise error" do
+        expect {
+          blob_manager.get_blob_properties(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+        }.to raise_error("initialize_blob_client: Storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' not found")
+      end
+    end
+
     context "when blob exists" do
       let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
       let(:properties) { { "foo" => "bar" } }
