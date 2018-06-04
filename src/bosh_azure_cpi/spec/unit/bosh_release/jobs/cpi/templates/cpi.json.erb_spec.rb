@@ -69,10 +69,10 @@ describe 'cpi.json.erb' do
             'parallel_upload_thread_num'  => 16,
             'debug_mode'                  => false,
             'keep_failed_vms'             => false,
-            'enable_telemetry'            => true,
+            'enable_telemetry'            => false,
             'use_managed_disks'           => false,
             'pip_idle_timeout_in_minutes' => 4,
-            'enable_vm_boot_diagnostics'  => true
+            'enable_vm_boot_diagnostics'  => false
           },
           'registry'=>{
             'address'=>'registry-host.example.com',
@@ -234,6 +234,16 @@ describe 'cpi.json.erb' do
       end
     end
 
+    context 'when the enable_telemetry is enabled' do
+      before do
+        manifest['properties']['azure']['enable_telemetry'] = true
+      end
+
+      it 'is able to render enable_telemetry to true' do
+        expect(subject['cloud']['properties']['azure']['enable_telemetry']).to be(true)
+      end
+    end
+
     context 'when the enable_vm_boot_diagnostics is disabled' do
       before do
         manifest['properties']['azure']['enable_vm_boot_diagnostics'] = false
@@ -241,6 +251,16 @@ describe 'cpi.json.erb' do
 
       it 'is able to render enable_vm_boot_diagnostics to false' do
         expect(subject['cloud']['properties']['azure']['enable_vm_boot_diagnostics']).to be(false)
+      end
+    end
+
+    context 'when the enable_vm_boot_diagnostics is enabled' do
+      before do
+        manifest['properties']['azure']['enable_vm_boot_diagnostics'] = true
+      end
+
+      it 'is able to render enable_vm_boot_diagnostics to true' do
+        expect(subject['cloud']['properties']['azure']['enable_vm_boot_diagnostics']).to be(true)
       end
     end
 
