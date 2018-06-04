@@ -63,10 +63,10 @@ properties:
     default: false
   azure.enable_telemetry:
     description: Enable telemetry on CPI calls
-    default: true
+    default: false
   azure.enable_vm_boot_diagnostics:
     description: Enable VM boot diagnostics
-    default: true
+    default: false
   azure.azure_stack.domain:
     description: The domain for your AzureStack deployment
     default: local.azurestack.external
