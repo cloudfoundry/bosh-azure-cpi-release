@@ -44,6 +44,8 @@ STEMCELL_STORAGE_ACCOUNT_TAGS   = {
   'type' => 'stemcell'
 }
 
+CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT = 300
+
 def mock_cloud_options
   {
     'plugin'     => 'azure',
