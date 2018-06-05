@@ -39,7 +39,7 @@ module Bosh::AzureCloud
     def get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
       @logger.debug("get_or_create_storage_account(#{name}, #{tags}, #{type}, #{location}, #{containers}, #{is_default_storage_account})")
       lock_file = "#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{name}"
-      mutex = FileMutex.new(lock_file, @logger)
+      mutex = FileMutex.new(lock_file, @logger, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT)
       begin
         if mutex.lock
           storage_account = find_storage_account_by_name(name) # make sure the storage account is not yet created by other process
@@ -101,7 +101,7 @@ module Bosh::AzureCloud
     def get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
       @logger.debug("get_or_create_storage_account_by_tags(#{tags}, #{type}, #{location}, #{containers}, #{is_default_storage_account})")
       lock_file = "#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{location}-#{Digest::MD5.hexdigest(tags.to_s)}"
-      mutex = FileMutex.new(lock_file, @logger)
+      mutex = FileMutex.new(lock_file, @logger, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT)
       begin
         if mutex.lock
           storage_account = find_storage_account_by_tags(tags, location) # make sure the storage account is not yet created by other process

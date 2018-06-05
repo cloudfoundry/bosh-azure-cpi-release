@@ -65,9 +65,12 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
     let(:storage_account) { double('storage-account') }
     let(:lock_creating_storage_account) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
+    let(:lock_file) { "bosh-lock-create-storage-account-#{name}" }
 
     before do
-      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_creating_storage_account)
+      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).
+        with(lock_file, anything, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT).
+        and_return(lock_creating_storage_account)
     end
 
     context 'when lock is not acquired' do
@@ -267,7 +270,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
     before do
       allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).
-        with(lock_file, anything).
+        with(lock_file, anything, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT).
         and_return(lock)
     end
 
