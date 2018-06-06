@@ -105,7 +105,7 @@
 
     - For CPI v35.2.0+.
 
-        Since v35.2.0, VM boot diagnostics will NOT be configured by `debug_mode` any more, a new configuration parameter `enable_vm_boot_diagnostics` is added to global CPI settings to turn on/off this feature, the default value is `true`. If you want to turn off the feature, you need to change its value to `false`. Example of enabling boot diagnostics:
+        Since v35.2.0, VM boot diagnostics will NOT be configured by `debug_mode` any more, a new configuration parameter `enable_vm_boot_diagnostics` is added to global CPI settings to turn on/off this feature. If you want to turn on the feature, you need to configure this parameter in global CPI settings. Example of enabling boot diagnostics:
 
         ```yaml
         properties:
