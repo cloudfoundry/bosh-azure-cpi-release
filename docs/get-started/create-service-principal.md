@@ -14,7 +14,7 @@ A service principal contains the following credentials which will be mentioned i
 
 The easiest way to create the Service Principal is with the Azure Cloud Shell in the Azure portal which provides a pre-installed, pre-configured Azure CLI 2.0. If you can't use Azure Cloud Shell, you may [install Azure CLI 2.0](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) in the system of your preference.
 
-You can then create the service principal by simply typing `az ad sp create-for-rbac`. You can get more inforamtions from the [doc](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?toc=%2fazure%2fazure-resource-manager%2ftoc.json&view=azure-cli-latest).
+You can then create the service principal by simply typing `az ad sp create-for-rbac`. You can get more information from the [doc](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?toc=%2fazure%2fazure-resource-manager%2ftoc.json&view=azure-cli-latest).
 
 The default role is `Contributor` and the default scope is the current subscription. Please go to the section [Assigning roles to your Service Principal](#assigning-roles-to-your-service-principal).
 
