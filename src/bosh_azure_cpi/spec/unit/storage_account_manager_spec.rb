@@ -759,6 +759,18 @@ describe Bosh::AzureCloud::StorageAccountManager do
     end
 
     context 'When the global configurations contain storage_account_name' do
+      context 'when the storage account does not exist' do
+        before do
+          allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(nil)
+        end
+
+        it 'should raise an error' do
+          expect{
+            storage_account_manager.default_storage_account
+          }.to raise_error /The default storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' is specified in Global Configuration, but it does not exist./
+        end
+      end
+
       context 'When use_managed_disks is false' do
         it 'should return the default storage account, and do not set the tags' do
           expect(client2).not_to receive(:update_tags_of_storage_account)
