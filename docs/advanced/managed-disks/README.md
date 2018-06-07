@@ -10,42 +10,25 @@ For better performance in a large-scale deployment, you need to create multiple 
 
 ## Changed Manifest Configuration
 
-When you decide to enable managed disks, you need to update the [global properties](http://bosh.io/docs/azure-cpi.html#global), [resource_pools/cloud_properties](http://bosh.io/docs/azure-cpi.html#resource-pools) and [disk_pools/cloud_properties](http://bosh.io/docs/azure-cpi.html#disk-pools).
+When you decide to enable managed disks, you must update the [Global Configuration](http://bosh.io/docs/azure-cpi/#global). It's optional to update [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools) and [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools) if needed.
 
 ## New Deployment
 
 Below are behavior changes with a new deployment:
 
-1. In Azure environment preparing stage, you no longer need to create or add storage account when creating/attaching a new disk. So, **you must not specify storage_account_name in bosh.yml for a new deployment.**
+1. Before the deployment, you no longer need to create or add storage account. So, **it is not required to specify storage_account_name in bosh.yml for a new deployment.**
 
-1. When deploying BOSH, you need to specify additional parameters in `bosh.yml`:
+1. Deploying BOSH director:
 
-    ```
-    azure:
-      use_managed_disks: true # New parameter, Default value is false. If the region does not support managed disks, CPI throws an error when this value is set to true.
+    1. (**REQUIRED**) You need to enable managed disks in the [Global Configuration](http://bosh.io/docs/azure-cpi/#global) using the ops file [use-managed-disks.yml](https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/master/azure/use-managed-disks.yml).
 
-    disk_pools:
-      cloud_properties:
-        storage_account_type # New parameter: Standard_LRS or Premium_LRS.
-    ```
+    1. (Optional) You can specify the `storage_account_type` in [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools). For example, if you need a SSD persistent disk for the BOSH director, you can use `Premium_LRS`.
 
-1. When deploying Cloud Foundry, you need to specify additional parameters in your CF manifest:
+1. Deploying Cloud Foundry:
 
-    ```
-    disk_pools:
-      cloud_properties:
-        storage_account_type # New parameter: Standard_LRS or Premium_LRS.
-    ```
+    1. (Optional) If availability sets are used to host VMs with managed disks and you want to have 3 fault domains, you need to set `platform_fault_domain_count` to `3` explicitly in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). The reason: When `use_managed_disks` is `true`, the default value of `platform_fault_domain_count` is `2` because [the maximum number of fault domain is 2 in some regions](#with-availability-sets).
 
-1. If availability sets are used to host VMs with managed disks and you want to have 3 fault domains, you need to set `platform_fault_domain_count` to `3` explicitly.
-
-    ```
-    resource_pools:
-      cloud_properties:
-        platform_fault_domain_count: 3
-    ```
-
-    The reason: When `use_managed_disks` is `true`, the default value of `platform_fault_domain_count` is `2` because [the maximum number of fault domain is 2 in some regions](#with-availability-sets).
+    1. (Optional) You can specify the `storage_account_type` in [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools). For example, if you need a SSD persistent disk for Cloud Foundry VM, you can use `Premium_LRS`.
 
 ## Migrating an Existing Deployment
 
@@ -54,8 +37,6 @@ Below are behavior changes with a new deployment:
 You should **NOT** migrate the deployment if any of the following conditions is true. You should leave `use_managed_disks` as `false` in the manifest file in this case.
 
   * The region does not support managed disks. You can see [Azure Products by Region](https://azure.microsoft.com/en-us/regions/services/) for the availability of the Managed Disks feature.
-
-  * If Storage Service Encryption (SSE) is enabled once, migration to managed disks is not supported. Even if SSE is disabled later, you still can't migrate to managed disks. Please see details [here](https://docs.microsoft.com/en-us/azure/storage/storage-managed-disks-overview#managed-disks-and-encryption).
 
 You need to review the following checklist to prevent predictable migration failures.
 
@@ -75,7 +56,7 @@ You need to review the following checklist to prevent predictable migration fail
     1. Re-deploy BOSH director
 
         ```
-        bosh-init deploy ~/bosh.yml
+        bosh create-env ~/bosh.yml
         ```
 
     1. Delete all existing snapshots.
@@ -84,44 +65,36 @@ You need to review the following checklist to prevent predictable migration fail
 
 This is the recommended approach for existing deployment, you can migrate entire deployment to managed disk with following steps:
 
-1. In `bosh.yml`, specify the new CPI version and add below properties.
+1. Update the manifest for deploying BOSH director:
 
-    ```
-    azure:
-      use_managed_disks: true
+    1. (**REQUIRED**) Upgrade Azure CPI to the new version.
 
-    disk_pools:
-      cloud_properties:
-        storage_account_type # New parameter: Standard_LRS or Premium_LRS
+    1. (**REQUIRED**) You need to enable managed disks in the [Global Configuration](http://bosh.io/docs/azure-cpi/#global) using the ops file [use-managed-disks.yml](https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/master/azure/use-managed-disks.yml).
 
-    resource_pools:
-      cloud_properties:
-        storage_account_name # Remove it if it exists
-        storage_account_max_disk_number # Remove it if it exists
-        storage_account_type # Remove it if it exists
-    ```
+    1. (**REQUIRED**) You need to remove `storage_account_name` and `storage_account_max_disk_number` if they exist in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools).
+
+    1. (Optional) You can specify the `storage_account_type` in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). For example, if you need a SSD root disk for the BOSH director, you can use `Premium_LRS`.
+
+    1. (Optional) You can specify the `storage_account_type` in [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools). For example, if you need a SSD persistent disk for the BOSH director, you can use `Premium_LRS`.
 
     >NOTE: Since an existing CF deployment has a default storage account which contains uploaded stemcells, you need to keep `azure.storage_account_name` in the global configurations in `bosh.yml` while migrating. CPI will re-use the uploaded stemcells. After the migration, you can remove the default storage account from `bosh.yml`.
 
 1. Re-deploy BOSH director
 
     ```
-    bosh-init deploy ~/bosh.yml
+    bosh create-env ~/bosh.yml
     ```
 
-1. Update your CF manifest, add below properties
+1. Update the manifest for deploying Cloud Foundry:
 
-    ```
-    disk_pools:
-      cloud_properties:
-        storage_account_type
+    1. (**REQUIRED**) You need to remove `storage_account_name` and `storage_account_max_disk_number` if they exist in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools).
 
-    resource_pools:
-      cloud_properties:
-        storage_account_name # Remove it if it exists
-        storage_account_max_disk_number # Remove it if it exists
-        storage_account_type # Remove it if it exists
-    ```
+    1. (Optional) If availability sets are used to host VMs with managed disks and you want to have 3 fault domains, you need to set `platform_fault_domain_count` to `3` explicitly in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). The reason: When `use_managed_disks` is `true`, the default value of `platform_fault_domain_count` is `2` because [the maximum number of fault domain is 2 in some regions](#with-availability-sets).
+
+    1. (Optional) You can specify the `storage_account_type` in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). For example, if you need a SSD root disk for Cloud Foundry VM, you can use `Premium_LRS`.
+
+    1. (Optional) You can specify the `storage_account_type` in [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools). For example, if you need a SSD persistent disk for Cloud Foundry VM, you can use `Premium_LRS`.
+
 
 1. Use ‘bosh recreate --force’ to update your current CF deployment
 
