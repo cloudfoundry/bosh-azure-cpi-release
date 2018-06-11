@@ -14,44 +14,6 @@ describe Bosh::AzureCloud::VMManager do
 
       # Availability Set
       context '#availability_set' do
-        let(:rwlock) { instance_double(Bosh::AzureCloud::Helpers::ReadersWriterLock) }
-        before do
-          allow(Bosh::AzureCloud::Helpers::ReadersWriterLock).to receive(:new).and_return(rwlock)
-          allow(rwlock).to receive(:acquire_read_lock)
-          allow(rwlock).to receive(:release_read_lock)
-        end
-        let(:create_avset_lock) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-        before do
-          allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(create_avset_lock)
-          allow(create_avset_lock).to receive(:lock).and_return(true)
-          allow(create_avset_lock).to receive(:unlock)
-        end
-
-        context 'when it fails to acquire the readers lock' do
-          let(:env) { nil }
-          let(:availability_set_name) { SecureRandom.uuid.to_s }
-          let(:resource_pool) do
-            {
-              'instance_type' => 'Standard_D1',
-              'availability_set' => availability_set_name
-            }
-          end
-
-          before do
-            allow(rwlock).to receive(:acquire_read_lock).and_raise(Bosh::AzureCloud::Helpers::LockTimeoutError)
-          end
-
-          it 'should not delete VM and then raise an error' do
-            expect(File).to receive(:open).with('/tmp/azure_cpi/DELETING-LOCKS', 'wb')
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).to receive(:delete_network_interface).exactly(2).times
-
-            expect do
-              vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            end.to raise_error /LockTimeoutError/
-          end
-        end
-
         context 'when availability set is not created' do
           let(:env) { nil }
           let(:availability_set_name) { SecureRandom.uuid.to_s }
@@ -68,22 +30,21 @@ describe Bosh::AzureCloud::VMManager do
             allow(client2).to receive(:get_availability_set_by_name)
               .with(resource_group_name, availability_set_name)
               .and_return(nil)
-            allow(rwlock).to receive(:acquire_read_lock)
-            allow(create_avset_lock).to receive(:lock).and_return(true)
             allow(client2).to receive(:create_availability_set)
               .and_raise('availability set is not created')
           end
 
           it 'should delete nics and then raise an error' do
-            expect(File).to receive(:open).with('/tmp/azure_cpi/DELETING-LOCKS', 'wb')
-            expect(create_avset_lock).not_to receive(:unlock)
-            expect(rwlock).to receive(:release_read_lock)
+            expect(vm_manager).to receive(:flock)
+              .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+              .and_call_original
+
             expect(client2).to receive(:delete_virtual_machine)
             expect(client2).to receive(:delete_network_interface).exactly(2).times
 
             expect do
               vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-            end.to raise_error /Failed to create the availability set `#{availability_set_name}' in the resource group `#{resource_group_name}'/
+            end.to raise_error /availability set is not created/
           end
         end
 
@@ -108,14 +69,26 @@ describe Bosh::AzureCloud::VMManager do
               managed: false
             }
           end
+          let(:availability_set) do
+            {
+              name: availability_set_name
+            }
+          end
 
           before do
             allow(client2).to receive(:get_availability_set_by_name)
               .with(resource_group_name, resource_pool['availability_set'])
-              .and_return(nil)
+              .and_return(nil, availability_set)
           end
 
           it 'should create availability set with the name specified in resource_pool' do
+            expect(vm_manager).to receive(:flock)
+              .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+              .and_call_original
+            expect(vm_manager).to receive(:flock)
+              .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+              .and_call_original
+
             expect(client2).to receive(:create_availability_set)
               .with(resource_group_name, avset_params)
             expect(client2).to receive(:create_network_interface).twice
@@ -153,14 +126,26 @@ describe Bosh::AzureCloud::VMManager do
                 managed: false
               }
             end
+            let(:availability_set) do
+              {
+                name: availability_set_name
+              }
+            end
 
             before do
               allow(client2).to receive(:get_availability_set_by_name)
                 .with(resource_group_name, resource_pool['availability_set'])
-                .and_return(nil)
+                .and_return(nil, availability_set)
             end
 
             it 'should create availability set with the name specified in resource_pool' do
+              expect(vm_manager).to receive(:flock)
+                .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                .and_call_original
+              expect(vm_manager).to receive(:flock)
+                .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                .and_call_original
+
               expect(client2).to receive(:create_availability_set)
                 .with(resource_group_name, avset_params)
 
@@ -191,15 +176,27 @@ describe Bosh::AzureCloud::VMManager do
                   'bosh' => { 'group' => 'group' * 16 }
                 }
               end
+              let(:availability_set) do
+                {
+                  name: env['bosh']['group']
+                }
+              end
 
               before do
                 avset_params[:name] = env['bosh']['group']
                 allow(client2).to receive(:get_availability_set_by_name)
                   .with(resource_group_name, env['bosh']['group'])
-                  .and_return(nil)
+                  .and_return(nil, availability_set)
               end
 
               it 'should create availability set and use value of env.bosh.group as its name' do
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{env['bosh']['group']}", File::LOCK_SH)
+                  .and_call_original
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{env['bosh']['group']}", File::LOCK_EX)
+                  .and_call_original
+
                 expect(client2).to receive(:create_availability_set)
                   .with(resource_group_name, avset_params)
 
@@ -214,15 +211,27 @@ describe Bosh::AzureCloud::VMManager do
                   'bosh' => { 'group' => 'a' * 80 + 'group' * 8 }
                 }
               end
+              let(:availability_set) do
+                {
+                  name: env['bosh']['group']
+                }
+              end
 
               before do
                 # 21d9858fb04d8ba39cdacdc926c5415e is MD5 of the availability_set name ('a' * 80 + 'group' * 8)
                 avset_params[:name] = "az-21d9858fb04d8ba39cdacdc926c5415e-#{'group' * 8}"
                 allow(client2).to receive(:get_availability_set_by_name)
-                  .and_return(nil)
+                  .and_return(nil, availability_set)
               end
 
               it 'should create availability set with a truncated value of env.bosh.group as its name' do
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{avset_params[:name]}", File::LOCK_SH)
+                  .and_call_original
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{avset_params[:name]}", File::LOCK_EX)
+                  .and_call_original
+
                 expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
 
                 vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
@@ -234,10 +243,16 @@ describe Bosh::AzureCloud::VMManager do
 
         context "when the availability set doesn't exist" do
           let(:availability_set_name) { SecureRandom.uuid.to_s }
+          let(:availability_set) do
+            {
+              name: availability_set_name
+            }
+          end
+
           before do
             allow(client2).to receive(:get_availability_set_by_name)
               .with(resource_group_name, availability_set_name)
-              .and_return(nil)
+              .and_return(nil, availability_set)
           end
 
           context 'when platform_update_domain_count and platform_fault_domain_count are set' do
@@ -265,6 +280,13 @@ describe Bosh::AzureCloud::VMManager do
               end
 
               it 'should create the unmanaged availability set' do
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                  .and_call_original
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                  .and_call_original
+
                 expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                 expect(client2).to receive(:create_network_interface).twice
 
@@ -279,6 +301,13 @@ describe Bosh::AzureCloud::VMManager do
               end
 
               it 'should create the managed availability set' do
+                expect(vm_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                  .and_call_original
+                expect(vm_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                  .and_call_original
+
                 expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                 expect(client2).to receive(:create_network_interface).twice
 
@@ -312,6 +341,13 @@ describe Bosh::AzureCloud::VMManager do
                 end
 
                 it 'should create the unmanaged availability set' do
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                    .and_call_original
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                    .and_call_original
+
                   expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                   expect(client2).to receive(:create_network_interface).twice
 
@@ -328,6 +364,13 @@ describe Bosh::AzureCloud::VMManager do
                 end
 
                 it 'should create the managed availability set' do
+                  expect(vm_manager2).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                    .and_call_original
+                  expect(vm_manager2).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                    .and_call_original
+
                   expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                   expect(client2).to receive(:create_network_interface).twice
 
@@ -355,6 +398,13 @@ describe Bosh::AzureCloud::VMManager do
                 end
 
                 it 'should create the unmanaged availability set' do
+                  expect(vm_manager_azure_stack).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                    .and_call_original
+                  expect(vm_manager_azure_stack).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                    .and_call_original
+
                   expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                   expect(client2).to receive(:create_network_interface).twice
 
@@ -479,6 +529,13 @@ describe Bosh::AzureCloud::VMManager do
             end
 
             it 'should update the managed property of the availability set' do
+              expect(vm_manager2).to receive(:flock)
+                .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                .and_call_original
+              expect(vm_manager2).to receive(:flock)
+                .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                .and_call_original
+
               expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
               expect(client2).to receive(:create_network_interface).twice
 

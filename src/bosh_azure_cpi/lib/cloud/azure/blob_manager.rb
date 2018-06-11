@@ -227,7 +227,6 @@ module Bosh::AzureCloud
 
           copy_status_description = ''
           while copy_status == 'pending'
-            yield if block_given?
             options = merge_storage_common_options
             @logger.info("copy_blob: Calling get_blob_properties(#{container_name}, #{blob_name}, #{options})")
             blob = @blob_service_client.get_blob_properties(container_name, blob_name, options)

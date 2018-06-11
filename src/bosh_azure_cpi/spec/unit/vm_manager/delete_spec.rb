@@ -90,13 +90,6 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context 'when vm is in an availability set' do
-        let(:rwlock) { instance_double(Bosh::AzureCloud::Helpers::ReadersWriterLock) }
-        before do
-          allow(Bosh::AzureCloud::Helpers::ReadersWriterLock).to receive(:new).and_return(rwlock)
-          allow(rwlock).to receive(:acquire_write_lock).and_return(true)
-          allow(rwlock).to receive(:release_write_lock)
-        end
-
         context 'when the availability set contains VMs' do
           let(:availability_set) do
             {
@@ -124,6 +117,8 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it 'should delete all resources, not including the availability set' do
+            expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH).and_call_original # share lock to delete vm
+            expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB).and_call_original # exclusive unblock lock to delete avset
             expect(client2).to receive(:delete_virtual_machine).with(resource_group_name, vm_name)
             expect(client2).not_to receive(:delete_availability_set)
             expect(client2).to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-1')
@@ -162,6 +157,8 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it 'should delete all resources, including the availability set' do
+            expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH).and_call_original # share lock to delete vm
+            expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB).and_call_original # exclusive unblock lock to delete avset
             expect(client2).to receive(:delete_virtual_machine).with(resource_group_name, vm_name)
             expect(client2).to receive(:delete_availability_set).with(resource_group_name, availability_set_name)
             expect(client2).to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-1')
@@ -177,6 +174,8 @@ describe Bosh::AzureCloud::VMManager do
 
           context 'when it fails to delete the availability set' do
             it 'raises an error' do
+              expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH).and_call_original # share lock to delete vm
+              expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB).and_call_original # exclusive unblock lock to delete avset
               expect(client2).to receive(:delete_virtual_machine).with(resource_group_name, vm_name)
               expect(client2).to receive(:delete_availability_set).and_raise(StandardError)
               expect(client2).not_to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-1')
@@ -275,14 +274,8 @@ describe Bosh::AzureCloud::VMManager do
             .with(resource_group_name, availability_set_name).and_return(availability_set)
         end
 
-        let(:rwlock) { instance_double(Bosh::AzureCloud::Helpers::ReadersWriterLock) }
-        before do
-          allow(Bosh::AzureCloud::Helpers::ReadersWriterLock).to receive(:new).and_return(rwlock)
-          allow(rwlock).to receive(:acquire_write_lock).and_return(true)
-          allow(rwlock).to receive(:release_write_lock)
-        end
-
         it 'should delete other resources and the availability set but not delete the vm' do
+          expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB).and_call_original # exclusive unblock lock to delete avset
           expect(client2).not_to receive(:delete_virtual_machine)
           expect(client2).to receive(:delete_availability_set).with(resource_group_name, availability_set_name).once
           expect(client2).to receive(:delete_network_interface).with(resource_group_name, 'fake-possible-nic-1')

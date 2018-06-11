@@ -13,11 +13,9 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
     end
 
     context 'when it gets the lock successfully' do
-      let(:mutex) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-
       before do
-        allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(mutex)
-        allow(mutex).to receive(:lock).and_return(true)
+        allow_any_instance_of(File).to receive(:flock).with(File::LOCK_EX | File::LOCK_NB).and_return(0)
+        allow_any_instance_of(File).to receive(:flock).with(File::LOCK_UN)
         allow(event_handler).to receive(:has_event?).and_return(true, false) # has_event? must return false at the end to terminate the while loop
       end
 
@@ -35,8 +33,6 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
           expect(event_handler).to receive(:collect_events).once
           expect(event_handler).to receive(:send_events).once
           expect(event_handler).to receive(:update_last_post_timestamp).once
-          expect(mutex).to receive(:update)
-          expect(mutex).to receive(:unlock)
           expect do
             event_handler.collect_and_send_events
           end.not_to raise_error
@@ -56,33 +52,6 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
           expect(event_handler).to receive(:collect_events).once
           expect(event_handler).to receive(:send_events).once
           expect(event_handler).to receive(:update_last_post_timestamp).once
-          expect(mutex).to receive(:update)
-          expect(mutex).to receive(:unlock)
-          expect do
-            event_handler.collect_and_send_events
-          end.not_to raise_error
-        end
-      end
-
-      context 'when error happens' do
-        let(:now) { Time.now.round }
-        let(:last_post_timestamp) { now - 61 }
-
-        before do
-          allow(Time).to receive(:now).and_return(now)
-          allow(event_handler).to receive(:get_last_post_timestamp).and_return(last_post_timestamp)
-          allow(event_handler).to receive(:send_events).and_raise 'unexpected error'
-        end
-
-        it 'should log the error and release the lock, but not raise the error' do
-          expect(event_handler).not_to receive(:sleep)
-          expect(event_handler).to receive(:collect_events).once
-          expect(event_handler).not_to receive(:update_last_post_timestamp)
-
-          expect(logger).to receive(:warn).with(/unexpected error/)
-          expect(mutex).to receive(:update)
-          expect(mutex).to receive(:unlock)
-
           expect do
             event_handler.collect_and_send_events
           end.not_to raise_error
@@ -91,15 +60,11 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
     end
 
     context 'when it fails to get the lock' do
-      let(:mutex) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-
       before do
-        allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(mutex)
-        allow(mutex).to receive(:lock).and_return(false)
+        allow_any_instance_of(File).to receive(:flock).with(File::LOCK_EX | File::LOCK_NB).and_return(false)
       end
 
       it 'will quit silently' do
-        expect(mutex).not_to receive(:unlock)
         expect(event_handler).not_to receive(:has_event?)
         expect do
           event_handler.collect_and_send_events

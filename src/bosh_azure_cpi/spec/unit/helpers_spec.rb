@@ -838,408 +838,162 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
-  describe '#FileMutex' do
-    let(:logger) { Logger.new('/dev/null') }
-    let(:lock_dir) { '/tmp/azure_cpi' }
+  describe '#flock' do
     let(:lock_name) { 'fake-lock-name' }
-    let(:file_path) { "#{lock_dir}/#{lock_name}" }
-    let(:expired) { 5 }
-    let(:mtime) { 100 } # The value doesn't matter
-    let(:mutex) { Bosh::AzureCloud::Helpers::FileMutex.new(lock_name, logger, expired) }
 
-    context '#lock' do
-      context 'when the lock file does not exist' do
-        before do
-          allow(File).to receive(:mtime).with(file_path).and_raise(Errno::ENOENT)
-        end
+    context 'when it gets the lock successfully' do
+      let(:mode) { 'fake-mode' }
+      let(:result) { 'fake-result' }
+      let(:file) { instance_double(File) }
+      let(:lock_result) { 0 }
 
-        context 'when it creates the lock file successfully' do
-          let(:file_handler) { double('file_handler') }
-          before do
-            allow(IO).to receive(:sysopen)
-            allow(IO).to receive(:open).and_return(file_handler)
-            allow(file_handler).to receive(:syswrite)
-            allow(file_handler).to receive(:close)
-          end
-
-          it 'should get the lock' do
-            expect(mutex.lock).to eq(true)
-            expect(mutex.instance_variable_get(:@is_locked)).to be(true)
-          end
-        end
-
-        context 'when it fails to create the lock file' do
-          before do
-            allow(IO).to receive(:sysopen).and_raise(Errno::EEXIST)
-          end
-
-          it 'should not get the lock' do
-            expect(mutex.lock).to eq(false)
-            expect(mutex.instance_variable_get(:@is_locked)).to be(false)
-          end
-        end
-      end
-
-      context 'when the lock file exists' do
-        before do
-          allow(File).to receive(:mtime).with(file_path).and_return(mtime)
-        end
-
-        context "when the lock doesn't timeout" do
-          before do
-            allow(File).to receive(:mtime).with(file_path).and_return(mtime)
-            allow(Time).to receive(:new).and_return(mtime + expired - 1)
-          end
-
-          it 'should not get the lock' do
-            expect(IO).not_to receive(:sysopen)
-            expect(mutex.lock).to eq(false)
-            expect(mutex.instance_variable_get(:@is_locked)).to be(false)
-          end
-        end
-
-        context 'when the lock timeouts' do
-          before do
-            allow(File).to receive(:mtime).with(file_path).and_return(mtime)
-            allow(Time).to receive(:new).and_return(mtime + expired + 1)
-          end
-
-          it 'should raise a timeout exception' do
-            expect(IO).not_to receive(:sysopen)
-            expect do
-              mutex.lock
-            end.to raise_error(Bosh::AzureCloud::Helpers::LockTimeoutError)
-            expect(mutex.instance_variable_get(:@is_locked)).to be(false)
-          end
-        end
-      end
-    end
-
-    context '#wait' do
-      context 'when the lock has been acquired' do
-        before do
-          allow(File).to receive(:mtime).with(file_path).and_raise(Errno::ENOENT)
-        end
-
-        it 'should return true' do
-          expect(mutex.wait).to eq(true)
-        end
-      end
-
-      context 'when the lock has been acquired by other process initially, and released later' do
-        before do
-          allow(Time).to receive(:new).and_return(mtime + expired - 1)
-          count = 0
-          allow(File).to receive(:mtime) do
-            count += 1
-            count == 1 ? mtime : raise(Errno::ENOENT)
-          end
-        end
-
-        it 'should return true' do
-          expect(File).to receive(:mtime).with(file_path).twice
-          expect(mutex.wait).to eq(true)
-        end
-      end
-
-      context 'when the lock has been acquired initially, and it timeouts' do
-        before do
-          allow(File).to receive(:mtime).with(file_path).and_return(mtime)
-          allow(Time).to receive(:new).and_return(mtime + expired + 1)
-        end
-
-        it 'should return true' do
-          expect do
-            mutex.wait
-          end.to raise_error(Bosh::AzureCloud::Helpers::LockTimeoutError)
-        end
-      end
-    end
-
-    context '#unlock' do
-      context 'when it deletes the lock file successfully' do
-        it 'should release the lock' do
-          expect(File).to receive(:delete).with(file_path)
-          expect do
-            mutex.unlock
-          end.not_to raise_error
-          expect(mutex.instance_variable_get(:@is_locked)).to be(false)
-        end
-      end
-
-      context 'when the lock file is not found' do
-        before do
-          allow(File).to receive(:delete).and_raise(Errno::ENOENT)
-        end
-
-        it 'should raise an error' do
-          expect do
-            mutex.unlock
-          end.to raise_error(Bosh::AzureCloud::Helpers::LockNotFoundError)
-        end
-      end
-
-      context 'when it fails to delete the lock file due to other errors' do
-        before do
-          allow(File).to receive(:delete).and_raise(StandardError)
-        end
-
-        it 'should raise an error' do
-          expect do
-            mutex.unlock
-          end.to raise_error(StandardError)
-        end
-      end
-    end
-
-    context '#update' do
-      context 'when the lock file is not owned by the process' do
-        before do
-          mutex.instance_variable_set(:@is_locked, false)
-        end
-
-        it 'should raise an error' do
-          expect do
-            mutex.update
-          end.to raise_error(Bosh::AzureCloud::Helpers::LockNotOwnedError)
-        end
-      end
-
-      context 'when the lock file is owned by the process' do
-        before do
-          mutex.instance_variable_set(:@is_locked, true)
-        end
-
-        context 'when the lock file is updated successfully' do
-          it 'should not raise an error' do
-            expect(File).to receive(:open).with(file_path, 'wb')
-            expect do
-              mutex.update
-            end.not_to raise_error
-          end
-        end
-
-        context 'when the lock file is not found' do
-          before do
-            allow(File).to receive(:open).and_raise(Errno::ENOENT)
-          end
-
-          it 'should raise an error' do
-            expect do
-              mutex.update
-            end.to raise_error(Bosh::AzureCloud::Helpers::LockNotFoundError)
-          end
-        end
-
-        context 'when it fails to update the lock file due to other errors' do
-          before do
-            allow(File).to receive(:open).and_raise(StandardError)
-          end
-
-          it 'should raise an error' do
-            expect do
-              mutex.update
-            end.to raise_error(StandardError)
-          end
-        end
-      end
-    end
-  end
-
-  describe '#ReadersWriterLock' do
-    let(:lock_name)            { 'fake-readers-writer-lock-name' }
-    let(:logger)               { Logger.new('/dev/null') }
-    let(:expired)              { 5 }
-    let(:rwlock)               { Bosh::AzureCloud::Helpers::ReadersWriterLock.new(lock_name, logger, expired) }
-    let(:readers_lock_name)    { "#{lock_name}-readers" }
-    let(:writer_lock_name)     { "#{lock_name}-writer" }
-    let(:readers_mutex)        { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-    let(:writer_mutex)         { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-    let(:counter_file)         { "/tmp/azure_cpi/#{lock_name}-counter" }
-    let(:counter_file_handler) { instance_double(File) }
-
-    before do
-      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new)
-        .with(readers_lock_name, logger, expired).and_return(readers_mutex)
-      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new)
-        .with(writer_lock_name, logger, expired).and_return(writer_mutex)
-      allow(File).to receive(:open).and_yield(counter_file_handler)
-    end
-
-    context '#acquire_read_lock' do
-      context 'when the readers mutex is locked at the first time' do
-        before do
-          allow(readers_mutex).to receive(:lock).and_return(true)
-        end
-
-        context "when the counter file doesn't exist" do
-          before do
-            allow(File).to receive(:exist?).with(counter_file).and_return(false)
-          end
-
-          it 'should update the counter to 1, and lock the writer mutex' do
-            expect(readers_mutex).not_to receive(:wait)
-            expect(counter_file_handler).to receive(:write).with('1')
-            expect(writer_mutex).to receive(:lock).and_return(true)
-            expect(readers_mutex).to receive(:unlock)
-
-            expect do
-              rwlock.acquire_read_lock
-            end.not_to raise_error
-          end
-        end
-
-        context 'when the counter file exists' do
-          let(:counter) { 1 }
-          before do
-            allow(File).to receive(:exist?).with(counter_file).and_return(true)
-            allow(counter_file_handler).to receive(:read).and_return(counter.to_s)
-          end
-
-          it 'should increase the counter, and should not lock the writer mutex' do
-            expect(readers_mutex).not_to receive(:wait)
-            expect(counter_file_handler).to receive(:write).with((counter + 1).to_s)
-            expect(writer_mutex).not_to receive(:lock)
-            expect(readers_mutex).to receive(:unlock)
-
-            expect do
-              rwlock.acquire_read_lock
-            end.not_to raise_error
-          end
-        end
-      end
-
-      context 'when the readers mutex is locked at the second time' do
-        before do
-          allow(readers_mutex).to receive(:lock).and_return(false, true)
-          allow(File).to receive(:exist?).with(counter_file).and_return(false)
-        end
-
-        it 'should update the counter to 1, and lock the writer mutex' do
-          expect(readers_mutex).to receive(:wait).and_return(true)
-          expect(counter_file_handler).to receive(:write).with('1')
-          expect(writer_mutex).to receive(:lock).and_return(true)
-          expect(readers_mutex).to receive(:unlock)
-
-          expect do
-            rwlock.acquire_read_lock
-          end.not_to raise_error
-        end
-      end
-
-      context "when the readers mutex can't be locked" do
-        before do
-          allow(readers_mutex).to receive(:lock).and_return(false)
-          allow(readers_mutex).to receive(:wait).and_raise(Bosh::AzureCloud::Helpers::LockTimeoutError)
-        end
-
-        it 'should raise a timeout' do
-          expect do
-            rwlock.acquire_read_lock
-          end.to raise_error(Bosh::AzureCloud::Helpers::LockTimeoutError)
-        end
-      end
-    end
-
-    context '#release_read_lock' do
-      context 'when the readers mutex is locked at the first time' do
-        before do
-          allow(readers_mutex).to receive(:lock).and_return(true)
-          allow(File).to receive(:exist?).with(counter_file).and_return(true)
-        end
-
-        context 'when the counter is greater than 1' do
-          let(:counter) { 3 }
-          before do
-            allow(counter_file_handler).to receive(:read).and_return(counter.to_s)
-          end
-
-          it 'should decrease the counter, and should not unlock the writer mutex' do
-            expect(readers_mutex).not_to receive(:wait)
-            expect(counter_file_handler).to receive(:write).with((counter - 1).to_s)
-            expect(File).not_to receive(:delete)
-            expect(writer_mutex).not_to receive(:unlock)
-            expect(readers_mutex).to receive(:unlock)
-
-            expect do
-              rwlock.release_read_lock
-            end.not_to raise_error
-          end
-        end
-
-        context 'when the counter is 1' do
-          before do
-            allow(counter_file_handler).to receive(:read).and_return('1')
-          end
-
-          it 'should decrease the counter to 0, and should unlock the writer mutex' do
-            expect(readers_mutex).not_to receive(:wait)
-            expect(counter_file_handler).to receive(:write).with('0')
-            expect(File).to receive(:delete)
-            expect(writer_mutex).to receive(:unlock)
-            expect(readers_mutex).to receive(:unlock)
-
-            expect do
-              rwlock.release_read_lock
-            end.not_to raise_error
-          end
-        end
-      end
-
-      context 'when the readers mutex is locked at the second time' do
-        let(:counter) { 3 }
-        before do
-          allow(readers_mutex).to receive(:lock).and_return(false, true)
-          allow(File).to receive(:exist?).with(counter_file).and_return(true)
-          allow(counter_file_handler).to receive(:read).and_return(counter.to_s)
-        end
-
-        it 'should decrease the counter, and should not unlock the writer mutex' do
-          expect(readers_mutex).to receive(:wait).and_return(true)
-          expect(counter_file_handler).to receive(:write).with((counter - 1).to_s)
-          expect(File).not_to receive(:delete)
-          expect(writer_mutex).not_to receive(:unlock)
-          expect(readers_mutex).to receive(:unlock)
-
-          expect do
-            rwlock.release_read_lock
-          end.not_to raise_error
-        end
-      end
-
-      context "when the readers mutex can't be locked" do
-        before do
-          allow(readers_mutex).to receive(:lock).and_return(false)
-          allow(readers_mutex).to receive(:wait).and_raise(Bosh::AzureCloud::Helpers::LockTimeoutError)
-        end
-
-        it 'should raise a timeout' do
-          expect do
-            rwlock.release_read_lock
-          end.to raise_error(Bosh::AzureCloud::Helpers::LockTimeoutError)
-        end
-      end
-    end
-
-    context '#acquire_write_lock' do
       before do
-        allow(writer_mutex).to receive(:lock).and_return(true)
+        allow(File).to receive(:open).and_return(file)
+        allow(file).to receive(:flock).with(mode).and_return(lock_result)
       end
 
-      it 'should acquire the writer lock' do
-        expect(rwlock.acquire_write_lock).to be(true)
+      it 'should execute the block and return the result' do
+        expect(file).to receive(:flock).with(File::LOCK_UN)
+        expect(
+          helpers_tester.flock(lock_name, mode) do
+            result
+          end
+        ).to eq(result)
       end
     end
 
-    context '#release_write_lock' do
+    context 'when it fails to get the lock' do
+      let(:mode) { 'fake-mode' }
+      let(:result) { 'fake-result' }
+      let(:file) { instance_double(File) }
+      let(:lock_result) { false }
+
       before do
-        allow(writer_mutex).to receive(:unlock)
+        allow(File).to receive(:open).and_return(file)
+        allow(file).to receive(:flock).with(mode).and_return(lock_result)
       end
 
-      it 'should release the writer lock' do
-        expect do
-          rwlock.release_write_lock
-        end.not_to raise_error
+      it 'should not execute the block and return nil directly' do
+        expect(file).not_to receive(:flock).with(File::LOCK_UN)
+        expect(
+          helpers_tester.flock(lock_name, mode) do
+            result
+          end
+        ).to be(nil)
+      end
+    end
+
+    context 'for single process' do
+      let(:mode) { File::LOCK_EX }
+      context 'when the block is executed successfully' do
+        let(:result) { 'fake-result' }
+        it 'should return the result' do
+          expect(File).to receive(:open).and_call_original
+          expect_any_instance_of(File).to receive(:flock).with(mode).and_call_original
+          expect_any_instance_of(File).to receive(:flock).with(File::LOCK_UN).and_call_original
+          expect(
+            helpers_tester.flock(lock_name, mode) do
+              result
+            end
+          ).to eq(result)
+        end
+      end
+
+      context 'when an error happens in the block' do
+        it 'should return the result' do
+          expect(File).to receive(:open).and_call_original
+          expect_any_instance_of(File).to receive(:flock).with(mode).and_call_original
+          expect_any_instance_of(File).to receive(:flock).with(File::LOCK_UN).and_call_original
+          expect do
+            helpers_tester.flock(lock_name, mode) do
+              raise 'fake-error'
+            end
+          end.to raise_error 'fake-error'
+        end
+      end
+    end
+
+    context 'for multiple processes' do
+      context 'with exclusive lock' do
+        let(:mode) { File::LOCK_EX }
+        let(:accuracy) { 0.05 }
+
+        it 'the processes should get the lock sequentially and then call the block' do
+          # process 1 - child process
+          run_in_new_process do
+            time_measure do
+              helpers_tester.flock(lock_name, mode) do
+                sleep(0.5)
+              end
+            end
+          end
+
+          sleep(0.1) # make sure the lock is got by process 1
+          # process 2 - parent process
+          time_elapsed = time_measure do
+            helpers_tester.flock(lock_name, mode) do
+              sleep(0.5)
+            end
+          end
+
+          # process 2 will elapase approximately to (0.5 - 0.1) + 0.5 seconds
+          expect(time_elapsed).to be > (0.9 - accuracy)
+          expect(time_elapsed).to be < (0.9 + accuracy)
+        end
+      end
+
+      context 'with share lock' do
+        let(:mode) { File::LOCK_SH }
+        let(:accuracy) { 0.05 }
+
+        it 'the processes should get the lock in parallel and then call the block' do
+          # process 1 - child process
+          run_in_new_process do
+            time_measure do
+              helpers_tester.flock(lock_name, mode) do
+                sleep(0.5)
+              end
+            end
+          end
+
+          # process 2 - parent process
+          time_elapsed = time_measure do
+            helpers_tester.flock(lock_name, mode) do
+              sleep(0.5)
+            end
+          end
+
+          # process 2 will elapase approximately to 0.5 seconds
+          expect(time_elapsed).to be > (0.5 - accuracy)
+          expect(time_elapsed).to be < (0.5 + accuracy)
+        end
+      end
+
+      context 'with exclusive but no block lock' do
+        let(:mode) { File::LOCK_EX | File::LOCK_NB }
+        let(:accuracy) { 0.05 }
+
+        it 'only the process gets the lock and calls the block, the other process should return directly' do
+          # process 1 - child process
+          run_in_new_process do
+            time_measure do
+              helpers_tester.flock(lock_name, mode) do
+                sleep(0.5)
+              end
+            end
+          end
+
+          sleep(0.1) # make sure the lock is got by process 1
+          # process 2 - parent process
+          time_elapsed = time_measure do
+            helpers_tester.flock(lock_name, mode) do
+              sleep(0.5)
+            end
+          end
+
+          # process 2 will elapase approximately to 0 seconds because it can't get the lock
+          expect(time_elapsed).to be < (0 + accuracy)
+        end
       end
     end
   end

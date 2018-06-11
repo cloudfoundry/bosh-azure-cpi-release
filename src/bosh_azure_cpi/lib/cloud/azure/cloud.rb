@@ -695,16 +695,7 @@ module Bosh::AzureCloud
 
     def init_cpi_lock_dir
       @logger.info('init_cpi_lock_dir: Initializing the CPI lock directory')
-      if !Dir.exist?(CPI_LOCK_DIR)
-        ignore_exception(Errno::EEXIST) { Dir.mkdir(CPI_LOCK_DIR) }
-      elsif needs_deleting_locks?
-        @logger.info('init_cpi_lock_dir: Cleaning up the locks')
-        Dir.glob("#{CPI_LOCK_DIR}/#{CPI_LOCK_PREFIX}*") do |file_name|
-          @logger.debug("init_cpi_lock_dir: Deleting the lock `#{file_name}'")
-          ignore_exception(Errno::ENOENT) { File.delete(file_name) }
-        end
-        ignore_exception(Errno::ENOENT) { remove_deleting_mark }
-      end
+      ignore_exception(Errno::EEXIST) { Dir.mkdir(CPI_LOCK_DIR) } unless Dir.exist?(CPI_LOCK_DIR)
     end
 
     # Generates initial agent settings. These settings will be read by agent

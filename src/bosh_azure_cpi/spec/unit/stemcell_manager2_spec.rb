@@ -181,7 +181,6 @@ describe Bosh::AzureCloud::StemcellManager2 do
           allow(blob_manager).to receive(:get_blob_properties)
             .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
             .and_return('foo' => 'bar') # The stemcell exists in the default storage account
-          allow(client2).to receive(:create_user_image)
         end
 
         context 'when the location of the default storage account is the targeted location' do
@@ -191,6 +190,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
               location: location
             }
           end
+
           before do
             allow(storage_account_manager).to receive(:default_storage_account)
               .and_return(default_storage_account)
@@ -202,18 +202,38 @@ describe Bosh::AzureCloud::StemcellManager2 do
               .and_return(stemcell_blob_metadata)
           end
 
-          let(:lock_creating_user_image) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-          before do
-            allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_creating_user_image)
-            allow(lock_creating_user_image).to receive(:lock).and_return(true)
-            allow(lock_creating_user_image).to receive(:unlock)
+          context 'when the lock is got for the first time' do
+            before do
+              allow(client2).to receive(:get_user_image_by_name)
+                .with(user_image_name)
+                .and_return(nil, nil, user_image) # The first and the second return value nil means the user image doesn't exist, the third one user_image is returned after the image is created.
+            end
+
+            it 'should get the stemcell from the default storage account, create a new user image and return the user image information' do
+              expect(client2).not_to receive(:list_storage_accounts)
+              expect(stemcell_manager2).to receive(:flock).with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX).and_call_original
+              expect(client2).to receive(:create_user_image)
+              stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
+              expect(stemcell_info.uri).to eq(user_image_id)
+              expect(stemcell_info.metadata).to eq(tags)
+            end
           end
 
-          it 'should get the stemcell from the default storage account, create a new user image and return the user image information' do
-            expect(client2).not_to receive(:list_storage_accounts)
-            stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-            expect(stemcell_info.uri).to eq(user_image_id)
-            expect(stemcell_info.metadata).to eq(tags)
+          context 'when the lock is got, but the image is already created by other process' do
+            before do
+              allow(client2).to receive(:get_user_image_by_name)
+                .with(user_image_name)
+                .and_return(nil, user_image) # The first return value nil means the user image doesn't exist, the second one user_image is returned after the image is created.
+            end
+
+            it 'should get the stemcell from the default storage account, get the user image and return image information' do
+              expect(client2).not_to receive(:list_storage_accounts)
+              expect(stemcell_manager2).to receive(:flock).with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX).and_call_original
+              expect(client2).not_to receive(:create_user_image)
+              stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
+              expect(stemcell_info.uri).to eq(user_image_id)
+              expect(stemcell_info.metadata).to eq(tags)
+            end
           end
         end
 
@@ -224,6 +244,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
               location: "#{location}-different"
             }
           end
+
           before do
             allow(storage_account_manager).to receive(:default_storage_account)
               .and_return(default_storage_account)
@@ -238,7 +259,6 @@ describe Bosh::AzureCloud::StemcellManager2 do
                 tags: STEMCELL_STORAGE_ACCOUNT_TAGS
               }
             end
-            let(:lock_copy_blob) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
 
             before do
               allow(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
@@ -250,109 +270,85 @@ describe Bosh::AzureCloud::StemcellManager2 do
               allow(blob_manager).to receive(:get_blob_metadata)
                 .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
                 .and_return(stemcell_blob_metadata)
-              allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_copy_blob)
             end
 
-            context 'when the lock of copying blob is not acquired' do
+            context 'when the stemcell exists in the exising storage account, but the image does not exist' do
               before do
-                allow(lock_copy_blob).to receive(:lock).and_return(false)
-                allow(lock_copy_blob).to receive(:expired).and_return('fake-expired-value')
+                allow(blob_manager).to receive(:get_blob_properties)
+                  .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
+                  .and_return('foo' => 'bar') # The stemcell exists in the existing storage account
+                allow(client2).to receive(:get_user_image_by_name)
+                  .with(user_image_name)
+                  .and_return(nil, nil, user_image) # The first and the second return value nil means the user image doesn't exist, the third one user_image is returned after the image is created.
               end
 
-              context 'when copying blob timeouts' do
+              it 'should create a new user image and return the user image information' do
+                expect(blob_manager).not_to receive(:get_blob_uri)
+                  .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+                expect(blob_manager).not_to receive(:copy_blob)
+                expect(stemcell_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{existing_storage_account_name}", File::LOCK_EX)
+                  .and_call_original
+                expect(stemcell_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                  .and_call_original
+                expect(client2).to receive(:create_user_image)
+                stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
+                expect(stemcell_info.uri).to eq(user_image_id)
+                expect(stemcell_info.metadata).to eq(tags)
+              end
+            end
+
+            context "when the stemcell doesn't exist in the exising storage account" do
+              before do
+                allow(blob_manager).to receive(:get_blob_properties)
+                  .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
+                  .and_return(nil) # The stemcell doesn't exist in the existing storage account
+              end
+
+              context 'when copying blob is successful' do
                 before do
-                  allow(lock_copy_blob).to receive(:wait).and_raise(Bosh::AzureCloud::Helpers::LockTimeoutError)
+                  allow(client2).to receive(:get_user_image_by_name)
+                    .with(user_image_name)
+                    .and_return(nil, nil, user_image) # The first and the second return value nil means the user image doesn't exist, the third one user_image is returned after the image is created.
                 end
 
-                it 'should raise a timeout error' do
-                  expect(blob_manager).not_to receive(:get_blob_uri)
-                  expect(blob_manager).not_to receive(:copy_blob)
-                  expect(File).to receive(:open).with(Bosh::AzureCloud::Helpers::CPI_LOCK_DELETE, 'wb')
+                it 'should copy the stemcell from default storage account to an existing storage account, create a new user image and return the user image information' do
+                  expect(blob_manager).to receive(:get_blob_uri)
+                    .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+                    .and_return(stemcell_blob_uri)
+                  expect(stemcell_manager2).to receive(:flock)
+                    .with("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{existing_storage_account_name}", File::LOCK_EX)
+                    .and_call_original
+                  expect(stemcell_manager2).to receive(:flock)
+                    .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                    .and_call_original
+                  expect(blob_manager).to receive(:copy_blob)
+                    .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
+                  expect(client2).to receive(:create_user_image)
+                  stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
+                  expect(stemcell_info.uri).to eq(user_image_id)
+                  expect(stemcell_info.metadata).to eq(tags)
+                end
+              end
+
+              context 'when copying blob raises an error' do
+                before do
+                  allow(blob_manager).to receive(:get_blob_uri)
+                    .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+                    .and_return(stemcell_blob_uri)
+                  expect(blob_manager).to receive(:copy_blob)
+                    .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
+                    .and_raise('Error when copying blobs')
+                end
+
+                it 'should raise an error' do
+                  expect(stemcell_manager2).to receive(:flock)
+                    .with("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{existing_storage_account_name}", File::LOCK_EX)
+                    .and_call_original
                   expect do
                     stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                  end.to raise_error /get_user_image: Failed to finish the copying process of the stemcell/
-                end
-              end
-
-              context 'when copying blob finishes before it timeouts' do
-                before do
-                  allow(lock_copy_blob).to receive(:wait)
-                end
-
-                it 'should create a new user image and return the user image information' do
-                  expect(blob_manager).not_to receive(:copy_blob)
-                  stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                  expect(stemcell_info.uri).to eq(user_image_id)
-                  expect(stemcell_info.metadata).to eq(tags)
-                end
-              end
-            end
-
-            context 'when the lock of copying blob is acquired' do
-              before do
-                allow(lock_copy_blob).to receive(:lock).and_return(true)
-              end
-
-              context 'when the stemcell exists in the exising storage account' do
-                before do
-                  allow(blob_manager).to receive(:get_blob_properties)
-                    .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
-                    .and_return('foo' => 'bar') # The stemcell exists in the existing storage account
-                  allow(lock_copy_blob).to receive(:unlock)
-                end
-
-                it 'should create a new user image and return the user image information' do
-                  expect(blob_manager).not_to receive(:get_blob_uri)
-                    .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
-                  expect(blob_manager).not_to receive(:copy_blob)
-                  stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                  expect(stemcell_info.uri).to eq(user_image_id)
-                  expect(stemcell_info.metadata).to eq(tags)
-                end
-              end
-
-              context "when the stemcell doesn't exist in the exising storage account" do
-                before do
-                  allow(blob_manager).to receive(:get_blob_properties)
-                    .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
-                    .and_return(nil) # The stemcell doesn't exist in the existing storage account
-                end
-
-                context 'when copying blob is successful' do
-                  before do
-                    allow(lock_copy_blob).to receive(:update)
-                    allow(lock_copy_blob).to receive(:unlock)
-                  end
-
-                  it 'should copy the stemcell from default storage account to an existing storage account, create a new user image and return the user image information' do
-                    expect(blob_manager).to receive(:get_blob_uri)
-                      .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
-                      .and_return(stemcell_blob_uri)
-                    expect(blob_manager).to receive(:copy_blob)
-                      .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
-                    stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                    expect(stemcell_info.uri).to eq(user_image_id)
-                    expect(stemcell_info.metadata).to eq(tags)
-                  end
-                end
-
-                context 'when copying blob raises an error' do
-                  before do
-                    allow(blob_manager).to receive(:get_blob_uri)
-                      .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
-                      .and_return(stemcell_blob_uri)
-                    expect(blob_manager).to receive(:copy_blob)
-                      .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
-                      .and_raise('Error when copying blobs')
-                  end
-
-                  it 'should raise an error' do
-                    expect(lock_copy_blob).not_to receive(:unlock)
-                    expect(File).to receive(:open).with('/tmp/azure_cpi/DELETING-LOCKS', 'wb')
-                    expect do
-                      stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                    end.to raise_error /get_user_image: Failed to finish the copying process of the stemcell `#{stemcell_name}'/
-                  end
+                  end.to raise_error /Error when copying blobs/
                 end
               end
             end
@@ -384,11 +380,8 @@ describe Bosh::AzureCloud::StemcellManager2 do
                   tags: STEMCELL_STORAGE_ACCOUNT_TAGS
                 }
               end
-              let(:lock_copy_blob) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
 
               before do
-                allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_copy_blob)
-
                 # check storage account
                 allow(storage_account_manager).to receive(:find_storage_account_by_tags).and_return(nil)
 
@@ -404,19 +397,30 @@ describe Bosh::AzureCloud::StemcellManager2 do
                   .and_return(nil) # The stemcell doesn't exist in the new storage account
 
                 # Copy blob
-                allow(lock_copy_blob).to receive(:lock).and_return(true)
-                allow(lock_copy_blob).to receive(:unlock)
                 allow(blob_manager).to receive(:get_blob_uri)
                   .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
                   .and_return(stemcell_blob_uri)
                 allow(blob_manager).to receive(:copy_blob)
                   .with(new_storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
+
+                # check image
+                allow(client2).to receive(:get_user_image_by_name)
+                  .with(user_image_name)
+                  .and_return(nil, nil, user_image) # The first and the second return value nil means the user image doesn't exist, the third one user_image is returned after the image is created.
               end
 
               it 'should create a new user image and return the user image information' do
                 expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
                   .with(STEMCELL_STORAGE_ACCOUNT_TAGS, storage_account_type, location, ['stemcell'], false)
                   .and_return(storage_account)
+                expect(stemcell_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{new_storage_account_name}", File::LOCK_EX)
+                  .and_call_original
+                expect(stemcell_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                  .and_call_original
+                expect(blob_manager).to receive(:copy_blob)
+                expect(client2).to receive(:create_user_image)
                 stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
                 expect(stemcell_info.uri).to eq(user_image_id)
                 expect(stemcell_info.metadata).to eq(tags)
@@ -446,89 +450,51 @@ describe Bosh::AzureCloud::StemcellManager2 do
               .and_return(stemcell_blob_metadata)
           end
 
-          let(:lock_creating_user_image) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-          before do
-            allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).and_return(lock_creating_user_image)
-          end
-
-          context 'when the lock of creating the user image timeouts' do
+          context 'when the user image is not created successfully' do
             before do
               allow(client2).to receive(:get_user_image_by_name)
                 .with(user_image_name)
-                .and_return(nil)
-              allow(lock_creating_user_image).to receive(:lock).and_return(false)
-              allow(lock_creating_user_image).to receive(:wait).and_raise(Bosh::AzureCloud::Helpers::LockTimeoutError)
-              allow(lock_creating_user_image).to receive(:expired).and_return(60)
+                .and_return(nil, nil, nil) # The first and second return value nil means the user image doesn't exist, the third nil means that the user image can't be found after creation.
             end
 
-            it 'should mark deleting locks and raise an error' do
-              expect(lock_creating_user_image).not_to receive(:unlock)
-              expect(File).to receive(:open).with('/tmp/azure_cpi/DELETING-LOCKS', 'wb')
+            it 'should raise an error' do
+              expect(stemcell_manager2).to receive(:flock)
+                .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                .and_call_original
+              expect(client2).to receive(:create_user_image)
+
               expect do
                 stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-              end.to raise_error(/get_user_image: Failed to create the user image `#{user_image_name}'/)
+              end.to raise_error(/get_user_image: Can not find a user image with the name `#{user_image_name}'/)
             end
           end
 
-          context 'when the lock of creating the user image fails due to other errors' do
+          context 'when the user image is created successfully' do
+            let(:user_image) do
+              {
+                id: user_image_id,
+                tags: tags,
+                provisioning_state: 'Succeeded'
+              }
+            end
+
             before do
               allow(client2).to receive(:get_user_image_by_name)
                 .with(user_image_name)
-                .and_return(nil)
-              allow(lock_creating_user_image).to receive(:lock).and_raise(Bosh::AzureCloud::Helpers::LockError)
+                .and_return(user_image)
+              allow(client2).to receive(:get_user_image_by_name)
+                .with(user_image_name)
+                .and_return(nil, nil, user_image) # The first and second return value nil means the user image doesn't exist, the third nil means that the user image can't be found after creation.
             end
 
-            it 'should mark deleting locks and raise an error' do
-              expect(lock_creating_user_image).not_to receive(:unlock)
-              expect(File).to receive(:open).with('/tmp/azure_cpi/DELETING-LOCKS', 'wb')
-              expect do
-                stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-              end.to raise_error(/get_user_image: Failed to create the user image `#{user_image_name}'/)
-            end
-          end
-
-          context 'when creating user image is locked' do
-            before do
-              allow(lock_creating_user_image).to receive(:lock).and_return(true)
-              allow(lock_creating_user_image).to receive(:unlock)
-            end
-
-            context "when user image can't be found" do
-              before do
-                allow(client2).to receive(:get_user_image_by_name)
-                  .with(user_image_name)
-                  .and_return(nil, nil) # The first return value nil means the user image doesn't exist, the second nil means that the user image can't be found after creation.
-              end
-
-              it 'should raise an error' do
-                expect(File).not_to receive(:open).with('/tmp/azure_cpi/DELETING-LOCKS', 'wb')
-                expect do
-                  stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                end.to raise_error(/get_user_image: Can not find a user image with the name `#{user_image_name}'/)
-              end
-            end
-
-            context 'when the user image is created successfully' do
-              let(:user_image) do
-                {
-                  id: user_image_id,
-                  tags: tags,
-                  provisioning_state: 'Succeeded'
-                }
-              end
-
-              before do
-                allow(client2).to receive(:get_user_image_by_name)
-                  .with(user_image_name)
-                  .and_return(user_image)
-              end
-
-              it 'should return the new user image' do
-                expect(File).not_to receive(:open).with('/tmp/azure_cpi/DELETING-LOCKS', 'wb')
-                stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                expect(stemcell_info.uri).to eq(user_image_id)
-                expect(stemcell_info.metadata).to eq(tags)
-              end
+            it 'should return the new user image' do
+              expect(stemcell_manager2).to receive(:flock)
+                .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                .and_call_original
+              expect(client2).to receive(:create_user_image)
+              stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
+              expect(stemcell_info.uri).to eq(user_image_id)
+              expect(stemcell_info.metadata).to eq(tags)
             end
           end
         end
