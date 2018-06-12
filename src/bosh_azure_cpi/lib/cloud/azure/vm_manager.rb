@@ -369,6 +369,13 @@ module Bosh::AzureCloud
       ip_forwarding
     end
 
+    def get_accelerated_networking(resource_pool, network)
+      accelerated_networking = false
+      # accelerated_networking can be specified in resource_pool and networks (ordered by priority)
+      accelerated_networking = resource_pool.fetch('accelerated_networking', network.accelerated_networking)
+      accelerated_networking
+    end
+
     def get_public_ip(vip_network)
       public_ip = nil
       unless vip_network.nil?
@@ -421,6 +428,7 @@ module Bosh::AzureCloud
         network_security_group = get_network_security_group(resource_pool, network)
         application_security_groups = get_application_security_groups(resource_pool, network)
         ip_forwarding = get_ip_forwarding(resource_pool, network)
+        accelerated_networking = get_accelerated_networking(resource_pool, network)
         nic_name = "#{vm_name}-#{index}"
         nic_params = {
           name: nic_name,
@@ -429,7 +437,8 @@ module Bosh::AzureCloud
           network_security_group: network_security_group,
           application_security_groups: application_security_groups,
           ipconfig_name: "ipconfig#{index}",
-          enable_ip_forwarding: ip_forwarding
+          enable_ip_forwarding: ip_forwarding,
+          enable_accelerated_networking: accelerated_networking
         }
         nic_params[:subnet] = get_network_subnet(network)
         if index.zero?

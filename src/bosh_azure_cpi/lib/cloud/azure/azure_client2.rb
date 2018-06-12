@@ -1290,19 +1290,20 @@ module Bosh::AzureCloud
     #  ==== Params
     #
     # Accepted key/value pairs are:
-    # * +:name+                       - String. Name of network interface.
-    # * +:location+                   - String. The location where the network interface will be created.
-    # * +:tags                        - Hash. The tags of the network interface.
-    # * +:enable_ip_forwarding        - Boolean. Indicates whether IP forwarding is enabled on this network interface.
-    # * +:ipconfig_name+              - String. The name of ipConfigurations for the network interface.
-    # * +:private_ip                  - String. Private IP address which the network interface will use.
-    # * +:public_ip                   - Hash. The public IP which the network interface is bound to.
-    # * +:subnet                      - Hash. The subnet which the network interface is bound to.
-    # * +:dns_servers                 - Array. DNS servers.
-    # * +:network_security_group      - Hash. The network security group which the network interface is bound to.
-    # * +:application_security_groups - Array. The application security groups which the network interface is bound to.
-    # * +:load_balancer               - Hash. The load balancer which the network interface is bound to.
-    # * +:application_gateway         - Hash. The application gateway which the network interface is bound to.
+    # * +:name+                         - String. Name of network interface.
+    # * +:location+                     - String. The location where the network interface will be created.
+    # * +:tags                          - Hash. The tags of the network interface.
+    # * +:enable_ip_forwarding          - Boolean. Indicates whether IP forwarding is enabled on this network interface.
+    # * +:enable_accelerated_networking - Boolean. Indicates whether accelerated networking is enabled on this network interface.
+    # * +:ipconfig_name+                - String. The name of ipConfigurations for the network interface.
+    # * +:private_ip                    - String. Private IP address which the network interface will use.
+    # * +:public_ip                     - Hash. The public IP which the network interface is bound to.
+    # * +:subnet                        - Hash. The subnet which the network interface is bound to.
+    # * +:dns_servers                   - Array. DNS servers.
+    # * +:network_security_group        - Hash. The network security group which the network interface is bound to.
+    # * +:application_security_groups   - Array. The application security groups which the network interface is bound to.
+    # * +:load_balancer                 - Hash. The load balancer which the network interface is bound to.
+    # * +:application_gateway           - Hash. The application gateway which the network interface is bound to.
     #
     # @return [Boolean]
     #
@@ -1318,6 +1319,7 @@ module Bosh::AzureCloud
         'properties' => {
           'networkSecurityGroup' => nic_params[:network_security_group].nil? ? nil : { 'id' => nic_params[:network_security_group][:id] },
           'enableIPForwarding' => nic_params[:enable_ip_forwarding],
+          'enableAcceleratedNetworking' => nic_params[:enable_accelerated_networking],
           'ipConfigurations' => [
             {
               'name'        => nic_params[:ipconfig_name],
@@ -1901,6 +1903,8 @@ module Bosh::AzureCloud
         interface[:provisioning_state] = properties['provisioningState']
 
         interface[:enable_ip_forwarding] = properties['enableIPForwarding'] unless properties['enableIPForwarding'].nil?
+
+        interface[:enable_accelerated_networking] = properties['enableAcceleratedNetworking'] unless properties['enableAcceleratedNetworking'].nil?
 
         unless properties['networkSecurityGroup'].nil?
           interface[:network_security_group] = if recursive

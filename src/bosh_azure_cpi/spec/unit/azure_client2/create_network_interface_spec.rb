@@ -49,6 +49,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             subnet: { id: subnet[:id] },
             tags: {},
             enable_ip_forwarding: false,
+            enable_accelerated_networking: false,
             private_ip: '10.0.0.100',
             dns_servers: ['168.63.129.16'],
             public_ip: { id: 'fake-public-id' },
@@ -68,6 +69,7 @@ describe Bosh::AzureCloud::AzureClient2 do
                 id: nic_params[:network_security_group][:id]
               },
               enableIPForwarding: false,
+              enableAcceleratedNetworking: false,
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
@@ -125,6 +127,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             subnet: { id: subnet[:id] },
             tags: {},
             enable_ip_forwarding: false,
+            enable_accelerated_networking: false,
             network_security_group: { id: nsg_id },
             application_security_groups: [],
             load_balancer: nil,
@@ -141,6 +144,7 @@ describe Bosh::AzureCloud::AzureClient2 do
                 id: nic_params[:network_security_group][:id]
               },
               enableIPForwarding: false,
+              enableAcceleratedNetworking: false,
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
@@ -198,6 +202,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             subnet: { id: subnet[:id] },
             tags: {},
             enable_ip_forwarding: false,
+            enable_accelerated_networking: false,
             private_ip: '10.0.0.100',
             dns_servers: ['168.63.129.16'],
             public_ip: { id: 'fake-public-id' },
@@ -215,6 +220,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             properties: {
               networkSecurityGroup: nil,
               enableIPForwarding: false,
+              enableAcceleratedNetworking: false,
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
@@ -272,6 +278,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             subnet: { id: subnet[:id] },
             tags: {},
             enable_ip_forwarding: false,
+            enable_accelerated_networking: false,
             private_ip: '10.0.0.100',
             dns_servers: ['168.63.129.16'],
             public_ip: { id: 'fake-public-id' },
@@ -303,6 +310,7 @@ describe Bosh::AzureCloud::AzureClient2 do
                 id: nic_params[:network_security_group][:id]
               },
               enableIPForwarding: false,
+              enableAcceleratedNetworking: false,
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
@@ -366,6 +374,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             subnet: { id: subnet[:id] },
             tags: {},
             enable_ip_forwarding: false,
+            enable_accelerated_networking: false,
             private_ip: '10.0.0.100',
             dns_servers: ['168.63.129.16'],
             public_ip: { id: 'fake-public-id' },
@@ -385,6 +394,7 @@ describe Bosh::AzureCloud::AzureClient2 do
                 id: nic_params[:network_security_group][:id]
               },
               enableIPForwarding: false,
+              enableAcceleratedNetworking: false,
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
@@ -450,6 +460,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             subnet: { id: subnet[:id] },
             tags: {},
             enable_ip_forwarding: false,
+            enable_accelerated_networking: false,
             private_ip: '10.0.0.100',
             dns_servers: ['168.63.129.16'],
             public_ip: { id: 'fake-public-id' },
@@ -475,6 +486,7 @@ describe Bosh::AzureCloud::AzureClient2 do
                 id: nic_params[:network_security_group][:id]
               },
               enableIPForwarding: false,
+              enableAcceleratedNetworking: false,
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
