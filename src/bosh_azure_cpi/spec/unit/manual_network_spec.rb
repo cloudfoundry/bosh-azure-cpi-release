@@ -24,7 +24,8 @@ describe Bosh::AzureCloud::ManualNetwork do
           'resource_group_name'         => rg_name,
           'security_group'              => nsg_name,
           'application_security_groups' => asg_names,
-          'ip_forwarding'               => true
+          'ip_forwarding'               => true,
+          'accelerated_networking'      => true
         }
       }
     end
@@ -38,6 +39,7 @@ describe Bosh::AzureCloud::ManualNetwork do
       expect(network.security_group).to eq(nsg_name)
       expect(network.application_security_groups).to eq(asg_names)
       expect(network.ip_forwarding).to eq(true)
+      expect(network.accelerated_networking).to eq(true)
       expect(network.dns).to eq(dns)
       expect(network.has_default_dns?).to be true
       expect(network.has_default_gateway?).to be true
@@ -181,6 +183,7 @@ describe Bosh::AzureCloud::ManualNetwork do
       expect(network.security_group).to be_nil
       expect(network.application_security_groups).to eq([])
       expect(network.ip_forwarding).to be false
+      expect(network.accelerated_networking).to be false
       expect(network.resource_group_name).to eq(azure_properties['resource_group_name'])
       expect(network.dns).to be_nil
       expect(network.has_default_dns?).to be false

@@ -94,7 +94,8 @@ module Bosh::AzureCloud
     #        "resource_group_name"         => "rg1",
     #        "security_group"              => "nsg-bosh",
     #        "application_security_groups" => ["asg1", "asg2"],
-    #        "ip_forwarding"               => true
+    #        "ip_forwarding"               => true,
+    #        "accelerated_networking"      => true
     #      }
     #    }
     #  }
@@ -125,7 +126,8 @@ module Bosh::AzureCloud
     #    "assign_dynamic_public_ip" => true,
     #    "security_group" => "nsg-bosh",
     #    "application_security_groups" => ["asg1", "asg2"],
-    #    "ip_forwarding" => true
+    #    "ip_forwarding" => true,
+    #    "accelerated_networking" => true
     #  }
     #
     # Sample env config:

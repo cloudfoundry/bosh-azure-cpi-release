@@ -4,7 +4,7 @@ module Bosh::AzureCloud
   class DynamicNetwork < Network
     include Helpers
 
-    attr_reader :virtual_network_name, :subnet_name, :security_group, :application_security_groups, :ip_forwarding
+    attr_reader :virtual_network_name, :subnet_name, :security_group, :application_security_groups, :ip_forwarding, :accelerated_networking
 
     # create dynamic network
     # @param [String] name Network name
@@ -16,11 +16,12 @@ module Bosh::AzureCloud
     #     "dns"     => ["168.63.129.16"],
     #     "type"    => "dynamic",
     #     "cloud_properties" => {
-    #       "virtual_network_name" => "boshvnet",
-    #       "subnet_name"          => "Bosh",
-    #       "resource_group_name"  => "rg-name",
-    #       "ip_forwarding"        => false,
-    #       "security_group"       => "nsg-bosh",
+    #       "virtual_network_name"   => "boshvnet",
+    #       "subnet_name"            => "Bosh",
+    #       "resource_group_name"    => "rg-name",
+    #       "ip_forwarding"          => false,
+    #       "accelerated_networking" => false,
+    #       "security_group"         => "nsg-bosh",
     #       "application_security_groups" => []
     #     }
     #   }
@@ -47,6 +48,8 @@ module Bosh::AzureCloud
       @application_security_groups = @cloud_properties.fetch('application_security_groups', [])
 
       @ip_forwarding = @cloud_properties.fetch('ip_forwarding', false)
+
+      @accelerated_networking = @cloud_properties.fetch('accelerated_networking', false)
     end
 
     def dns
