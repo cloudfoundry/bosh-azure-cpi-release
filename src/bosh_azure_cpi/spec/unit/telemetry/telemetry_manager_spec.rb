@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Bosh::AzureCloud::TelemetryManager do
@@ -7,7 +9,7 @@ describe Bosh::AzureCloud::TelemetryManager do
 
     let(:id) { 'fake-id' }
     let(:operation) { 'fake-op' }
-    let(:extras) { {'fake-key' => 'fake-value'} }
+    let(:extras) { { 'fake-key' => 'fake-value' } }
 
     let(:event_param_name) { instance_double(Bosh::AzureCloud::TelemetryEventParam) }
     let(:event_param_version) { instance_double(Bosh::AzureCloud::TelemetryEventParam) }
@@ -20,33 +22,33 @@ describe Bosh::AzureCloud::TelemetryManager do
     before do
       allow(Bosh::Cpi::Logger).to receive(:new).and_return(logger)
 
-      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new).
-        with("Name", "BOSH-CPI").
-        and_return(event_param_name)
-      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new).
-        with("Version", Bosh::AzureCloud::VERSION).
-        and_return(event_param_version)
-      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new).
-        with("Operation", operation).
-        and_return(event_param_operation)
-      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new).
-        with("ContainerId", id).
-        and_return(event_param_container_id)
-      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new).
-        with("OperationSuccess", true).
-        and_return(event_param_operation_success)
-      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new).
-        with("Message", "").
-        and_return(event_param_message)
-      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new).
-        with("Duration", 0).
-        and_return(event_param_duration)
+      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new)
+        .with('Name', 'BOSH-CPI')
+        .and_return(event_param_name)
+      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new)
+        .with('Version', Bosh::AzureCloud::VERSION)
+        .and_return(event_param_version)
+      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new)
+        .with('Operation', operation)
+        .and_return(event_param_operation)
+      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new)
+        .with('ContainerId', id)
+        .and_return(event_param_container_id)
+      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new)
+        .with('OperationSuccess', true)
+        .and_return(event_param_operation_success)
+      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new)
+        .with('Message', '')
+        .and_return(event_param_message)
+      allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new)
+        .with('Duration', 0)
+        .and_return(event_param_duration)
 
       allow(event_param_duration).to receive(:value=)
       allow(event_param_message).to receive(:value=)
 
-      allow(Bosh::AzureCloud::TelemetryEvent).to receive(:new).
-        and_return(telemetry_event)
+      allow(Bosh::AzureCloud::TelemetryEvent).to receive(:new)
+        .and_return(telemetry_event)
       allow(telemetry_event).to receive(:add_param).with(event_param_name)
       allow(telemetry_event).to receive(:add_param).with(event_param_version)
       allow(telemetry_event).to receive(:add_param).with(event_param_operation)
@@ -57,15 +59,15 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when the block is executed successfully' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true})) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge('enable_telemetry' => true)) }
       let(:result) { 'fake-result' }
 
       context 'when operation is not initialize' do
         it 'should return the result and report the event' do
-          expect(event_param_message).to receive(:value=).
-            with({'msg' => 'Successed',
+          expect(event_param_message).to receive(:value=)
+            .with('msg' => 'Successed',
                   'subscription_id' => mock_azure_properties['subscription_id'],
-                  'fake-key' => 'fake-value'})
+                  'fake-key' => 'fake-value')
           expect(telemetry_manager).to receive(:report_event)
 
           expect(
@@ -80,10 +82,10 @@ describe Bosh::AzureCloud::TelemetryManager do
         let(:operation) { 'initialize' }
 
         it 'should return the result but do not report the event' do
-          expect(event_param_message).to receive(:value=).
-            with({'msg' => 'Successed',
+          expect(event_param_message).to receive(:value=)
+            .with('msg' => 'Successed',
                   'subscription_id' => mock_azure_properties['subscription_id'],
-                  'fake-key' => 'fake-value'})
+                  'fake-key' => 'fake-value')
           expect(telemetry_manager).not_to receive(:report_event)
 
           expect(
@@ -96,25 +98,25 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when the block raises an error' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true})) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge('enable_telemetry' => true)) }
 
       context 'when length of the message exceeds 3.9 kB' do
-        let(:error) { 'x'*3994 }
+        let(:error) { 'x' * 3994 }
         let(:runtime_error_prefix) { '#<RuntimeError: ' }
         let(:error_message) { "#{runtime_error_prefix}#{error}"[0...3990] + '...' }
 
         it 'should raise the entire error message and send the truncated message for telemetry' do
-          expect(event_param_operation_success).to receive(:value=).
-            with(false)
-          expect(event_param_message).to receive(:value=).
-            with(hash_including('msg' => error_message))
+          expect(event_param_operation_success).to receive(:value=)
+            .with(false)
+          expect(event_param_message).to receive(:value=)
+            .with(hash_including('msg' => error_message))
           expect(telemetry_manager).to receive(:report_event)
 
-          expect{
+          expect do
             telemetry_manager.monitor(operation, id: id, extras: extras) do
               raise error
             end
-          }.to raise_error error
+          end.to raise_error error
         end
       end
 
@@ -124,17 +126,17 @@ describe Bosh::AzureCloud::TelemetryManager do
         let(:error_message) { "#{runtime_error_prefix}#{error}" }
 
         it 'should raise the error and report the event' do
-          expect(event_param_operation_success).to receive(:value=).
-            with(false)
-          expect(event_param_message).to receive(:value=).
-            with(hash_including('msg' => /#{error_message}/))
+          expect(event_param_operation_success).to receive(:value=)
+            .with(false)
+          expect(event_param_message).to receive(:value=)
+            .with(hash_including('msg' => /#{error_message}/))
           expect(telemetry_manager).to receive(:report_event)
 
-          expect{
+          expect do
             telemetry_manager.monitor(operation, id: id, extras: extras) do
               raise error
             end
-          }.to raise_error error
+          end.to raise_error error
         end
       end
 
@@ -145,23 +147,23 @@ describe Bosh::AzureCloud::TelemetryManager do
         let(:operationi) { 'initialize' }
 
         it 'should raise the error and report the event' do
-          expect(event_param_operation_success).to receive(:value=).
-            with(false)
-          expect(event_param_message).to receive(:value=).
-            with(hash_including('msg' => /#{error_message}/))
+          expect(event_param_operation_success).to receive(:value=)
+            .with(false)
+          expect(event_param_message).to receive(:value=)
+            .with(hash_including('msg' => /#{error_message}/))
           expect(telemetry_manager).to receive(:report_event)
 
-          expect{
+          expect do
             telemetry_manager.monitor(operation, id: id, extras: extras) do
               raise error
             end
-          }.to raise_error error
+          end.to raise_error error
         end
       end
     end
 
     context 'when telemetry is not enabled' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => false})) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge('enable_telemetry' => false)) }
       let(:result) { 'fake-result' }
 
       it 'should return the result and does not report the event' do
@@ -175,7 +177,7 @@ describe Bosh::AzureCloud::TelemetryManager do
       end
     end
     context 'when environment is AzureStack' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge({'enable_telemetry' => true, 'environment' => 'AzureStack'})) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge('enable_telemetry' => true, 'environment' => 'AzureStack')) }
       let(:result) { 'fake-result' }
 
       it 'should return the result and does not report the event' do
@@ -195,7 +197,7 @@ describe Bosh::AzureCloud::TelemetryManager do
     let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties) }
     let(:telemetry_event) { instance_double(Bosh::AzureCloud::TelemetryEvent) }
     let(:telemetry_event_handler) { instance_double(Bosh::AzureCloud::TelemetryEventHandler) }
-    let(:file) { double('file')}
+    let(:file) { double('file') }
     let(:event_handler) { instance_double(Bosh::AzureCloud::TelemetryEventHandler) }
 
     before do
@@ -215,20 +217,20 @@ describe Bosh::AzureCloud::TelemetryManager do
           expect(file).to receive(:write)
         end
 
-        expect(telemetry_manager).to receive(:fork).and_call_original do |block1|
+        expect(telemetry_manager).to receive(:fork).and_call_original do |_block1|
           expect(Process).to receive(:setsid)
           expect(STDIN).to receive(:reopen)
           expect(STDOUT).to receive(:reopen)
           expect(STDERR).to receive(:reopen)
 
-          expect(telemetry_manager).to receive(:fork).and_call_original do |block2|
+          expect(telemetry_manager).to receive(:fork).and_call_original do |_block2|
             expect(event_handler).to receive(:collect_and_send_events)
           end
         end
 
-        expect {
+        expect do
           telemetry_manager.send(:report_event, telemetry_event)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
@@ -247,9 +249,9 @@ describe Bosh::AzureCloud::TelemetryManager do
         expect(logger).to receive(:warn).with(/fake-stderr/)
         expect(Bosh::AzureCloud::TelemetryEventHandler).not_to receive(:new)
 
-        expect {
+        expect do
           telemetry_manager.send(:report_event, telemetry_event)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
@@ -262,9 +264,9 @@ describe Bosh::AzureCloud::TelemetryManager do
         expect(logger).to receive(:warn).with(/failed to open file/)
         expect(Bosh::AzureCloud::TelemetryEventHandler).not_to receive(:new)
 
-        expect {
+        expect do
           telemetry_manager.send(:report_event, telemetry_event)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end

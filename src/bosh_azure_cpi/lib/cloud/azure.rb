@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bosh
   module AzureCloud; end
 end
@@ -14,7 +16,6 @@ require 'yaml'
 require 'time'
 require 'socket'
 require 'vhd'
-require 'thread'
 require 'open3'
 require 'etc'
 require 'fcntl'
@@ -23,7 +24,7 @@ require 'jwt'
 # Reference:
 #  https://makandracards.com/ninjaconcept/30815-fixing-socketerror-getaddrinfo-name-or-service-not-known-with-ruby-s-resolv-replace-rb
 #  http://www.subelsky.com/2014/05/fixing-socketerror-getaddrinfo-name-or.html
-require "resolv-replace.rb"
+require 'resolv-replace.rb'
 require 'net/http'
 
 # Load Azure Libs before cloud/azure/* in case they are used by the latter

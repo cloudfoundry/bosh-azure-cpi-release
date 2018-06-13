@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Bosh::AzureCloud::InstanceId do
@@ -6,34 +8,34 @@ describe Bosh::AzureCloud::InstanceId do
     let(:agent_id) { 'fake-agent-id' }
 
     context 'when storage_account_name is nil' do
-      let(:id) {
+      let(:id) do
         {
           'resource_group_name' => resource_group_name,
           'agent_id'            => agent_id
         }
-      }
+      end
 
       it 'should initialize the instance_id' do
         instance_id = Bosh::AzureCloud::InstanceId.create(resource_group_name, agent_id)
-        expect(instance_id.instance_variable_get("@version")).to eq('v2')
-        expect(instance_id.instance_variable_get("@id")).to eq(id)
+        expect(instance_id.instance_variable_get('@version')).to eq('v2')
+        expect(instance_id.instance_variable_get('@id')).to eq(id)
       end
     end
 
     context 'when storage_account_name is NOT nil' do
       let(:storage_account_name) { 'fakestorageaccountname' }
-      let(:id) {
+      let(:id) do
         {
           'resource_group_name'  => resource_group_name,
           'agent_id'             => agent_id,
           'storage_account_name' => storage_account_name
         }
-      }
+      end
 
       it 'should initialize the instance_id' do
         instance_id = Bosh::AzureCloud::InstanceId.create(resource_group_name, agent_id, storage_account_name)
-        expect(instance_id.instance_variable_get("@version")).to eq('v2')
-        expect(instance_id.instance_variable_get("@id")).to eq(id)
+        expect(instance_id.instance_variable_get('@version')).to eq('v2')
+        expect(instance_id.instance_variable_get('@id')).to eq(id)
       end
     end
   end
@@ -48,44 +50,44 @@ describe Bosh::AzureCloud::InstanceId do
 
     context 'when id contains ":"' do
       let(:id) { 'a:a;b:b' }
-      let(:id_hash) {
+      let(:id_hash) do
         {
           'a' => 'a',
           'b' => 'b'
         }
-      }
-      let(:options) {
+      end
+      let(:options) do
         {
-          :id => id_hash
+          id: id_hash
         }
-      }
+      end
 
       it 'should initialize a v2 instance_id' do
-        expect(Bosh::AzureCloud::InstanceId).to receive(:new).
-          with('v2', options).
-          and_return(instance_id)
-        expect {
+        expect(Bosh::AzureCloud::InstanceId).to receive(:new)
+          .with('v2', options)
+          .and_return(instance_id)
+        expect do
           Bosh::AzureCloud::InstanceId.parse(id, azure_properties)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
     context 'when id does not contain ":"' do
       let(:id) { 'fake-id' }
-      let(:options) {
+      let(:options) do
         {
-          :id => id,
-          :default_resource_group_name => 'default-resource-group-name'
+          id: id,
+          default_resource_group_name: 'default-resource-group-name'
         }
-      }
+      end
 
       it 'should initialize a v1 instance_id' do
-        expect(Bosh::AzureCloud::InstanceId).to receive(:new).
-          with('v1', options).
-          and_return(instance_id)
-        expect {
+        expect(Bosh::AzureCloud::InstanceId).to receive(:new)
+          .with('v1', options)
+          .and_return(instance_id)
+        expect do
           Bosh::AzureCloud::InstanceId.parse(id, azure_properties)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end
@@ -93,7 +95,7 @@ describe Bosh::AzureCloud::InstanceId do
   describe '#to_s' do
     context 'when instance id is a v1 id' do
       let(:azure_properties) { { 'resource_group_name' => 'default-resource-group-name' } }
-      let(:instance_id_string) { "#{SecureRandom.uuid}" }
+      let(:instance_id_string) { SecureRandom.uuid.to_s }
       let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, azure_properties) }
 
       it 'should return the v1 string' do
@@ -145,7 +147,7 @@ describe Bosh::AzureCloud::InstanceId do
     context 'when instance id is a v1 id' do
       let(:default_resource_group_name) { 'fake-resource-group-name' }
       let(:azure_properties) { { 'resource_group_name' => default_resource_group_name } }
-      let(:instance_id_string) { "#{SecureRandom.uuid}" }
+      let(:instance_id_string) { SecureRandom.uuid.to_s }
       let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, azure_properties) }
 
       it 'should return the default resource group' do
@@ -195,7 +197,7 @@ describe Bosh::AzureCloud::InstanceId do
     context 'when instance id is a v1 id' do
       context 'when it is a managed disk vm' do
         let(:azure_properties) { { 'resource_group_name' => 'fake-resource-group-name' } }
-        let(:instance_id_string) { "#{SecureRandom.uuid}" }
+        let(:instance_id_string) { SecureRandom.uuid.to_s }
         let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, azure_properties) }
 
         it 'should return nil' do
@@ -242,7 +244,7 @@ describe Bosh::AzureCloud::InstanceId do
 
       context 'when it is a managed disk vm' do
         let(:azure_properties) { { 'resource_group_name' => 'fake-resource-group-name' } }
-        let(:instance_id_string) { "#{SecureRandom.uuid}" }
+        let(:instance_id_string) { SecureRandom.uuid.to_s }
         let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, azure_properties) }
 
         it 'should return true' do
@@ -254,7 +256,7 @@ describe Bosh::AzureCloud::InstanceId do
     context 'when instance id is a v2 id' do
       context 'when it is a unmanaged disk vm' do
         let(:azure_properties) { { 'resource_group_name' => 'fake-resource-group-name' } }
-        let(:instance_id_string) { "resource_group_name:r;agent_id:None;storage_account_name:s" }
+        let(:instance_id_string) { 'resource_group_name:r;agent_id:None;storage_account_name:s' }
         let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, azure_properties) }
 
         it 'should return false' do
@@ -264,7 +266,7 @@ describe Bosh::AzureCloud::InstanceId do
 
       context 'when it is a managed disk vm' do
         let(:azure_properties) { { 'resource_group_name' => 'fake-resource-group-name' } }
-        let(:instance_id_string) { "resource_group_name:r;agent_id:None" }
+        let(:instance_id_string) { 'resource_group_name:r;agent_id:None' }
         let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, azure_properties) }
 
         it 'should return true' do
@@ -280,23 +282,23 @@ describe Bosh::AzureCloud::InstanceId do
         let(:azure_properties) { { 'resource_group_name' => 'fake-resource-group-name' } }
         let(:storage_account_name) { 'fakestorageaccountname' }
         let(:instance_id_string) { "#{storage_account_name}-length-not-equal-to-36" }
-        let(:instance_id) {  }
+        let(:instance_id) {}
 
         it 'should raise an error' do
-          expect {
+          expect do
             Bosh::AzureCloud::InstanceId.parse(instance_id_string, azure_properties)
-          }.to raise_error /Invalid instance id \(version 1\)/
+          end.to raise_error /Invalid instance id \(version 1\)/
         end
       end
 
       context 'when it is a managed disk vm and length of agent id is not 36' do
         let(:azure_properties) { { 'resource_group_name' => 'fake-resource-group-name' } }
-        let(:instance_id_string) { "length-not-equal-to-36" }
+        let(:instance_id_string) { 'length-not-equal-to-36' }
 
         it 'should raise an error' do
-          expect {
+          expect do
             Bosh::AzureCloud::InstanceId.parse(instance_id_string, azure_properties)
-          }.to raise_error /Invalid instance id \(version 1\)/
+          end.to raise_error /Invalid instance id \(version 1\)/
         end
       end
     end
@@ -307,9 +309,9 @@ describe Bosh::AzureCloud::InstanceId do
           let(:instancd_id) { Bosh::AzureCloud::InstanceId.create(nil, 'agent-id', 'storage-account-name') }
 
           it 'should raise an error' do
-            expect {
-              instancd_id.validate()
-            }.to raise_error /Invalid resource_group_name in instance id \(version 2\)/
+            expect do
+              instancd_id.validate
+            end.to raise_error /Invalid resource_group_name in instance id \(version 2\)/
           end
         end
 
@@ -317,9 +319,9 @@ describe Bosh::AzureCloud::InstanceId do
           let(:instancd_id) { Bosh::AzureCloud::InstanceId.create('', 'agent-id', 'storage-account-name') }
 
           it 'should raise an error' do
-            expect {
-              instancd_id.validate()
-            }.to raise_error /Invalid resource_group_name in instance id \(version 2\)/
+            expect do
+              instancd_id.validate
+            end.to raise_error /Invalid resource_group_name in instance id \(version 2\)/
           end
         end
       end
@@ -329,9 +331,9 @@ describe Bosh::AzureCloud::InstanceId do
           let(:instancd_id) { Bosh::AzureCloud::InstanceId.create('resource-group-name', nil, 'storage-account-name') }
 
           it 'should raise an error' do
-            expect {
-              instancd_id.validate()
-            }.to raise_error /Invalid vm_name in instance id \(version 2\)/
+            expect do
+              instancd_id.validate
+            end.to raise_error /Invalid vm_name in instance id \(version 2\)/
           end
         end
 
@@ -339,9 +341,9 @@ describe Bosh::AzureCloud::InstanceId do
           let(:instancd_id) { Bosh::AzureCloud::InstanceId.create('resource-group-name', '', 'storage-account-name') }
 
           it 'should raise an error' do
-            expect {
-              instancd_id.validate()
-            }.to raise_error /Invalid vm_name in instance id \(version 2\)/
+            expect do
+              instancd_id.validate
+            end.to raise_error /Invalid vm_name in instance id \(version 2\)/
           end
         end
       end
@@ -351,9 +353,9 @@ describe Bosh::AzureCloud::InstanceId do
           let(:instancd_id) { Bosh::AzureCloud::InstanceId.create('resource-group-name', 'agent-id', '') }
 
           it 'should raise an error' do
-            expect {
-              instancd_id.validate()
-            }.to raise_error /Invalid storage_account_name in instance id \(version 2\)/
+            expect do
+              instancd_id.validate
+            end.to raise_error /Invalid storage_account_name in instance id \(version 2\)/
           end
         end
       end

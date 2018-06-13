@@ -1,23 +1,25 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
-  class RetriableError < Exception; end
+  class RetriableError < RuntimeError; end
 
   class WireClient
-    TELEMETRY_URI_FORMAT = "http://%{endpoint}/machine?comp=telemetrydata"
-    TELEMETRY_HEADER     = {'Content-Type' => 'text/xml;charset=utf-8', 'x-ms-version' => '2012-11-30'}
+    TELEMETRY_URI_FORMAT = 'http://%{endpoint}/machine?comp=telemetrydata'
+    TELEMETRY_HEADER     = { 'Content-Type' => 'text/xml;charset=utf-8', 'x-ms-version' => '2012-11-30' }.freeze
 
-    RETRY_ERROR_CODES    = [408, 429, 500, 502, 503, 504]
+    RETRY_ERROR_CODES    = [408, 429, 500, 502, 503, 504].freeze
     SLEEP_BEFORE_RETRY   = 5
 
-    HEADER_LEASE         = "lease {"
-    HEADER_OPTION        = "option unknown-245"
-    HEADER_DNS           = "option domain-name-servers"
-    HEADER_EXPIRE        = "expire"
-    FOOTER_LEASE         = "}"
+    HEADER_LEASE         = 'lease {'
+    HEADER_OPTION        = 'option unknown-245'
+    HEADER_DNS           = 'option domain-name-servers'
+    HEADER_EXPIRE        = 'expire'
+    FOOTER_LEASE         = '}'
 
     LEASE_PATHS = {
       'Ubuntu' => '/var/lib/dhcp/dhclient.*.leases',
-      'CentOS' => '/var/lib/dhclient/dhclient-*.leases',
-    }
+      'CentOS' => '/var/lib/dhclient/dhclient-*.leases'
+    }.freeze
 
     def initialize(logger)
       @logger = logger
@@ -28,10 +30,12 @@ module Bosh::AzureCloud
     # @param [TelemetryEventList] event_list - events to be sent
     #
     def post_data(event_list)
-      endpoint = get_endpoint()
+      endpoint = get_endpoint
 
-      unless endpoint.nil?
-        uri = URI.parse(TELEMETRY_URI_FORMAT % {:endpoint => endpoint})
+      if endpoint.nil?
+        @logger.warn('[Telemetry] Wire server endpoint is nil, drop data')
+      else
+        uri = URI.parse(format(TELEMETRY_URI_FORMAT, endpoint: endpoint))
         retried = false
         begin
           request = Net::HTTP::Post.new(uri)
@@ -53,16 +57,14 @@ module Bosh::AzureCloud
           if !retried
             retried = true
             sleep(SLEEP_BEFORE_RETRY)
-            @logger.debug("[Telemetry] Failed to post data, retrying...")
+            @logger.debug('[Telemetry] Failed to post data, retrying...')
             retry
           else
             @logger.warn("[Telemetry] Failed to post data to uri `#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
           end
-        rescue => e
+        rescue StandardError => e
           @logger.warn("[Telemetry] Failed to post data to uri `#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
         end
-      else
-        @logger.warn("[Telemetry] Wire server endpoint is nil, drop data")
       end
     end
 
@@ -70,13 +72,13 @@ module Bosh::AzureCloud
 
     # Get endpoint for different OS, only Ubuntu and CentOS are supported.
     #
-    def get_endpoint()
+    def get_endpoint
       os = nil
       endpoint = nil
-      if File.exists?("/etc/lsb-release")
-        os = "Ubuntu" if File.read("/etc/lsb-release").include?("Ubuntu")
-      elsif File.exists?("/etc/centos-release")
-        os = "CentOS" if File.read("/etc/centos-release").include?("CentOS")
+      if File.exist?('/etc/lsb-release')
+        os = 'Ubuntu' if File.read('/etc/lsb-release').include?('Ubuntu')
+      elsif File.exist?('/etc/centos-release')
+        os = 'CentOS' if File.read('/etc/centos-release').include?('CentOS')
       end
       endpoint = get_endpoint_from_leases_path(LEASE_PATHS[os]) unless os.nil?
       endpoint
@@ -100,18 +102,18 @@ module Bosh::AzureCloud
           when /#{HEADER_LEASE}/
             is_lease_file = true
           when /#{HEADER_OPTION}/
-            #example - option unknown-245 a8:3f:81:10;
-            endpoint = get_ip_from_lease_value(line.gsub(HEADER_OPTION, '').gsub(';', '').strip)
+            # example - option unknown-245 a8:3f:81:10;
+            endpoint = get_ip_from_lease_value(line.gsub(HEADER_OPTION, '').delete(';').strip)
           when /#{HEADER_EXPIRE}/
             # example - expire 1 2018/01/29 04:45:46;
-            if line.include?("never")
+            if line.include?('never')
               expired = false
             else
               begin
                 ret = line.match('.*expire (\d*) (.*);')
-                expire_date = ret[2] #
-                expired = false if Time.parse(expire_date) > Time.now()
-              rescue => e
+                expire_date = ret[2]
+                expired = false if Time.parse(expire_date) > Time.now
+              rescue StandardError => e
                 @logger.warn("[Telemetry] Failed to get expired data for leases of endpoint. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
               end
             end
@@ -127,13 +129,9 @@ module Bosh::AzureCloud
 
     # example: a8:3f:81:10 -> 168.63.129.16
     def get_ip_from_lease_value(fallback_lease_value)
-      unescaped_value = fallback_lease_value.gsub('\\', '')
-      if unescaped_value.length > 4
-        unescaped_value.split(":").map{|c| c.hex}.join('.')
-      else
-        #unknown value
-        nil
-      end
+      unescaped_value = fallback_lease_value.delete('\\')
+      return unless unescaped_value.length > 4
+      unescaped_value.split(':').map(&:hex).join('.')
     end
   end
 end

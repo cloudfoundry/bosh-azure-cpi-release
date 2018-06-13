@@ -3,6 +3,7 @@ GEM
   specs:
     addressable (2.5.2)
       public_suffix (>= 2.0.2, < 4.0)
+    ast (2.4.0)
     azure-core (0.1.14)
       faraday (~> 0.9)
       faraday_middleware (~> 0.10)
@@ -28,6 +29,7 @@ GEM
       faraday (>= 0.7.4, < 1.0)
     hashdiff (0.3.6)
     httpclient (2.8.3)
+    jaro_winkler (1.5.1)
     json (2.1.0)
     jwt (1.5.6)
     little-plugger (1.1.4)
@@ -40,7 +42,12 @@ GEM
     multipart-post (2.0.0)
     nokogiri (1.8.2)
       mini_portile2 (~> 2.3.0)
+    parallel (1.12.1)
+    parser (2.5.1.0)
+      ast (~> 2.4.0)
+    powerpack (0.1.2)
     public_suffix (3.0.0)
+    rainbow (3.0.0)
     rake (12.0.0)
     rspec (3.5.0)
       rspec-core (~> 3.5.0)
@@ -55,6 +62,15 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.5.0)
     rspec-support (3.5.0)
+    rubocop (0.57.2)
+      jaro_winkler (~> 1.5.1)
+      parallel (~> 1.10)
+      parser (>= 2.5)
+      powerpack (~> 0.1)
+      rainbow (>= 2.2.2, < 4.0)
+      ruby-progressbar (~> 1.7)
+      unicode-display_width (~> 1.0, >= 1.0.1)
+    ruby-progressbar (1.9.0)
     safe_yaml (1.0.4)
     semi_semantic (1.2.0)
     simplecov (0.15.0)
@@ -62,6 +78,7 @@ GEM
       json (>= 1.8, < 3)
       simplecov-html (~> 0.10.0)
     simplecov-html (0.10.2)
+    unicode-display_width (1.4.0)
     vhd (0.0.4)
       bit-struct
     webmock (3.0.1)
@@ -79,9 +96,10 @@ DEPENDENCIES
   jwt (= 1.5.6)
   rake (~> 12.0)
   rspec (~> 3.5.0)
+  rubocop (~> 0.57.1)
   simplecov
   vhd (= 0.0.4)
   webmock
 
 BUNDLED WITH
-   1.16.1
+   1.16.2

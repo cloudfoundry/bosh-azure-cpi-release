@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Bosh::AzureCloud::StorageAccountManager do
@@ -10,57 +12,57 @@ describe Bosh::AzureCloud::StorageAccountManager do
   let(:default_resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
 
   before do
-    allow(Azure::Storage::Client).to receive(:create).
-      and_return(azure_client)
+    allow(Azure::Storage::Client).to receive(:create)
+      .and_return(azure_client)
     allow(azure_client).to receive(:storage_table_host)
   end
 
-  describe "#generate_storage_account_name" do
-    context "when the first generated name is available" do
-      let(:storage_account_name) { "386ebba59c883c7d15b419b3" }
+  describe '#generate_storage_account_name' do
+    context 'when the first generated name is available' do
+      let(:storage_account_name) { '386ebba59c883c7d15b419b3' }
       before do
         allow(SecureRandom).to receive(:hex).with(12).and_return(storage_account_name)
-        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name).
-          and_return({
-            :available => true
-          })
+        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name)
+                                                                           .and_return(
+                                                                             available: true
+                                                                           )
       end
 
-      it "should return the available storage account name" do
+      it 'should return the available storage account name' do
         expect(client2).to receive(:check_storage_account_name_availability).once
-        expect(storage_account_manager.generate_storage_account_name()).to eq(storage_account_name)
+        expect(storage_account_manager.generate_storage_account_name).to eq(storage_account_name)
       end
     end
 
-    context "when the first generated name is not available, and the second one is available" do
-      let(:storage_account_name_unavailable) { "386ebba59c883c7d15b419b3" }
-      let(:storage_account_name_available)   { "db49daf2fbbf100575a3af9c" }
+    context 'when the first generated name is not available, and the second one is available' do
+      let(:storage_account_name_unavailable) { '386ebba59c883c7d15b419b3' }
+      let(:storage_account_name_available)   { 'db49daf2fbbf100575a3af9c' }
       before do
         allow(SecureRandom).to receive(:hex).with(12).and_return(storage_account_name_unavailable, storage_account_name_available)
-        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name_unavailable).
-          and_return({
-            :available => false
-          })
-        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name_available).
-          and_return({
-            :available => true
-          })
+        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name_unavailable)
+                                                                           .and_return(
+                                                                             available: false
+                                                                           )
+        allow(client2).to receive(:check_storage_account_name_availability).with(storage_account_name_available)
+                                                                           .and_return(
+                                                                             available: true
+                                                                           )
       end
 
-      it "should return the available storage account name" do
+      it 'should return the available storage account name' do
         expect(client2).to receive(:check_storage_account_name_availability).twice
-        expect(storage_account_manager.generate_storage_account_name()).to eq(storage_account_name_available)
+        expect(storage_account_manager.generate_storage_account_name).to eq(storage_account_name_available)
       end
     end
   end
 
   describe '#get_or_create_storage_account' do
     # Parameters
-    let(:name) { "fake-storage-account-name" }
-    let(:location) { "fake-storage-account-location" }
-    let(:type) { "fake-storage-account-type" }
-    let(:tags) { {"foo" => "bar"} }
-    let(:containers) { ['bosh', 'stemcell'] }
+    let(:name) { 'fake-storage-account-name' }
+    let(:location) { 'fake-storage-account-location' }
+    let(:type) { 'fake-storage-account-type' }
+    let(:tags) { { 'foo' => 'bar' } }
+    let(:containers) { %w[bosh stemcell] }
     let(:is_default_storage_account) { false }
 
     let(:storage_account) { double('storage-account') }
@@ -68,9 +70,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
     let(:lock_file) { "bosh-lock-create-storage-account-#{name}" }
 
     before do
-      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).
-        with(lock_file, anything, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT).
-        and_return(lock_creating_storage_account)
+      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new)
+        .with(lock_file, anything, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT)
+        .and_return(lock_creating_storage_account)
     end
 
     context 'when lock is not acquired' do
@@ -80,8 +82,8 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       it 'should wait and return the storage account if the storage account is created by other process' do
         expect(lock_creating_storage_account).to receive(:wait)
-        expect(storage_account_manager).to receive(:find_storage_account_by_name).
-          and_return(storage_account)
+        expect(storage_account_manager).to receive(:find_storage_account_by_name)
+          .and_return(storage_account)
         expect(
           storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
         ).to be(storage_account)
@@ -89,19 +91,19 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       it 'should raise error if the storage account is not created by other process' do
         expect(lock_creating_storage_account).to receive(:wait)
-        expect(storage_account_manager).to receive(:find_storage_account_by_name).
-          and_return(nil)
-        expect{
+        expect(storage_account_manager).to receive(:find_storage_account_by_name)
+          .and_return(nil)
+        expect do
           storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-        }.to raise_error("Storage account `#{name}' is not created.")
+        end.to raise_error("Storage account `#{name}' is not created.")
       end
 
       it 'should raise error if error happens' do
-        expect(lock_creating_storage_account).to receive(:wait).
-          and_raise('timeout')
-        expect{
+        expect(lock_creating_storage_account).to receive(:wait)
+          .and_raise('timeout')
+        expect do
           storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-        }.to raise_error(/Failed to create storage account in location `#{location}' with name `#{name}' and tags `#{tags}'/)
+        end.to raise_error(/Failed to create storage account in location `#{location}' with name `#{name}' and tags `#{tags}'/)
       end
     end
 
@@ -113,8 +115,8 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       context 'when the storage account is already created by other process' do
         before do
-          expect(storage_account_manager).to receive(:find_storage_account_by_name).
-            and_return(storage_account)
+          expect(storage_account_manager).to receive(:find_storage_account_by_name)
+            .and_return(storage_account)
         end
 
         it 'should return the storage account directly' do
@@ -126,47 +128,47 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       context 'if the storage account is going to be created' do
         context 'when the storage account name is invalid' do
-          let(:result) {
+          let(:result) do
             {
-              :available => false,
-              :reason => 'AccountNameInvalid',
-              :message => 'fake-message'
+              available: false,
+              reason: 'AccountNameInvalid',
+              message: 'fake-message'
             }
-          }
+          end
           before do
             allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
             allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
           end
 
           it 'should raise an error' do
-            expect {
+            expect do
               storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            }.to raise_error(/The storage account name `#{name}' is invalid./)
+            end.to raise_error(/The storage account name `#{name}' is invalid./)
           end
         end
 
         context 'when the storage account is not available' do
-          let(:result) {
+          let(:result) do
             {
-              :available => false,
-              :reason => 'fake-reason',
-              :message => 'fake-message'
+              available: false,
+              reason: 'fake-reason',
+              message: 'fake-message'
             }
-          }
+          end
           before do
             allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
             allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
           end
 
           it 'should raise an error' do
-            expect {
+            expect do
               storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            }.to raise_error(/The storage account with the name `#{name}' is not available/)
+            end.to raise_error(/The storage account with the name `#{name}' is not available/)
           end
         end
 
         context 'when name is not nil' do
-          let(:result) { {:available => true} }
+          let(:result) { { available: true } }
           let(:name) { nil }
 
           before do
@@ -175,14 +177,14 @@ describe Bosh::AzureCloud::StorageAccountManager do
           end
 
           it 'should raise an error' do
-            expect {
+            expect do
               storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            }.to raise_error(/Require name to create a new storage account/)
+            end.to raise_error(/Require name to create a new storage account/)
           end
         end
 
         context 'when type is not provided' do
-          let(:result) { {:available => true} }
+          let(:result) { { available: true } }
           let(:type) { nil }
 
           before do
@@ -191,14 +193,14 @@ describe Bosh::AzureCloud::StorageAccountManager do
           end
 
           it 'should raise an error' do
-            expect {
+            expect do
               storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            }.to raise_error(/Require type to create a new storage account/)
+            end.to raise_error(/Require type to create a new storage account/)
           end
         end
 
         context 'when location not provided' do
-          let(:result) { {:available => true} }
+          let(:result) { { available: true } }
           let(:location) { nil }
 
           before do
@@ -207,14 +209,14 @@ describe Bosh::AzureCloud::StorageAccountManager do
           end
 
           it 'should raise an error' do
-            expect {
+            expect do
               storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            }.to raise_error(/Require location to create a new storage account/)
+            end.to raise_error(/Require location to create a new storage account/)
           end
         end
 
         context 'when everything is ok' do
-          let(:result) { {:available => true} }
+          let(:result) { { available: true } }
 
           before do
             allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil, storage_account)
@@ -222,10 +224,10 @@ describe Bosh::AzureCloud::StorageAccountManager do
           end
 
           it 'should create the storage account and prepare the containers' do
-            expect(blob_manager).to receive(:prepare_containers).
-              with(name, containers, is_default_storage_account)
-            expect(client2).to receive(:create_storage_account).
-              with(name, location, type, tags)
+            expect(blob_manager).to receive(:prepare_containers)
+              .with(name, containers, is_default_storage_account)
+            expect(client2).to receive(:create_storage_account)
+              .with(name, location, type, tags)
             expect(
               storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
             ).to be(storage_account)
@@ -233,23 +235,23 @@ describe Bosh::AzureCloud::StorageAccountManager do
         end
 
         context 'when it fails to prepare containers' do
-          let(:result) { {:available => true} }
+          let(:result) { { available: true } }
 
           before do
             allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
             allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-            allow(client2).to receive(:create_storage_account).
-              with(name, location, type, tags).
-              and_return(true)
-            expect(blob_manager).to receive(:prepare_containers).
-              with(name, containers, is_default_storage_account).
-              and_raise('failed to create')
+            allow(client2).to receive(:create_storage_account)
+              .with(name, location, type, tags)
+              .and_return(true)
+            expect(blob_manager).to receive(:prepare_containers)
+              .with(name, containers, is_default_storage_account)
+              .and_raise('failed to create')
           end
 
           it 'should create the storage account and prepare the containers' do
-            expect {
+            expect do
               storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            }.to raise_error(/it failed to prepare the containers/)
+            end.to raise_error(/it failed to prepare the containers/)
           end
         end
       end
@@ -266,12 +268,12 @@ describe Bosh::AzureCloud::StorageAccountManager do
     let(:lock) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
     let(:lock_file) { "bosh-lock-create-storage-account-#{location}-#{Digest::MD5.hexdigest(tags.to_s)}" }
 
-    let(:storage_account) { {:name => 'fake-name'} }
+    let(:storage_account) { { name: 'fake-name' } }
 
     before do
-      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new).
-        with(lock_file, anything, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT).
-        and_return(lock)
+      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new)
+        .with(lock_file, anything, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT)
+        .and_return(lock)
     end
 
     context 'when lock is acquired' do
@@ -282,9 +284,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       context 'when the storage account is already created' do
         before do
-          allow(storage_account_manager).to receive(:find_storage_account_by_tags).
-            with(tags, location).
-            and_return(storage_account)
+          allow(storage_account_manager).to receive(:find_storage_account_by_tags)
+            .with(tags, location)
+            .and_return(storage_account)
         end
 
         it 'should return the storage account directly' do
@@ -298,17 +300,17 @@ describe Bosh::AzureCloud::StorageAccountManager do
         let(:name) { 'fake-name' }
 
         before do
-          allow(storage_account_manager).to receive(:generate_storage_account_name).
-            and_return(name)
-          allow(storage_account_manager).to receive(:find_storage_account_by_tags).
-            with(tags, location).
-            and_return(nil)
+          allow(storage_account_manager).to receive(:generate_storage_account_name)
+            .and_return(name)
+          allow(storage_account_manager).to receive(:find_storage_account_by_tags)
+            .with(tags, location)
+            .and_return(nil)
         end
 
         it 'should create a new storage account' do
-          expect(storage_account_manager).to receive(:get_or_create_storage_account).
-            with(name, tags, type, location, containers, is_default_storage_account).
-            and_return(storage_account)
+          expect(storage_account_manager).to receive(:get_or_create_storage_account)
+            .with(name, tags, type, location, containers, is_default_storage_account)
+            .and_return(storage_account)
           expect(
             storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
           ).to be(storage_account)
@@ -319,26 +321,26 @@ describe Bosh::AzureCloud::StorageAccountManager do
         let(:name) { 'fake-name' }
 
         before do
-          allow(storage_account_manager).to receive(:generate_storage_account_name).
-            and_return(name)
-          allow(storage_account_manager).to receive(:find_storage_account_by_tags).
-            with(tags, location).
-            and_return(nil)
+          allow(storage_account_manager).to receive(:generate_storage_account_name)
+            .and_return(name)
+          allow(storage_account_manager).to receive(:find_storage_account_by_tags)
+            .with(tags, location)
+            .and_return(nil)
         end
 
         it 'should raise an error' do
-          expect(storage_account_manager).to receive(:get_or_create_storage_account).
-            with(name, tags, type, location, containers, is_default_storage_account).
-            and_raise('failed to create')
-          expect{
+          expect(storage_account_manager).to receive(:get_or_create_storage_account)
+            .with(name, tags, type, location, containers, is_default_storage_account)
+            .and_raise('failed to create')
+          expect do
             storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
-          }.to raise_error(/Failed to create storage account in location `#{location}' with tags `#{tags}'/)
+          end.to raise_error(/Failed to create storage account in location `#{location}' with tags `#{tags}'/)
         end
       end
     end
 
     context 'when lock is not acquired' do
-      let(:storage_account) { {:name => 'fake-name'} }
+      let(:storage_account) { { name: 'fake-name' } }
 
       before do
         allow(lock).to receive(:lock).and_return(false)
@@ -346,9 +348,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       it 'should wait and then find the storage account' do
         expect(lock).to receive(:wait)
-        expect(storage_account_manager).to receive(:find_storage_account_by_tags).
-          with(tags, location).
-          and_return(storage_account)
+        expect(storage_account_manager).to receive(:find_storage_account_by_tags)
+          .with(tags, location)
+          .and_return(storage_account)
         expect(
           storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
         ).to be(storage_account)
@@ -362,12 +364,12 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       it 'should raise an error' do
         expect(lock).to receive(:wait)
-        expect(storage_account_manager).to receive(:find_storage_account_by_tags).
-          with(tags, location).
-          and_return(nil)
-        expect{
+        expect(storage_account_manager).to receive(:find_storage_account_by_tags)
+          .with(tags, location)
+          .and_return(nil)
+        expect do
           storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
-        }.to raise_error(/Storage account for tags `#{tags}' is not created./)
+        end.to raise_error(/Storage account for tags `#{tags}' is not created./)
       end
     end
   end
@@ -375,12 +377,12 @@ describe Bosh::AzureCloud::StorageAccountManager do
   describe '#find_storage_account_by_name' do
     context 'when storage account exists' do
       let(:name) { 'fake-name' }
-      let(:storage_account) { {:name => 'fake-name'} }
+      let(:storage_account) { { name: 'fake-name' } }
 
       it 'get the storage account by name' do
-        expect(client2).to receive(:get_storage_account_by_name).
-          with(name).
-          and_return(storage_account)
+        expect(client2).to receive(:get_storage_account_by_name)
+          .with(name)
+          .and_return(storage_account)
         expect(
           storage_account_manager.find_storage_account_by_name(name)
         ).to be(storage_account)
@@ -403,22 +405,22 @@ describe Bosh::AzureCloud::StorageAccountManager do
   end
 
   describe '#find_storage_account_by_tags' do
-    let(:tags) { {'key' => 'value'} }
+    let(:tags) { { 'key' => 'value' } }
     let(:location) { 'fake-location' }
 
     context 'when storage account exists' do
       let(:name) { 'fake-name' }
-      let(:storage_account) {
+      let(:storage_account) do
         {
-          :name => name,
-          :location => location,
-          :tags => tags
+          name: name,
+          location: location,
+          tags: tags
         }
-      }
+      end
 
       before do
-        allow(client2).to receive(:list_storage_accounts).
-          and_return([storage_account])
+        allow(client2).to receive(:list_storage_accounts)
+          .and_return([storage_account])
       end
 
       it 'should return the storage account' do
@@ -430,17 +432,17 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
     context 'when storage account does not exist' do
       let(:name) { 'fake-name' }
-      let(:storage_account) {
+      let(:storage_account) do
         {
-          :name => name,
-          :location => location,
-          :tags => { 'x' => 'y' }
+          name: name,
+          location: location,
+          tags: { 'x' => 'y' }
         }
-      }
+      end
 
       before do
-        allow(client2).to receive(:list_storage_accounts).
-          and_return([storage_account])
+        allow(client2).to receive(:list_storage_accounts)
+          .and_return([storage_account])
       end
 
       it 'should return nil' do
@@ -453,31 +455,31 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
   describe '#get_storage_account_from_resource_pool' do
     let(:location) { 'fake-location' }
-    let(:default_storage_account) {
+    let(:default_storage_account) do
       {
-        :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME
+        name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME
       }
-    }
+    end
     before do
       allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
     end
 
     let(:storage_account_name) { 'fake-storage-account-name-in-resource-pool' }
-    let(:storage_account) {
+    let(:storage_account) do
       {
-        :name => storage_account_name
+        name: storage_account_name
       }
-    }
+    end
 
     context 'when resource_pool does not contain storage_account_name' do
-      let(:resource_pool) {
+      let(:resource_pool) do
         {
           'instance_type' => 'fake-vm-size'
         }
-      }
+      end
 
       it 'should return the default storage account' do
-        storage_account_manager.default_storage_account_name()
+        storage_account_manager.default_storage_account_name
 
         expect(
           storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
@@ -487,18 +489,18 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
     context 'when resource_pool contains storage_account_name' do
       context 'when the storage account name is not a pattern' do
-        let(:resource_pool) {
+        let(:resource_pool) do
           {
             'instance_type' => 'fake-vm-size',
             'storage_account_name' => storage_account_name,
             'storage_account_type' => 'fake-storage_account_type'
           }
-        }
+        end
 
         it 'should try to get or create the storage account' do
-          expect(storage_account_manager).to receive(:get_or_create_storage_account).
-            with(storage_account_name, {}, 'fake-storage_account_type', location, ['bosh', 'stemcell'], false).
-            and_return(storage_account)
+          expect(storage_account_manager).to receive(:get_or_create_storage_account)
+            .with(storage_account_name, {}, 'fake-storage_account_type', location, %w[bosh stemcell], false)
+            .and_return(storage_account)
           expect(
             storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
           ).to be(storage_account)
@@ -507,51 +509,51 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       context 'when the storage account name is a pattern' do
         context 'when the pattern is valid' do
-          let(:resource_pool) {
+          let(:resource_pool) do
             {
               'instance_type' => 'fake-vm-size',
               'storage_account_name' => '*pattern*'
             }
-          }
-          let(:storage_accounts) {
+          end
+          let(:storage_accounts) do
             [
               {
-                :name => 'pattern',
-                :location => 'fake-location'
+                name: 'pattern',
+                location: 'fake-location'
               }, {
-                :name => '2pattern',
-                :location => 'fake-location'
+                name: '2pattern',
+                location: 'fake-location'
               }, {
-                :name => 'pattern3',
-                :location => 'fake-location'
+                name: 'pattern3',
+                location: 'fake-location'
               }, {
-                :name => '4pattern4',
-                :location => 'fake-location'
+                name: '4pattern4',
+                location: 'fake-location'
               }, {
-                :name => 'tpattern',
-                :location => 'fake-location'
+                name: 'tpattern',
+                location: 'fake-location'
               }, {
-                :name => 'patternt',
-                :location => 'fake-location'
+                name: 'patternt',
+                location: 'fake-location'
               }, {
-                :name => 'tpatternt',
-                :location => 'fake-location'
+                name: 'tpatternt',
+                location: 'fake-location'
               }, {
-                :name => 'patten',
-                :location => 'fake-location'
+                name: 'patten',
+                location: 'fake-location'
               }, {
-                :name => 'foo',
-                :location => 'fake-location'
+                name: 'foo',
+                location: 'fake-location'
               }
             ]
-          }
+          end
 
           context 'when finding an availiable storage account successfully' do
-            let(:disks) {
+            let(:disks) do
               [
-                1,2,3
+                1, 2, 3
               ]
-            }
+            end
 
             before do
               allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
@@ -574,13 +576,13 @@ describe Bosh::AzureCloud::StorageAccountManager do
             end
 
             context 'with 2 as storage_account_max_disk_number' do
-              let(:resource_pool) {
+              let(:resource_pool) do
                 {
                   'instance_type' => 'fake-vm-size',
                   'storage_account_name' => '*pattern*',
                   'storage_account_max_disk_number' => 2
                 }
-              }
+              end
 
               before do
                 allow(disk_manager).to receive(:list_disks).and_return(disks)
@@ -596,10 +598,8 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(
                   storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
                 ).to eq(
-                  {
-                    :name => '4pattern4',
-                    :location => 'fake-location'
-                  }
+                  name: '4pattern4',
+                  location: 'fake-location'
                 )
               end
             end
@@ -617,9 +617,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(client2).not_to receive(:create_storage_account)
                 expect(disk_manager).not_to receive(:list_disks)
 
-                expect {
+                expect do
                   storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
-                }.to raise_error(/get_storage_account_from_resource_pool - Cannot find an available storage account./)
+                end.to raise_error(/get_storage_account_from_resource_pool - Cannot find an available storage account./)
               end
             end
 
@@ -634,9 +634,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
               it 'should raise an error' do
                 expect(client2).not_to receive(:create_storage_account)
 
-                expect {
+                expect do
                   storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
-                }.to raise_error(/get_storage_account_from_resource_pool - Cannot find an available storage account./)
+                end.to raise_error(/get_storage_account_from_resource_pool - Cannot find an available storage account./)
               end
             end
           end
@@ -645,31 +645,31 @@ describe Bosh::AzureCloud::StorageAccountManager do
         context 'when the pattern is invalid' do
           context 'when the pattern contains one asterisk' do
             context 'when the pattern starts with one asterisk' do
-              let(:resource_pool) {
+              let(:resource_pool) do
                 {
                   'instance_type' => 'fake-vm-size',
                   'storage_account_name' => '*pattern'
                 }
-              }
+              end
 
               it 'should raise an error' do
                 expect(client2).not_to receive(:list_storage_accounts)
                 expect(client2).not_to receive(:create_storage_account)
                 expect(disk_manager).not_to receive(:list_disks)
 
-                expect {
+                expect do
                   storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
-                }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
+                end.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
               end
             end
 
             context 'when the pattern ends with one asterisk' do
-              let(:resource_pool) {
+              let(:resource_pool) do
                 {
                   'instance_type' => 'fake-vm-size',
                   'storage_account_name' => 'pattern*'
                 }
-              }
+              end
 
               it 'should raise an error' do
                 expect(client2).not_to receive(:list_storage_accounts)
@@ -677,20 +677,20 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(client2).not_to receive(:get_storage_account_by_name)
                 expect(disk_manager).not_to receive(:list_disks)
 
-                expect {
+                expect do
                   storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
-                }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
+                end.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
               end
             end
           end
 
           context 'when the pattern contains more than two asterisks' do
-            let(:resource_pool) {
+            let(:resource_pool) do
               {
                 'instance_type' => 'fake-vm-size',
                 'storage_account_name' => '**pattern*'
               }
-            }
+            end
 
             it 'should raise an error' do
               expect(client2).not_to receive(:list_storage_accounts)
@@ -698,19 +698,19 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(client2).not_to receive(:get_storage_account_by_name)
               expect(disk_manager).not_to receive(:list_disks)
 
-              expect {
+              expect do
                 storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
-              }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
+              end.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
             end
           end
 
           context 'when the pattern contains upper-case letters' do
-            let(:resource_pool) {
+            let(:resource_pool) do
               {
                 'instance_type' => 'fake-vm-size',
                 'storage_account_name' => '*PATTERN*'
               }
-            }
+            end
 
             it 'should raise an error' do
               expect(client2).not_to receive(:list_storage_accounts)
@@ -718,19 +718,19 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(client2).not_to receive(:get_storage_account_by_name)
               expect(disk_manager).not_to receive(:list_disks)
 
-              expect {
+              expect do
                 storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
-              }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
+              end.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
             end
           end
 
           context 'when the pattern contains special characters' do
-            let(:resource_pool) {
+            let(:resource_pool) do
               {
                 'instance_type' => 'fake-vm-size',
                 'storage_account_name' => '*pat+tern*'
               }
-            }
+            end
 
             it 'should raise an error' do
               expect(client2).not_to receive(:list_storage_accounts)
@@ -738,9 +738,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(client2).not_to receive(:get_storage_account_by_name)
               expect(disk_manager).not_to receive(:list_disks)
 
-              expect {
+              expect do
                 storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
-              }.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
+              end.to raise_error(/get_storage_account_from_resource_pool - storage_account_name in resource_pool is invalid./)
             end
           end
         end
@@ -749,11 +749,11 @@ describe Bosh::AzureCloud::StorageAccountManager do
   end
 
   describe '#default_storage_account' do
-    let(:default_storage_account) {
+    let(:default_storage_account) do
       {
-        :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME
+        name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME
       }
-    }
+    end
     before do
       allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
     end
@@ -765,9 +765,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
         end
 
         it 'should raise an error' do
-          expect{
+          expect do
             storage_account_manager.default_storage_account
-          }.to raise_error /The default storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' is specified in Global Configuration, but it does not exist./
+          end.to raise_error /The default storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' is specified in Global Configuration, but it does not exist./
         end
       end
 
@@ -779,11 +779,11 @@ describe Bosh::AzureCloud::StorageAccountManager do
       end
 
       context 'When use_managed_disks is true' do
-        let(:azure_properties_managed) {
-          mock_azure_properties_merge({
+        let(:azure_properties_managed) do
+          mock_azure_properties_merge(
             'use_managed_disks' => true
-          })
-        }
+          )
+        end
         let(:storage_account_manager) { Bosh::AzureCloud::StorageAccountManager.new(azure_properties_managed, blob_manager, disk_manager, client2) }
 
         context 'When the default storage account do not have the tags' do
@@ -794,12 +794,12 @@ describe Bosh::AzureCloud::StorageAccountManager do
         end
 
         context 'When the default storage account has the tags' do
-          let(:default_storage_account) {
+          let(:default_storage_account) do
             {
-              :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-              :tags => STEMCELL_STORAGE_ACCOUNT_TAGS
+              name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+              tags: STEMCELL_STORAGE_ACCOUNT_TAGS
             }
-          }
+          end
           before do
             allow(client2).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
           end
@@ -813,48 +813,48 @@ describe Bosh::AzureCloud::StorageAccountManager do
     end
 
     context 'When the global configurations do not contain storage_account_name' do
-      let(:tags) {
+      let(:tags) do
         {
           'user-agent' => 'bosh',
           'type' => 'stemcell'
         }
-      }
+      end
       let(:resource_group_location) { 'fake-resource-group-location' }
-      let(:resource_group) {
+      let(:resource_group) do
         {
-          :name => "fake-rg-name",
-          :location => resource_group_location
+          name: 'fake-rg-name',
+          location: resource_group_location
         }
-      }
+      end
 
       context 'When the storage account with the specified tags is found in the resource group location' do
-        let(:targeted_storage_account) {
+        let(:targeted_storage_account) do
           {
-            :name => 'account1',
-            :location => resource_group_location,
-            :tags => tags
+            name: 'account1',
+            location: resource_group_location,
+            tags: tags
           }
-        }
-        let(:storage_accounts) {
+        end
+        let(:storage_accounts) do
           [
             targeted_storage_account,
             {
-              :name => 'account2',
-              :location => resource_group_location,
-              :tags => {}
+              name: 'account2',
+              location: resource_group_location,
+              tags: {}
             },
             {
-              :name => 'account3',
-              :location => 'different-location',
-              :tags => tags
+              name: 'account3',
+              location: 'different-location',
+              tags: tags
             }
           ]
-        }
+        end
         before do
           allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-          allow(client2).to receive(:get_resource_group).
-            with(default_resource_group_name).
-            and_return(resource_group)
+          allow(client2).to receive(:get_resource_group)
+            .with(default_resource_group_name)
+            .and_return(resource_group)
         end
 
         it 'should return the storage account' do
@@ -867,70 +867,70 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       context 'When the storage account with the specified tags is not found in the resource group location' do
         let(:request_id) { 'fake-client-request-id' }
-        let(:options) {
+        let(:options) do
           {
-            :request_id => request_id
+            request_id: request_id
           }
-        }
+        end
         let(:azure_client) { instance_double(Azure::Storage::Client) }
         let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
         let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
-        let(:storage_dns_suffix) { "fake-storage-dns-suffix" }
+        let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
 
         before do
-          allow(azure_client).to receive(:table_client).
-            and_return(table_service)
-          allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new).
-            and_return(exponential_retry)
+          allow(azure_client).to receive(:table_client)
+            .and_return(table_service)
+          allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
+            .and_return(exponential_retry)
           allow(table_service).to receive(:with_filter).with(exponential_retry)
           allow(SecureRandom).to receive(:uuid).and_return(request_id)
         end
 
         context 'When the old storage account with the stemcell table is found in the resource group' do
           before do
-            allow(table_service).to receive(:get_table).
-              with('stemcells', options)
+            allow(table_service).to receive(:get_table)
+              .with('stemcells', options)
           end
 
           context 'When the old storage account is in the resource group location' do
-            let(:targeted_storage_account) {
+            let(:targeted_storage_account) do
               {
-                :name => 'account1',
-                :location => resource_group_location,
-                :account_type => 'Standard_LRS',
-                :storage_blob_host => "https://account1.blob.#{storage_dns_suffix}",
-                :storage_table_host => "https://account1.table.#{storage_dns_suffix}"
+                name: 'account1',
+                location: resource_group_location,
+                account_type: 'Standard_LRS',
+                storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
+                storage_table_host: "https://account1.table.#{storage_dns_suffix}"
               }
-            }
-            let(:storage_accounts) {
+            end
+            let(:storage_accounts) do
               [
                 targeted_storage_account
               ]
-            }
+            end
             let(:keys) { ['fake-key-1', 'fake-key-2'] }
 
             before do
               allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-              allow(client2).to receive(:get_resource_group).
-                with(default_resource_group_name).
-                and_return(resource_group)
-              allow(client2).to receive(:get_storage_account_by_name).
-                with(targeted_storage_account[:name]).
-                and_return(targeted_storage_account)
-              allow(client2).to receive(:get_storage_account_keys_by_name).
-                with(targeted_storage_account[:name]).
-                and_return(keys)
+              allow(client2).to receive(:get_resource_group)
+                .with(default_resource_group_name)
+                .and_return(resource_group)
+              allow(client2).to receive(:get_storage_account_by_name)
+                .with(targeted_storage_account[:name])
+                .and_return(targeted_storage_account)
+              allow(client2).to receive(:get_storage_account_keys_by_name)
+                .with(targeted_storage_account[:name])
+                .and_return(keys)
             end
 
             it 'should return the storage account' do
               azure_properties.delete('storage_account_name')
-              expect(Azure::Storage::Client).to receive(:create).
-                with({
-                  :storage_account_name => targeted_storage_account[:name],
-                  :storage_access_key   => keys[0],
-                  :storage_dns_suffix   => storage_dns_suffix,
-                  :user_agent_prefix    => "BOSH-AZURE-CPI"
-                }).and_return(azure_client)
+              expect(Azure::Storage::Client).to receive(:create)
+                .with(
+                  storage_account_name: targeted_storage_account[:name],
+                  storage_access_key: keys[0],
+                  storage_dns_suffix: storage_dns_suffix,
+                  user_agent_prefix: 'BOSH-AZURE-CPI'
+                ).and_return(azure_client)
               expect(client2).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
               expect(client2).to receive(:update_tags_of_storage_account).with(targeted_storage_account[:name], tags)
 
@@ -939,126 +939,126 @@ describe Bosh::AzureCloud::StorageAccountManager do
           end
 
           context 'When the old storage account is not in the resource group location' do
-            let(:targeted_storage_account) {
+            let(:targeted_storage_account) do
               {
-                :name => 'account1',
-                :location => 'another-resource-group-location',
-                :account_type => 'Standard_LRS',
-                :storage_blob_host => "https://account1.blob.#{storage_dns_suffix}",
-                :storage_table_host => "https://account1.table.#{storage_dns_suffix}"
+                name: 'account1',
+                location: 'another-resource-group-location',
+                account_type: 'Standard_LRS',
+                storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
+                storage_table_host: "https://account1.table.#{storage_dns_suffix}"
               }
-            }
-            let(:storage_accounts) {
+            end
+            let(:storage_accounts) do
               [
                 targeted_storage_account
               ]
-            }
+            end
             let(:keys) { ['fake-key-1', 'fake-key-2'] }
 
             before do
               allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-              allow(client2).to receive(:get_resource_group).
-                with(default_resource_group_name).
-                and_return(resource_group)
-              allow(client2).to receive(:get_storage_account_by_name).
-                with(targeted_storage_account[:name]).
-                and_return(targeted_storage_account)
-              allow(client2).to receive(:get_storage_account_keys_by_name).
-                with(targeted_storage_account[:name]).
-                and_return(keys)
+              allow(client2).to receive(:get_resource_group)
+                .with(default_resource_group_name)
+                .and_return(resource_group)
+              allow(client2).to receive(:get_storage_account_by_name)
+                .with(targeted_storage_account[:name])
+                .and_return(targeted_storage_account)
+              allow(client2).to receive(:get_storage_account_keys_by_name)
+                .with(targeted_storage_account[:name])
+                .and_return(keys)
             end
 
             it 'should raise an error' do
               azure_properties.delete('storage_account_name')
-              expect(Azure::Storage::Client).to receive(:create).
-                with({
-                  :storage_account_name => targeted_storage_account[:name],
-                  :storage_access_key   => keys[0],
-                  :storage_dns_suffix   => storage_dns_suffix,
-                  :user_agent_prefix    => "BOSH-AZURE-CPI"
-                }).and_return(azure_client)
+              expect(Azure::Storage::Client).to receive(:create)
+                .with(
+                  storage_account_name: targeted_storage_account[:name],
+                  storage_access_key: keys[0],
+                  storage_dns_suffix: storage_dns_suffix,
+                  user_agent_prefix: 'BOSH-AZURE-CPI'
+                ).and_return(azure_client)
 
-              expect {
+              expect do
                 storage_account_manager.default_storage_account
-              }.to raise_error(/The existing default storage account `#{targeted_storage_account[:name]}' has a different location other than the resource group location./)
+              end.to raise_error(/The existing default storage account `#{targeted_storage_account[:name]}' has a different location other than the resource group location./)
             end
           end
         end
 
         context 'When no standard storage account is found in the resource group' do
-          let(:targeted_storage_account) {
+          let(:targeted_storage_account) do
             {
-              :name => 'account1',
-              :location => resource_group_location,
-              :account_type => 'Premium_LRS',
-              :storage_blob_host => "https://account1.blob.#{storage_dns_suffix}",
-              :storage_table_host => "https://account1.table.#{storage_dns_suffix}"
+              name: 'account1',
+              location: resource_group_location,
+              account_type: 'Premium_LRS',
+              storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
+              storage_table_host: "https://account1.table.#{storage_dns_suffix}"
             }
-          }
-          let(:storage_accounts) {
+          end
+          let(:storage_accounts) do
             [
               targeted_storage_account
             ]
-          }
+          end
 
           before do
             allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-            allow(client2).to receive(:get_resource_group).
-              with(default_resource_group_name).
-              and_return(resource_group)
-            allow(client2).to receive(:get_storage_account_by_name).
-              with(targeted_storage_account[:name]).
-              and_return(targeted_storage_account)
+            allow(client2).to receive(:get_resource_group)
+              .with(default_resource_group_name)
+              .and_return(resource_group)
+            allow(client2).to receive(:get_storage_account_by_name)
+              .with(targeted_storage_account[:name])
+              .and_return(targeted_storage_account)
           end
 
           it 'should create a new storage account' do
             azure_properties.delete('storage_account_name')
             expect(client2).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
-            expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags).
-              with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', resource_group_location, ['bosh', 'stemcell'], true).
-              and_return(targeted_storage_account)
+            expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
+              .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', resource_group_location, %w[bosh stemcell], true)
+              .and_return(targeted_storage_account)
 
             storage_account_manager.default_storage_account
           end
         end
 
         context 'When the old storage account with the stemcell table is not found in the resource group' do
-          let(:targeted_storage_account) {
+          let(:targeted_storage_account) do
             {
-              :name => 'account1',
-              :location => resource_group_location,
-              :account_type => 'Standard_LRS',
-              :storage_blob_host => "https://account1.blob.#{storage_dns_suffix}",
-              :storage_table_host => "https://account1.table.#{storage_dns_suffix}"
+              name: 'account1',
+              location: resource_group_location,
+              account_type: 'Standard_LRS',
+              storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
+              storage_table_host: "https://account1.table.#{storage_dns_suffix}"
             }
-          }
-          let(:storage_accounts) {
+          end
+          let(:storage_accounts) do
             [
               targeted_storage_account
             ]
-          }
+          end
           let(:keys) { ['fake-key-1', 'fake-key-2'] }
 
           before do
             allow(client2).to receive(:list_storage_accounts).and_return(storage_accounts)
-            allow(client2).to receive(:get_resource_group).
-              with(default_resource_group_name).
-              and_return(resource_group)
-            allow(client2).to receive(:get_storage_account_by_name).
-              with(targeted_storage_account[:name]).
-              and_return(targeted_storage_account)
-            allow(client2).to receive(:get_storage_account_keys_by_name).
-              with(targeted_storage_account[:name]).
-              and_return(keys)
-            allow(table_service).to receive(:get_table).
-              and_raise("(404)") # The table stemcells is not found in the storage account
+            allow(client2).to receive(:get_resource_group)
+              .with(default_resource_group_name)
+              .and_return(resource_group)
+            allow(client2).to receive(:get_storage_account_by_name)
+              .with(targeted_storage_account[:name])
+              .and_return(targeted_storage_account)
+            allow(client2).to receive(:get_storage_account_keys_by_name)
+              .with(targeted_storage_account[:name])
+              .and_return(keys)
+            allow(table_service).to receive(:get_table)
+              .and_raise('(404)') # The table stemcells is not found in the storage account
           end
 
           it 'should create a new storage account' do
             azure_properties.delete('storage_account_name')
-            expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags).
-              with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', resource_group_location, ['bosh', 'stemcell'], true).
-              and_return(targeted_storage_account)
+            expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
+              .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', resource_group_location, %w[bosh stemcell], true)
+              .and_return(targeted_storage_account)
 
             storage_account_manager.default_storage_account
           end
@@ -1066,19 +1066,19 @@ describe Bosh::AzureCloud::StorageAccountManager do
       end
 
       context 'When no storage account is found in the resource group location' do
-        let(:targeted_storage_account) { {:name => 'account1'} }
+        let(:targeted_storage_account) { { name: 'account1' } }
         before do
           allow(client2).to receive(:list_storage_accounts).and_return([])
-          allow(client2).to receive(:get_resource_group).
-            with(default_resource_group_name).
-            and_return(resource_group)
+          allow(client2).to receive(:get_resource_group)
+            .with(default_resource_group_name)
+            .and_return(resource_group)
         end
 
         it 'should create a new storage account' do
           azure_properties.delete('storage_account_name')
-          expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags).
-            with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', resource_group_location, ['bosh', 'stemcell'], true).
-            and_return(targeted_storage_account)
+          expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
+            .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', resource_group_location, %w[bosh stemcell], true)
+            .and_return(targeted_storage_account)
 
           storage_account_manager.default_storage_account
         end
@@ -1086,19 +1086,19 @@ describe Bosh::AzureCloud::StorageAccountManager do
     end
 
     describe '#get_or_create_diagnostics_storage_account' do
-      let(:diagnostic_tags) {
+      let(:diagnostic_tags) do
         {
           'user-agent' => 'bosh',
           'type' => 'bootdiagnostics'
         }
-      }
+      end
       let(:location) { 'fake-location' }
       let(:storage_account) { double('storage-account') }
 
       it 'should get or create the storage account' do
-        expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags).
-          with(diagnostic_tags, 'Standard_LRS', location, [], false).
-          and_return(storage_account)
+        expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
+          .with(diagnostic_tags, 'Standard_LRS', location, [], false)
+          .and_return(storage_account)
         expect(
           storage_account_manager.get_or_create_diagnostics_storage_account(location)
         ).to be(storage_account)

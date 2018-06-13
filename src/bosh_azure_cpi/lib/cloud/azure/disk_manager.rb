@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
   class DiskManager
     include Bosh::Exec
@@ -25,13 +27,13 @@ module Bosh::AzureCloud
 
     def delete_vm_status_files(storage_account_name, prefix)
       @logger.info("delete_vm_status_files(#{storage_account_name}, #{prefix})")
-      blobs = @blob_manager.list_blobs(storage_account_name, DISK_CONTAINER, prefix).select{
-        |blob| blob.name =~ /status$/
-      }
+      blobs = @blob_manager.list_blobs(storage_account_name, DISK_CONTAINER, prefix).select do |blob|
+        blob.name =~ /status$/
+      end
       blobs.each do |blob|
         @blob_manager.delete_blob(storage_account_name, DISK_CONTAINER, blob.name)
       end
-    rescue => e
+    rescue StandardError => e
       @logger.debug("delete_vm_status_files - error: #{e.inspect}\n#{e.backtrace.join("\n")}")
     end
 
@@ -45,7 +47,7 @@ module Bosh::AzureCloud
     def delete_snapshot(snapshot_id)
       @logger.info("delete_snapshot(#{snapshot_id})")
       storage_account_name = snapshot_id.storage_account_name()
-      snapshot_name = snapshot_id.disk_name()
+      snapshot_name = snapshot_id.disk_name
       disk_name, snapshot_time = parse_snapshot_name(snapshot_name)
       @blob_manager.delete_blob_snapshot(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", snapshot_time)
     end
@@ -126,11 +128,11 @@ module Bosh::AzureCloud
       use_root_disk_for_ephemeral_data = @resource_pool.fetch('ephemeral_disk', {}).fetch('use_root_disk', false)
       disk_size = get_os_disk_size(root_disk_size, stemcell_info, use_root_disk_for_ephemeral_data)
 
-      return {
-        :disk_name    => disk_name,
-        :disk_uri     => disk_uri,
-        :disk_size    => disk_size,
-        :disk_caching => disk_caching
+      {
+        disk_name: disk_name,
+        disk_uri: disk_uri,
+        disk_size: disk_size,
+        disk_caching: disk_caching
       }
     end
 
@@ -144,26 +146,26 @@ module Bosh::AzureCloud
       size = ephemeral_disk.fetch('size', nil)
       unless size.nil?
         validate_disk_size(size)
-        disk_size = size/1024
+        disk_size = size / 1024
       end
 
-      return {
-        :disk_name    => EPHEMERAL_DISK_POSTFIX,
-        :disk_uri     => get_disk_uri(storage_account_name, generate_ephemeral_disk_name(vm_name)),
-        :disk_size    => disk_size,
-        :disk_caching => 'ReadWrite'
+      {
+        disk_name: EPHEMERAL_DISK_POSTFIX,
+        disk_uri: get_disk_uri(storage_account_name, generate_ephemeral_disk_name(vm_name)),
+        disk_size: disk_size,
+        disk_caching: 'ReadWrite'
       }
     end
 
     def list_disks(storage_account_name)
       @logger.info("list_disks(#{storage_account_name})")
       disks = []
-      blobs = @blob_manager.list_blobs(storage_account_name, DISK_CONTAINER).select{
-        |blob| blob.name =~ /vhd$/
-      }
+      blobs = @blob_manager.list_blobs(storage_account_name, DISK_CONTAINER).select do |blob|
+        blob.name =~ /vhd$/
+      end
       blobs.each do |blob|
         disk = {
-          :disk_name => blob.name[0..-5]
+          disk_name: blob.name[0..-5]
         }
         disks << disk
       end
@@ -178,9 +180,9 @@ module Bosh::AzureCloud
     end
 
     def parse_snapshot_name(snapshot_name)
-      ret = snapshot_name.match("^(.*)--(.*)$")
+      ret = snapshot_name.match('^(.*)--(.*)$')
       cloud_error("Invalid snapshot id #{snapshot_name}") if ret.nil?
-      return ret[1], ret[2]
+      [ret[1], ret[2]]
     end
   end
 end

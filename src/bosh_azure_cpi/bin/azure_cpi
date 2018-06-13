@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
-$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 
 require 'yaml'
 require 'ostruct'
@@ -11,16 +13,14 @@ require 'cloud/azure'
 
 cpi_config = YAML.load_file(ARGV.shift)
 
-cloud_config = OpenStruct.new(:logger => Bosh::Cpi::Logger.new(STDERR))
+cloud_config = OpenStruct.new(logger: Bosh::Cpi::Logger.new(STDERR))
 
 Bosh::Clouds::Config.configure(cloud_config)
 
 cpi_log = StringIO.new
 
 cpi_lambda = lambda do |context|
-  unless cpi_config.has_key?('cloud') && cpi_config['cloud'].has_key?('properties')
-    raise "Could not find cloud properties in the configuration"
-  end
+  raise 'Could not find cloud properties in the configuration' unless cpi_config.key?('cloud') && cpi_config['cloud'].key?('properties')
 
   cloud_properties = cpi_config['cloud']['properties']
   cloud_properties['cpi_log'] = cpi_log

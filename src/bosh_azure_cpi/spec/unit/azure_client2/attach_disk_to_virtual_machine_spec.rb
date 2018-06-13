@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'webmock/rspec'
 
@@ -5,123 +7,127 @@ WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient2 do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) {
+  let(:azure_client2) do
     Bosh::AzureCloud::AzureClient2.new(
-      mock_cloud_options["properties"]["azure"],
+      mock_cloud_options['properties']['azure'],
       logger
     )
-  }
+  end
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
-  let(:resource_group) { "fake-resource-group-name" }
-  let(:request_id) { "fake-request-id" }
+  let(:resource_group) { 'fake-resource-group-name' }
+  let(:request_id) { 'fake-request-id' }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
-  let(:vm_name) { "fake-vm-name" }
+  let(:vm_name) { 'fake-vm-name' }
   let(:tags) { {} }
 
-  let(:valid_access_token) { "valid-access-token" }
+  let(:valid_access_token) { 'valid-access-token' }
 
-  let(:expires_on) { (Time.now+1800).to_i.to_s }
+  let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
     allow(azure_client2).to receive(:sleep)
   end
 
-  describe "#attach_disk_to_virtual_machine" do
-    let(:disk_name) { "fake-disk-name" }
-    let(:caching) { "ReadWrite" }
+  describe '#attach_disk_to_virtual_machine' do
+    let(:disk_name) { 'fake-disk-name' }
+    let(:caching) { 'ReadWrite' }
     let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
-    let(:disk_bosh_id) { "fake-bosh-id" }
+    let(:disk_bosh_id) { 'fake-bosh-id' }
 
-    context "when attaching a managed disk" do
-      let(:disk_id) { "fake-disk-id" }
-      let(:disk_params) {
+    context 'when attaching a managed disk' do
+      let(:disk_id) { 'fake-disk-id' }
+      let(:disk_params) do
         {
-          :disk_name    => disk_name,
-          :caching      => caching,
-          :disk_id      => disk_id,
-          :managed      => true,
-          :disk_bosh_id => disk_bosh_id
-         }
-      }
-      let(:response_body) {
+          disk_name: disk_name,
+          caching: caching,
+          disk_id: disk_id,
+          managed: true,
+          disk_bosh_id: disk_bosh_id
+        }
+      end
+      let(:response_body) do
         {
-          "id" => "fake-id",
-          "name" => "fake-name",
-          "location" => "fake-location",
-          "tags" => {},
-          "properties" => {
-            "provisioningState" => "fake-state",
-            "storageProfile" => {
-              "dataDisks" => [
-                { "lun" => 0 },
-                { "lun" => 1 }
+          'id' => 'fake-id',
+          'name' => 'fake-name',
+          'location' => 'fake-location',
+          'tags' => {},
+          'properties' => {
+            'provisioningState' => 'fake-state',
+            'storageProfile' => {
+              'dataDisks' => [
+                { 'lun' => 0 },
+                { 'lun' => 1 }
               ]
             },
-            "hardwareProfile" => {
-              "vmSize" => "Standard_A5"
+            'hardwareProfile' => {
+              'vmSize' => 'Standard_A5'
             }
           }
         }.to_json
-      }
+      end
       let(:lun) { 2 }
-      let(:request_body) {
+      let(:request_body) do
         {
-          "id" => "fake-id",
-          "name" => "fake-name",
-          "location" => "fake-location",
-          "tags" => {
+          'id' => 'fake-id',
+          'name' => 'fake-name',
+          'location' => 'fake-location',
+          'tags' => {
             "disk-id-#{disk_name}" => disk_bosh_id
           },
-          "properties" => {
-            "provisioningState" => "fake-state",
-            "storageProfile" => {
-              "dataDisks" => [
-                { "lun" => 0 },
-                { "lun" => 1 },
+          'properties' => {
+            'provisioningState' => 'fake-state',
+            'storageProfile' => {
+              'dataDisks' => [
+                { 'lun' => 0 },
+                { 'lun' => 1 },
                 {
-                  "name" => disk_name,
-                  "lun"  => lun,
-                  "createOption" => "Attach",
-                  "caching"      => caching,
-                  "managedDisk"  => { "id" => disk_id }
+                  'name' => disk_name,
+                  'lun'  => lun,
+                  'createOption' => 'Attach',
+                  'caching'      => caching,
+                  'managedDisk'  => { 'id' => disk_id }
                 }
               ]
             },
-            "hardwareProfile" => {
-              "vmSize" => "Standard_A5"
+            'hardwareProfile' => {
+              'vmSize' => 'Standard_A5'
             }
           }
         }
-      }
+      end
 
-      it "should raise no error" do
+      it 'should raise no error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:get, vm_uri).to_return(
-          :status => 200,
-          :body => response_body,
-          :headers => {})
+          status: 200,
+          body: response_body,
+          headers: {}
+        )
         stub_request(:put, vm_uri).with(body: request_body).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
         stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
 
         expect(
           azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
@@ -129,95 +135,99 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
     end
 
-    context "when attaching an unmanaged disk" do
-      let(:disk_uri) { "fake-disk-uri" }
+    context 'when attaching an unmanaged disk' do
+      let(:disk_uri) { 'fake-disk-uri' }
       let(:disk_size) { 42 }
-      let(:disk_params) {
+      let(:disk_params) do
         {
-          :disk_name    => disk_name,
-          :caching      => caching,
-          :disk_uri     => disk_uri,
-          :disk_size    => disk_size,
-          :managed      => false,
-          :disk_bosh_id => disk_bosh_id
-         }
-      }
+          disk_name: disk_name,
+          caching: caching,
+          disk_uri: disk_uri,
+          disk_size: disk_size,
+          managed: false,
+          disk_bosh_id: disk_bosh_id
+        }
+      end
       let(:lun) { 2 }
-      let(:request_body) {
+      let(:request_body) do
         {
-          "id" => "fake-id",
-          "name" => "fake-name",
-          "location" => "fake-location",
-          "tags" => {
+          'id' => 'fake-id',
+          'name' => 'fake-name',
+          'location' => 'fake-location',
+          'tags' => {
             "disk-id-#{disk_name}" => disk_bosh_id
           },
-          "properties" => {
-            "provisioningState" => "fake-state",
-            "storageProfile" => {
-              "dataDisks" => [
-                { "lun" => 0 },
-                { "lun" => 1 },
+          'properties' => {
+            'provisioningState' => 'fake-state',
+            'storageProfile' => {
+              'dataDisks' => [
+                { 'lun' => 0 },
+                { 'lun' => 1 },
                 {
-                  "name" => disk_name,
-                  "lun"  => lun,
-                  "createOption" => "Attach",
-                  "caching"      => caching,
-                  "diskSizeGb"   => disk_size,
-                  "vhd"          => { "uri" => disk_uri }
+                  'name' => disk_name,
+                  'lun'  => lun,
+                  'createOption' => 'Attach',
+                  'caching'      => caching,
+                  'diskSizeGb'   => disk_size,
+                  'vhd'          => { 'uri' => disk_uri }
                 }
               ]
             },
-            "hardwareProfile" => {
-              "vmSize" => "Standard_A5"
+            'hardwareProfile' => {
+              'vmSize' => 'Standard_A5'
             }
           }
         }
-      }
+      end
 
       context "when VM's information does not contain 'resources'" do
-        let(:response_body) {
+        let(:response_body) do
           {
-            "id" => "fake-id",
-            "name" => "fake-name",
-            "location" => "fake-location",
-            "tags" => {},
-            "properties" => {
-              "provisioningState" => "fake-state",
-              "storageProfile" => {
-                "dataDisks" => [
-                  { "lun" => 0 },
-                  { "lun" => 1 }
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'properties' => {
+              'provisioningState' => 'fake-state',
+              'storageProfile' => {
+                'dataDisks' => [
+                  { 'lun' => 0 },
+                  { 'lun' => 1 }
                 ]
               },
-              "hardwareProfile" => {
-                "vmSize" => "Standard_A5"
+              'hardwareProfile' => {
+                'vmSize' => 'Standard_A5'
               }
             }
           }.to_json
-        }
+        end
 
-        it "should raise no error" do
+        it 'should raise no error' do
           stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
             }.to_json,
-            :headers => {})
+            headers: {}
+          )
           stub_request(:get, vm_uri).to_return(
-            :status => 200,
-            :body => response_body,
-            :headers => {})
+            status: 200,
+            body: response_body,
+            headers: {}
+          )
           stub_request(:put, vm_uri).with(body: request_body).to_return(
-            :status => 200,
-            :body => '',
-            :headers => {
-              "azure-asyncoperation" => operation_status_link
-            })
+            status: 200,
+            body: '',
+            headers: {
+              'azure-asyncoperation' => operation_status_link
+            }
+          )
           stub_request(:get, operation_status_link).to_return(
-            :status => 200,
-            :body => '{"status":"Succeeded"}',
-            :headers => {})
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
 
           expect(
             azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
@@ -226,58 +236,62 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
 
       context "when VM's information contains 'resources'" do
-        let(:response_body) {
+        let(:response_body) do
           {
-            "id" => "fake-id",
-            "name" => "fake-name",
-            "location" => "fake-location",
-            "tags" => {},
-            "properties" => {
-              "provisioningState" => "fake-state",
-              "storageProfile" => {
-                "dataDisks" => [
-                  { "lun" => 0 },
-                  { "lun" => 1 }
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'properties' => {
+              'provisioningState' => 'fake-state',
+              'storageProfile' => {
+                'dataDisks' => [
+                  { 'lun' => 0 },
+                  { 'lun' => 1 }
                 ]
               },
-              "hardwareProfile" => {
-                "vmSize" => "Standard_A5"
+              'hardwareProfile' => {
+                'vmSize' => 'Standard_A5'
               }
             },
-            "resources" => [
+            'resources' => [
               {
                 "properties": {},
-                "id": "fake-id",
-                "name": "fake-name",
-                "type": "fake-type",
-                "location": "fake-location"
+                "id": 'fake-id',
+                "name": 'fake-name',
+                "type": 'fake-type',
+                "location": 'fake-location'
               }
             ]
           }.to_json
-        }
+        end
 
-        it "should raise no error" do
+        it 'should raise no error' do
           stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
             }.to_json,
-            :headers => {})
+            headers: {}
+          )
           stub_request(:get, vm_uri).to_return(
-            :status => 200,
-            :body => response_body,
-            :headers => {})
+            status: 200,
+            body: response_body,
+            headers: {}
+          )
           stub_request(:put, vm_uri).with(body: request_body).to_return(
-            :status => 200,
-            :body => '',
-            :headers => {
-              "azure-asyncoperation" => operation_status_link
-            })
+            status: 200,
+            body: '',
+            headers: {
+              'azure-asyncoperation' => operation_status_link
+            }
+          )
           stub_request(:get, operation_status_link).to_return(
-            :status => 200,
-            :body => '{"status":"Succeeded"}',
-            :headers => {})
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
 
           expect(
             azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
@@ -285,152 +299,157 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
       end
 
-      context "when the virtual machine is not found" do
-        it "should raise an error" do
+      context 'when the virtual machine is not found' do
+        it 'should raise an error' do
           stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
             }.to_json,
-            :headers => {})
+            headers: {}
+          )
           stub_request(:get, vm_uri).to_return(
-            :status => 200,
-            :body => '',
-            :headers => {})
+            status: 200,
+            body: '',
+            headers: {}
+          )
 
-          expect {
+          expect do
             azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
-          }.to raise_error /attach_disk_to_virtual_machine - cannot find the virtual machine by name/
+          end.to raise_error /attach_disk_to_virtual_machine - cannot find the virtual machine by name/
         end
       end
 
-      context "when no avaiable lun can be found" do
-        let(:response_body) {
+      context 'when no avaiable lun can be found' do
+        let(:response_body) do
           {
-            "id" => "fake-id",
-            "name" => "fake-name",
-            "location" => "fake-location",
-            "tags" => {},
-            "properties" => {
-              "provisioningState" => "fake-state",
-              "storageProfile" => {
-                "dataDisks" => [
-                  { "lun" => 0 },
-                  { "lun" => 1 }
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'properties' => {
+              'provisioningState' => 'fake-state',
+              'storageProfile' => {
+                'dataDisks' => [
+                  { 'lun' => 0 },
+                  { 'lun' => 1 }
                 ]
               },
-              "hardwareProfile" => {
-                "vmSize" => "Standard_A1" # Standard_A1 only has 2 available luns
+              'hardwareProfile' => {
+                'vmSize' => 'Standard_A1' # Standard_A1 only has 2 available luns
               }
             }
           }.to_json
-        }
+        end
 
-        it "should raise an error" do
+        it 'should raise an error' do
           stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
             }.to_json,
-            :headers => {})
+            headers: {}
+          )
           stub_request(:get, vm_uri).to_return(
-            :status => 200,
-            :body => response_body,
-            :headers => {})
+            status: 200,
+            body: response_body,
+            headers: {}
+          )
 
-          expect {
+          expect do
             azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
-          }.to raise_error /attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine/
+          end.to raise_error /attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine/
         end
       end
 
-      context "if put operation returns retryable error code (returns 429)" do
-        let(:response_body) {
+      context 'if put operation returns retryable error code (returns 429)' do
+        let(:response_body) do
           {
-            "id" => "fake-id",
-            "name" => "fake-name",
-            "location" => "fake-location",
-            "tags" => {},
-            "properties" => {
-              "provisioningState" => "fake-state",
-              "storageProfile" => {
-                "dataDisks" => [
-                  { "lun" => 0 },
-                  { "lun" => 1 }
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'properties' => {
+              'provisioningState' => 'fake-state',
+              'storageProfile' => {
+                'dataDisks' => [
+                  { 'lun' => 0 },
+                  { 'lun' => 1 }
                 ]
               },
-              "hardwareProfile" => {
-                "vmSize" => "Standard_A5"
+              'hardwareProfile' => {
+                'vmSize' => 'Standard_A5'
               }
             }
           }.to_json
-        }
+        end
 
-        it "should raise error if it always returns 429" do
+        it 'should raise error if it always returns 429' do
           stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
             }.to_json,
-            :headers => {})
+            headers: {}
+          )
           stub_request(:get, vm_uri).to_return(
-            :status => 200,
-            :body => response_body,
-            :headers => {})
+            status: 200,
+            body: response_body,
+            headers: {}
+          )
           stub_request(:put, vm_uri).to_return(
-            {
-              :status => 429,
-              :body => '',
-              :headers => {
-              }
+            status: 429,
+            body: '',
+            headers: {
             }
           )
 
           expect(azure_client2).to receive(:sleep).exactly(AZURE_MAX_RETRY_COUNT).times
-          expect {
+          expect do
             azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
-          }.to raise_error Bosh::AzureCloud::AzureInternalError
+          end.to raise_error Bosh::AzureCloud::AzureInternalError
         end
 
-        it "should not raise error if it returns 429 at the first time but returns 200 at the second time" do
+        it 'should not raise error if it returns 429 at the first time but returns 200 at the second time' do
           stub_request(:post, token_uri).to_return(
-            :status => 200,
-            :body => {
-              "access_token" => valid_access_token,
-              "expires_on" => expires_on
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
             }.to_json,
-            :headers => {})
+            headers: {}
+          )
           stub_request(:get, vm_uri).to_return(
-            :status => 200,
-            :body => response_body,
-            :headers => {})
+            status: 200,
+            body: response_body,
+            headers: {}
+          )
           stub_request(:put, vm_uri).to_return(
             {
-              :status => 429,
-              :body => '',
-              :headers => {
+              status: 429,
+              body: '',
+              headers: {
               }
             },
-            {
-              :status => 200,
-              :body => '',
-              :headers => {
-                "azure-asyncoperation" => operation_status_link
-              }
+            status: 200,
+            body: '',
+            headers: {
+              'azure-asyncoperation' => operation_status_link
             }
           )
           stub_request(:get, operation_status_link).to_return(
-            :status => 200,
-            :body => '{"status":"Succeeded"}',
-            :headers => {})
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
 
           expect(azure_client2).to receive(:sleep).twice
-          expect {
+          expect do
             azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
-          }.not_to raise_error
+          end.not_to raise_error
         end
       end
     end

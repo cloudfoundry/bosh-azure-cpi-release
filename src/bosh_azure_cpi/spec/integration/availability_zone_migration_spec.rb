@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'securerandom'
 require 'tempfile'
@@ -6,15 +8,15 @@ require 'cloud'
 
 describe Bosh::AzureCloud::Cloud do
   before(:all) do
-    @subscription_id                 = ENV['BOSH_AZURE_SUBSCRIPTION_ID']                 || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
-    @tenant_id                       = ENV['BOSH_AZURE_TENANT_ID']                       || raise("Missing BOSH_AZURE_TENANT_ID")
-    @client_id                       = ENV['BOSH_AZURE_CLIENT_ID']                       || raise("Missing BOSH_AZURE_CLIENT_ID")
-    @client_secret                   = ENV['BOSH_AZURE_CLIENT_SECRET']                   || raise("Missing BOSH_AZURE_CLIENT_secret")
-    @stemcell_id                     = ENV['BOSH_AZURE_STEMCELL_ID']                     || raise("Missing BOSH_AZURE_STEMCELL_ID")
-    @ssh_public_key                  = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']                  || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
-    @default_security_group          = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']          || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
-    @default_resource_group_name     = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME']     || raise("Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME")
-    @additional_resource_group_name  = ENV['BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME']  || raise("Missing BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME")
+    @subscription_id                 = ENV['BOSH_AZURE_SUBSCRIPTION_ID']                 || raise('Missing BOSH_AZURE_SUBSCRIPTION_ID')
+    @tenant_id                       = ENV['BOSH_AZURE_TENANT_ID']                       || raise('Missing BOSH_AZURE_TENANT_ID')
+    @client_id                       = ENV['BOSH_AZURE_CLIENT_ID']                       || raise('Missing BOSH_AZURE_CLIENT_ID')
+    @client_secret                   = ENV['BOSH_AZURE_CLIENT_SECRET']                   || raise('Missing BOSH_AZURE_CLIENT_secret')
+    @stemcell_id                     = ENV['BOSH_AZURE_STEMCELL_ID']                     || raise('Missing BOSH_AZURE_STEMCELL_ID')
+    @ssh_public_key                  = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']                  || raise('Missing BOSH_AZURE_SSH_PUBLIC_KEY')
+    @default_security_group          = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']          || raise('Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP')
+    @default_resource_group_name     = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME']     || raise('Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME')
+    @additional_resource_group_name  = ENV['BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME']  || raise('Missing BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME')
   end
 
   let(:azure_environment)    { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
@@ -22,7 +24,7 @@ describe Bosh::AzureCloud::Cloud do
   let(:vnet_name)            { ENV.fetch('BOSH_AZURE_VNET_NAME', 'boshvnet-crp') }
   let(:subnet_name)          { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
   let(:instance_type)        { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
-  let(:network_spec) {
+  let(:network_spec) do
     {
       'network_a' => {
         'type' => 'dynamic',
@@ -32,18 +34,18 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
     }
-  }
+  end
   let(:availability_zone)    { Random.rand(1..3).to_s }
-  let(:resource_pool)        {
+  let(:resource_pool)        do
     {
       'instance_type' => instance_type,
       'resource_group_name' => @additional_resource_group_name,
       'assign_dynamic_public_ip' => true,
       'availability_zone' => availability_zone
     }
-  }
+  end
 
-  let(:cloud_options) {
+  let(:cloud_options) do
     {
       'azure' => {
         'environment' => azure_environment,
@@ -56,7 +58,7 @@ describe Bosh::AzureCloud::Cloud do
         'ssh_user' => 'vcap',
         'ssh_public_key' => @ssh_public_key,
         'default_security_group' => @default_security_group,
-        'parallel_upload_thread_num' => 16,
+        'parallel_upload_thread_num' => 16
       },
       'registry' => {
         'endpoint' => 'fake',
@@ -64,7 +66,7 @@ describe Bosh::AzureCloud::Cloud do
         'password' => 'fake'
       }
     }
-  }
+  end
 
   subject(:cpi) do
     cloud_options['azure']['use_managed_disks'] = true
@@ -76,23 +78,22 @@ describe Bosh::AzureCloud::Cloud do
     described_class.new(cloud_options)
   end
 
-
-  before {
+  before do
     Bosh::Clouds::Config.configure(double('delegate', task_checkpoint: nil))
-  }
+  end
 
   before { allow(Bosh::Clouds::Config).to receive_messages(logger: logger) }
   let(:logger) { Logger.new(STDERR) }
 
   before { allow(Bosh::Cpi::RegistryClient).to receive_messages(new: double('registry').as_null_object) }
 
-  before { @disk_id_pool = Array.new }
-  after {
+  before { @disk_id_pool = [] }
+  after do
     @disk_id_pool.each do |disk_id|
       logger.info("Cleanup: Deleting the disk `#{disk_id}'")
       cpi.delete_disk(disk_id) if disk_id
     end
-  }
+  end
 
   context 'Migrate regional VM to zonal VM', availability_zone: true do
     context 'when the regional VM is with unmanaged disks' do
@@ -114,7 +115,7 @@ describe Bosh::AzureCloud::Cloud do
           cpi.attach_disk(instance_id, disk_id)
 
           # Detach the zonal disk
-          Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
+          Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: ->(n, _) { [2**(n - 1), 30].min }) do
             cpi.detach_disk(instance_id, disk_id)
             true
           end
@@ -148,7 +149,7 @@ describe Bosh::AzureCloud::Cloud do
           cpi.attach_disk(instance_id, disk_id)
 
           # Detach the zonal disk
-          Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
+          Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: ->(n, _) { [2**(n - 1), 30].min }) do
             cpi.detach_disk(instance_id, disk_id)
             true
           end

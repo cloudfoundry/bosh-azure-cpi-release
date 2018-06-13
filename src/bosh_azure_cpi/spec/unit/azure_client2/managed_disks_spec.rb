@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'webmock/rspec'
 
@@ -5,407 +7,426 @@ WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient2 do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) {
+  let(:azure_client2) do
     Bosh::AzureCloud::AzureClient2.new(
-      mock_cloud_options["properties"]["azure"],
+      mock_cloud_options['properties']['azure'],
       logger
     )
-  }
+  end
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
-  let(:resource_group) { "fake-resource-group-name" }
-  let(:request_id) { "fake-request-id" }
+  let(:resource_group) { 'fake-resource-group-name' }
+  let(:request_id) { 'fake-request-id' }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
-  let(:disk_name) { "fake-disk-name" }
-  let(:valid_access_token) { "valid-access-token" }
-  let(:expires_on) { (Time.now+1800).to_i.to_s }
+  let(:disk_name) { 'fake-disk-name' }
+  let(:valid_access_token) { 'valid-access-token' }
+  let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
     allow(azure_client2).to receive(:sleep)
   end
 
-  describe "#create_empty_managed_disk" do
+  describe '#create_empty_managed_disk' do
     let(:disk_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
 
-    context "when common disk_params are provided" do
+    context 'when common disk_params are provided' do
       let(:disk_params) do
         {
-          :name           => disk_name,
-          :location       => "b",
-          :tags           => { "foo" => "bar"},
-          :disk_size      => "c",
-          :account_type   => "d"
+          name: disk_name,
+          location: 'b',
+          tags: { 'foo' => 'bar' },
+          disk_size: 'c',
+          account_type: 'd'
         }
       end
 
-      let(:request_body) {
+      let(:request_body) do
         {
-          :location => "b",
-          :tags     => {
-            :foo => "bar"
+          location: 'b',
+          tags: {
+            foo: 'bar'
           },
-          :properties => {
-            :creationData => {
-              :createOption => "Empty"
+          properties: {
+            creationData: {
+              createOption: 'Empty'
             },
-            :accountType => "d",
-            :diskSizeGB => "c"
+            accountType: 'd',
+            diskSizeGB: 'c'
           }
         }
-      }
+      end
 
-      it "should raise no error" do
+      it 'should raise no error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:put, disk_uri).with(body: request_body).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
         stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
 
-        expect {
+        expect do
           azure_client2.create_empty_managed_disk(resource_group, disk_params)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
-    context "when zone is specified" do
+    context 'when zone is specified' do
       let(:disk_params) do
         {
-          :name           => disk_name,
-          :location       => "b",
-          :tags           => { "foo" => "bar"},
-          :disk_size      => "c",
-          :account_type   => "d",
-          :zone           => "e"
+          name: disk_name,
+          location: 'b',
+          tags: { 'foo' => 'bar' },
+          disk_size: 'c',
+          account_type: 'd',
+          zone: 'e'
         }
       end
 
-      let(:request_body) {
+      let(:request_body) do
         {
-          :location => "b",
-          :tags     => {
-            :foo => "bar"
+          location: 'b',
+          tags: {
+            foo: 'bar'
           },
-          :zones      => ["e"],
-          :properties => {
-            :creationData => {
-              :createOption => "Empty"
+          zones: ['e'],
+          properties: {
+            creationData: {
+              createOption: 'Empty'
             },
-            :accountType => "d",
-            :diskSizeGB => "c"
+            accountType: 'd',
+            diskSizeGB: 'c'
           }
         }
-      }
+      end
 
-      it "should raise no error" do
+      it 'should raise no error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:put, disk_uri).with(body: request_body).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
         stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
 
-        expect {
+        expect do
           azure_client2.create_empty_managed_disk(resource_group, disk_params)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end
 
-  describe "#create_managed_disk_from_blob" do
+  describe '#create_managed_disk_from_blob' do
     let(:disk_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
 
-    context "when common disk_params are provided" do
+    context 'when common disk_params are provided' do
       let(:disk_params) do
         {
-          :name           => disk_name,
-          :location       => "b",
-          :tags           => { "foo" => "bar"},
-          :source_uri     => "c",
-          :account_type   => "d"
+          name: disk_name,
+          location: 'b',
+          tags: { 'foo' => 'bar' },
+          source_uri: 'c',
+          account_type: 'd'
         }
       end
 
-      let(:request_body) {
+      let(:request_body) do
         {
-          :location => "b",
-          :tags     => {
-            :foo => "bar"
+          location: 'b',
+          tags: {
+            foo: 'bar'
           },
-          :properties => {
-            :creationData => {
-              :createOption => "Import",
-              :sourceUri => "c"
+          properties: {
+            creationData: {
+              createOption: 'Import',
+              sourceUri: 'c'
             },
-            :accountType => "d"
+            accountType: 'd'
           }
         }
-      }
+      end
 
-      it "should raise no error" do
+      it 'should raise no error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:put, disk_uri).with(body: request_body).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
         stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
 
-        expect {
+        expect do
           azure_client2.create_managed_disk_from_blob(resource_group, disk_params)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
-    context "when zone is specified" do
+    context 'when zone is specified' do
       let(:disk_params) do
         {
-          :name           => disk_name,
-          :location       => "b",
-          :tags           => { "foo" => "bar"},
-          :source_uri     => "c",
-          :account_type   => "d",
-          :zone           => "e"
+          name: disk_name,
+          location: 'b',
+          tags: { 'foo' => 'bar' },
+          source_uri: 'c',
+          account_type: 'd',
+          zone: 'e'
         }
       end
 
-      let(:request_body) {
+      let(:request_body) do
         {
-          :location => "b",
-          :tags     => {
-            :foo => "bar"
+          location: 'b',
+          tags: {
+            foo: 'bar'
           },
-          :zones      => ["e"],
-          :properties => {
-            :creationData => {
-              :createOption => "Import",
-              :sourceUri => "c"
+          zones: ['e'],
+          properties: {
+            creationData: {
+              createOption: 'Import',
+              sourceUri: 'c'
             },
-            :accountType => "d"
+            accountType: 'd'
           }
         }
-      }
+      end
 
-      it "should raise no error" do
+      it 'should raise no error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:put, disk_uri).with(body: request_body).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
         stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
 
-        expect {
+        expect do
           azure_client2.create_managed_disk_from_blob(resource_group, disk_params)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end
 
-  describe "#create_managed_disk_from_snapshot" do
-    let(:snapshot_name) { "fake-snapshot-name" }
+  describe '#create_managed_disk_from_snapshot' do
+    let(:snapshot_name) { 'fake-snapshot-name' }
     let(:disk_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
     let(:snapshot_url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}" }
 
-    context "when common disk_params are provided" do
+    context 'when common disk_params are provided' do
       let(:disk_params) do
         {
-          :name           => disk_name,
-          :location       => "b",
-          :tags           => { "foo" => "bar"},
-          :account_type   => "c"
+          name: disk_name,
+          location: 'b',
+          tags: { 'foo' => 'bar' },
+          account_type: 'c'
         }
       end
 
-      let(:request_body) {
+      let(:request_body) do
         {
-          :location => "b",
-          :tags     => {
-            :foo => "bar"
+          location: 'b',
+          tags: {
+            foo: 'bar'
           },
-          :properties => {
-            :creationData => {
-              :createOption => "Copy",
-              :sourceResourceId => snapshot_url
+          properties: {
+            creationData: {
+              createOption: 'Copy',
+              sourceResourceId: snapshot_url
             },
-            :accountType => "c"
+            accountType: 'c'
           }
         }
-      }
+      end
 
-      it "should raise no error" do
+      it 'should raise no error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:put, disk_uri).with(body: request_body).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
         stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
 
-        expect {
+        expect do
           azure_client2.create_managed_disk_from_snapshot(resource_group, disk_params, snapshot_name)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
-    context "when zone is specified" do
+    context 'when zone is specified' do
       let(:disk_params) do
         {
-          :name           => disk_name,
-          :location       => "b",
-          :tags           => { "foo" => "bar"},
-          :account_type   => "c",
-          :zone           => "d"
+          name: disk_name,
+          location: 'b',
+          tags: { 'foo' => 'bar' },
+          account_type: 'c',
+          zone: 'd'
         }
       end
 
-      let(:request_body) {
+      let(:request_body) do
         {
-          :location => "b",
-          :tags     => {
-            :foo => "bar"
+          location: 'b',
+          tags: {
+            foo: 'bar'
           },
-          :zones      => ["d"],
-          :properties => {
-            :creationData => {
-              :createOption => "Copy",
-              :sourceResourceId => snapshot_url
+          zones: ['d'],
+          properties: {
+            creationData: {
+              createOption: 'Copy',
+              sourceResourceId: snapshot_url
             },
-            :accountType => "c"
+            accountType: 'c'
           }
         }
-      }
+      end
 
-      it "should raise no error" do
+      it 'should raise no error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:put, disk_uri).with(body: request_body).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {
-            "azure-asyncoperation" => operation_status_link
-          })
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
         stub_request(:get, operation_status_link).to_return(
-          :status => 200,
-          :body => '{"status":"Succeeded"}',
-          :headers => {})
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
 
-        expect {
+        expect do
           azure_client2.create_managed_disk_from_snapshot(resource_group, disk_params, snapshot_name)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end
 
-
-  describe "#get_managed_disk_by_name" do
+  describe '#get_managed_disk_by_name' do
     let(:disk_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
 
-    let(:response_body) {
+    let(:response_body) do
       {
-        :id => "a",
-        :name => "b",
-        :location => "c",
-        :tags     => {
-          :foo => "bar"
+        id: 'a',
+        name: 'b',
+        location: 'c',
+        tags: {
+          foo: 'bar'
         },
-        :zones => ["fake-zone"],
-        :properties => {
-          :provisioningState => "d",
-          :diskSizeGB => "e",
-          :accountType => "f"
+        zones: ['fake-zone'],
+        properties: {
+          provisioningState: 'd',
+          diskSizeGB: 'e',
+          accountType: 'f'
         }
       }
-    }
-    let(:disk) {
+    end
+    let(:disk) do
       {
-        :id => "a",
-        :name => "b",
-        :location => "c",
-        :tags     => {
-          "foo" => "bar"
+        id: 'a',
+        name: 'b',
+        location: 'c',
+        tags: {
+          'foo' => 'bar'
         },
-        :zone => "fake-zone",
-        :provisioning_state => "d",
-        :disk_size => "e",
-        :account_type => "f"
+        zone: 'fake-zone',
+        provisioning_state: 'd',
+        disk_size: 'e',
+        account_type: 'f'
       }
-    }
+    end
 
-    it "should raise no error" do
+    it 'should raise no error' do
       stub_request(:post, token_uri).to_return(
-        :status => 200,
-        :body => {
-          "access_token" => valid_access_token,
-          "expires_on" => expires_on
+        status: 200,
+        body: {
+          'access_token' => valid_access_token,
+          'expires_on' => expires_on
         }.to_json,
-        :headers => {})
+        headers: {}
+      )
       stub_request(:get, disk_uri).to_return(
-        :status => 200,
-        :body => response_body.to_json,
-        :headers => {})
+        status: 200,
+        body: response_body.to_json,
+        headers: {}
+      )
 
       expect(
         azure_client2.get_managed_disk_by_name(resource_group, disk_name)
@@ -413,26 +434,28 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
   end
 
-  describe "#delete_managed_disk" do
+  describe '#delete_managed_disk' do
     let(:disk_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
 
-    context "when token is valid, delete operation is accepted and completed" do
-      it "should delete the managed disk without error" do
+    context 'when token is valid, delete operation is accepted and completed' do
+      it 'should delete the managed disk without error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:delete, disk_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {})
+          status: 200,
+          body: '',
+          headers: {}
+        )
 
-        expect {
+        expect do
           azure_client2.delete_managed_disk(resource_group, disk_name)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end

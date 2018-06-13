@@ -1,5 +1,6 @@
-module Bosh::AzureCloud
+# frozen_string_literal: true
 
+module Bosh::AzureCloud
   class ManualNetwork < Network
     include Helpers
 
@@ -29,31 +30,27 @@ module Bosh::AzureCloud
     def initialize(azure_properties, name, spec)
       super
 
-      if @cloud_properties.nil?
-        cloud_error("cloud_properties required for manual network")
-      end
+      cloud_error('cloud_properties required for manual network') if @cloud_properties.nil?
 
-      unless @cloud_properties["virtual_network_name"].nil?
-        @virtual_network_name = @cloud_properties["virtual_network_name"]
+      if @cloud_properties['virtual_network_name'].nil?
+        cloud_error('virtual_network_name required for manual network')
       else
-        cloud_error("virtual_network_name required for manual network")
+        @virtual_network_name = @cloud_properties['virtual_network_name']
       end
 
-      unless @cloud_properties["subnet_name"].nil?
-        @subnet_name = @cloud_properties["subnet_name"]
+      if @cloud_properties['subnet_name'].nil?
+        cloud_error('subnet_name required for manual network')
       else
-        cloud_error("subnet_name required for manual network")
+        @subnet_name = @cloud_properties['subnet_name']
       end
 
-      if @ip.nil?
-        cloud_error("ip address required for manual network")
-      end
+      cloud_error('ip address required for manual network') if @ip.nil?
 
-      @security_group = @cloud_properties["security_group"]
+      @security_group = @cloud_properties['security_group']
 
-      @application_security_groups = @cloud_properties.fetch("application_security_groups", [])
+      @application_security_groups = @cloud_properties.fetch('application_security_groups', [])
 
-      @ip_forwarding = @cloud_properties.fetch("ip_forwarding", false)
+      @ip_forwarding = @cloud_properties.fetch('ip_forwarding', false)
     end
 
     def private_ip
@@ -61,15 +58,15 @@ module Bosh::AzureCloud
     end
 
     def dns
-      @spec["dns"]
+      @spec['dns']
     end
 
     def has_default_dns?
-      !@spec["default"].nil? && @spec["default"].include?("dns")
+      !@spec['default'].nil? && @spec['default'].include?('dns')
     end
 
     def has_default_gateway?
-      !@spec["default"].nil? && @spec["default"].include?("gateway")
+      !@spec['default'].nil? && @spec['default'].include?('gateway')
     end
   end
 end

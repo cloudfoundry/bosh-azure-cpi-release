@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Bosh::AzureCloud::LightStemcellManager do
@@ -11,99 +13,99 @@ describe Bosh::AzureCloud::LightStemcellManager do
   let(:uuid) { 'fac96afe-6953-4e74-b9a8-80ae571dfca7' }
   let(:stemcell_name) { "#{prefix}-#{uuid}" }
   let(:location) { 'fake-location' }
-  let(:version) { "fake-version" }
-  let(:storage_account) {
+  let(:version) { 'fake-version' }
+  let(:storage_account) do
     {
-      :id => "foo",
-      :name => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-      :location => location,
-      :provisioning_state => "bar",
-      :account_type => "foo",
-      :storage_blob_host => "fake-blob-endpoint",
-      :storage_table_host => "fake-table-endpoint"
+      id: 'foo',
+      name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+      location: location,
+      provisioning_state: 'bar',
+      account_type: 'foo',
+      storage_blob_host: 'fake-blob-endpoint',
+      storage_table_host: 'fake-table-endpoint'
     }
-  }
-  let(:stemcell_properties) {
+  end
+  let(:stemcell_properties) do
     {
-      "name" => "fake-name",
-      "version" => version,
-      "infrastructure" => "azure",
-      "hypervisor" => "hyperv",
-      "disk" => "3072",
-      "disk_format" => "vhd",
-      "container_format" => "bare",
-      "os_type" => "linux",
-      "os_distro" => "ubuntu",
-      "architecture" => "x86_64",
-      "image" => {
-        "publisher" => "bosh",
-        "offer" => "UbuntuServer",
-        "sku" => "trusty",
-        "version" => version
+      'name' => 'fake-name',
+      'version' => version,
+      'infrastructure' => 'azure',
+      'hypervisor' => 'hyperv',
+      'disk' => '3072',
+      'disk_format' => 'vhd',
+      'container_format' => 'bare',
+      'os_type' => 'linux',
+      'os_distro' => 'ubuntu',
+      'architecture' => 'x86_64',
+      'image' => {
+        'publisher' => 'bosh',
+        'offer' => 'UbuntuServer',
+        'sku' => 'trusty',
+        'version' => version
       }
     }
-  }
-  let(:metadata) {
+  end
+  let(:metadata) do
     {
-      "name" => "fake-name",
-      "version" => version,
-      "infrastructure" => "azure",
-      "hypervisor" => "hyperv",
-      "disk" => "3072",
-      "disk_format" => "vhd",
-      "container_format" => "bare",
-      "os_type" => "linux",
-      "os_distro" => "ubuntu",
-      "architecture" => "x86_64",
-      "image" => JSON.dump({
-        "publisher" => "bosh",
-        "offer" => "UbuntuServer",
-        "sku" => "trusty",
-        "version" => version
-      })
+      'name' => 'fake-name',
+      'version' => version,
+      'infrastructure' => 'azure',
+      'hypervisor' => 'hyperv',
+      'disk' => '3072',
+      'disk_format' => 'vhd',
+      'container_format' => 'bare',
+      'os_type' => 'linux',
+      'os_distro' => 'ubuntu',
+      'architecture' => 'x86_64',
+      'image' => JSON.dump(
+        'publisher' => 'bosh',
+        'offer' => 'UbuntuServer',
+        'sku' => 'trusty',
+        'version' => version
+      )
     }
-  }
-  let(:versions) {
+  end
+  let(:versions) do
     [
       {
-        :id       => 'a',
-        :name     => version,
-        :location => location
+        id: 'a',
+        name: version,
+        location: location
       }, {
-        :id       => 'c',
-        :name     => 'd',
-        :location => location
+        id: 'c',
+        name: 'd',
+        location: location
       }
     ]
-  }
-
-  before do
-    allow(storage_account_manager).to receive(:default_storage_account).
-      and_return(storage_account)
   end
 
-  describe "#delete_stemcell" do
-    context "when the stemcell exists" do
+  before do
+    allow(storage_account_manager).to receive(:default_storage_account)
+      .and_return(storage_account)
+  end
+
+  describe '#delete_stemcell' do
+    context 'when the stemcell exists' do
       before do
-        allow(blob_manager).to receive(:get_blob_metadata).
-          and_return(metadata)
+        allow(blob_manager).to receive(:get_blob_metadata)
+          .and_return(metadata)
       end
 
-      it "should delete the stemcell" do
-        expect(blob_manager).to receive(:delete_blob).
-          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+      it 'should delete the stemcell' do
+        expect(blob_manager).to receive(:delete_blob)
+          .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
 
         light_stemcell_manager.delete_stemcell(stemcell_name)
       end
     end
 
-    context "when the stemcell does not exist" do
+    context 'when the stemcell does not exist' do
       before do
-        allow(blob_manager).to receive(:get_blob_metadata).
-          and_return(nil)
+        allow(blob_manager).to receive(:get_blob_metadata)
+          .and_return(nil)
       end
 
-      it "should do nothing" do
+      it 'should do nothing' do
         expect(blob_manager).not_to receive(:delete_blob)
 
         light_stemcell_manager.delete_stemcell(stemcell_name)
@@ -111,62 +113,62 @@ describe Bosh::AzureCloud::LightStemcellManager do
     end
   end
 
-  describe "#create_stemcell" do
-    context "when the platform image exists" do
+  describe '#create_stemcell' do
+    context 'when the platform image exists' do
       before do
         allow(SecureRandom).to receive(:uuid).and_return(uuid)
-        allow(azure_client2).to receive(:list_platform_image_versions).
-          and_return(versions)
+        allow(azure_client2).to receive(:list_platform_image_versions)
+          .and_return(versions)
       end
 
-      it "should create the stemcell" do
-        expect(blob_manager).to receive(:create_empty_page_blob).
-          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd", 1, metadata).
-          and_return(true)
+      it 'should create the stemcell' do
+        expect(blob_manager).to receive(:create_empty_page_blob)
+          .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd", 1, metadata)
+          .and_return(true)
 
         expect(light_stemcell_manager.create_stemcell(stemcell_properties)).to eq(stemcell_name)
       end
     end
 
-    context "when the platform image does not exist" do
-      let(:versions) {
+    context 'when the platform image does not exist' do
+      let(:versions) do
         [
           {
-            :id       => 'a',
-            :name     => 'b',
-            :location => location
+            id: 'a',
+            name: 'b',
+            location: location
           }, {
-            :id       => 'c',
-            :name     => 'd',
-            :location => location
+            id: 'c',
+            name: 'd',
+            location: location
           }
         ]
-      }
-
-      before do
-        allow(azure_client2).to receive(:list_platform_image_versions).
-            and_return(versions)
       end
 
-      it "should raise an error" do
+      before do
+        allow(azure_client2).to receive(:list_platform_image_versions)
+          .and_return(versions)
+      end
+
+      it 'should raise an error' do
         expect(azure_client2).to receive(:list_platform_image_versions)
         expect(blob_manager).not_to receive(:create_empty_page_blob)
 
-        expect {
+        expect do
           light_stemcell_manager.create_stemcell(stemcell_properties)
-        }.to raise_error /Cannot find the light stemcell/
+        end.to raise_error /Cannot find the light stemcell/
       end
     end
   end
 
-  describe "#has_stemcell?" do
-    context "when the blob does not exist in the default storage account" do
+  describe '#has_stemcell?' do
+    context 'when the blob does not exist in the default storage account' do
       before do
-        allow(blob_manager).to receive(:get_blob_metadata).
-          and_return(nil)
+        allow(blob_manager).to receive(:get_blob_metadata)
+          .and_return(nil)
       end
 
-      it "should return false" do
+      it 'should return false' do
         expect(blob_manager).to receive(:get_blob_metadata)
 
         expect(
@@ -175,20 +177,20 @@ describe Bosh::AzureCloud::LightStemcellManager do
       end
     end
 
-    context "when the blob exists in the default storage account" do
+    context 'when the blob exists in the default storage account' do
       before do
-        allow(blob_manager).to receive(:get_blob_metadata).
-          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd").
-          and_return(metadata)
+        allow(blob_manager).to receive(:get_blob_metadata)
+          .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+          .and_return(metadata)
       end
 
-      context "but the platform image does not exist" do
+      context 'but the platform image does not exist' do
         before do
-          allow(azure_client2).to receive(:list_platform_image_versions).
-            and_return([])
+          allow(azure_client2).to receive(:list_platform_image_versions)
+            .and_return([])
         end
 
-        it "should return false" do
+        it 'should return false' do
           expect(blob_manager).to receive(:get_blob_metadata)
           expect(azure_client2).to receive(:list_platform_image_versions)
 
@@ -198,13 +200,13 @@ describe Bosh::AzureCloud::LightStemcellManager do
         end
       end
 
-      context "and the platform image exists" do
+      context 'and the platform image exists' do
         before do
-          allow(azure_client2).to receive(:list_platform_image_versions).
-            and_return(versions)
+          allow(azure_client2).to receive(:list_platform_image_versions)
+            .and_return(versions)
         end
 
-        it "should return true" do
+        it 'should return true' do
           expect(blob_manager).to receive(:get_blob_metadata)
           expect(azure_client2).to receive(:list_platform_image_versions)
 
@@ -216,29 +218,29 @@ describe Bosh::AzureCloud::LightStemcellManager do
     end
   end
 
-  describe "#get_stemcell_info" do
-    context "when the blob does not exist in the default storage account" do
+  describe '#get_stemcell_info' do
+    context 'when the blob does not exist in the default storage account' do
       before do
-        allow(blob_manager).to receive(:get_blob_metadata).
-          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd").
-          and_return(nil)
+        allow(blob_manager).to receive(:get_blob_metadata)
+          .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+          .and_return(nil)
       end
 
-      it "should throw an error" do
-        expect {
+      it 'should throw an error' do
+        expect do
           light_stemcell_manager.get_stemcell_info(stemcell_name)
-        }.to raise_error /The light stemcell `#{stemcell_name}' does not exist in the storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}'/
+        end.to raise_error /The light stemcell `#{stemcell_name}' does not exist in the storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}'/
       end
     end
 
-    context "when the blob exists in the default storage account" do
+    context 'when the blob exists in the default storage account' do
       before do
-        allow(blob_manager).to receive(:get_blob_metadata).
-          with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd").
-          and_return(metadata)
+        allow(blob_manager).to receive(:get_blob_metadata)
+          .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+          .and_return(metadata)
       end
 
-      it "should return stemcell info" do
+      it 'should return stemcell info' do
         stemcell_info = light_stemcell_manager.get_stemcell_info(stemcell_name)
         expect(stemcell_info.uri).to eq('')
         expect(stemcell_info.metadata).to eq(stemcell_properties)

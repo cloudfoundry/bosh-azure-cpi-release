@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+# frozen_string_literal: true
+
 load 'helpers.rb'
 
 # --------------------------------- test ------------------------------------#
@@ -41,8 +43,6 @@ delete_disk(cpi, disk_id_1)
 delete_disk(cpi, disk_id_2)
 
 delete_vm(cpi, instance_id)
-
-
 
 # 2. migrate: managed v24 -> managed vNext
 
@@ -121,7 +121,6 @@ delete_disk(cpi, disk_id_1)
 delete_disk(cpi, disk_id_2)
 
 delete_vm(cpi, instance_id)
-
 
 # 4. attach v24 unmanaged disk to vNext unmanaged vm
 # 4.1 create resources using cpi v24

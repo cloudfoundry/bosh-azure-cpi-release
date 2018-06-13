@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Bosh::AzureCloud::DiskManager2 do
@@ -6,14 +8,14 @@ describe Bosh::AzureCloud::DiskManager2 do
   let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
   let(:snapshot_id) { instance_double(Bosh::AzureCloud::DiskId) }
 
-  let(:managed_os_disk_prefix) { "bosh-disk-os" }
-  let(:managed_data_disk_prefix) { "bosh-disk-data" }
-  let(:uuid) { "c691bf30-b72c-44de-907e-8b80823ec848" }
-  let(:disk_name) { "fake-disk-name" }
-  let(:caching) { "fake-caching" }
-  let(:resource_group_name) { "fake-resource-group-name" }
+  let(:managed_os_disk_prefix) { 'bosh-disk-os' }
+  let(:managed_data_disk_prefix) { 'bosh-disk-data' }
+  let(:uuid) { 'c691bf30-b72c-44de-907e-8b80823ec848' }
+  let(:disk_name) { 'fake-disk-name' }
+  let(:caching) { 'fake-caching' }
+  let(:resource_group_name) { 'fake-resource-group-name' }
 
-  let(:snapshot_name) { "fake-snapshot-name" }
+  let(:snapshot_name) { 'fake-snapshot-name' }
 
   before do
     allow(SecureRandom).to receive(:uuid).and_return(uuid)
@@ -26,411 +28,403 @@ describe Bosh::AzureCloud::DiskManager2 do
     allow(snapshot_id).to receive(:resource_group_name).and_return(resource_group_name)
   end
 
-  describe "#create_disk" do
+  describe '#create_disk' do
     # Parameters
-    let(:location) { "SouthEastAsia" }
+    let(:location) { 'SouthEastAsia' }
     let(:size) { 100 }
-    let(:storage_account_type) { "fake-storage-account-type" }
-    let(:zone) { "fake-zone" }
+    let(:storage_account_type) { 'fake-storage-account-type' }
+    let(:zone) { 'fake-zone' }
 
-    let(:disk_params) {
+    let(:disk_params) do
       {
-        :name => disk_name,
-        :location => location,
-        :tags => {
-          "user-agent" => "bosh",
-          "caching" => caching
+        name: disk_name,
+        location: location,
+        tags: {
+          'user-agent' => 'bosh',
+          'caching' => caching
         },
-        :disk_size => size,
-        :account_type => storage_account_type,
-        :zone => zone
+        disk_size: size,
+        account_type: storage_account_type,
+        zone: zone
       }
-    }
+    end
 
-    it "creates the disk with the specified caching and storage account type" do
-      expect(client2).to receive(:create_empty_managed_disk).
-        with(resource_group_name, disk_params)
-      expect {
+    it 'creates the disk with the specified caching and storage account type' do
+      expect(client2).to receive(:create_empty_managed_disk)
+        .with(resource_group_name, disk_params)
+      expect do
         disk_manager2.create_disk(disk_id, location, size, storage_account_type, zone)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#create_disk_from_blob" do
-    let(:blob_data_disk_prefix) { "bosh-data" }
-    let(:blob_uri) { "fake-blob-uri" }
-    let(:location) { "SouthEastAsia" }
-    let(:storage_account_type) { "Standard_LRS" }
-    let(:zone) { "fake-zone" }
+  describe '#create_disk_from_blob' do
+    let(:blob_data_disk_prefix) { 'bosh-data' }
+    let(:blob_uri) { 'fake-blob-uri' }
+    let(:location) { 'SouthEastAsia' }
+    let(:storage_account_type) { 'Standard_LRS' }
+    let(:zone) { 'fake-zone' }
 
-    let(:disk_params) {
+    let(:disk_params) do
       {
-        :name => disk_name,
-        :location => location,
-        :tags => {
-          "user-agent" => "bosh",
-          "caching" => caching,
-          "original_blob" => blob_uri
+        name: disk_name,
+        location: location,
+        tags: {
+          'user-agent' => 'bosh',
+          'caching' => caching,
+          'original_blob' => blob_uri
         },
-        :source_uri => blob_uri,
-        :account_type => storage_account_type,
-        :zone => zone
+        source_uri: blob_uri,
+        account_type: storage_account_type,
+        zone: zone
       }
-    }
+    end
 
-    it "creates the managed disk from the blob uri" do
-      expect(client2).to receive(:create_managed_disk_from_blob).
-        with(resource_group_name, disk_params)
-      expect {
+    it 'creates the managed disk from the blob uri' do
+      expect(client2).to receive(:create_managed_disk_from_blob)
+        .with(resource_group_name, disk_params)
+      expect do
         disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, zone)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#delete_disk" do
-    context "when the disk exists" do
+  describe '#delete_disk' do
+    context 'when the disk exists' do
       before do
-        allow(client2).to receive(:get_managed_disk_by_name).
-          with(resource_group_name, disk_name).
-          and_return({})
+        allow(client2).to receive(:get_managed_disk_by_name)
+          .with(resource_group_name, disk_name)
+          .and_return({})
       end
 
-      context "when AzureConflictError is not thrown" do
-        it "deletes the disk" do
-          expect(client2).to receive(:delete_managed_disk).
-            with(resource_group_name, disk_name).once
+      context 'when AzureConflictError is not thrown' do
+        it 'deletes the disk' do
+          expect(client2).to receive(:delete_managed_disk)
+            .with(resource_group_name, disk_name).once
 
-          expect {
+          expect do
             disk_manager2.delete_disk(resource_group_name, disk_name)
-          }.not_to raise_error
+          end.not_to raise_error
         end
       end
 
-      context "when AzureConflictError is thrown only one time" do
-        it "do one retry and deletes the disk" do
-          expect(client2).to receive(:delete_managed_disk).
-            with(resource_group_name, disk_name).
-            and_raise(Bosh::AzureCloud::AzureConflictError)
-          expect(client2).to receive(:delete_managed_disk).
-            with(resource_group_name, disk_name).once
+      context 'when AzureConflictError is thrown only one time' do
+        it 'do one retry and deletes the disk' do
+          expect(client2).to receive(:delete_managed_disk)
+            .with(resource_group_name, disk_name)
+            .and_raise(Bosh::AzureCloud::AzureConflictError)
+          expect(client2).to receive(:delete_managed_disk)
+            .with(resource_group_name, disk_name).once
 
-          expect {
+          expect do
             disk_manager2.delete_disk(resource_group_name, disk_name)
-          }.not_to raise_error
+          end.not_to raise_error
         end
       end
 
-      context "when AzureConflictError is thrown every time" do
+      context 'when AzureConflictError is thrown every time' do
         before do
-          allow(client2).to receive(:delete_managed_disk).
-            with(resource_group_name, disk_name).
-            and_raise(Bosh::AzureCloud::AzureConflictError)
+          allow(client2).to receive(:delete_managed_disk)
+            .with(resource_group_name, disk_name)
+            .and_raise(Bosh::AzureCloud::AzureConflictError)
         end
 
-        it "raise an error because the retry still fails" do
-          expect {
+        it 'raise an error because the retry still fails' do
+          expect do
             disk_manager2.delete_disk(resource_group_name, disk_name)
-          }.to raise_error Bosh::AzureCloud::AzureConflictError
+          end.to raise_error Bosh::AzureCloud::AzureConflictError
         end
       end
     end
 
-    context "when the disk does not exist" do
+    context 'when the disk does not exist' do
       before do
-        allow(client2).to receive(:get_managed_disk_by_name).
-          with(resource_group_name, disk_name).
-          and_return(nil)
+        allow(client2).to receive(:get_managed_disk_by_name)
+          .with(resource_group_name, disk_name)
+          .and_return(nil)
       end
 
-      it "does not delete the disk" do
-        expect(client2).not_to receive(:delete_managed_disk).
-          with(resource_group_name, disk_name)
+      it 'does not delete the disk' do
+        expect(client2).not_to receive(:delete_managed_disk)
+          .with(resource_group_name, disk_name)
 
-        expect {
+        expect do
           disk_manager2.delete_disk(resource_group_name, disk_name)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end
 
-  describe "#delete_data_disk" do
-    it "should delete the disk" do
-      expect(disk_manager2).to receive(:delete_disk).
-        with(resource_group_name, disk_name)
+  describe '#delete_data_disk' do
+    it 'should delete the disk' do
+      expect(disk_manager2).to receive(:delete_disk)
+        .with(resource_group_name, disk_name)
 
-      expect {
+      expect do
         disk_manager2.delete_data_disk(disk_id)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#has_disk?" do
-    context "when the disk exists" do
+  describe '#has_disk?' do
+    context 'when the disk exists' do
       before do
-        allow(client2).to receive(:get_managed_disk_by_name).
-          with(resource_group_name, disk_name).
-          and_return({})
+        allow(client2).to receive(:get_managed_disk_by_name)
+          .with(resource_group_name, disk_name)
+          .and_return({})
       end
 
-      it "should return true" do
+      it 'should return true' do
         expect(disk_manager2.has_disk?(resource_group_name, disk_name)).to be(true)
       end
     end
 
-    context "when the disk does not exist" do
+    context 'when the disk does not exist' do
       before do
-        allow(client2).to receive(:get_managed_disk_by_name).
-          with(resource_group_name, disk_name).
-          and_return(nil)
+        allow(client2).to receive(:get_managed_disk_by_name)
+          .with(resource_group_name, disk_name)
+          .and_return(nil)
       end
 
-      it "should return false" do
+      it 'should return false' do
         expect(disk_manager2.has_disk?(resource_group_name, disk_name)).to be(false)
       end
     end
   end
 
-  describe "#has_data_disk?" do
-    it "should check the disk" do
-      expect(disk_manager2).to receive(:has_disk?).
-        with(resource_group_name, disk_name).
-        and_return(true)
+  describe '#has_data_disk?' do
+    it 'should check the disk' do
+      expect(disk_manager2).to receive(:has_disk?)
+        .with(resource_group_name, disk_name)
+        .and_return(true)
 
       expect(disk_manager2.has_data_disk?(disk_id)).to be(true)
     end
   end
 
-  describe "#get_disk" do
-    let(:disk) {
-      { :name => "fake-name" }
-    }
+  describe '#get_disk' do
+    let(:disk) do
+      { name: 'fake-name' }
+    end
     before do
-      allow(client2).to receive(:get_managed_disk_by_name).
-        with(resource_group_name, disk_name).
-        and_return(disk)
+      allow(client2).to receive(:get_managed_disk_by_name)
+        .with(resource_group_name, disk_name)
+        .and_return(disk)
     end
 
-    it "should get the disk" do
+    it 'should get the disk' do
       expect(disk_manager2.get_disk(resource_group_name, disk_name)).to be(disk)
     end
   end
 
-  describe "#get_data_disk" do
-    it "should get the disk" do
-      expect(disk_manager2).to receive(:get_disk).
-        with(resource_group_name, disk_name)
+  describe '#get_data_disk' do
+    it 'should get the disk' do
+      expect(disk_manager2).to receive(:get_disk)
+        .with(resource_group_name, disk_name)
 
-      expect {
+      expect do
         disk_manager2.get_data_disk(disk_id)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#snapshot_disk" do
-    let(:metadata) { {"foo" => "bar"} }
-    let(:snapshot_params) {
+  describe '#snapshot_disk' do
+    let(:metadata) { { 'foo' => 'bar' } }
+    let(:snapshot_params) do
       {
-        :name => snapshot_name,
-        :tags => {
-          "foo" => "bar",
-          "original" => disk_name
+        name: snapshot_name,
+        tags: {
+          'foo' => 'bar',
+          'original' => disk_name
         },
-        :disk_name => disk_name
+        disk_name: disk_name
       }
-    }
+    end
 
-    it "creates the managed snapshot" do
+    it 'creates the managed snapshot' do
       expect(client2).to receive(:create_managed_snapshot).with(resource_group_name, snapshot_params)
 
-      expect {
+      expect do
         disk_manager2.snapshot_disk(snapshot_id, disk_name, metadata)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#delete_snapshot" do
-    it "deletes the snapshot" do
+  describe '#delete_snapshot' do
+    it 'deletes the snapshot' do
       expect(client2).to receive(:delete_managed_snapshot).with(resource_group_name, snapshot_name)
 
-      expect {
+      expect do
         disk_manager2.delete_snapshot(snapshot_id)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#has_snapshot?" do
-    context "when the snapshot exists" do
+  describe '#has_snapshot?' do
+    context 'when the snapshot exists' do
       before do
-        allow(client2).to receive(:get_managed_snapshot_by_name).
-          with(resource_group_name, snapshot_name).
-          and_return({})
+        allow(client2).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name)
+          .and_return({})
       end
 
-      it "should return true" do
+      it 'should return true' do
         expect(disk_manager2.has_snapshot?(resource_group_name, snapshot_name)).to be(true)
       end
     end
 
-    context "when the snapshot does not exist" do
+    context 'when the snapshot does not exist' do
       before do
-        allow(client2).to receive(:get_managed_snapshot_by_name).
-          with(resource_group_name, snapshot_name).
-          and_return(nil)
+        allow(client2).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name)
+          .and_return(nil)
       end
 
-      it "should return false" do
+      it 'should return false' do
         expect(disk_manager2.has_snapshot?(resource_group_name, snapshot_name)).to be(false)
       end
     end
   end
 
-  describe "#generate_os_disk_name" do
-    let(:vm_name) { "fake-vm-name" }
+  describe '#generate_os_disk_name' do
+    let(:vm_name) { 'fake-vm-name' }
 
-    it "returns the right os disk name" do
+    it 'returns the right os disk name' do
       expect(disk_manager2.generate_os_disk_name(vm_name)).to eq("#{managed_os_disk_prefix}-#{vm_name}")
     end
   end
 
-  describe "#generate_ephemeral_disk_name" do
-    let(:vm_name) { "fake-vm-name" }
+  describe '#generate_ephemeral_disk_name' do
+    let(:vm_name) { 'fake-vm-name' }
 
-    it "returns the right ephemeral disk name" do
+    it 'returns the right ephemeral disk name' do
       expect(disk_manager2.generate_ephemeral_disk_name(vm_name)).to eq("#{managed_os_disk_prefix}-#{vm_name}-ephemeral-disk")
     end
   end
 
-  describe "#os_disk" do
+  describe '#os_disk' do
     let(:vm_name) { 'fake-vm-name' }
     let(:disk_name) { 'fake-disk-name' }
     let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
     let(:image_size) { 3 * 1024 }
 
     before do
-      allow(disk_manager2).to receive(:generate_os_disk_name).
-        and_return(disk_name)
-      allow(stemcell_info).to receive(:image_size).
-        and_return(image_size)
-      allow(stemcell_info).to receive(:is_windows?).
-        and_return(false)
+      allow(disk_manager2).to receive(:generate_os_disk_name)
+        .and_return(disk_name)
+      allow(stemcell_info).to receive(:image_size)
+        .and_return(image_size)
+      allow(stemcell_info).to receive(:is_windows?)
+        .and_return(false)
     end
 
     # Caching
-    context "when caching is not specified" do
-      let(:resource_pool) {
+    context 'when caching is not specified' do
+      let(:resource_pool) do
         {
           'instance_type' => 'STANDARD_A1'
         }
-      }
+      end
 
-      it "should return the default caching for os disk: ReadWrite" do
+      it 'should return the default caching for os disk: ReadWrite' do
         disk_manager2.resource_pool = resource_pool
 
         expect(
           disk_manager2.os_disk(vm_name, stemcell_info)
         ).to eq(
-          {
-            :disk_name    => disk_name,
-            :disk_size    => nil,
-            :disk_caching => 'ReadWrite'
-          }
+          disk_name: disk_name,
+          disk_size: nil,
+          disk_caching: 'ReadWrite'
         )
       end
     end
 
-    context "when caching is specified" do
-      context "when caching is valid" do
+    context 'when caching is specified' do
+      context 'when caching is valid' do
         let(:disk_caching) { 'ReadOnly' }
-        let(:resource_pool) {
+        let(:resource_pool) do
           {
             'instance_type' => 'STANDARD_A1',
             'caching' => disk_caching
           }
-        }
+        end
 
-        it "should return the specified caching" do
+        it 'should return the specified caching' do
           disk_manager2.resource_pool = resource_pool
 
           expect(
             disk_manager2.os_disk(vm_name, stemcell_info)
           ).to eq(
-            {
-              :disk_name    => disk_name,
-              :disk_size    => nil,
-              :disk_caching => disk_caching
-            }
+            disk_name: disk_name,
+            disk_size: nil,
+            disk_caching: disk_caching
           )
         end
       end
 
-      context "when caching is invalid" do
-        let(:resource_pool) {
+      context 'when caching is invalid' do
+        let(:resource_pool) do
           {
             'instance_type' => 'STANDARD_A1',
             'caching' => 'invalid'
           }
-        }
+        end
 
-        it "should raise an error" do
+        it 'should raise an error' do
           disk_manager2.resource_pool = resource_pool
 
-          expect {
+          expect do
             disk_manager2.os_disk(vm_name, stemcell_info)
-          }.to raise_error /Unknown disk caching/
+          end.to raise_error /Unknown disk caching/
         end
       end
     end
 
     # Disk Size
-    context "without root_disk" do
-      let(:resource_pool) {
+    context 'without root_disk' do
+      let(:resource_pool) do
         {
           'instance_type' => 'STANDARD_A1'
         }
-      }
+      end
 
-      it "should return disk_size: nil" do
+      it 'should return disk_size: nil' do
         disk_manager2.resource_pool = resource_pool
 
         expect(
           disk_manager2.os_disk(vm_name, stemcell_info)
         ).to eq(
-          {
-            :disk_name    => disk_name,
-            :disk_size    => nil,
-            :disk_caching => 'ReadWrite'
-          }
+          disk_name: disk_name,
+          disk_size: nil,
+          disk_caching: 'ReadWrite'
         )
       end
     end
 
-    context "with root_disk" do
-      context "when size is not specified" do
-        context "with the ephemeral disk" do
-          let(:resource_pool) {
+    context 'with root_disk' do
+      context 'when size is not specified' do
+        context 'with the ephemeral disk' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {}
             }
-          }
+          end
 
-          it "should return correct values" do
+          it 'should return correct values' do
             disk_manager2.resource_pool = resource_pool
 
             expect(
               disk_manager2.os_disk(vm_name, stemcell_info)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_size    => nil,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_size: nil,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "without the ephemeral disk" do
-          let(:resource_pool) {
+        context 'without the ephemeral disk' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {},
@@ -438,102 +432,94 @@ describe Bosh::AzureCloud::DiskManager2 do
                 'use_root_disk' => true
               }
             }
-          }
+          end
 
-          context "when the OS is Linux" do
+          context 'when the OS is Linux' do
             let(:minimum_required_disk_size) { 30 }
-            context "when the image_size is smaller than the minimum required disk size" do
+            context 'when the image_size is smaller than the minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size - 1) * 1024 }
               before do
-                allow(stemcell_info).to receive(:image_size).
-                  and_return(image_size)
+                allow(stemcell_info).to receive(:image_size)
+                  .and_return(image_size)
               end
 
-              it "should return the minimum required disk size" do
+              it 'should return the minimum required disk size' do
                 disk_manager2.resource_pool = resource_pool
 
                 expect(
                   disk_manager2.os_disk(vm_name, stemcell_info)
                 ).to eq(
-                  {
-                    :disk_name    => disk_name,
-                    :disk_size    => minimum_required_disk_size,
-                    :disk_caching => 'ReadWrite'
-                  }
+                  disk_name: disk_name,
+                  disk_size: minimum_required_disk_size,
+                  disk_caching: 'ReadWrite'
                 )
               end
             end
 
-            context "when the image_size is larger than minimum required disk size" do
+            context 'when the image_size is larger than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size + 1) * 1024 }
               before do
-                allow(stemcell_info).to receive(:image_size).
-                  and_return(image_size)
+                allow(stemcell_info).to receive(:image_size)
+                  .and_return(image_size)
               end
 
-              it "should return image_size as the disk size" do
+              it 'should return image_size as the disk size' do
                 disk_manager2.resource_pool = resource_pool
 
                 expect(
                   disk_manager2.os_disk(vm_name, stemcell_info)
                 ).to eq(
-                  {
-                    :disk_name    => disk_name,
-                    :disk_size    => image_size / 1024,
-                    :disk_caching => 'ReadWrite'
-                  }
+                  disk_name: disk_name,
+                  disk_size: image_size / 1024,
+                  disk_caching: 'ReadWrite'
                 )
               end
             end
           end
 
-          context "when the OS is Windows" do
+          context 'when the OS is Windows' do
             let(:minimum_required_disk_size) { 128 }
             before do
-              allow(stemcell_info).to receive(:is_windows?).
-                and_return(true)
+              allow(stemcell_info).to receive(:is_windows?)
+                .and_return(true)
             end
 
-            context "when the image_size is smaller than the minimum required disk size" do
+            context 'when the image_size is smaller than the minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size - 1) * 1024 }
               before do
-                allow(stemcell_info).to receive(:image_size).
-                  and_return(image_size)
+                allow(stemcell_info).to receive(:image_size)
+                  .and_return(image_size)
               end
 
-              it "should return the minimum required disk size" do
+              it 'should return the minimum required disk size' do
                 disk_manager2.resource_pool = resource_pool
 
                 expect(
                   disk_manager2.os_disk(vm_name, stemcell_info)
                 ).to eq(
-                  {
-                    :disk_name    => disk_name,
-                    :disk_size    => minimum_required_disk_size,
-                    :disk_caching => 'ReadWrite'
-                  }
+                  disk_name: disk_name,
+                  disk_size: minimum_required_disk_size,
+                  disk_caching: 'ReadWrite'
                 )
               end
             end
 
-            context "when the image_size is larger than minimum required disk size" do
+            context 'when the image_size is larger than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size + 1) * 1024 }
               before do
-                allow(stemcell_info).to receive(:image_size).
-                  and_return(image_size)
+                allow(stemcell_info).to receive(:image_size)
+                  .and_return(image_size)
               end
 
-              it "should return image_size as the disk size" do
+              it 'should return image_size as the disk size' do
                 disk_manager2.resource_pool = resource_pool
 
                 expect(
                   disk_manager2.os_disk(vm_name, stemcell_info)
                 ).to eq(
-                  {
-                    :disk_name    => disk_name,
-                    :disk_size    => image_size / 1024,
-                    :disk_caching => 'ReadWrite'
-                  }
+                  disk_name: disk_name,
+                  disk_size: image_size / 1024,
+                  disk_caching: 'ReadWrite'
                 )
               end
             end
@@ -541,102 +527,96 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
       end
 
-      context "when size is specified" do
-        context "When the size is not an integer" do
-          let(:resource_pool) {
+      context 'when size is specified' do
+        context 'When the size is not an integer' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 'invalid-size'
               }
             }
-          }
+          end
 
-          it "should raise an error" do
+          it 'should raise an error' do
             disk_manager2.resource_pool = resource_pool
 
-            expect {
+            expect do
               disk_manager2.os_disk(vm_name, stemcell_info)
-            }.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
+            end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
           end
         end
 
-        context "When the size is smaller than image_size" do
-          let(:resource_pool) {
+        context 'When the size is smaller than image_size' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 2 * 1024
               }
             }
-          }
+          end
           let(:image_size) { 4 * 1024 }
           before do
-            allow(stemcell_info).to receive(:image_size).
-              and_return(image_size)
+            allow(stemcell_info).to receive(:image_size)
+              .and_return(image_size)
           end
 
-          it "should use the image_size" do
+          it 'should use the image_size' do
             disk_manager2.resource_pool = resource_pool
 
             expect(
               disk_manager2.os_disk(vm_name, stemcell_info)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_size    => 4,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_size: 4,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "When the size is divisible by 1024" do
-          let(:resource_pool) {
+        context 'When the size is divisible by 1024' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 5 * 1024
               }
             }
-          }
+          end
 
-          it "should return the correct disk_size" do
+          it 'should return the correct disk_size' do
             disk_manager2.resource_pool = resource_pool
 
             expect(
               disk_manager2.os_disk(vm_name, stemcell_info)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_size    => 5,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_size: 5,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "When the size is not divisible by 1024" do
-          let(:resource_pool) {
+        context 'When the size is not divisible by 1024' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 5 * 1024 + 512
               }
             }
-          }
+          end
 
-          it "should return the smallest Integer greater than or equal to size/1024 for disk_size" do
+          it 'should return the smallest Integer greater than or equal to size/1024 for disk_size' do
             disk_manager2.resource_pool = resource_pool
 
             expect(
               disk_manager2.os_disk(vm_name, stemcell_info)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_size    => 6,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_size: 6,
+              disk_caching: 'ReadWrite'
             )
           end
         end
@@ -644,95 +624,89 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
   end
 
-  describe "#ephemeral_disk" do
+  describe '#ephemeral_disk' do
     let(:vm_name) { 'fake-vm-name' }
     let(:disk_name) { "#{managed_os_disk_prefix}-#{vm_name}-ephemeral-disk" }
-    let(:default_ephemeral_disk_size) { 70 } # The default value is default_ephemeral_disk_size for Standard_A1 
+    let(:default_ephemeral_disk_size) { 70 } # The default value is default_ephemeral_disk_size for Standard_A1
 
-    context "without ephemeral_disk" do
-      context "with a valid instance_type" do
-        let(:resource_pool) {
+    context 'without ephemeral_disk' do
+      context 'with a valid instance_type' do
+        let(:resource_pool) do
           {
             'instance_type' => 'STANDARD_A1'
           }
-        }
+        end
 
-        it "should return correct values" do
+        it 'should return correct values' do
           disk_manager2.resource_pool = resource_pool
 
           expect(
             disk_manager2.ephemeral_disk(vm_name)
           ).to eq(
-            {
-              :disk_name    => disk_name,
-              :disk_size    => default_ephemeral_disk_size,
-              :disk_caching => 'ReadWrite'
-            }
+            disk_name: disk_name,
+            disk_size: default_ephemeral_disk_size,
+            disk_caching: 'ReadWrite'
           )
         end
       end
 
-      context "with an invalid instance_type" do
-        let(:resource_pool) {
+      context 'with an invalid instance_type' do
+        let(:resource_pool) do
           {
             'instance_type' => 'invalid-instance-type'
           }
-        }
+        end
 
-        it "should return 30 as the default disk size" do
+        it 'should return 30 as the default disk size' do
           disk_manager2.resource_pool = resource_pool
 
           expect(
             disk_manager2.ephemeral_disk(vm_name)
           ).to eq(
-            {
-              :disk_name    => disk_name,
-              :disk_size    => 30,
-              :disk_caching => 'ReadWrite'
-            }
+            disk_name: disk_name,
+            disk_size: 30,
+            disk_caching: 'ReadWrite'
           )
         end
       end
     end
 
-    context "with ephemeral_disk" do
-      context "with use_root_disk" do
-        context "when use_root_disk is false" do
-          let(:resource_pool) {
+    context 'with ephemeral_disk' do
+      context 'with use_root_disk' do
+        context 'when use_root_disk is false' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {
                 'use_root_disk' => false
               }
             }
-          }
+          end
 
-          it "should return correct values" do
+          it 'should return correct values' do
             disk_manager2.resource_pool = resource_pool
 
             expect(
               disk_manager2.ephemeral_disk(vm_name)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_size    => default_ephemeral_disk_size,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_size: default_ephemeral_disk_size,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "when use_root_disk is true" do
-          let(:resource_pool) {
+        context 'when use_root_disk is true' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {
                 'use_root_disk' => true
               }
             }
-          }
+          end
 
-          it "should return correct values" do
+          it 'should return correct values' do
             disk_manager2.resource_pool = resource_pool
 
             expect(
@@ -742,72 +716,68 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
       end
 
-      context "without use_root_disk" do
-        context "without size" do
-          let(:resource_pool) {
+      context 'without use_root_disk' do
+        context 'without size' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {}
             }
-          }
+          end
 
-          it "should return correct values" do
+          it 'should return correct values' do
             disk_manager2.resource_pool = resource_pool
 
             expect(
               disk_manager2.ephemeral_disk(vm_name)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_size    => default_ephemeral_disk_size,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_size: default_ephemeral_disk_size,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "with size" do
-          context "when the size is valid" do
-            let(:resource_pool) {
+        context 'with size' do
+          context 'when the size is valid' do
+            let(:resource_pool) do
               {
                 'instance_type' => 'STANDARD_A1',
                 'ephemeral_disk' => {
                   'size' => 30 * 1024
                 }
               }
-            }
-            
-            it "should return the specified size" do
+            end
+
+            it 'should return the specified size' do
               disk_manager2.resource_pool = resource_pool
 
               expect(
                 disk_manager2.ephemeral_disk(vm_name)
               ).to eq(
-                {
-                  :disk_name    => disk_name,
-                  :disk_size    => 30,
-                  :disk_caching => 'ReadWrite'
-                }
+                disk_name: disk_name,
+                disk_size: 30,
+                disk_caching: 'ReadWrite'
               )
             end
           end
 
-          context "when the size is not an integer" do
-            let(:resource_pool) {
+          context 'when the size is not an integer' do
+            let(:resource_pool) do
               {
                 'instance_type' => 'STANDARD_A1',
                 'ephemeral_disk' => {
                   'size' => 'invalid-size'
                 }
               }
-            }
+            end
 
-            it "should raise an error" do
+            it 'should raise an error' do
               disk_manager2.resource_pool = resource_pool
 
-              expect {
+              expect do
                 disk_manager2.ephemeral_disk(vm_name)
-              }.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
+              end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
             end
           end
         end
@@ -815,111 +785,111 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
   end
 
-  describe "#migrate_to_zone" do
-    let(:disk) {
+  describe '#migrate_to_zone' do
+    let(:disk) do
       {
-        :location => "fake-location",
-        :account_type => "fake-account-type",
-        :tags => {}
+        location: 'fake-location',
+        account_type: 'fake-account-type',
+        tags: {}
       }
-    }
-    let(:zone) { "fake-zone" }
-    let(:disk_params) {
+    end
+    let(:zone) { 'fake-zone' }
+    let(:disk_params) do
       {
-        :name            => disk_name,
-        :location        => "fake-location",
-        :zone            => "fake-zone",
-        :account_type    => "fake-account-type",
-        :tags            => {}
+        name: disk_name,
+        location: 'fake-location',
+        zone: 'fake-zone',
+        account_type: 'fake-account-type',
+        tags: {}
       }
-    }
+    end
 
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:create).and_return(snapshot_id)
-      allow(disk_manager2).to receive(:snapshot_disk).
-        with(snapshot_id, disk_name, {})
-      allow(disk_manager2).to receive(:has_snapshot?).
-        with(resource_group_name, snapshot_name).
-        and_return(true)
-      allow(disk_manager2).to receive(:delete_disk).
-        with(resource_group_name, disk_name)
-      allow(client2).to receive(:create_managed_disk_from_snapshot).
-        with(resource_group_name, disk_params, snapshot_name)
-      allow(disk_manager2).to receive(:has_data_disk?).
-        with(disk_id).
-        and_return(true)
-      allow(disk_manager2).to receive(:delete_snapshot).
-        with(snapshot_id)
+      allow(disk_manager2).to receive(:snapshot_disk)
+        .with(snapshot_id, disk_name, {})
+      allow(disk_manager2).to receive(:has_snapshot?)
+        .with(resource_group_name, snapshot_name)
+        .and_return(true)
+      allow(disk_manager2).to receive(:delete_disk)
+        .with(resource_group_name, disk_name)
+      allow(client2).to receive(:create_managed_disk_from_snapshot)
+        .with(resource_group_name, disk_params, snapshot_name)
+      allow(disk_manager2).to receive(:has_data_disk?)
+        .with(disk_id)
+        .and_return(true)
+      allow(disk_manager2).to receive(:delete_snapshot)
+        .with(snapshot_id)
     end
 
-    context "When everything is ok" do
-      it "should migrate the disk without error" do
-        expect {
+    context 'When everything is ok' do
+      it 'should migrate the disk without error' do
+        expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
-    context "When the created snapshot does not exist" do
+    context 'When the created snapshot does not exist' do
       before do
-        allow(disk_manager2).to receive(:has_snapshot?).
-          with(resource_group_name, snapshot_name).
-          and_return(false)
+        allow(disk_manager2).to receive(:has_snapshot?)
+          .with(resource_group_name, snapshot_name)
+          .and_return(false)
       end
 
-      it "should raise an error" do
-        expect {
+      it 'should raise an error' do
+        expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        }.to raise_error /migrate_to_zone - Can'n find snapshot `#{snapshot_name}' in resource group `#{resource_group_name}'/
+        end.to raise_error /migrate_to_zone - Can'n find snapshot `#{snapshot_name}' in resource group `#{resource_group_name}'/
       end
     end
 
-    context "When it fails to create disk from snapshot" do
+    context 'When it fails to create disk from snapshot' do
       before do
-        allow(client2).to receive(:create_managed_disk_from_snapshot).
-          with(resource_group_name, disk_params, snapshot_name).
-          and_raise('fails to create disk')
+        allow(client2).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name)
+          .and_raise('fails to create disk')
       end
 
-      it "should retry and raise an error finally" do
+      it 'should retry and raise an error finally' do
         expect(client2).to receive(:create_managed_disk_from_snapshot).exactly(3).times
 
-        expect {
+        expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        }.to raise_error /fails to create disk/
+        end.to raise_error /fails to create disk/
       end
     end
 
-    context "When it fails to create disk from snapshot but succeeds with retry" do
-      it "should migrate the disk without error" do
+    context 'When it fails to create disk from snapshot but succeeds with retry' do
+      it 'should migrate the disk without error' do
         count = 0
-        allow(client2).to receive(:create_managed_disk_from_snapshot).
-          with(resource_group_name, disk_params, snapshot_name) do
-          count += 1
-          count == 1 ? raise('fails to create disk') : nil
+        allow(client2).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name) do
+            count += 1
+            count == 1 ? raise('fails to create disk') : nil
           end
 
         expect(client2).to receive(:create_managed_disk_from_snapshot).exactly(2).times
 
-        expect {
+        expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
-    context "When the migrated disk does not exist" do
+    context 'When the migrated disk does not exist' do
       before do
-        allow(disk_manager2).to receive(:has_data_disk?).
-          with(disk_id).
-          and_return(false)
+        allow(disk_manager2).to receive(:has_data_disk?)
+          .with(disk_id)
+          .and_return(false)
       end
 
-      it "should raise an error and not delete the snapshot" do
+      it 'should raise an error and not delete the snapshot' do
         expect(disk_manager2).not_to receive(:delete_snapshot)
 
-        expect {
+        expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        }.to raise_error /migrate_to_zone - Can'n find disk `#{disk_name}' in resource group `#{resource_group_name}' after migration/
+        end.to raise_error /migrate_to_zone - Can'n find disk `#{disk_name}' in resource group `#{resource_group_name}' after migration/
       end
     end
   end

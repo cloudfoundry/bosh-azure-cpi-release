@@ -1,6 +1,7 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
   module Helpers
-
     AZURE_RESOURCE_PROVIDER_COMPUTE          = 'crp'
     AZURE_RESOURCE_PROVIDER_NETWORK          = 'nrp'
     AZURE_RESOURCE_PROVIDER_STORAGE          = 'srp'
@@ -67,7 +68,7 @@ module Bosh::AzureCloud
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
       }
-    }
+    }.freeze
 
     PROVISIONING_STATE_SUCCEEDED  = 'Succeeded'
     PROVISIONING_STATE_FAILED     = 'Failed'
@@ -81,23 +82,23 @@ module Bosh::AzureCloud
     USER_AGENT_FOR_AZURE_RESOURCE = 'bosh'
     AZURE_TAGS                    = {
       'user-agent' => USER_AGENT_FOR_AZURE_RESOURCE
-    }
+    }.freeze
 
-    AZURE_MAX_RETRY_COUNT         = 10
+    AZURE_MAX_RETRY_COUNT = 10
 
     # Storage Account
     STORAGE_ACCOUNT_TYPE_STANDARD_LRS = 'Standard_LRS'
     STORAGE_ACCOUNT_TYPE_PREMIUM_LRS  = 'Premium_LRS'
-    STEMCELL_STORAGE_ACCOUNT_TAGS     = AZURE_TAGS.merge({
+    STEMCELL_STORAGE_ACCOUNT_TAGS     = AZURE_TAGS.merge(
       'type' => 'stemcell'
-    })
-    DIAGNOSTICS_STORAGE_ACCOUNT_TAGS  = AZURE_TAGS.merge({
+    )
+    DIAGNOSTICS_STORAGE_ACCOUNT_TAGS = AZURE_TAGS.merge(
       'type' => 'bootdiagnostics'
-    })
+    )
     DISK_CONTAINER                    = 'bosh'
     STEMCELL_CONTAINER                = 'stemcell'
     STEMCELL_TABLE                    = 'stemcells'
-    PUBLIC_ACCESS_LEVEL_BLOB          = "blob"
+    PUBLIC_ACCESS_LEVEL_BLOB          = 'blob'
 
     # Disk
     OS_DISK_PREFIX                  = 'bosh-os'
@@ -111,9 +112,9 @@ module Bosh::AzureCloud
     LIGHT_STEMCELL_PROPERTY         = 'image'
     AZURE_SCSI_HOST_DEVICE_ID       = '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}'
     METADATA_FOR_MIGRATED_BLOB_DISK = {
-      "user_agent" => USER_AGENT_FOR_AZURE_RESOURCE, # The key can't be user-agent because '-' is invalid for blob metadata
-      "migrated" => "true"
-    }
+      'user_agent' => USER_AGENT_FOR_AZURE_RESOURCE, # The key can't be user-agent because '-' is invalid for blob metadata
+      'migrated' => 'true'
+    }.freeze
 
     OS_TYPE_LINUX                               = 'linux'
     OS_TYPE_WINDOWS                             = 'windows'
@@ -123,8 +124,8 @@ module Bosh::AzureCloud
     MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS = 128
 
     # Lock
-    CPI_LOCK_DIR                            = "/tmp/azure_cpi"
-    CPI_LOCK_PREFIX                         = "bosh-lock"
+    CPI_LOCK_DIR                            = '/tmp/azure_cpi'
+    CPI_LOCK_PREFIX                         = 'bosh-lock'
     CPI_LOCK_CREATE_STORAGE_ACCOUNT         = "#{CPI_LOCK_PREFIX}-create-storage-account"
     CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT = 300 # seconds
     CPI_LOCK_COPY_STEMCELL                  = "#{CPI_LOCK_PREFIX}-copy-stemcell"
@@ -157,12 +158,12 @@ module Bosh::AzureCloud
     SERVICE_PRINCIPAL_CERTIFICATE_RELATIVE_PATH = 'azure_cpi/config/service_principal_certificate.pem'
 
     # Availability Zones
-    AVAILABILITY_ZONES = ['1', '2', '3']
+    AVAILABILITY_ZONES = %w[1 2 3].freeze
 
     # Telemetry
-    CPI_EVENTS_DIR                        = "/tmp/azure_cpi_events"
-    CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP = "/tmp/azure_cpi_events_last_update"
-    CPI_TELEMETRY_LOG_FILE                = "/tmp/azure_cpi_telemetry.log"
+    CPI_EVENTS_DIR                        = '/tmp/azure_cpi_events'
+    CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP = '/tmp/azure_cpi_events_last_update'
+    CPI_TELEMETRY_LOG_FILE                = '/tmp/azure_cpi_telemetry.log'
 
     ##
     # Raises CloudError exception
@@ -170,7 +171,7 @@ module Bosh::AzureCloud
     # @param [String] message Message about what went wrong
     # @param [Exception] exception Exception to be logged (optional)
     def cloud_error(message, exception = nil)
-      @logger.error(message) if @logger
+      @logger&.error(message)
       @logger.error(exception) if @logger && exception
       raise Bosh::Clouds::CloudError, message
     end
@@ -187,17 +188,13 @@ module Bosh::AzureCloud
     end
 
     def validate_disk_caching(caching)
-      valid_caching = ['None', 'ReadOnly', 'ReadWrite']
-      unless valid_caching.include?(caching)
-        cloud_error("Unknown disk caching #{caching}")
-      end
+      valid_caching = %w[None ReadOnly ReadWrite]
+      cloud_error("Unknown disk caching #{caching}") unless valid_caching.include?(caching)
     end
 
     def ignore_exception(error = Exception)
-      begin
-        yield
-      rescue error
-      end
+      yield
+    rescue error
     end
 
     def bosh_jobs_dir
@@ -245,7 +242,7 @@ module Bosh::AzureCloud
         url = "#{AZURE_ENVIRONMENTS[azure_properties['environment']]['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
       end
 
-      return url, api_version
+      [url, api_version]
     end
 
     def get_service_principal_certificate_path
@@ -261,30 +258,30 @@ module Bosh::AzureCloud
       thumbprint = OpenSSL::Digest::SHA1.new(cert.to_der).to_s
       @logger.debug("The certificate thumbprint is `#{thumbprint}'")
       header = {
-        "alg": "RS256",
-        "typ": "JWT",
+        "alg": 'RS256',
+        "typ": 'JWT',
         "x5t": Base64.urlsafe_encode64([thumbprint].pack('H*'))
       }
       payload = {
         "aud": authentication_endpoint,
-        "exp": (Time.now + 3600).strftime("%s"),
+        "exp": (Time.now + 3600).strftime('%s'),
         "iss": client_id,
         "jti": SecureRandom.uuid,
-        "nbf": (Time.now - 90).strftime("%s"),
+        "nbf": (Time.now - 90).strftime('%s'),
         "sub": client_id
       }
       rsa_private = OpenSSL::PKey::RSA.new(certificate_data)
       JWT.encode(payload, rsa_private, 'RS256', header)
-    rescue => e
+    rescue StandardError => e
       cloud_error("Failed to get the jwt assertion: #{e.inspect}\n#{e.backtrace.join("\n")}")
     end
 
     def initialize_azure_storage_client(storage_account, azure_properties)
       options = {
-        :storage_account_name => storage_account[:name],
-        :storage_access_key   => storage_account[:key],
-        :storage_dns_suffix   => URI.parse(storage_account[:storage_blob_host]).host.split(".")[2..-1].join("."),
-        :user_agent_prefix    => USER_AGENT_FOR_REST
+        storage_account_name: storage_account[:name],
+        storage_access_key: storage_account[:key],
+        storage_dns_suffix: URI.parse(storage_account[:storage_blob_host]).host.split('.')[2..-1].join('.'),
+        user_agent_prefix: USER_AGENT_FOR_REST
       }
       options[:ca_file] = get_ca_cert_path if azure_properties['environment'] == ENVIRONMENT_AZURESTACK
 
@@ -306,7 +303,7 @@ module Bosh::AzureCloud
     end
 
     def validate_disk_size_type(size)
-      raise ArgumentError, "The disk size needs to be an integer. The current value is `#{size}'." unless size.kind_of?(Integer)
+      raise ArgumentError, "The disk size needs to be an integer. The current value is `#{size}'." unless size.is_a?(Integer)
     end
 
     def is_debug_mode(azure_properties)
@@ -316,7 +313,7 @@ module Bosh::AzureCloud
     end
 
     def merge_storage_common_options(options = {})
-      options.merge!({ :request_id => SecureRandom.uuid })
+      options[:request_id] = SecureRandom.uuid
       options
     end
 
@@ -344,11 +341,11 @@ module Bosh::AzureCloud
         'STANDARD_A11' => [382, 16],
 
         # Av2-series
-        'STANDARD_A1_V2'   => [30, 2], #10 GiB
-        'STANDARD_A2_V2'   => [30, 4], #20 GiB
+        'STANDARD_A1_V2'   => [30, 2], # 10 GiB
+        'STANDARD_A2_V2'   => [30, 4], # 20 GiB
         'STANDARD_A4_V2'   => [40, 8],
         'STANDARD_A8_V2'   => [80, 16],
-        'STANDARD_A2M_V2'  => [30, 4], #20 GiB
+        'STANDARD_A2M_V2'  => [30, 4], # 20 GiB
         'STANDARD_A4M_V2'  => [40, 8],
         'STANDARD_A8M_V2'  => [80, 16],
 
@@ -424,35 +421,35 @@ module Bosh::AzureCloud
         'STANDARD_GS4'  => [448, 32],
         'STANDARD_GS5'  => [896, 64],
 
-        #Ls-series
+        # Ls-series
         'STANDARD_L4S'  => [678, 8],
         'STANDARD_L8S'  => [1000, 16], # 1388 GiB
         'STANDARD_L16S' => [1000, 32], # 2807 GiB
         'STANDARD_L32S' => [1000, 64], # 5630 GiB
 
-        #M-series
+        # M-series
         'STANDARD_M64MS' => [1000, 32], # 2048 GiB
         'STANDARD_M128S' => [1000, 64], # 4096 GiB
 
-        #NV-series
+        # NV-series
         'STANDARD_NV6'  => [380, 8],
         'STANDARD_NV12' => [680, 16],
         'STANDARD_NV24' => [1000, 32], # 1440 GiB
 
-        #NC-series
+        # NC-series
         'STANDARD_NC6'   => [380, 8],
         'STANDARD_NC12'  => [680, 16],
         'STANDARD_NC24'  => [1000, 32], # 1440 GiB
         'STANDARD_NC24R' => [1000, 32], # 1440 GiB
 
-        #H-series
+        # H-series
         'STANDARD_8'    => [1000, 16],
         'STANDARD_16'   => [1000, 32], # 2000 GiB
         'STANDARD_8M'   => [1000, 16],
         'STANDARD_16M'  => [1000, 32], # 2000 GiB
         'STANDARD_16R'  => [1000, 32], # 2000 GiB
         'STANDARD_16MR' => [1000, 32]  # 2000 GiB
-      }
+      }.freeze
 
       attr_reader :size, :count
 
@@ -491,14 +488,14 @@ module Bosh::AzureCloud
       def initialize(uri, metadata)
         @uri = uri
         @metadata = metadata
-        @os_type = @metadata['os_type'].nil? ? 'linux': @metadata['os_type'].downcase
+        @os_type = @metadata['os_type'].nil? ? 'linux' : @metadata['os_type'].downcase
         @name = @metadata['name']
         @version = @metadata['version']
-        if @metadata['disk'].nil?
-          @image_size = is_windows? ? IMAGE_SIZE_IN_MB_WINDOWS : IMAGE_SIZE_IN_MB_LINUX
-        else
-          @image_size = @metadata['disk'].to_i
-        end
+        @image_size = if @metadata['disk'].nil?
+                        is_windows? ? IMAGE_SIZE_IN_MB_WINDOWS : IMAGE_SIZE_IN_MB_LINUX
+                      else
+                        @metadata['disk'].to_i
+                      end
         @image = @metadata['image']
       end
 
@@ -533,8 +530,8 @@ module Bosh::AzureCloud
           @logger.warn("root_disk.size `#{root_disk_size}' MiB is smaller than the default OS disk size `#{image_size}' MiB. root_disk.size is ignored and use `#{image_size}' MiB as root disk size.")
           root_disk_size = image_size
         end
-        disk_size = (root_disk_size/1024.0).ceil
-        validate_disk_size(disk_size*1024)
+        disk_size = (root_disk_size / 1024.0).ceil
+        validate_disk_size(disk_size * 1024)
       end
 
       # When using OS disk to store the ephemeral data and root_disk.size is not set, CPI will resize the OS disk size.
@@ -542,7 +539,7 @@ module Bosh::AzureCloud
       # For Windows, the size of the VHD in the stemcell is 128 GiB. CPI will resize it to the high value between the minimum disk size and 128 GiB.
       if disk_size.nil? && use_root_disk
         minimum_required_disk_size = stemcell_info.is_windows? ? MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS : MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_LINUX
-        disk_size = (image_size/1024.0).ceil < minimum_required_disk_size ? minimum_required_disk_size : (image_size/1024.0).ceil
+        disk_size = (image_size / 1024.0).ceil < minimum_required_disk_size ? minimum_required_disk_size : (image_size / 1024.0).ceil
       end
       disk_size
     end
@@ -584,7 +581,7 @@ module Bosh::AzureCloud
         @is_locked = false
       end
 
-      def lock()
+      def lock
         begin
           mtime = File.mtime(@file_path)
         rescue Errno::ENOENT => e
@@ -592,19 +589,19 @@ module Bosh::AzureCloud
           begin
             fd = IO.sysopen(@file_path, Fcntl::O_WRONLY | Fcntl::O_EXCL | Fcntl::O_CREAT) # Using O_EXCL, creation fails if the file exists
             f = IO.open(fd)
-            f.syswrite("#{Process.pid}")
+            f.syswrite(Process.pid.to_s)
             @logger.debug("The lock `#{@file_path}' is created by the process `#{Process.pid}'")
             @is_locked = true
           rescue Errno::EEXIST => e
             @logger.info("Failed to create the lock file `#{@file_path}' because it has been created by another process.")
             return false
           ensure
-            f.close unless f.nil?
+            f&.close
           end
           return true
         end
 
-        if Time.new() - mtime > @expired
+        if Time.new - mtime > @expired
           @logger.debug("The lock `#{@file_path}' exists, but timeouts.")
           raise LockTimeoutError
         end
@@ -613,7 +610,7 @@ module Bosh::AzureCloud
         false
       end
 
-      def wait()
+      def wait
         loop do
           begin
             mtime = File.mtime(@file_path)
@@ -621,12 +618,12 @@ module Bosh::AzureCloud
             @logger.debug("The lock `#{@file_path}' does not exist")
             return true
           end
-          raise LockTimeoutError if Time.new() - mtime > @expired
+          raise LockTimeoutError if Time.new - mtime > @expired
           sleep(1) # second
         end
       end
 
-      def unlock()
+      def unlock
         File.delete(@file_path)
         @logger.debug("The lock `#{@file_path}' is deleted by the process `#{Process.pid}'")
         @is_locked = false
@@ -634,12 +631,12 @@ module Bosh::AzureCloud
         raise LockNotFoundError
       end
 
-      def update()
+      def update
         raise LockNotOwnedError unless @is_locked
         begin
-          File.open(@file_path, 'wb') { |f|
-            f.write("#{Process.pid}")
-          }
+          File.open(@file_path, 'wb') do |f|
+            f.write(Process.pid.to_s)
+          end
           @logger.debug("The lock `#{@file_path}' is updated by the process `#{Process.pid}'")
         rescue Errno::ENOENT => e
           raise LockNotFoundError
@@ -691,10 +688,10 @@ module Bosh::AzureCloud
         end
 
         is_counter_increased = false
-        counter = update_counter { |counter|
+        counter = update_counter do |counter|
           @logger.debug("The counter `#{@counter_file_path}' is updated from `#{counter}' to `#{counter + 1}'")
-          counter = counter + 1
-        }
+          counter += 1
+        end
         is_counter_increased = true
 
         if counter == 1
@@ -703,12 +700,12 @@ module Bosh::AzureCloud
             @writer_mutex.wait
           end
         end
-      rescue => e
+      rescue StandardError => e
         if is_counter_increased
-          counter = update_counter { |counter|
+          counter = update_counter do |counter|
             @logger.debug("The counter `#{@counter_file_path}' is updated from `#{counter}' to `#{counter - 1}'")
-            counter = counter - 1
-          }
+            counter -= 1
+          end
         end
         raise e
       ensure
@@ -723,12 +720,12 @@ module Bosh::AzureCloud
           @readers_mutex.wait
         end
 
-        counter = update_counter { |counter|
+        counter = update_counter do |counter|
           @logger.debug("The counter is `#{@counter_file_path}' updated from `#{counter}' to `#{counter - 1}'")
-          counter = counter - 1
-        }
+          counter -= 1
+        end
 
-        if counter == 0
+        if counter.zero?
           File.delete(@counter_file_path)
           @writer_mutex.unlock
         end
@@ -748,25 +745,25 @@ module Bosh::AzureCloud
 
       def update_counter
         counter = 0
-        if File.exists?(@counter_file_path)
-          File.open(@counter_file_path, 'rb') { |f|
-            counter = f.read().to_i
-          }
+        if File.exist?(@counter_file_path)
+          File.open(@counter_file_path, 'rb') do |f|
+            counter = f.read.to_i
+          end
         end
-        File.open(@counter_file_path, 'wb') { |f|
+        File.open(@counter_file_path, 'wb') do |f|
           counter = yield counter
-          f.write("#{counter}")
-        }
+          f.write(counter.to_s)
+        end
         counter
       end
     end
 
     def mark_deleting_locks
-      File.open(CPI_LOCK_DELETE, 'wb') { |f| f.write("Some errors happen. Will delete the locks when CPI starts next time.") }
+      File.open(CPI_LOCK_DELETE, 'wb') { |f| f.write('Some errors happen. Will delete the locks when CPI starts next time.') }
     end
 
     def needs_deleting_locks?
-      File.exists?(CPI_LOCK_DELETE)
+      File.exist?(CPI_LOCK_DELETE)
     end
 
     def remove_deleting_mark
@@ -777,15 +774,14 @@ module Bosh::AzureCloud
       instance_type = instance_type.downcase
       storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
       if ((instance_type =~ /^standard_ds/) == 0) || # including DS and DSv2, e.g. Standard_DS1, Standard_DS1_v2
-        ((instance_type =~ /^standard_d(\d)+s_v3/) == 0) ||
-        ((instance_type =~ /^standard_gs/) == 0) ||
-        ((instance_type =~ /^standard_b(\d)+s/) == 0) ||
-        ((instance_type =~ /^standard_b(\d)+ms/) == 0) ||
-        ((instance_type =~ /^standard_f(\d)+s/) == 0) ||
-        ((instance_type =~ /^standard_e(\d)+s_v3/) == 0) ||
-        ((instance_type =~ /^standard_e(\d)+is_v3/) == 0) ||
-        ((instance_type =~ /^standard_l(\d)+s/) == 0)
-      then
+         ((instance_type =~ /^standard_d(\d)+s_v3/) == 0) ||
+         ((instance_type =~ /^standard_gs/) == 0) ||
+         ((instance_type =~ /^standard_b(\d)+s/) == 0) ||
+         ((instance_type =~ /^standard_b(\d)+ms/) == 0) ||
+         ((instance_type =~ /^standard_f(\d)+s/) == 0) ||
+         ((instance_type =~ /^standard_e(\d)+s_v3/) == 0) ||
+         ((instance_type =~ /^standard_e(\d)+is_v3/) == 0) ||
+         ((instance_type =~ /^standard_l(\d)+s/) == 0)
         storage_account_type = STORAGE_ACCOUNT_TYPE_PREMIUM_LRS
       end
       storage_account_type
@@ -800,7 +796,7 @@ module Bosh::AzureCloud
     end
 
     def has_light_stemcell_property?(stemcell_properties)
-      stemcell_properties.has_key?(LIGHT_STEMCELL_PROPERTY)
+      stemcell_properties.key?(LIGHT_STEMCELL_PROPERTY)
     end
 
     def is_light_stemcell_id?(stemcell_id)
@@ -816,15 +812,15 @@ module Bosh::AzureCloud
       suffix = Process.pid.to_s(32) # default max pid 65536, .to_s(32) -> '2000'
       padding_length = WINDOWS_VM_NAME_LENGTH - prefix.length - suffix.length
       if padding_length >= 0
-        prefix + '0'*padding_length + suffix
+        prefix + '0' * padding_length + suffix
       else
-        @logger.warn("Length of generated string is longer than expected, so it is truncated. It may be not unique.")
-        (prefix + suffix)[prefix.length + suffix.length - WINDOWS_VM_NAME_LENGTH, prefix.length + suffix.length]  # get tail
+        @logger.warn('Length of generated string is longer than expected, so it is truncated. It may be not unique.')
+        (prefix + suffix)[prefix.length + suffix.length - WINDOWS_VM_NAME_LENGTH, prefix.length + suffix.length] # get tail
       end
     end
 
     def validate_idle_timeout(idle_timeout_in_minutes)
-      raise ArgumentError, 'idle_timeout_in_minutes needs to be an integer' unless idle_timeout_in_minutes.kind_of?(Integer)
+      raise ArgumentError, 'idle_timeout_in_minutes needs to be an integer' unless idle_timeout_in_minutes.is_a?(Integer)
 
       cloud_error('Minimum idle_timeout_in_minutes is 4 minutes') if idle_timeout_in_minutes < 4
       cloud_error('Maximum idle_timeout_in_minutes is 30 minutes') if idle_timeout_in_minutes > 30

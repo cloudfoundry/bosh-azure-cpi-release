@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+which rubocop > /dev/null 2>&1
+[[ "$?" -eq "1" ]] && {
+  echo "You need to install rubocop using 'gem install rubocop'"
+  exit
+}
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+pushd $DIR/..
+rubocop -P
+popd
