@@ -14,6 +14,7 @@ src/bosh_azure_cpi/vendor/cache
 src/bosh_azure_cpi/coverage
 .DS_Store
 .vagrant
+.vscode
 *.swp
 *~
 *#

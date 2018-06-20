@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'securerandom'
 require 'tempfile'
@@ -6,15 +8,15 @@ require 'cloud'
 
 describe Bosh::AzureCloud::Cloud do
   before(:all) do
-    @subscription_id                 = ENV['BOSH_AZURE_SUBSCRIPTION_ID']                 || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
-    @tenant_id                       = ENV['BOSH_AZURE_TENANT_ID']                       || raise("Missing BOSH_AZURE_TENANT_ID")
-    @client_id                       = ENV['BOSH_AZURE_CLIENT_ID']                       || raise("Missing BOSH_AZURE_CLIENT_ID")
-    @client_secret                   = ENV['BOSH_AZURE_CLIENT_SECRET']                   || raise("Missing BOSH_AZURE_CLIENT_secret")
-    @stemcell_id                     = ENV['BOSH_AZURE_STEMCELL_ID']                     || raise("Missing BOSH_AZURE_STEMCELL_ID")
-    @ssh_public_key                  = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']                  || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
-    @default_security_group          = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']          || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
-    @default_resource_group_name     = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME']     || raise("Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME")
-    @additional_resource_group_name  = ENV['BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME']  || raise("Missing BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME")
+    @subscription_id                 = ENV['BOSH_AZURE_SUBSCRIPTION_ID']                 || raise('Missing BOSH_AZURE_SUBSCRIPTION_ID')
+    @tenant_id                       = ENV['BOSH_AZURE_TENANT_ID']                       || raise('Missing BOSH_AZURE_TENANT_ID')
+    @client_id                       = ENV['BOSH_AZURE_CLIENT_ID']                       || raise('Missing BOSH_AZURE_CLIENT_ID')
+    @client_secret                   = ENV['BOSH_AZURE_CLIENT_SECRET']                   || raise('Missing BOSH_AZURE_CLIENT_secret')
+    @stemcell_id                     = ENV['BOSH_AZURE_STEMCELL_ID']                     || raise('Missing BOSH_AZURE_STEMCELL_ID')
+    @ssh_public_key                  = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']                  || raise('Missing BOSH_AZURE_SSH_PUBLIC_KEY')
+    @default_security_group          = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']          || raise('Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP')
+    @default_resource_group_name     = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME']     || raise('Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME')
+    @additional_resource_group_name  = ENV['BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME']  || raise('Missing BOSH_AZURE_ADDITIONAL_RESOURCE_GROUP_NAME')
   end
 
   let(:azure_environment)    { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
@@ -24,13 +26,13 @@ describe Bosh::AzureCloud::Cloud do
   let(:instance_type)        { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
   let(:vm_metadata)          { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
   let(:network_spec)         { {} }
-  let(:resource_pool)        {
+  let(:resource_pool)        do
     {
       'instance_type' => instance_type,
       'resource_group_name' => @additional_resource_group_name
     }
-  }
-  let(:snapshot_metadata)    {
+  end
+  let(:snapshot_metadata) do
     vm_metadata.merge(
       bosh_data: 'bosh data',
       instance_id: 'instance',
@@ -38,9 +40,9 @@ describe Bosh::AzureCloud::Cloud do
       director_name: 'Director',
       director_uuid: SecureRandom.uuid
     )
-  }
+  end
 
-  let(:cloud_options) {
+  let(:cloud_options) do
     {
       'azure' => {
         'environment' => azure_environment,
@@ -53,7 +55,7 @@ describe Bosh::AzureCloud::Cloud do
         'ssh_user' => 'vcap',
         'ssh_public_key' => @ssh_public_key,
         'default_security_group' => @default_security_group,
-        'parallel_upload_thread_num' => 16,
+        'parallel_upload_thread_num' => 16
       },
       'registry' => {
         'endpoint' => 'fake',
@@ -61,29 +63,29 @@ describe Bosh::AzureCloud::Cloud do
         'password' => 'fake'
       }
     }
-  }
+  end
 
   subject(:cpi) do
     cloud_options['azure']['use_managed_disks'] = true
     described_class.new(cloud_options)
   end
 
-  before {
+  before do
     Bosh::Clouds::Config.configure(double('delegate', task_checkpoint: nil))
-  }
+  end
 
   before { allow(Bosh::Clouds::Config).to receive_messages(logger: logger) }
   let(:logger) { Logger.new(STDERR) }
 
   before { allow(Bosh::Cpi::RegistryClient).to receive_messages(new: double('registry').as_null_object) }
 
-  before { @disk_id_pool = Array.new }
-  after {
+  before { @disk_id_pool = [] }
+  after do
     @disk_id_pool.each do |disk_id|
       logger.info("Cleanup: Deleting the disk `#{disk_id}'")
       cpi.delete_disk(disk_id) if disk_id
     end
-  }
+  end
 
   context 'Migrate from unmanaged disks deployment to managed disks deployment' do
     subject(:cpi_unmanaged) do
@@ -91,7 +93,7 @@ describe Bosh::AzureCloud::Cloud do
       described_class.new(cloud_options)
     end
 
-    let(:network_spec) {
+    let(:network_spec) do
       {
         'network_a' => {
           'type' => 'dynamic',
@@ -101,7 +103,7 @@ describe Bosh::AzureCloud::Cloud do
           }
         }
       }
-    }
+    end
 
     context 'Without availability set' do
       it 'should exercise the vm lifecycle' do
@@ -126,17 +128,17 @@ describe Bosh::AzureCloud::Cloud do
           expect(unmanaged_snapshot_id).not_to be_nil
           cpi_unmanaged.delete_snapshot(unmanaged_snapshot_id)
 
-          logger.info("Assume that the new BOSH director (use_managed_disks=true) is deployed.") # After this line, cpi instead of cpi_unmanaged will be used
+          logger.info('Assume that the new BOSH director (use_managed_disks=true) is deployed.') # After this line, cpi instead of cpi_unmanaged will be used
 
           # Even use_managed_disks is enabled, but the unmanaged VM and disks have not been updated. It should succeed to snapshot the unmanaged disk.
           unmanaged_snapshot_id = cpi.snapshot_disk(disk_id, snapshot_metadata)
           expect(unmanaged_snapshot_id).not_to be_nil
           cpi.delete_snapshot(unmanaged_snapshot_id)
 
-          logger.info("The new BOSH director starts to update the unmanaged VM to a managed VM")
+          logger.info('The new BOSH director starts to update the unmanaged VM to a managed VM')
 
           # Detach the unmanaged disk
-          Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
+          Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: ->(n, _) { [2**(n - 1), 30].min }) do
             cpi.detach_disk(unmanaged_instance_id, disk_id)
             true
           end
@@ -159,7 +161,7 @@ describe Bosh::AzureCloud::Cloud do
           cpi.delete_snapshot(managed_snapshot_id)
 
           # Detach the managed disk
-          Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
+          Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: ->(n, _) { [2**(n - 1), 30].min }) do
             cpi.detach_disk(managed_instance_id, disk_id)
             true
           end
@@ -176,26 +178,26 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'With availability set' do
-      let(:resource_pool) {
+      let(:resource_pool) do
         {
           'instance_type' => instance_type,
           'availability_set' => SecureRandom.uuid,
           'platform_fault_domain_count' => 2,
           'ephemeral_disk' => {
-            'size' => 20480
+            'size' => 20_480
           }
         }
-      }
+      end
 
       it 'should exercise the vm lifecycle' do
         vm_count = 3
-        unmanaged_instance_id_pool = Array.new
-        managed_instance_id_pool = Array.new
-        instance_id_and_disk_id_pool = Array.new
+        unmanaged_instance_id_pool = []
+        managed_instance_id_pool = []
+        instance_id_and_disk_id_pool = []
         begin
           unmanaged_vm_lifecycles = []
           vm_count.times do |i|
-            unmanaged_vm_lifecycles[i] = Thread.new {
+            unmanaged_vm_lifecycles[i] = Thread.new do
               # Create an unmanaged VM
               logger.info("Creating VM with stemcell_id=`#{@stemcell_id}'")
               instance_id = cpi_unmanaged.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
@@ -213,20 +215,20 @@ describe Bosh::AzureCloud::Cloud do
               @disk_id_pool.push(disk_id)
               cpi_unmanaged.attach_disk(instance_id, disk_id)
 
-              instance_id_and_disk_id_pool.push({
-                :instance_id => instance_id,
-                :disk_id => disk_id
-              })
-            }
+              instance_id_and_disk_id_pool.push(
+                instance_id: instance_id,
+                disk_id: disk_id
+              )
+            end
           end
-          unmanaged_vm_lifecycles.each { |t| t.join; }
+          unmanaged_vm_lifecycles.each(&:join)
 
-          logger.info("Assume that the new BOSH director (use_managed_disks=true) is deployed.") # After this line, cpi instead of cpi_unmanaged will be used
-          logger.info("The new BOSH director starts to update the unmanaged VM to an managed VM one by one")
+          logger.info('Assume that the new BOSH director (use_managed_disks=true) is deployed.') # After this line, cpi instead of cpi_unmanaged will be used
+          logger.info('The new BOSH director starts to update the unmanaged VM to an managed VM one by one')
 
           managed_vm_lifecycles = []
           vm_count.times do |i|
-            managed_vm_lifecycles[i] = Thread.new {
+            managed_vm_lifecycles[i] = Thread.new do
               instance_id_and_disk_id = instance_id_and_disk_id_pool[i]
               unmanaged_instance_id = instance_id_and_disk_id[:instance_id]
               disk_id = instance_id_and_disk_id[:disk_id]
@@ -250,7 +252,7 @@ describe Bosh::AzureCloud::Cloud do
               cpi.delete_snapshot(managed_snapshot_id)
 
               # Detach the managed disk
-              Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: lambda { |n, _| [2**(n-1), 30].min }) do
+              Bosh::Common.retryable(tries: 20, on: Bosh::Clouds::DiskNotAttached, sleep: ->(n, _) { [2**(n - 1), 30].min }) do
                 cpi.detach_disk(managed_instance_id, disk_id)
                 true
               end
@@ -259,9 +261,9 @@ describe Bosh::AzureCloud::Cloud do
               cpi.delete_disk(disk_id)
               cpi_unmanaged.delete_disk(disk_id)
               @disk_id_pool.delete(disk_id)
-            }
+            end
           end
-          managed_vm_lifecycles.each { |t| t.join; }
+          managed_vm_lifecycles.each(&:join)
         ensure
           unmanaged_instance_id_pool.each do |unmanaged_instance_id|
             cpi_unmanaged.delete_vm(unmanaged_instance_id) unless unmanaged_instance_id.nil?

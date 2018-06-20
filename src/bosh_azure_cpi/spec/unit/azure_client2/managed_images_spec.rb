@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'webmock/rspec'
 
@@ -5,129 +7,134 @@ WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient2 do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) {
+  let(:azure_client2) do
     Bosh::AzureCloud::AzureClient2.new(
-      mock_cloud_options["properties"]["azure"],
+      mock_cloud_options['properties']['azure'],
       logger
     )
-  }
+  end
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
   let(:resource_group) { mock_azure_properties['resource_group_name'] }
-  let(:request_id) { "fake-request-id" }
+  let(:request_id) { 'fake-request-id' }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
-  let(:image_name) { "fake-image-name" }
-  let(:valid_access_token) { "valid-access-token" }
-  let(:expires_on) { (Time.now+1800).to_i.to_s }
+  let(:image_name) { 'fake-image-name' }
+  let(:valid_access_token) { 'valid-access-token' }
+  let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
     allow(azure_client2).to receive(:sleep)
   end
 
-  describe "#create_user_image" do
+  describe '#create_user_image' do
     let(:image_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
 
     let(:image_params) do
       {
-        :name           => image_name,
-        :location       => "a",
-        :tags           => { "foo" => "bar"},
-        :os_type        => "b",
-        :source_uri     => "c",
-        :account_type   => "d"
+        name: image_name,
+        location: 'a',
+        tags: { 'foo' => 'bar' },
+        os_type: 'b',
+        source_uri: 'c',
+        account_type: 'd'
       }
     end
 
-    let(:request_body) {
+    let(:request_body) do
       {
-        :location => "a",
-        :tags     => {
-          :foo => "bar"
+        location: 'a',
+        tags: {
+          foo: 'bar'
         },
-        :properties => {
-          :storageProfile => {
-            :osDisk => {
-              :osType => "b",
-              :blobUri => "c",
-              :osState => 'generalized',
-              :caching => 'readwrite',
-              :storageAccountType => "d"
+        properties: {
+          storageProfile: {
+            osDisk: {
+              osType: 'b',
+              blobUri: 'c',
+              osState: 'generalized',
+              caching: 'readwrite',
+              storageAccountType: 'd'
             }
           }
         }
       }
-    }
+    end
 
-    it "should raise no error" do
+    it 'should raise no error' do
       stub_request(:post, token_uri).to_return(
-        :status => 200,
-        :body => {
-          "access_token"=>valid_access_token,
-          "expires_on"=>expires_on
+        status: 200,
+        body: {
+          'access_token' => valid_access_token,
+          'expires_on' => expires_on
         }.to_json,
-        :headers => {})
+        headers: {}
+      )
       stub_request(:put, image_uri).with(body: request_body).to_return(
-        :status => 200,
-        :body => '',
-        :headers => {
-          "azure-asyncoperation" => operation_status_link
-        })
+        status: 200,
+        body: '',
+        headers: {
+          'azure-asyncoperation' => operation_status_link
+        }
+      )
       stub_request(:get, operation_status_link).to_return(
-        :status => 200,
-        :body => '{"status":"Succeeded"}',
-        :headers => {})
+        status: 200,
+        body: '{"status":"Succeeded"}',
+        headers: {}
+      )
 
-      expect {
+      expect do
         azure_client2.create_user_image(image_params)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#get_user_image_by_name" do
+  describe '#get_user_image_by_name' do
     let(:image_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
 
-    let(:response_body) {
+    let(:response_body) do
       {
-        :id => "a",
-        :name => "b",
-        :location => "c",
-        :tags     => {
-          :foo => "bar"
+        id: 'a',
+        name: 'b',
+        location: 'c',
+        tags: {
+          foo: 'bar'
         },
-        :properties => {
-          :provisioningState => "d"
+        properties: {
+          provisioningState: 'd'
         }
       }
-    }
-    let(:image) {
+    end
+    let(:image) do
       {
-        :id => "a",
-        :name => "b",
-        :location => "c",
-        :tags     => {
-          "foo" => "bar"
+        id: 'a',
+        name: 'b',
+        location: 'c',
+        tags: {
+          'foo' => 'bar'
         },
-        :provisioning_state => "d"
+        provisioning_state: 'd'
       }
-    }
+    end
 
-    it "should raise no error" do
+    it 'should raise no error' do
       stub_request(:post, token_uri).to_return(
-        :status => 200,
-        :body => {
-          "access_token"=>valid_access_token,
-          "expires_on"=>expires_on
+        status: 200,
+        body: {
+          'access_token' => valid_access_token,
+          'expires_on' => expires_on
         }.to_json,
-        :headers => {})
+        headers: {}
+      )
       stub_request(:get, image_uri).to_return(
-        :status => 200,
-        :body => response_body.to_json,
-        :headers => {})
+        status: 200,
+        body: response_body.to_json,
+        headers: {}
+      )
 
       expect(
         azure_client2.get_user_image_by_name(image_name)
@@ -135,99 +142,103 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
   end
 
-  describe "#list_user_images" do
+  describe '#list_user_images' do
     let(:images_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images?api-version=#{api_version_compute}" }
 
-    let(:response_body) {
+    let(:response_body) do
       {
-        :value => [
+        value: [
           {
-            :id => "a1",
-            :name => "b1",
-            :location => "c1",
-            :tags     => {
-              :foo => "bar1"
+            id: 'a1',
+            name: 'b1',
+            location: 'c1',
+            tags: {
+              foo: 'bar1'
             },
-            :properties => {
-              :provisioningState => "d1"
+            properties: {
+              provisioningState: 'd1'
             }
           },
           {
-            :id => "a2",
-            :name => "b2",
-            :location => "c2",
-            :tags     => {
-              :foo => "bar2"
+            id: 'a2',
+            name: 'b2',
+            location: 'c2',
+            tags: {
+              foo: 'bar2'
             },
-            :properties => {
-              :provisioningState => "d2"
+            properties: {
+              provisioningState: 'd2'
             }
           }
         ]
       }
-    }
-    let(:images) {
+    end
+    let(:images) do
       [
         {
-          :id => "a1",
-          :name => "b1",
-          :location => "c1",
-          :tags     => {
-            "foo" => "bar1"
+          id: 'a1',
+          name: 'b1',
+          location: 'c1',
+          tags: {
+            'foo' => 'bar1'
           },
-          :provisioning_state => "d1"
+          provisioning_state: 'd1'
         },
         {
-          :id => "a2",
-          :name => "b2",
-          :location => "c2",
-          :tags     => {
-            "foo" => "bar2"
+          id: 'a2',
+          name: 'b2',
+          location: 'c2',
+          tags: {
+            'foo' => 'bar2'
           },
-          :provisioning_state => "d2"
+          provisioning_state: 'd2'
         }
       ]
-    }
+    end
 
-    it "should raise no error" do
+    it 'should raise no error' do
       stub_request(:post, token_uri).to_return(
-        :status => 200,
-        :body => {
-          "access_token"=>valid_access_token,
-          "expires_on"=>expires_on
+        status: 200,
+        body: {
+          'access_token' => valid_access_token,
+          'expires_on' => expires_on
         }.to_json,
-        :headers => {})
+        headers: {}
+      )
       stub_request(:get, images_uri).to_return(
-        :status => 200,
-        :body => response_body.to_json,
-        :headers => {})
+        status: 200,
+        body: response_body.to_json,
+        headers: {}
+      )
 
       expect(
-        azure_client2.list_user_images()
+        azure_client2.list_user_images
       ).to eq(images)
     end
   end
 
-  describe "#delete_user_image" do
+  describe '#delete_user_image' do
     let(:image_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
 
-    context "when token is valid, delete operation is accepted and completed" do
-      it "should delete the managed image without error" do
+    context 'when token is valid, delete operation is accepted and completed' do
+      it 'should delete the managed image without error' do
         stub_request(:post, token_uri).to_return(
-          :status => 200,
-          :body => {
-            "access_token"=>valid_access_token,
-            "expires_on"=>expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:delete, image_uri).to_return(
-          :status => 200,
-          :body => '',
-          :headers => {})
+          status: 200,
+          body: '',
+          headers: {}
+        )
 
-        expect {
+        expect do
           azure_client2.delete_user_image(image_name)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end

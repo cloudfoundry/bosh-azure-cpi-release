@@ -1,4 +1,6 @@
-$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+# frozen_string_literal: true
+
+$LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 
 require 'simplecov'
 SimpleCov.start do
@@ -42,7 +44,7 @@ ERROR_MSG_OPENSSL_RESET         = 'Connection reset by peer - SSL_connect'
 STEMCELL_STORAGE_ACCOUNT_TAGS   = {
   'user-agent' => 'bosh',
   'type' => 'stemcell'
-}
+}.freeze
 
 CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT = 300
 
@@ -50,7 +52,7 @@ def mock_cloud_options
   {
     'plugin'     => 'azure',
     'properties' => {
-      'azure'     => {
+      'azure' => {
         'environment'                => 'AzureCloud',
         'subscription_id'            => MOCK_AZURE_SUBSCRIPTION_ID,
         'storage_account_name'       => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
@@ -71,11 +73,11 @@ def mock_cloud_options
         'user'      => 'admin',
         'password'  => 'admin'
       },
-      'agent'   => {
+      'agent' => {
         'blobstore' => {
           'address' => '10.0.0.5'
         },
-        'nats'  => {
+        'nats' => {
           'address' => '10.0.0.5'
         }
       }
@@ -100,11 +102,11 @@ def mock_cloud_options_merge(override_options, base_hash = mock_cloud_options)
   override_options ||= {}
 
   override_options.each do |key, value|
-    if value.is_a? Hash
-      merged_options[key] = mock_cloud_options_merge(override_options[key], base_hash[key])
-    else
-      merged_options[key] = value
-    end
+    merged_options[key] = if value.is_a? Hash
+                            mock_cloud_options_merge(override_options[key], base_hash[key])
+                          else
+                            value
+                          end
   end
 
   extra_keys = base_hash.keys - override_options.keys
@@ -119,10 +121,9 @@ end
 
 def mock_registry
   registry = double('registry',
-    :endpoint => mock_registry_properties['endpoint'],
-    :user     => mock_registry_properties['user'],
-    :password => mock_registry_properties['password']
-  )
+                    endpoint: mock_registry_properties['endpoint'],
+                    user: mock_registry_properties['user'],
+                    password: mock_registry_properties['password'])
   allow(Bosh::Cpi::RegistryClient).to receive(:new).and_return(registry)
   registry
 end
@@ -132,7 +133,7 @@ def mock_cloud(options = nil)
 end
 
 class MockTelemetryManager
-  def monitor(operation, id: "", extras: {})
+  def monitor(*)
     yield
   end
 end

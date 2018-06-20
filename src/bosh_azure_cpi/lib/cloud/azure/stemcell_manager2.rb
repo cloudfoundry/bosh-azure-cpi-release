@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
   class StemcellManager2 < StemcellManager
     include Bosh::Exec
@@ -12,10 +14,10 @@ module Bosh::AzureCloud
       @logger.info("delete_stemcell(#{name})")
 
       # Both the old format and new format of user image are deleted
-      stemcell_uuid = name.sub("#{STEMCELL_PREFIX}-", "")
-      user_images = @azure_client2.list_user_images().select{ |user_image|
-        user_image[:name].start_with?(stemcell_uuid) || user_image[:name].start_with?(name)
-      }
+      stemcell_uuid = name.sub("#{STEMCELL_PREFIX}-", '')
+      user_images = @azure_client2.list_user_images.select do |user_image|
+        user_image[:name].start_with?(stemcell_uuid, name)
+      end
       user_images.each do |user_image|
         user_image_name = user_image[:name]
         @logger.info("Delete user image `#{user_image_name}'")
@@ -23,7 +25,7 @@ module Bosh::AzureCloud
       end
 
       # Delete all stemcells with the given stemcell name in all storage accounts
-      storage_accounts = @azure_client2.list_storage_accounts()
+      storage_accounts = @azure_client2.list_storage_accounts
       storage_accounts.each do |storage_account|
         storage_account_name = storage_account[:name]
         @logger.info("Delete stemcell `#{name}' in the storage `#{storage_account_name}'")
@@ -33,7 +35,7 @@ module Bosh::AzureCloud
       # Delete all records whose PartitionKey is the given stemcell name
       if @table_manager.has_table?(STEMCELL_TABLE)
         options = {
-          :filter => "PartitionKey eq '#{name}'"
+          filter: "PartitionKey eq '#{name}'"
         }
         entities = @table_manager.query_entities(STEMCELL_TABLE, options)
         entities.each do |entity|
@@ -65,17 +67,15 @@ module Bosh::AzureCloud
       # Old format: bosh-stemcell-<UUID>-Standard_LRS-<LOCATION>, bosh-stemcell-<UUID>-Premium_LRS-<LOCATION>
       # New format: <UUID>-S-<LOCATION>, <UUID>-P-<LOCATION>
       user_image_name_deprecated = "#{stemcell_name}-#{storage_account_type}-#{location}"
-      user_image_name = user_image_name_deprecated.sub("#{STEMCELL_PREFIX}-", "")
-        .sub(STORAGE_ACCOUNT_TYPE_STANDARD_LRS, "S")
-        .sub(STORAGE_ACCOUNT_TYPE_PREMIUM_LRS, "P")
+      user_image_name = user_image_name_deprecated.sub("#{STEMCELL_PREFIX}-", '')
+                                                  .sub(STORAGE_ACCOUNT_TYPE_STANDARD_LRS, 'S')
+                                                  .sub(STORAGE_ACCOUNT_TYPE_PREMIUM_LRS, 'P')
       user_image = @azure_client2.get_user_image_by_name(user_image_name)
       return user_image unless user_image.nil?
 
       default_storage_account = @storage_account_manager.default_storage_account
       default_storage_account_name = default_storage_account[:name]
-      unless has_stemcell?(default_storage_account_name, stemcell_name)
-        cloud_error("get_user_image: Failed to get user image for the stemcell `#{stemcell_name}' because the stemcell doesn't exist in the default storage account `#{default_storage_account_name}'")
-      end
+      cloud_error("get_user_image: Failed to get user image for the stemcell `#{stemcell_name}' because the stemcell doesn't exist in the default storage account `#{default_storage_account_name}'") unless has_stemcell?(default_storage_account_name, stemcell_name)
 
       storage_account_name = nil
       if location == default_storage_account[:location]
@@ -93,14 +93,14 @@ module Bosh::AzureCloud
               @logger.info("get_user_image: Copying the stemcell from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}'")
               stemcell_source_blob_uri = @blob_manager.get_blob_uri(default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
               @blob_manager.copy_blob(storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd", stemcell_source_blob_uri) do
-                mutex.update()
+                mutex.update
               end
             end
             mutex.unlock
           else
             mutex.wait
           end
-        rescue => e
+        rescue StandardError => e
           mark_deleting_locks
           cloud_error("get_user_image: Failed to finish the copying process of the stemcell `#{stemcell_name}' from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
@@ -108,12 +108,12 @@ module Bosh::AzureCloud
 
       stemcell_info = get_stemcell_info(storage_account_name, stemcell_name)
       user_image_params = {
-        :name                => user_image_name,
-        :location            => location,
-        :tags                => stemcell_info.metadata,
-        :os_type             => stemcell_info.os_type,
-        :source_uri          => stemcell_info.uri,
-        :account_type        => storage_account_type
+        name: user_image_name,
+        location: location,
+        tags: stemcell_info.metadata,
+        os_type: stemcell_info.os_type,
+        source_uri: stemcell_info.uri,
+        account_type: storage_account_type
       }
       begin
         mutex = FileMutex.new("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", @logger)
@@ -124,7 +124,7 @@ module Bosh::AzureCloud
         else
           mutex.wait
         end
-      rescue => e
+      rescue StandardError => e
         mark_deleting_locks
         cloud_error("get_user_image: Failed to create the user image `#{user_image_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
       end

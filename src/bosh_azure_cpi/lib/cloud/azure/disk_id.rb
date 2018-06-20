@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
   class DiskId
     include Helpers
@@ -42,25 +44,25 @@ module Bosh::AzureCloud
       }
       id['resource_group_name'] = resource_group_name unless resource_group_name.nil?
       id['storage_account_name'] = storage_account_name unless storage_account_name.nil?
-      new(VERSION2, { :id => id })
+      new(VERSION2, id: id)
     end
 
     def self.parse(id, azure_properties)
       disk_id = nil
 
       if id.include?(';')
-        id_hash = Hash.new
+        id_hash = {}
         array = id.split(';')
         array.each do |item|
-          ret = item.match("^([^:]*):(.*)$")
+          ret = item.match('^([^:]*):(.*)$')
           id_hash[ret[1]] = ret[2]
         end
-        disk_id = new(VERSION2, { :id => id_hash, :default_resource_group_name => azure_properties['resource_group_name'] })
+        disk_id = new(VERSION2, id: id_hash, default_resource_group_name: azure_properties['resource_group_name'])
       else
-        disk_id = new(VERSION1, { :id => id, :default_resource_group_name => azure_properties['resource_group_name'] })
+        disk_id = new(VERSION1, id: id, default_resource_group_name: azure_properties['resource_group_name'])
       end
 
-      disk_id.validate()
+      disk_id.validate
       disk_id
     end
 
@@ -68,50 +70,46 @@ module Bosh::AzureCloud
       "#{use_managed_disks ? MANAGED_DATA_DISK_PREFIX : DATA_DISK_PREFIX}-#{SecureRandom.uuid}"
     end
 
-    def to_s()
+    def to_s
       return @id if @version == VERSION1
-      array = Array.new
-      @id.each {|key, value| array << "#{key}:#{value}"}
+      array = []
+      @id.each { |key, value| array << "#{key}:#{value}" }
       array.sort.join(';')
     end
 
-    def resource_group_name()
+    def resource_group_name
       return @default_resource_group_name if @version == VERSION1
       @id.fetch('resource_group_name', @default_resource_group_name)
     end
 
-    def disk_name()
+    def disk_name
       return @id if @version == VERSION1
       @id['disk_name']
     end
 
-    def caching()
-      cloud_error('This function should only be called for data disks') unless disk_name().start_with?(DATA_DISK_PREFIX) || disk_name().start_with?(MANAGED_DATA_DISK_PREFIX)
+    def caching
+      cloud_error('This function should only be called for data disks') unless disk_name.start_with?(DATA_DISK_PREFIX, MANAGED_DATA_DISK_PREFIX)
 
-      if @version == VERSION1
-        return parse_data_disk_caching_v1(@id)
-      end
+      return parse_data_disk_caching_v1(@id) if @version == VERSION1
       @id['caching']
     end
 
-    def storage_account_name()
-      cloud_error('This function should only be called for unmanaged disks') if disk_name().start_with?(MANAGED_DATA_DISK_PREFIX)
+    def storage_account_name
+      cloud_error('This function should only be called for unmanaged disks') if disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
 
-      if @version == VERSION1
-        return parse_storage_account_v1(@id)
-      end
+      return parse_storage_account_v1(@id) if @version == VERSION1
       @id['storage_account_name']
     end
 
-    def validate()
+    def validate
       if @version == VERSION2
-        cloud_error("Invalid disk_name in disk id (version 2) `#{@id}'") if disk_name().nil? || disk_name().empty?
-        cloud_error("Invalid caching in disk id (version 2) `#{@id}'") if caching().nil? || caching().empty?
-        unless resource_group_name().nil?
-          cloud_error("Invalid resource_group_name in disk id (version 2) `#{@id}'") if resource_group_name().empty?
+        cloud_error("Invalid disk_name in disk id (version 2) `#{@id}'") if disk_name.nil? || disk_name.empty?
+        cloud_error("Invalid caching in disk id (version 2) `#{@id}'") if caching.nil? || caching.empty?
+        unless resource_group_name.nil?
+          cloud_error("Invalid resource_group_name in disk id (version 2) `#{@id}'") if resource_group_name.empty?
         end
-        if disk_name().start_with?(DATA_DISK_PREFIX)
-          cloud_error("Invalid storage_account_name in disk id (version 2) `#{@id}'") if storage_account_name().nil? || storage_account_name().empty?
+        if disk_name.start_with?(DATA_DISK_PREFIX)
+          cloud_error("Invalid storage_account_name in disk id (version 2) `#{@id}'") if storage_account_name.nil? || storage_account_name.empty?
         end
       end
     end

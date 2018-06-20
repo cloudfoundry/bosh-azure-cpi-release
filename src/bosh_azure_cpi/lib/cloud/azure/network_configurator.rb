@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
   ##
   # Represents Azure instance network config.
@@ -25,7 +27,7 @@ module Bosh::AzureCloud
     # @param [Hash] spec raw network spec passed by director
     def initialize(azure_properties, spec)
       unless spec.is_a?(Hash)
-        raise ArgumentError, "Invalid spec, Hash expected, " \
+        raise ArgumentError, 'Invalid spec, Hash expected, ' \
                              "`#{spec.class}' provided"
       end
 
@@ -34,25 +36,25 @@ module Bosh::AzureCloud
       @networks = []
       @vip_network = nil
 
-      logger.debug ("networks: `#{spec}'")
+      logger.debug "networks: '#{spec}'"
       spec.each_pair do |name, network_spec|
         network = nil
-        network_type = network_spec["type"] || "manual"
+        network_type = network_spec['type'] || 'manual'
 
         case network_type
-          when "dynamic"
-            network = DynamicNetwork.new(@azure_properties, name, network_spec)
+        when 'dynamic'
+          network = DynamicNetwork.new(@azure_properties, name, network_spec)
 
-          when "manual"
-            network = ManualNetwork.new(@azure_properties, name, network_spec)
+        when 'manual'
+          network = ManualNetwork.new(@azure_properties, name, network_spec)
 
-          when "vip"
-            cloud_error("More than one vip network for `#{name}'") if @vip_network
-            @vip_network = VipNetwork.new(@azure_properties, name, network_spec)
+        when 'vip'
+          cloud_error("More than one vip network for `#{name}'") if @vip_network
+          @vip_network = VipNetwork.new(@azure_properties, name, network_spec)
 
-          else
-            cloud_error("Invalid network type `#{network_type}' for Azure, " \
-                        "can only handle `dynamic', `vip', or `manual' network types")
+        else
+          cloud_error("Invalid network type `#{network_type}' for Azure, " \
+                      "can only handle `dynamic', `vip', or `manual' network types")
         end
 
         # @networks[0] is always the primary network.
@@ -69,9 +71,7 @@ module Bosh::AzureCloud
         end
       end
 
-      if @networks.empty?
-        cloud_error("At least one dynamic or manual network must be defined")
-      end
+      cloud_error('At least one dynamic or manual network must be defined') if @networks.empty?
     end
 
     # For multiple networks, use the default dns specified in spec.

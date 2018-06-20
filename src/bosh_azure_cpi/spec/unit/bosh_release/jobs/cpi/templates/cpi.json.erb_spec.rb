@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'json'
 
@@ -24,7 +26,7 @@ describe 'cpi.json.erb' do
           'host' => 'registry-host.example.com',
           'username' => 'admin',
           'password' => 'admin',
-          'port' => 25777
+          'port' => 25_777
         },
         'blobstore' => {
           'address' => 'blobstore-address.example.com',
@@ -51,11 +53,11 @@ describe 'cpi.json.erb' do
   end
 
   it 'is able to render the erb given most basic manifest properties' do
-    expect(subject).to eq({
-      'cloud'=>{
-        'plugin'=>'azure',
-        'properties'=> {
-          'azure'=>{
+    expect(subject).to eq(
+      'cloud' => {
+        'plugin' => 'azure',
+        'properties' => {
+          'azure' => {
             'environment'                 => 'AzureCloud',
             'subscription_id'             => 'fake-subscription-id',
             'tenant_id'                   => 'fake-tenant-id',
@@ -74,35 +76,35 @@ describe 'cpi.json.erb' do
             'pip_idle_timeout_in_minutes' => 4,
             'enable_vm_boot_diagnostics'  => false
           },
-          'registry'=>{
-            'address'=>'registry-host.example.com',
-            'user'=>'admin',
-            'password'=>'admin',
+          'registry' => {
+            'address' => 'registry-host.example.com',
+            'user' => 'admin',
+            'password' => 'admin',
             'http' => {
-              'port' => 25777,
+              'port' => 25_777,
               'user' => 'admin',
               'password' => 'admin'
             },
-            'endpoint'=>'http://admin:admin@registry-host.example.com:25777'
+            'endpoint' => 'http://admin:admin@registry-host.example.com:25777'
           },
-          'agent'=>{
-            'ntp'=>[
+          'agent' => {
+            'ntp' => [
               '0.pool.ntp.org',
               '1.pool.ntp.org'
             ],
-            'blobstore'=>{
-              'provider'=>'dav',
-              'options'=>{
-                'endpoint'=>'http://blobstore-address.example.com:25250',
-                'user'=>'agent',
-                'password'=>'agent-password'
+            'blobstore' => {
+              'provider' => 'dav',
+              'options' => {
+                'endpoint' => 'http://blobstore-address.example.com:25250',
+                'user' => 'agent',
+                'password' => 'agent-password'
               }
             },
-            'mbus'=>'nats://nats:nats-password@nats-address.example.com:4222'
+            'mbus' => 'nats://nats:nats-password@nats-address.example.com:4222'
           }
         }
       }
-    })
+    )
   end
 
   context 'when parsing the azure property' do
@@ -118,11 +120,11 @@ describe 'cpi.json.erb' do
 
     context 'when client_secret is provided' do
       before do
-        manifest['properties']['azure']['client_secret'] = "fake-client-secret"
+        manifest['properties']['azure']['client_secret'] = 'fake-client-secret'
       end
 
       it 'is able to render client_secret' do
-        expect(subject['cloud']['properties']['azure']['client_secret']).to eq("fake-client-secret")
+        expect(subject['cloud']['properties']['azure']['client_secret']).to eq('fake-client-secret')
       end
     end
 
@@ -143,7 +145,7 @@ describe 'cpi.json.erb' do
 
       context 'when certificate is provided' do
         before do
-          manifest['properties']['azure']['certificate'] = "fake-certificate-content"
+          manifest['properties']['azure']['certificate'] = 'fake-certificate-content'
         end
 
         it 'allows client_secret to be nil' do
@@ -276,12 +278,12 @@ describe 'cpi.json.erb' do
         end
 
         it 'parses the AzureStack properties' do
-          expect(subject['cloud']['properties']['azure']['azure_stack']).to eq({
+          expect(subject['cloud']['properties']['azure']['azure_stack']).to eq(
             'domain'                             => 'local.azurestack.external',
             'authentication'                     => 'AzureAD',
             'resource'                           => 'fake-token-resource',
-            'endpoint_prefix'                    => 'management',
-          })
+            'endpoint_prefix'                    => 'management'
+          )
         end
       end
 
@@ -294,12 +296,12 @@ describe 'cpi.json.erb' do
         end
 
         it 'parses the AzureStack properties' do
-          expect(subject['cloud']['properties']['azure']['azure_stack']).to eq({
+          expect(subject['cloud']['properties']['azure']['azure_stack']).to eq(
             'domain'                             => 'fake-domain',
             'authentication'                     => 'fake-authentication',
             'resource'                           => 'fake-token-resource',
-            'endpoint_prefix'                    => 'fake-endpoint-prefix',
-          })
+            'endpoint_prefix'                    => 'fake-endpoint-prefix'
+          )
         end
       end
 
@@ -374,26 +376,24 @@ describe 'cpi.json.erb' do
 
       context 'when provided a minimal configuration' do
         before do
-          manifest['properties']['blobstore'].merge!({
+          manifest['properties']['blobstore'].merge!(
             'provider' => 's3',
             'bucket_name' => 'my_bucket',
             'access_key_id' => 'blobstore-access-key-id',
-            'secret_access_key' => 'blobstore-secret-access-key',
-          })
+            'secret_access_key' => 'blobstore-secret-access-key'
+          )
         end
 
         it 'renders the s3 provider section with the correct defaults' do
           expect(rendered_blobstore).to eq(
-            {
-              'provider' => 's3',
-              'options' => {
-                'bucket_name' => 'my_bucket',
-                'access_key_id' => 'blobstore-access-key-id',
-                'secret_access_key' => 'blobstore-secret-access-key',
-                'use_ssl' => true,
-                'port' => 443,
-                's3_force_path_style' => false
-              }
+            'provider' => 's3',
+            'options' => {
+              'bucket_name' => 'my_bucket',
+              'access_key_id' => 'blobstore-access-key-id',
+              'secret_access_key' => 'blobstore-secret-access-key',
+              'use_ssl' => true,
+              'port' => 443,
+              's3_force_path_style' => false
             }
           )
         end
@@ -405,19 +405,17 @@ describe 'cpi.json.erb' do
 
       context 'when provided a minimal configuration' do
         before do
-          manifest['properties']['blobstore'].merge!({
+          manifest['properties']['blobstore'].merge!(
             'provider' => 'local',
-            'path' => '/fake/path',
-          })
+            'path' => '/fake/path'
+          )
         end
 
         it 'renders the local provider section with the correct defaults' do
           expect(rendered_blobstore).to eq(
-            {
-              'provider' => 'local',
-              'options' => {
-                'blobstore_path' => '/fake/path',
-              }
+            'provider' => 'local',
+            'options' => {
+              'blobstore_path' => '/fake/path'
             }
           )
         end
@@ -425,9 +423,9 @@ describe 'cpi.json.erb' do
 
       context 'when provided an incomplete configuration' do
         before do
-          manifest['properties']['blobstore'].merge!({
-            'provider' => 'local',
-          })
+          manifest['properties']['blobstore'].merge!(
+            'provider' => 'local'
+          )
         end
 
         it 'raises an error' do
@@ -477,7 +475,7 @@ class TemplateEvaluationContext
       return result unless result.nil?
     end
     return args[1] if args.length == 2
-    raise UnknownProperty.new(names)
+    raise UnknownProperty, names
   end
 
   def if_p(*names)
@@ -510,13 +508,13 @@ class TemplateEvaluationContext
 
   def openstruct(object)
     case object
-      when Hash
-        mapped = object.inject({}) { |h, (k,v)| h[k] = openstruct(v); h }
-        OpenStruct.new(mapped)
-      when Array
-        object.map { |item| openstruct(item) }
-      else
-        object
+    when Hash
+      mapped = object.each_with_object({}) { |(k, v), h| h[k] = openstruct(v); }
+      OpenStruct.new(mapped)
+    when Array
+      object.map { |item| openstruct(item) }
+    else
+      object
     end
   end
 
@@ -541,9 +539,11 @@ class TemplateEvaluationContext
     def initialize(template)
       @context = template
     end
+
     def else
       yield
     end
+
     def else_if_p(*names, &block)
       @context.if_p(*names, &block)
     end
@@ -551,6 +551,7 @@ class TemplateEvaluationContext
 
   class InactiveElseBlock
     def else; end
+
     def else_if_p(*_)
       InactiveElseBlock.new
     end

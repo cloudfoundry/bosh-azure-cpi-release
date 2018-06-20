@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
   class TelemetryEventHandler
     include Helpers
@@ -22,25 +24,23 @@ module Bosh::AzureCloud
       mutex = FileMutex.new(CPI_LOCK_EVENT_HANDLER, @logger, LOCK_EXPIRED)
       if mutex.lock
         begin
-          while has_event?() do
+          while has_event?
             # Update the lock, to notify other process (which tries to get this lock) that the lock is not expired.
-            mutex.update()
+            mutex.update
 
-            last_post_timestamp = get_last_post_timestamp()
+            last_post_timestamp = get_last_post_timestamp
             unless last_post_timestamp.nil?
-              duration = Time.now().round - last_post_timestamp
+              duration = Time.now.round - last_post_timestamp
               # will only send events once per minute
-              if duration >= 0 && duration < COOLDOWN
-                sleep(COOLDOWN - duration)
-              end
+              sleep(COOLDOWN - duration) if duration >= 0 && duration < COOLDOWN
             end
 
             # sent_events
-            event_list = collect_events()
+            event_list = collect_events
             send_events(event_list)
             update_last_post_timestamp(Time.now.round)
           end
-        rescue => e
+        rescue StandardError => e
           @logger.warn("[Telemetry] Failed to collect and send events. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
         ensure
           mutex.unlock
@@ -51,9 +51,9 @@ module Bosh::AzureCloud
     private
 
     # Check if there are events to be sent
-    def has_event?()
+    def has_event?
       event_files = Dir["#{@events_dir}/*.tld"]
-      !event_files.empty?()
+      !event_files.empty?
     end
 
     # Collect telemetry events
@@ -69,7 +69,7 @@ module Bosh::AzureCloud
         begin
           hash = JSON.parse(File.read(file))
           event_list << Bosh::AzureCloud::TelemetryEvent.parse_hash(hash)
-        rescue => e
+        rescue StandardError => e
           @logger.warn("[Telemetry] Failed to collect event from `#{file}'. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
           raise e
         ensure
@@ -90,7 +90,7 @@ module Bosh::AzureCloud
     # Get the time when the last post happened
     # Return Time or nil
     #
-    def get_last_post_timestamp()
+    def get_last_post_timestamp
       ignore_exception do
         Time.parse(File.read(CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP))
       end

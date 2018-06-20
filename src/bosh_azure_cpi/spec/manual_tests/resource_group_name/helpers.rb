@@ -1,14 +1,15 @@
 #!/usr/bin/env ruby
-require "irb"
-require "irb/completion"
-require "ostruct"
-require "optparse"
-require "psych"
-require "git"
+# frozen_string_literal: true
+
+require 'irb'
+require 'irb/completion'
+require 'ostruct'
+require 'optparse'
+require 'psych'
+require 'git'
 require 'fileutils'
 
-
-test_config_file = File.expand_path('../test.cfg', __FILE__)
+test_config_file = File.expand_path('test.cfg', __dir__)
 test_config = Psych.load_file(test_config_file)
 @additional_rg_name = test_config['additional_rg_name']
 @upstream_repo = test_config['upstream_repo']
@@ -17,7 +18,7 @@ test_config = Psych.load_file(test_config_file)
 @stemcell_id = test_config['stemcell_id']
 @vm_storage_account_name = test_config['vm_storage_account_name']
 
-cpi_config_file = File.expand_path('../cpi.cfg', __FILE__)
+cpi_config_file = File.expand_path('cpi.cfg', __dir__)
 @base_config = Psych.load_file(cpi_config_file)
 
 def checkout_repo(repo, dir: '/tmp/cpi-test', branch: 'master', force_renew: false)
@@ -28,7 +29,7 @@ def checkout_repo(repo, dir: '/tmp/cpi-test', branch: 'master', force_renew: fal
   FileUtils.rm_rf(dest_dir) if File.exist?(dest_dir)
   Dir.mkdir(dir) unless File.exist?(dir)
 
-  g = Git.clone(repo, name, :path => dir)
+  g = Git.clone(repo, name, path: dir)
   g.checkout(branch)
   g.dir.to_s
 end
@@ -37,13 +38,13 @@ def load_bosh_azure_cpi(cpi_dir, config)
   $LOAD_PATH.unshift File.join(cpi_dir, 'src/bosh_azure_cpi/lib')
   path = File.join(cpi_dir, 'src/bosh_azure_cpi/lib/bosh_azure_cpi.rb')
 
-  Dir[File.join(cpi_dir, 'src/bosh_azure_cpi/lib/**/**/**')].
-    select { |f| File.extname(f) == '.rb' }.
-    each { |p| load p }
+  Dir[File.join(cpi_dir, 'src/bosh_azure_cpi/lib/**/**/**')]
+    .select { |f| File.extname(f) == '.rb' }
+    .each { |p| load p }
 
   $LOAD_PATH.shift
 
-  cloud_config = OpenStruct.new(:logger => Logger.new(STDOUT))
+  cloud_config = OpenStruct.new(logger: Logger.new(STDOUT))
   Bosh::Clouds::Config.configure(cloud_config)
 
   cpi = Bosh::AzureCloud::Cloud.new(config)
@@ -55,11 +56,11 @@ end
 def get_cpi(repo, branch, managed, force_renew: false)
   cpi_dir = checkout_repo(repo, branch: branch, force_renew: force_renew)
   config = @base_config.clone
-  if managed
-    config['azure']['use_managed_disks'] = true
-  else
-    config['azure']['use_managed_disks'] = false
-  end
+  config['azure']['use_managed_disks'] = if managed
+                                           true
+                                         else
+                                           false
+                                         end
 
   load_bosh_azure_cpi(cpi_dir, config)
 end
@@ -85,12 +86,11 @@ def check_vm(cpi, instance_id)
   has_vm = cpi.has_vm?(instance_id)
   raise "vm #{instance_id} not found" unless has_vm
   cpi.reboot_vm(instance_id)
-  cpi.set_vm_metadata(instance_id, {"key" => "value"})
+  cpi.set_vm_metadata(instance_id, 'key' => 'value')
 end
 
-
 def create_disk(cpi, disk_pool: {}, instance_id: nil)
-  disk_id = cpi.create_disk(1024, {},instance_id)
+  disk_id = cpi.create_disk(1024, disk_pool, instance_id)
   check_disk(cpi, disk_id)
 
   disk_id

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 ###############################################################################
 # This client is for using Azure Resource Manager.
 # The reasons why we do not use azure-sdk-for-ruby are as below:
@@ -38,7 +40,7 @@ module Bosh::AzureCloud
 
     # https://azure.microsoft.com/en-us/documentation/articles/best-practices-retry-service-specific/#more-information-6
     # Error code 429 is not documented in the url above, but it is a code for throttling error. Add it for issue https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/179
-    AZURE_RETRY_ERROR_CODES       = [408, 429, 500, 502, 503, 504]
+    AZURE_RETRY_ERROR_CODES       = [408, 429, 500, 502, 503, 504].freeze
 
     REST_API_PROVIDER_COMPUTE            = 'Microsoft.Compute'
     REST_API_VIRTUAL_MACHINES            = 'virtualMachines'
@@ -62,7 +64,7 @@ module Bosh::AzureCloud
     REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
 
     # Please add the key into this list if you want to redact its value in request body.
-    CREDENTIAL_KEYWORD_LIST = ['adminPassword', 'client_secret', 'customData']
+    CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret customData].freeze
 
     def initialize(azure_properties, logger)
       @logger = logger
@@ -72,7 +74,7 @@ module Bosh::AzureCloud
 
     # Common
     def rest_api_url(resource_provider, resource_type, resource_group_name: nil, name: nil, others: nil)
-      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url = "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
       resource_group_name = @azure_properties['resource_group_name'] if resource_group_name.nil?
       url += "/resourceGroups/#{URI.escape(resource_group_name)}"
       url += "/providers/#{resource_provider}"
@@ -230,37 +232,35 @@ module Bosh::AzureCloud
       }
 
       case vm_params[:os_type]
-        when 'linux'
-          os_profile['adminUsername'] = vm_params[:ssh_username]
-          os_profile['linuxConfiguration'] = {
-            'disablePasswordAuthentication' => 'true',
-            'ssh' => {
-              'publicKeys' => [
-                {
-                  'path'    => "/home/#{vm_params[:ssh_username]}/.ssh/authorized_keys",
-                  'keyData' => vm_params[:ssh_cert_data],
-                }
-              ]
-            }
+      when 'linux'
+        os_profile['adminUsername'] = vm_params[:ssh_username]
+        os_profile['linuxConfiguration'] = {
+          'disablePasswordAuthentication' => 'true',
+          'ssh' => {
+            'publicKeys' => [
+              {
+                'path'    => "/home/#{vm_params[:ssh_username]}/.ssh/authorized_keys",
+                'keyData' => vm_params[:ssh_cert_data]
+              }
+            ]
           }
-        when 'windows'
-          os_profile['adminUsername'] = vm_params[:windows_username]
-          os_profile['adminPassword'] = vm_params[:windows_password]
-          os_profile['windowsConfiguration'] = {
-            'enableAutomaticUpdates' => false
-          }
-        else
-          raise ArgumentError, "Unsupported os type: #{vm_params[:os_type]}"
+        }
+      when 'windows'
+        os_profile['adminUsername'] = vm_params[:windows_username]
+        os_profile['adminPassword'] = vm_params[:windows_password]
+        os_profile['windowsConfiguration'] = {
+          'enableAutomaticUpdates' => false
+        }
+      else
+        raise ArgumentError, "Unsupported os type: #{vm_params[:os_type]}"
       end
 
       network_interfaces_params = []
       network_interfaces.each_with_index do |network_interface, index|
         network_interfaces_params.push(
-          {
-            'id' => network_interface[:id],
-            'properties' => {
-              'primary' => index == 0
-            }
+          'id' => network_interface[:id],
+          'properties' => {
+            'primary' => index.zero?
           }
         )
       end
@@ -281,9 +281,7 @@ module Bosh::AzureCloud
         }
       }
 
-      unless vm_params[:zone].nil?
-        vm['zones'] = [vm_params[:zone]]
-      end
+      vm['zones'] = [vm_params[:zone]] unless vm_params[:zone].nil?
 
       os_disk = {
         'name'         => vm_params[:os_disk][:disk_name],
@@ -301,27 +299,25 @@ module Bosh::AzureCloud
             'osDisk' => os_disk
           }
         else
-          os_disk.merge!({
+          os_disk.merge!(
             'osType'       => vm_params[:os_type],
             'image'        => {
               'uri' => vm_params[:image_uri]
             },
-            'vhd'          => {
+            'vhd' => {
               'uri' => vm_params[:os_disk][:disk_uri]
             }
-          })
+          )
           vm['properties']['storageProfile'] = {
             'osDisk' => os_disk
           }
         end
       else
         unless vm_params[:managed]
-          os_disk.merge!({
-            'osType' => vm_params[:os_type],
-            'vhd'    => {
-              'uri' => vm_params[:os_disk][:disk_uri]
-            }
-          })
+          os_disk['osType'] = vm_params[:os_type]
+          os_disk['vhd'] = {
+            'uri' => vm_params[:os_disk][:disk_uri]
+          }
         end
 
         vm['properties']['storageProfile'] = {
@@ -342,14 +338,12 @@ module Bosh::AzureCloud
           'lun'          => 0,
           'createOption' => 'Empty',
           'diskSizeGB'   => vm_params[:ephemeral_disk][:disk_size],
-          'caching'      => vm_params[:ephemeral_disk][:disk_caching],
+          'caching'      => vm_params[:ephemeral_disk][:disk_caching]
         }]
         unless vm_params[:managed]
-          vm['properties']['storageProfile']['dataDisks'][0].merge!({
-            'vhd'        => {
-              'uri' => vm_params[:ephemeral_disk][:disk_uri]
-            }
-          })
+          vm['properties']['storageProfile']['dataDisks'][0]['vhd'] = {
+            'uri' => vm_params[:ephemeral_disk][:disk_uri]
+          }
         end
       end
 
@@ -390,8 +384,8 @@ module Bosh::AzureCloud
       url += "/#{REST_API_VM_SIZES}"
       result = get_resource_by_id(url)
 
-      unless result.nil? || result["value"].nil?
-        result["value"].each do |value|
+      unless result.nil? || result['value'].nil?
+        result['value'].each do |value|
           vm_size = parse_vm_size(value)
           vm_sizes << vm_size
         end
@@ -424,14 +418,12 @@ module Bosh::AzureCloud
     def update_tags_of_virtual_machine(resource_group_name, name, tags)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       vm = get_resource_by_id(url)
-      if vm.nil?
-        raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name `#{name}' in resource group `#{resource_group_name}'"
-      end
+      raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name `#{name}' in resource group `#{resource_group_name}'" if vm.nil?
 
       vm = remove_resources_from_vm(vm)
 
       # keep disk_id in tags if it exists
-      tags.merge!(vm['tags'].select{ |k, _| k.start_with?(DISK_ID_TAG_PREFIX)})
+      tags.merge!(vm['tags'].select { |k, _| k.start_with?(DISK_ID_TAG_PREFIX) })
 
       vm['tags'] = tags
       http_put(url, vm)
@@ -467,9 +459,7 @@ module Bosh::AzureCloud
     def attach_disk_to_virtual_machine(resource_group_name, vm_name, disk_params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: vm_name)
       vm = get_resource_by_id(url)
-      if vm.nil?
-        raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{vm_name}' in resource group `#{resource_group_name}'"
-      end
+      raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{vm_name}' in resource group `#{resource_group_name}'" if vm.nil?
 
       # Record disk_id in VM's tag, which will be used in cpi.get_disks(instance_id)
       disk_id_tag = {
@@ -482,8 +472,8 @@ module Bosh::AzureCloud
       disk_info = DiskInfo.for(vm['properties']['hardwareProfile']['vmSize'])
       lun = nil
       data_disks = vm['properties']['storageProfile']['dataDisks']
-      for i in 0..(disk_info.count - 1)
-        disk = data_disks.find { |disk| disk['lun'] == i}
+      (0..(disk_info.count - 1)).each do |i|
+        disk = data_disks.find { |disk| disk['lun'] == i }
         if disk.nil?
           lun = i
           break
@@ -497,9 +487,7 @@ module Bosh::AzureCloud
       disk_uri = disk_params[:disk_uri]
       disk_size = disk_params[:disk_size]
 
-      if lun.nil?
-        raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine `#{vm_name}' for the new disk `#{disk_name}'"
-      end
+      raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine `#{vm_name}' for the new disk `#{disk_name}'" if lun.nil?
 
       new_disk = {
         'name'         => disk_name,
@@ -533,9 +521,7 @@ module Bosh::AzureCloud
     def detach_disk_from_virtual_machine(resource_group_name, name, disk_name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       vm = get_resource_by_id(url)
-      if vm.nil?
-        raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name `#{name}' in resource group `#{resource_group_name}'"
-      end
+      raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name `#{name}' in resource group `#{resource_group_name}'" if vm.nil?
 
       disk_id_tag = "#{DISK_ID_TAG_PREFIX}-#{disk_name}"
       vm['tags'].delete(disk_id_tag)
@@ -543,11 +529,13 @@ module Bosh::AzureCloud
       vm = remove_resources_from_vm(vm)
 
       @logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(vm)}")
-      disk = vm['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name}
-      raise Bosh::Clouds::DiskNotAttached.new(true),
-        "The disk #{disk_name} is not attached to the virtual machine #{name}" if disk.nil?
+      disk = vm['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name }
+      if disk.nil?
+        raise Bosh::Clouds::DiskNotAttached.new(true),
+              "The disk #{disk_name} is not attached to the virtual machine #{name}"
+      end
 
-      vm['properties']['storageProfile']['dataDisks'].delete_if { |disk| disk['name'] == disk_name}
+      vm['properties']['storageProfile']['dataDisks'].delete_if { |disk| disk['name'] == disk_name }
 
       @logger.info("detach_disk_from_virtual_machine - detach disk #{disk_name} from lun #{disk['lun']}")
       http_put(url, vm)
@@ -590,34 +578,32 @@ module Bosh::AzureCloud
         vm[:provisioning_state] = properties['provisioningState']
         vm[:vm_size]            = properties['hardwareProfile']['vmSize']
 
-        unless properties['availabilitySet'].nil?
-          vm[:availability_set] = get_availability_set(properties['availabilitySet']['id'])
-        end
+        vm[:availability_set] = get_availability_set(properties['availabilitySet']['id']) unless properties['availabilitySet'].nil?
 
-        storageProfile = properties['storageProfile']
-        os_disk = storageProfile['osDisk']
+        storage_profile = properties['storageProfile']
+        os_disk = storage_profile['osDisk']
         vm[:os_disk] = {}
         vm[:os_disk][:name]    = os_disk['name']
         vm[:os_disk][:caching] = os_disk['caching']
         vm[:os_disk][:size]    = os_disk['diskSizeGb']
 
-        vm[:os_disk][:uri]     = os_disk['vhd']['uri'] if os_disk.has_key?('vhd')
-        if os_disk.has_key?('managedDisk')
+        vm[:os_disk][:uri]     = os_disk['vhd']['uri'] if os_disk.key?('vhd')
+        if os_disk.key?('managedDisk')
           vm[:os_disk][:managed_disk] = {}
           vm[:os_disk][:managed_disk][:id]                   = os_disk['managedDisk']['id']
           vm[:os_disk][:managed_disk][:storage_account_type] = os_disk['managedDisk']['storageAccountType']
         end
 
         vm[:data_disks] = []
-        storageProfile['dataDisks'].each do |data_disk|
+        storage_profile['dataDisks'].each do |data_disk|
           disk = {}
           disk[:name]    = data_disk['name']
           disk[:lun]     = data_disk['lun']
           disk[:caching] = data_disk['caching']
           disk[:size]    = data_disk['diskSizeGb']
 
-          disk[:uri]     = data_disk['vhd']['uri'] if data_disk.has_key?('vhd')
-          if data_disk.has_key?('managedDisk')
+          disk[:uri]     = data_disk['vhd']['uri'] if data_disk.key?('vhd')
+          if data_disk.key?('managedDisk')
             disk[:managed_disk] = {}
             disk[:managed_disk][:id]                   = data_disk['managedDisk']['id']
             disk[:managed_disk][:storage_account_type] = data_disk['managedDisk']['storageAccountType']
@@ -738,10 +724,8 @@ module Bosh::AzureCloud
         availability_set[:platform_update_domain_count] = properties['platformUpdateDomainCount']
         availability_set[:platform_fault_domain_count]  = properties['platformFaultDomainCount']
         availability_set[:virtual_machines]             = []
-        unless properties['virtualMachines'].nil?
-          properties['virtualMachines'].each do |vm|
-            availability_set[:virtual_machines].push({:id => vm["id"]})
-          end
+        properties['virtualMachines']&.each do |vm|
+          availability_set[:virtual_machines].push(id: vm['id'])
         end
       end
       availability_set
@@ -830,7 +814,7 @@ module Bosh::AzureCloud
         'properties' => {
           'creationData' => {
             'createOption'  => 'Import',
-            'sourceUri'  => params[:source_uri]
+            'sourceUri' => params[:source_uri]
           },
           'accountType'  => params[:account_type]
         }
@@ -867,10 +851,10 @@ module Bosh::AzureCloud
         'location'   => disk_params[:location],
         'properties' => {
           'creationData' => {
-            'createOption'  => 'Copy',
-            'sourceResourceId'  => snapshot_url
+            'createOption' => 'Copy',
+            'sourceResourceId' => snapshot_url
           },
-          'accountType'  => disk_params[:account_type]
+          'accountType' => disk_params[:account_type]
         }
       }
       disk['zones'] = [disk_params[:zone]] unless disk_params[:zone].nil?
@@ -901,7 +885,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-get
     #
     def get_managed_disk_by_name(resource_group_name, name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name:resource_group_name, name: name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
       get_managed_disk(url)
     end
 
@@ -1005,7 +989,7 @@ module Bosh::AzureCloud
     #
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-list-by-resource-group
     #
-    def list_user_images()
+    def list_user_images
       user_images = []
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES)
       result = get_resource_by_id(url)
@@ -1129,14 +1113,12 @@ module Bosh::AzureCloud
       url += "/artifacttypes/#{REST_API_VM_IMAGE}"
       url += "/offers/#{offer}"
       url += "/skus/#{sku}"
-      url += "/versions"
+      url += '/versions'
 
       result = get_resource_by_id(url)
-      unless result.nil?
-        result.each do |value|
-          image = parse_platform_image(value)
-          images << image
-        end
+      result&.each do |value|
+        image = parse_platform_image(value)
+        images << image
       end
       images
     end
@@ -1349,7 +1331,7 @@ module Bosh::AzureCloud
               }
             }
           ],
-          'dnsSettings'      => {
+          'dnsSettings' => {
             'dnsServers' => nic_params[:dns_servers].nil? ? [] : nic_params[:dns_servers]
           }
         }
@@ -1357,12 +1339,10 @@ module Bosh::AzureCloud
 
       application_security_groups = []
       asg_params = nic_params.fetch(:application_security_groups, [])
-      for asg_param in asg_params
-        application_security_groups.push({'id' => asg_param[:id]})
+      asg_params.each do |asg_param|
+        application_security_groups.push('id' => asg_param[:id])
       end
-      unless application_security_groups.empty?
-        interface['properties']['ipConfigurations'][0]['properties']['applicationSecurityGroups'] = application_security_groups
-      end
+      interface['properties']['ipConfigurations'][0]['properties']['applicationSecurityGroups'] = application_security_groups unless application_security_groups.empty?
 
       load_balancer = nic_params[:load_balancer]
       unless load_balancer.nil?
@@ -1424,11 +1404,9 @@ module Bosh::AzureCloud
       network_interfaces = []
       network_interfaces_url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, resource_group_name: resource_group_name)
       results = get_resource_by_id(network_interfaces_url)
-      unless results.nil? || results["value"].nil?
-        results["value"].each do |network_interface_spec|
-          if network_interface_spec["name"].include?(keyword)
-            network_interfaces.push(parse_network_interface(network_interface_spec, recursive: false))
-          end
+      unless results.nil? || results['value'].nil?
+        results['value'].each do |network_interface_spec|
+          network_interfaces.push(parse_network_interface(network_interface_spec, recursive: false)) if network_interface_spec['name'].include?(keyword)
         end
       end
       network_interfaces
@@ -1481,7 +1459,7 @@ module Bosh::AzureCloud
 
         properties = result['properties']
         vnet[:provisioning_state] = properties['provisioningState']
-        vnet[:address_space]     = properties['addressSpace']
+        vnet[:address_space] = properties['addressSpace']
         vnet[:subnets] = []
         properties['subnets'].each do |subnet|
           vnet[:subnets].push(parse_subnet(subnet))
@@ -1682,7 +1660,7 @@ module Bosh::AzureCloud
         api_version = get_api_version(@azure_properties, AZURE_RESOURCE_PROVIDER_STORAGE)
         request = Net::HTTP::Get.new(uri.request_uri)
         request.add_field('x-ms-version', api_version)
-        while true
+        loop do
           retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
           sleep(retry_after)
           @logger.debug("create_storage_account - Checking the status of the asynchronous operation using `#{uri}' after `#{retry_after}' seconds.")
@@ -1693,7 +1671,7 @@ module Bosh::AzureCloud
             # Need to check status in response body for asynchronous operation even if status_code is HTTP_CODE_OK.
             # Ignore exception if the body of the response is not JSON format
             result = nil
-            ignore_exception{ result = JSON(response.body) } unless response.body.nil? || response.body.empty?
+            ignore_exception { result = JSON(response.body) } unless response.body.nil? || response.body.empty?
             if !result.nil? && result['status'] == PROVISIONING_STATE_FAILED
               error = "create_storage_account - http code: #{response.code}\n"
               error += get_http_common_headers(response)
@@ -1710,7 +1688,7 @@ module Bosh::AzureCloud
           elsif status_code != HTTP_CODE_ACCEPTED
             error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
             @logger.error(error)
-            raise AzureAsynchronousError.new(), error
+            raise AzureAsynchronousError.new, error
           end
         end
       rescue AzureAsynInternalError => e
@@ -1735,14 +1713,14 @@ module Bosh::AzureCloud
       url += '/checkNameAvailability'
       storage_account = {
         'name' => name,
-        'type' => "#{REST_API_PROVIDER_STORAGE}/#{REST_API_STORAGE_ACCOUNTS}",
+        'type' => "#{REST_API_PROVIDER_STORAGE}/#{REST_API_STORAGE_ACCOUNTS}"
       }
       result = http_post(url, storage_account)
       raise AzureError, "Cannot check the availability of the storage account name `#{name}'" unless result.is_a?(Hash)
       ret = {
-        :available => result['nameAvailable'],
-        :reason    => result['reason'],
-        :message   => result['message']
+        available: result['nameAvailable'],
+        reason: result['reason'],
+        message: result['message']
       }
       ret
     end
@@ -1780,9 +1758,7 @@ module Bosh::AzureCloud
         storage_account[:provisioning_state] = properties['provisioningState']
         storage_account[:account_type]       = properties['accountType']
         storage_account[:storage_blob_host]  = properties['primaryEndpoints']['blob']
-        if properties['primaryEndpoints'].has_key?('table')
-          storage_account[:storage_table_host] = properties['primaryEndpoints']['table']
-        end
+        storage_account[:storage_table_host] = properties['primaryEndpoints']['table'] if properties['primaryEndpoints'].key?('table')
       end
       storage_account
     end
@@ -1817,7 +1793,7 @@ module Bosh::AzureCloud
     #
     # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_ListByResourceGroup
     #
-    def list_storage_accounts()
+    def list_storage_accounts
       storage_accounts = []
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS)
       result = get_resource_by_id(url)
@@ -1833,9 +1809,7 @@ module Bosh::AzureCloud
           storage_account[:provisioning_state] = properties['provisioningState']
           storage_account[:account_type]       = properties['accountType']
           storage_account[:storage_blob_host]  = properties['primaryEndpoints']['blob']
-          if properties['primaryEndpoints'].has_key?('table')
-            storage_account[:storage_table_host] = properties['primaryEndpoints']['table']
-          end
+          storage_account[:storage_table_host] = properties['primaryEndpoints']['table'] if properties['primaryEndpoints'].key?('table')
           storage_accounts << storage_account
         end
       end
@@ -1926,16 +1900,14 @@ module Bosh::AzureCloud
         properties = result['properties']
         interface[:provisioning_state] = properties['provisioningState']
 
-        unless properties['enableIPForwarding'].nil?
-          interface[:enable_ip_forwarding] = properties['enableIPForwarding']
-        end
+        interface[:enable_ip_forwarding] = properties['enableIPForwarding'] unless properties['enableIPForwarding'].nil?
 
         unless properties['networkSecurityGroup'].nil?
-          if recursive
-            interface[:network_security_group] = get_network_security_group(properties['networkSecurityGroup']['id'])
-          else
-            interface[:network_security_group] = {:id => properties['networkSecurityGroup']['id']}
-          end
+          interface[:network_security_group] = if recursive
+                                                 get_network_security_group(properties['networkSecurityGroup']['id'])
+                                               else
+                                                 { id: properties['networkSecurityGroup']['id'] }
+                                               end
         end
 
         unless properties['dnsSettings']['dnsServers'].nil?
@@ -1950,18 +1922,18 @@ module Bosh::AzureCloud
         interface[:private_ip] = ip_configuration_properties['privateIPAddress']
         interface[:private_ip_allocation_method] = ip_configuration_properties['privateIPAllocationMethod']
         unless ip_configuration_properties['publicIPAddress'].nil?
-          if recursive
-            interface[:public_ip] = get_public_ip(ip_configuration_properties['publicIPAddress']['id'])
-          else
-            interface[:public_ip] = {:id => ip_configuration_properties['publicIPAddress']['id']}
-          end
+          interface[:public_ip] = if recursive
+                                    get_public_ip(ip_configuration_properties['publicIPAddress']['id'])
+                                  else
+                                    { id: ip_configuration_properties['publicIPAddress']['id'] }
+                                  end
         end
         unless ip_configuration_properties['loadBalancerBackendAddressPools'].nil?
           if recursive
             names = parse_name_from_id(ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'])
             interface[:load_balancer] = get_load_balancer_by_name(names[:resource_name])
           else
-            interface[:load_balancer] = {:id => ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id']}
+            interface[:load_balancer] = { id: ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'] }
           end
         end
         unless ip_configuration_properties['applicationGatewayBackendAddressPools'].nil?
@@ -1969,17 +1941,17 @@ module Bosh::AzureCloud
             names = parse_name_from_id(ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id'])
             interface[:application_gateway] = get_application_gateway_by_name(names[:resource_name])
           else
-            interface[:application_gateway] = {:id => ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id']}
+            interface[:application_gateway] = { id: ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id'] }
           end
         end
         unless ip_configuration_properties['applicationSecurityGroups'].nil?
           asgs_properties = ip_configuration_properties['applicationSecurityGroups']
           asgs = []
-          for asg_property in asgs_properties
+          asgs_properties.each do |asg_property|
             if recursive
               asgs.push(get_application_security_group(asg_property['id']))
             else
-              asgs.push({:id => asg_property['id']})
+              asgs.push(id: asg_property['id'])
             end
           end
           interface[:application_security_groups] = asgs
@@ -2011,7 +1983,7 @@ module Bosh::AzureCloud
         ip_address[:location] = result['location']
         ip_address[:tags]     = result['tags']
 
-        ip_address[:zone]    = result['zones'][0] unless result['zones'].nil?
+        ip_address[:zone] = result['zones'][0] unless result['zones'].nil?
 
         properties = result['properties']
         ip_address[:resource_guid]               = properties['resourceGuid']
@@ -2031,14 +2003,12 @@ module Bosh::AzureCloud
     end
 
     def filter_credential_in_logs(uri)
-      if !is_debug_mode(@azure_properties) && uri.request_uri.include?('/listKeys')
-        return true
-      end
+      return true if !is_debug_mode(@azure_properties) && uri.request_uri.include?('/listKeys')
       false
     end
 
     def redact_credentials(keys, hash)
-      Hash[hash.map { |k,v| [k, v.kind_of?(Hash) ? redact_credentials(keys, v) : (keys.include?(k) ? '<redacted>' : v) ] }]
+      Hash[hash.map { |k, v| [k, v.is_a?(Hash) ? redact_credentials(keys, v) : (keys.include?(k) ? '<redacted>' : v)] }]
     end
 
     def redact_credentials_in_request_body(body)
@@ -2047,7 +2017,7 @@ module Bosh::AzureCloud
 
     def redact_credentials_in_response_body(body)
       is_debug_mode(@azure_properties) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body)).to_json
-    rescue => e
+    rescue StandardError => e
       body
     end
 
@@ -2068,7 +2038,7 @@ module Bosh::AzureCloud
     # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service
     def get_token(force_refresh = false)
       if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.now) <= 0 || force_refresh
-        @logger.info("get_token - trying to get/refresh Azure authentication token")
+        @logger.info('get_token - trying to get/refresh Azure authentication token')
         endpoint, api_version = get_azure_authentication_endpoint_and_api_version(@azure_properties)
         uri = URI(endpoint)
         params = {
@@ -2083,7 +2053,7 @@ module Bosh::AzureCloud
           'resource'   => get_token_resource(@azure_properties),
           'scope'      => 'user_impersonation'
         }
-        if @azure_properties.has_key?('client_secret')
+        if @azure_properties.key?('client_secret')
           request_body['client_secret'] = @azure_properties['client_secret']
         else
           request_body['client_assertion_type'] = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
@@ -2098,8 +2068,8 @@ module Bosh::AzureCloud
           request = Net::HTTP::Post.new(uri.request_uri)
           request['Content-Type'] = 'application/x-www-form-urlencoded'
           request = merge_http_common_headers(request)
-          @logger.debug("get_token - request.header:")
-          request.each_header { |k,v| @logger.debug("\t#{k} = #{v}") }
+          @logger.debug('get_token - request.header:')
+          request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
           request.body = URI.encode_www_form(request_body)
           @logger.debug("get_token - request body:\n#{redact_credentials_in_request_body(request_body)}")
 
@@ -2120,7 +2090,7 @@ module Bosh::AzureCloud
             retry
           end
           raise e
-        rescue => e
+        rescue StandardError => e
           # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
           if retry_count < AZURE_MAX_RETRY_COUNT
             if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME)
@@ -2155,17 +2125,17 @@ module Bosh::AzureCloud
     end
 
     def http_url(url, params = {})
-      unless params.has_key?('api-version')
+      unless params.key?('api-version')
         resource_provider = nil
-        if url.include?(REST_API_PROVIDER_COMPUTE)
-          resource_provider = AZURE_RESOURCE_PROVIDER_COMPUTE
-        elsif url.include?(REST_API_PROVIDER_NETWORK)
-          resource_provider = AZURE_RESOURCE_PROVIDER_NETWORK
-        elsif url.include?(REST_API_PROVIDER_STORAGE)
-          resource_provider = AZURE_RESOURCE_PROVIDER_STORAGE
-        else
-          resource_provider = AZURE_RESOURCE_PROVIDER_GROUP
-        end
+        resource_provider = if url.include?(REST_API_PROVIDER_COMPUTE)
+                              AZURE_RESOURCE_PROVIDER_COMPUTE
+                            elsif url.include?(REST_API_PROVIDER_NETWORK)
+                              AZURE_RESOURCE_PROVIDER_NETWORK
+                            elsif url.include?(REST_API_PROVIDER_STORAGE)
+                              AZURE_RESOURCE_PROVIDER_STORAGE
+                            else
+                              AZURE_RESOURCE_PROVIDER_GROUP
+                            end
         params['api-version'] = get_api_version(@azure_properties, resource_provider)
       end
       uri = URI(get_arm_endpoint(@azure_properties) + url)
@@ -2187,21 +2157,17 @@ module Bosh::AzureCloud
 
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         status_code = response.code.to_i
-        if filter_credential_in_logs(uri)
-          message = "http_get_response - #{retry_count}: #{status_code}\n"
-          message += get_http_common_headers(response)
-          message += "response.body cannot be logged because it may contain credentials."
-          @logger.debug(message)
-        else
-          message = "http_get_response - #{retry_count}: #{status_code}\n"
-          message += get_http_common_headers(response)
-          message += "response.body: #{redact_credentials_in_response_body(response.body)}"
-          @logger.debug(message)
-        end
 
-        if status_code == HTTP_CODE_UNAUTHORIZED
-          raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid. Error message: #{response.body}"
-        end
+        message = "http_get_response - #{retry_count}: #{status_code}\n"
+        message += get_http_common_headers(response)
+        message += if filter_credential_in_logs(uri)
+                     'response.body cannot be logged because it may contain credentials.'
+                   else
+                     "response.body: #{redact_credentials_in_response_body(response.body)}"
+                   end
+        @logger.debug(message)
+
+        raise AzureUnauthorizedError, "http_get_response - Azure authentication failed: Token is invalid. Error message: #{response.body}" if status_code == HTTP_CODE_UNAUTHORIZED
         refresh_token = false
         if AZURE_RETRY_ERROR_CODES.include?(status_code)
           error = "http_get_response - http code: #{response.code}\n"
@@ -2231,7 +2197,7 @@ module Bosh::AzureCloud
           retry
         end
         raise e
-      rescue => e
+      rescue StandardError => e
         # Below error message depends on require "resolv-replace.rb" in lib/cloud/azure.rb
         if retry_count < AZURE_MAX_RETRY_COUNT
           if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME)
@@ -2257,7 +2223,7 @@ module Bosh::AzureCloud
       if options[:return_code].include?(response.code.to_i)
         if operation_status_link.nil?
           result = true
-          ignore_exception{ result = JSON(response.body) } unless response.body.nil? || response.body.empty?
+          ignore_exception { result = JSON(response.body) } unless response.body.nil? || response.body.empty?
           return result
         end
       elsif !options[:success_code].include?(response.code.to_i)
@@ -2278,28 +2244,24 @@ module Bosh::AzureCloud
       uri.query = URI.encode_www_form(params)
       request.add_field('x-ms-version', options[:api_version])
 
-      while true
+      loop do
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         sleep(retry_after)
 
         @logger.debug("check_completion - trying to get the status of asynchronous operation: #{uri}")
         response = http_get_response(uri, request, retry_after)
         status_code = response.code.to_i
-        if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
-          raise AzureAsynchronousError.new(), "check_completion - http code: #{response.code}. Error message: #{response.body}"
-        end
+        raise AzureAsynchronousError.new, "check_completion - http code: #{response.code}. Error message: #{response.body}" if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
 
-        raise AzureAsynchronousError.new(), 'The body of the asynchronous response is empty' if response.body.nil?
+        raise AzureAsynchronousError.new, 'The body of the asynchronous response is empty' if response.body.nil?
         result = JSON(response.body)
-        if result['status'].nil?
-          raise AzureAsynchronousError.new(), "The body of the asynchronous response does not contain `status'. Response: #{response.body}"
-        end
+        raise AzureAsynchronousError.new, "The body of the asynchronous response does not contain `status'. Response: #{response.body}" if result['status'].nil?
 
         status = result['status']
         if status == PROVISIONING_STATE_SUCCEEDED
           return true
         elsif status == PROVISIONING_STATE_INPROGRESS
-          @logger.debug("check_completion - InProgress...")
+          @logger.debug('check_completion - InProgress...')
         else
           error = "check_completion - http code: #{response.code}\n"
           error += get_http_common_headers(response)
@@ -2326,7 +2288,7 @@ module Bosh::AzureCloud
       status_code = response.code.to_i
       if status_code != HTTP_CODE_OK
         error = "http_get - http code: #{response.code}. Error message: #{response.body}"
-        if status_code == HTTP_CODE_NOCONTENT || status_code == HTTP_CODE_NOTFOUND
+        if [HTTP_CODE_NOCONTENT, HTTP_CODE_NOTFOUND].include? status_code
           raise AzureNotFoundError, error
         else
           raise AzureError, error
@@ -2354,11 +2316,11 @@ module Bosh::AzureCloud
 
         response = http_get_response(uri, request, retry_after)
         options = {
-          :operation    => 'http_put',
-          :return_code => [HTTP_CODE_OK, HTTP_CODE_CREATED],
-          :success_code => [HTTP_CODE_CREATED, HTTP_CODE_ACCEPTED],
-          :api_version  => params['api-version'],
-          :retry_after  => retry_after
+          operation: 'http_put',
+          return_code: [HTTP_CODE_OK, HTTP_CODE_CREATED],
+          success_code: [HTTP_CODE_CREATED, HTTP_CODE_ACCEPTED],
+          api_version: params['api-version'],
+          retry_after: retry_after
         }
         check_completion(response, options)
       rescue AzureAsynInternalError => e
@@ -2387,11 +2349,11 @@ module Bosh::AzureCloud
 
         response = http_get_response(uri, request, retry_after)
         options = {
-          :operation    => 'http_patch',
-          :return_code => [HTTP_CODE_OK],
-          :success_code => [HTTP_CODE_ACCEPTED],
-          :api_version  => params['api-version'],
-          :retry_after  => retry_after
+          operation: 'http_patch',
+          return_code: [HTTP_CODE_OK],
+          success_code: [HTTP_CODE_ACCEPTED],
+          api_version: params['api-version'],
+          retry_after: retry_after
         }
         check_completion(response, options)
       rescue AzureAsynInternalError => e
@@ -2413,11 +2375,11 @@ module Bosh::AzureCloud
         request = Net::HTTP::Delete.new(uri.request_uri)
         response = http_get_response(uri, request, retry_after)
         options = {
-          :operation    => 'http_delete',
-          :return_code => [HTTP_CODE_OK, HTTP_CODE_NOCONTENT],
-          :success_code => [HTTP_CODE_ACCEPTED],
-          :api_version  => params['api-version'],
-          :retry_after  => retry_after
+          operation: 'http_delete',
+          return_code: [HTTP_CODE_OK, HTTP_CODE_NOCONTENT],
+          success_code: [HTTP_CODE_ACCEPTED],
+          api_version: params['api-version'],
+          retry_after: retry_after
         }
         check_completion(response, options)
       rescue AzureAsynInternalError => e
@@ -2446,11 +2408,11 @@ module Bosh::AzureCloud
         end
         response = http_get_response(uri, request, retry_after)
         options = {
-          :operation    => 'http_post',
-          :return_code => [HTTP_CODE_OK],
-          :success_code => [HTTP_CODE_ACCEPTED],
-          :api_version  => params['api-version'],
-          :retry_after  => retry_after
+          operation: 'http_post',
+          return_code: [HTTP_CODE_OK],
+          success_code: [HTTP_CODE_ACCEPTED],
+          api_version: params['api-version'],
+          retry_after: retry_after
         }
         check_completion(response, options)
       rescue AzureAsynInternalError => e
@@ -2463,7 +2425,7 @@ module Bosh::AzureCloud
     end
 
     def merge_http_common_headers(request)
-      request['User-Agent']    = USER_AGENT_FOR_REST
+      request['User-Agent'] = USER_AGENT_FOR_REST
       # https://msdn.microsoft.com/en-us/library/mt766820.aspx
       # Caller-specified request ID, in the form of a GUID with no decoration such as curly braces.
       # If specified, this will be included in response information as a way to map the request.

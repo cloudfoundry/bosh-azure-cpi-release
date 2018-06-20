@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
   class VMManager
     include Helpers
@@ -21,9 +23,7 @@ module Bosh::AzureCloud
       vm_size = resource_pool.fetch('instance_type', nil)
 
       # When both availability_zone and availability_set are specified, raise an error
-      if !resource_pool['availability_zone'].nil? && !resource_pool['availability_set'].nil?
-        cloud_error("Only one of `availability_zone' and `availability_set' is allowed to be configured for the VM but you have configured both.")
-      end
+      cloud_error("Only one of `availability_zone' and `availability_set' is allowed to be configured for the VM but you have configured both.") if !resource_pool['availability_zone'].nil? && !resource_pool['availability_set'].nil?
 
       check_resource_group(resource_group_name, location)
 
@@ -41,23 +41,21 @@ module Bosh::AzureCloud
       end
 
       vm_params = {
-        :name                => vm_name,
-        :location            => location,
-        :tags                => AZURE_TAGS,
-        :vm_size             => vm_size,
-        :os_disk             => os_disk,
-        :ephemeral_disk      => ephemeral_disk,
-        :os_type             => stemcell_info.os_type,
-        :managed             => @use_managed_disks
+        name: vm_name,
+        location: location,
+        tags: AZURE_TAGS,
+        vm_size: vm_size,
+        os_disk: os_disk,
+        ephemeral_disk: ephemeral_disk,
+        os_type: stemcell_info.os_type,
+        managed: @use_managed_disks
       }
       if stemcell_info.is_light_stemcell?
         vm_params[:image_reference] = stemcell_info.image_reference
+      elsif @use_managed_disks
+        vm_params[:image_id] = stemcell_info.uri
       else
-        if @use_managed_disks
-          vm_params[:image_id] = stemcell_info.uri
-        else
-          vm_params[:image_uri] = stemcell_info.uri
-        end
+        vm_params[:image_uri] = stemcell_info.uri
       end
 
       case stemcell_info.os_type
@@ -74,7 +72,7 @@ module Bosh::AzureCloud
         # https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
         # adminUsername:
         #   Max-length (Windows): 20 characters
-        vm_params[:windows_username] = SecureRandom.uuid.delete('-')[0,20]
+        vm_params[:windows_username] = SecureRandom.uuid.delete('-')[0, 20]
         # adminPassword:
         #   Minimum-length (Windows): 8 characters
         #   Max-length (Windows): 123 characters
@@ -84,7 +82,7 @@ module Bosh::AzureCloud
         #     Has a digit
         #     Has a special character (Regex match [\W_])
         vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".split('').shuffle.join
-        computer_name = generate_windows_computer_name()
+        computer_name = generate_windows_computer_name
         vm_params[:computer_name] = computer_name
         vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns, computer_name)
       end
@@ -100,29 +98,29 @@ module Bosh::AzureCloud
         vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host]
       end
 
-      primary_nic_tags = AZURE_TAGS.clone
+      primary_nic_tags = AZURE_TAGS.dup
 
       # When availability_zone is specified, VM won't be in any availability set;
       # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
       availability_set_name = resource_pool['availability_zone'].nil? ? get_availability_set_name(resource_pool, env) : nil
 
       # Store the availability set name in the tags of the NIC
-      primary_nic_tags.merge!({'availability_set' => availability_set_name}) unless availability_set_name.nil?
+      primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
 
       network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, resource_pool, network_configurator, primary_nic_tags)
       availability_set_params = {
-        :name                         => availability_set_name,
-        :location                     => location,
-        :tags                         => AZURE_TAGS,
-        :platform_update_domain_count => resource_pool['platform_update_domain_count'] || default_update_domain_count,
-        :platform_fault_domain_count  => resource_pool['platform_fault_domain_count'] || default_fault_domain_count,
-        :managed                      => @use_managed_disks
+        name: availability_set_name,
+        location: location,
+        tags: AZURE_TAGS,
+        platform_update_domain_count: resource_pool['platform_update_domain_count'] || default_update_domain_count,
+        platform_fault_domain_count: resource_pool['platform_fault_domain_count'] || default_fault_domain_count,
+        managed: @use_managed_disks
       }
 
       create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set_params)
 
       vm_params
-    rescue => e
+    rescue StandardError => e
       error_message = ''
       if @keep_failed_vms
         # Including undeleted resources in error message to ask users to delete them manually later
@@ -166,7 +164,7 @@ module Bosh::AzureCloud
           # Delete the dynamic public IP
           dynamic_public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
           @azure_client2.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
-        rescue => error
+        rescue StandardError => error
           error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
           error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
         end
@@ -180,7 +178,7 @@ module Bosh::AzureCloud
     end
 
     def find(instance_id)
-      @azure_client2.get_virtual_machine_by_name(instance_id.resource_group_name(), instance_id.vm_name())
+      @azure_client2.get_virtual_machine_by_name(instance_id.resource_group_name, instance_id.vm_name)
     end
 
     def delete(instance_id)
@@ -208,7 +206,7 @@ module Bosh::AzureCloud
         # It still works since no avset name in the tags of the second NIC.
         network_interfaces = @azure_client2.list_network_interfaces_by_keyword(resource_group_name, vm_name)
         unless network_interfaces.empty?
-          for network_interface in network_interfaces
+          network_interfaces.each do |network_interface|
             availability_set_name = network_interface[:tags]['availability_set']
             delete_empty_availability_set(resource_group_name, availability_set_name) unless availability_set_name.nil?
             @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
@@ -221,7 +219,7 @@ module Bosh::AzureCloud
       @azure_client2.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
 
       # Delete OS & ephemeral disks
-      if instance_id.use_managed_disks?()
+      if instance_id.use_managed_disks?
         os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
         @disk_manager2.delete_disk(resource_group_name, os_disk_name)
 
@@ -243,16 +241,16 @@ module Bosh::AzureCloud
     def reboot(instance_id)
       @logger.info("reboot(#{instance_id})")
       @azure_client2.restart_virtual_machine(
-        instance_id.resource_group_name(),
-        instance_id.vm_name()
+        instance_id.resource_group_name,
+        instance_id.vm_name
       )
     end
 
     def set_metadata(instance_id, metadata)
       @logger.info("set_metadata(#{instance_id}, #{metadata})")
       @azure_client2.update_tags_of_virtual_machine(
-        instance_id.resource_group_name(),
-        instance_id.vm_name(),
+        instance_id.resource_group_name,
+        instance_id.vm_name,
         metadata.merge(AZURE_TAGS)
       )
     end
@@ -266,38 +264,38 @@ module Bosh::AzureCloud
     def attach_disk(instance_id, disk_id)
       @logger.info("attach_disk(#{instance_id}, #{disk_id})")
       disk_name = disk_id.disk_name()
-      if instance_id.use_managed_disks?()
-        disk_params = {
-          :disk_name     => disk_name,
-          :caching       => disk_id.caching(),
-          :disk_bosh_id  => disk_id.to_s,
-          :disk_id       => @azure_client2.get_managed_disk_by_name(disk_id.resource_group_name(), disk_name)[:id],
-          :managed       => true
-        }
-      else
-        disk_params = {
-          :disk_name     => disk_name,
-          :caching       => disk_id.caching(),
-          :disk_bosh_id  => disk_id.to_s,
-          :disk_uri      => @disk_manager.get_data_disk_uri(disk_id),
-          :disk_size     => @disk_manager.get_disk_size_in_gb(disk_id),
-          :managed       => false
-        }
-      end
+      disk_params = if instance_id.use_managed_disks?
+                      {
+                        disk_name: disk_name,
+                        caching: disk_id.caching,
+                        disk_bosh_id: disk_id.to_s,
+                        disk_id: @azure_client2.get_managed_disk_by_name(disk_id.resource_group_name, disk_name)[:id],
+                        managed: true
+                      }
+                    else
+                      {
+                        disk_name: disk_name,
+                        caching: disk_id.caching,
+                        disk_bosh_id: disk_id.to_s,
+                        disk_uri: @disk_manager.get_data_disk_uri(disk_id),
+                        disk_size: @disk_manager.get_disk_size_in_gb(disk_id),
+                        managed: false
+                      }
+                    end
       lun = @azure_client2.attach_disk_to_virtual_machine(
-        instance_id.resource_group_name(),
-        instance_id.vm_name(),
+        instance_id.resource_group_name,
+        instance_id.vm_name,
         disk_params
       )
-      "#{lun}"
+      lun.to_s
     end
 
     def detach_disk(instance_id, disk_id)
       @logger.info("detach_disk(#{instance_id}, #{disk_id})")
       @azure_client2.detach_disk_from_virtual_machine(
-        instance_id.resource_group_name(),
-        instance_id.vm_name(),
-        disk_id.disk_name()
+        instance_id.resource_group_name,
+        instance_id.vm_name,
+        disk_id.disk_name
       )
     end
 
@@ -307,14 +305,14 @@ module Bosh::AzureCloud
     # For Linux:     {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"server":{"name":"<instance-id>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
     # For Windows:   {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"instance-id":"<instance-id>","server":{"name":"<randomgeneratedname>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
     def get_user_data(instance_id, dns, computer_name = nil)
-      user_data = {registry: {endpoint: @registry_endpoint}}
+      user_data = { registry: { endpoint: @registry_endpoint } }
       if computer_name
         user_data[:'instance-id'] = instance_id
-        user_data[:server] = {name: computer_name}
+        user_data[:server] = { name: computer_name }
       else
-        user_data[:server] = {name: instance_id}
+        user_data[:server] = { name: instance_id }
       end
-      user_data[:dns] = {nameserver: dns} if dns
+      user_data[:dns] = { nameserver: dns } if dns
       Base64.strict_encode64(JSON.dump(user_data))
     end
 
@@ -328,9 +326,9 @@ module Bosh::AzureCloud
       network_security_group = nil
       # Network security group name can be specified in resource_pool, networks and global configuration (ordered by priority)
       network_security_group_name = resource_pool.fetch('security_group', network.security_group)
-      network_security_group_name = @azure_properties["default_security_group"] if network_security_group_name.nil?
+      network_security_group_name = @azure_properties['default_security_group'] if network_security_group_name.nil?
       return nil if network_security_group_name.nil?
-      cloud_error("Cannot specify an empty string to the network security group") if network_security_group_name.empty?
+      cloud_error('Cannot specify an empty string to the network security group') if network_security_group_name.empty?
       # The resource group which the NSG belongs to can be specified in networks and global configuration (ordered by priority)
       resource_group_name = network.resource_group_name
       network_security_group = @azure_client2.get_network_security_group_by_name(resource_group_name, network_security_group_name)
@@ -348,7 +346,7 @@ module Bosh::AzureCloud
       application_security_groups = []
       # Application security group name can be specified in resource_pool and networks (ordered by priority)
       application_security_group_names = resource_pool.fetch('application_security_groups', network.application_security_groups)
-      for application_security_group_name in application_security_group_names
+      application_security_group_names.each do |application_security_group_name|
         # The resource group which the ASG belongs to can be specified in networks and global configuration (ordered by priority)
         resource_group_name = network.resource_group_name
         application_security_group = @azure_client2.get_application_security_group_by_name(resource_group_name, application_security_group_name)
@@ -409,10 +407,10 @@ module Bosh::AzureCloud
         idle_timeout_in_minutes = @azure_properties.fetch('pip_idle_timeout_in_minutes', 4)
         validate_idle_timeout(idle_timeout_in_minutes)
         public_ip_params = {
-          :name => vm_name,
-          :location => location,
-          :is_static => false,
-          :idle_timeout_in_minutes => idle_timeout_in_minutes
+          name: vm_name,
+          location: location,
+          is_static: false,
+          idle_timeout_in_minutes: idle_timeout_in_minutes
         }
         public_ip_params[:zone] = resource_pool['availability_zone'].to_s unless resource_pool['availability_zone'].nil?
         @azure_client2.create_public_ip(resource_group_name, public_ip_params)
@@ -425,16 +423,16 @@ module Bosh::AzureCloud
         ip_forwarding = get_ip_forwarding(resource_pool, network)
         nic_name = "#{vm_name}-#{index}"
         nic_params = {
-          :name                        => nic_name,
-          :location                    => location,
-          :private_ip                  => (network.is_a? ManualNetwork) ? network.private_ip : nil,
-          :network_security_group      => network_security_group,
-          :application_security_groups => application_security_groups,
-          :ipconfig_name               => "ipconfig#{index}",
-          :enable_ip_forwarding        => ip_forwarding
+          name: nic_name,
+          location: location,
+          private_ip: network.is_a?(ManualNetwork) ? network.private_ip : nil,
+          network_security_group: network_security_group,
+          application_security_groups: application_security_groups,
+          ipconfig_name: "ipconfig#{index}",
+          enable_ip_forwarding: ip_forwarding
         }
         nic_params[:subnet] = get_network_subnet(network)
-        if index == 0
+        if index.zero?
           nic_params[:public_ip] = public_ip
           nic_params[:tags] = primary_nic_tags
           nic_params[:load_balancer] = get_load_balancer(resource_pool)
@@ -499,25 +497,21 @@ module Bosh::AzureCloud
 
       if availability_set.nil?
         @logger.info("create_availability_set - the availability set `#{availability_set_name}' doesn't exist. Will create a new one.")
+      # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
+      elsif !availability_set[:location].casecmp(availability_set_params[:location]).zero?
+        cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists, but in a different location `#{availability_set[:location].downcase}' instead of `#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
+      elsif !@use_managed_disks && availability_set[:managed]
+        cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
+      elsif @use_managed_disks && !availability_set[:managed]
+        @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
+        availability_set_params.merge!(
+          platform_update_domain_count: availability_set[:platform_update_domain_count],
+          platform_fault_domain_count: availability_set[:platform_fault_domain_count],
+          managed: true
+        )
       else
-        # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
-        if availability_set[:location].downcase != availability_set_params[:location].downcase
-          cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists, but in a different location `#{availability_set[:location].downcase}' instead of `#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
-        else
-          if !@use_managed_disks && availability_set[:managed]
-            cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
-          elsif @use_managed_disks && !availability_set[:managed]
-            @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
-            availability_set_params.merge!({
-              :platform_update_domain_count => availability_set[:platform_update_domain_count],
-              :platform_fault_domain_count  => availability_set[:platform_fault_domain_count],
-              :managed                      => true
-            })
-          else
-            @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists. No need to update.")
-            return availability_set
-          end
-        end
+        @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists. No need to update.")
+        return availability_set
       end
 
       mutex = FileMutex.new("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-create-#{availability_set_name}", @logger)
@@ -528,7 +522,7 @@ module Bosh::AzureCloud
         else
           mutex.wait
         end
-      rescue => e
+      rescue StandardError => e
         mark_deleting_locks
         cloud_error("Failed to create the availability set `#{availability_set_name}' in the resource group `#{resource_group_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
@@ -545,7 +539,7 @@ module Bosh::AzureCloud
           # CPI will release the write lock only when the availability set is deleted successfully.
           # If any error is raised above, the lock should NOT be released so that other tasks can't acquire the read lock.
           availability_set_rw_lock.release_write_lock
-        rescue => e
+        rescue StandardError => e
           mark_deleting_locks
           cloud_error("Failed to delete of the availability set `#{name}' in the resource group `#{resource_group_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
@@ -583,7 +577,7 @@ module Bosh::AzureCloud
         else
           @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
         end
-      rescue => e
+      rescue StandardError => e
         if e.is_a?(LockError)
           mark_deleting_locks
           cloud_error("create_virtual_machine - Lock error: #{e.inspect}\n#{e.backtrace.join("\n")}") unless is_vm_created
@@ -630,7 +624,7 @@ module Bosh::AzureCloud
                 @disk_manager.delete_disk(storage_account_name, ephemeral_disk_name)
               end
             end
-          rescue => error
+          rescue StandardError => error
             retry if (retry_delete_count += 1) <= max_retries
             @keep_failed_vms = true # If the cleanup fails, then the VM resources have to be kept
             error_message = "The VM fails in provisioning.\n"

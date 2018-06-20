@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 require 'webmock/rspec'
 
@@ -8,31 +10,31 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:subscription_id) { mock_azure_properties['subscription_id'] }
   let(:tenant_id) { mock_azure_properties['tenant_id'] }
   let(:client_id) { mock_azure_properties['client_id'] }
-  let(:resource_group) { "fake-resource-group-name" }
+  let(:resource_group) { 'fake-resource-group-name' }
   let(:authentication_endpoint) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token" }
   let(:api_version) { AZURE_API_VERSION }
   let(:token_uri) { "#{authentication_endpoint}?api-version=#{api_version}" }
-  let(:valid_access_token) { "valid-access-token" }
-  let(:expires_on) { (Time.now+1800).to_i.to_s }
+  let(:valid_access_token) { 'valid-access-token' }
+  let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
-  describe "#get_token" do
+  describe '#get_token' do
     let(:url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/foo/bar/foo" }
     let(:resource_uri) { "https://management.azure.com/#{url}?api-version=#{api_version}" }
-    let(:response_body) {
+    let(:response_body) do
       {
-        "id" => "foo",
-        "name" => "name"
+        'id' => 'foo',
+        'name' => 'name'
       }.to_json
-    }
+    end
 
-    context "when the client_secret is provided" do
-      let(:azure_client2) {
+    context 'when the client_secret is provided' do
+      let(:azure_client2) do
         Bosh::AzureCloud::AzureClient2.new(
           mock_azure_properties,
           logger
         )
-      }
-      let(:token_params) {
+      end
+      let(:token_params) do
         {
           'grant_type'    => 'client_credentials',
           'client_id'     => client_id,
@@ -40,64 +42,66 @@ describe Bosh::AzureCloud::AzureClient2 do
           'scope'         => 'user_impersonation',
           'client_secret' => mock_azure_properties['client_secret']
         }
-      }
+      end
 
-      it "should use the service principal with password to get the token" do
+      it 'should use the service principal with password to get the token' do
         stub_request(:post, token_uri).with(body: URI.encode_www_form(token_params)).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:get, resource_uri).to_return(
-          :status => 200,
-          :body => response_body,
-          :headers => {})
+          status: 200,
+          body: response_body,
+          headers: {}
+        )
         expect(
-          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
         ).not_to be_nil
       end
     end
 
-    context "when the client_secret is not provided" do
-      let(:azure_properties_without_client_secret) {
+    context 'when the client_secret is not provided' do
+      let(:azure_properties_without_client_secret) do
         properties = mock_azure_properties.clone
         properties.delete('client_secret')
         properties
-      }
-      let(:azure_client2) {
+      end
+      let(:azure_client2) do
         Bosh::AzureCloud::AzureClient2.new(
           azure_properties_without_client_secret,
           logger
         )
-      }
+      end
 
-      let(:certificate_data) { "fake-cert-data" }
+      let(:certificate_data) { 'fake-cert-data' }
       let(:cert) { instance_double(OpenSSL::X509::Certificate) }
-      let(:thumbprint) { "12f0d2b95eb4d0ad81892c9d9fcc45a89c324cbd" }
-      let(:x5t) { "EvDSuV600K2BiSydn8xFqJwyTL0=" } # x5t is the Base64 UrlEncoding of thumbprint
+      let(:thumbprint) { '12f0d2b95eb4d0ad81892c9d9fcc45a89c324cbd' }
+      let(:x5t) { 'EvDSuV600K2BiSydn8xFqJwyTL0=' } # x5t is the Base64 UrlEncoding of thumbprint
       let(:now) { Time.now }
-      let(:jti) { "b55b54ac-7494-449b-94b2-d7bff0285837" }
-      let(:header) {
+      let(:jti) { 'b55b54ac-7494-449b-94b2-d7bff0285837' }
+      let(:header) do
         {
-          "alg": "RS256",
-          "typ": "JWT",
+          "alg": 'RS256',
+          "typ": 'JWT',
           "x5t": x5t
         }
-      }
-      let(:payload) {
+      end
+      let(:payload) do
         {
           "aud": authentication_endpoint,
-          "exp": (now + 3600).strftime("%s"),
+          "exp": (now + 3600).strftime('%s'),
           "iss": client_id,
           "jti": jti,
-          "nbf": (now - 90).strftime("%s"),
+          "nbf": (now - 90).strftime('%s'),
           "sub": client_id
         }
-      }
-      let(:rsa_private) { "fake-rsa-private" }
-      let(:jwt_assertion) { "fake-jwt-assertion" }
+      end
+      let(:rsa_private) { 'fake-rsa-private' }
+      let(:jwt_assertion) { 'fake-jwt-assertion' }
 
       before do
         allow(File).to receive(:read).and_return(certificate_data)
@@ -110,7 +114,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         allow(JWT).to receive(:encode).with(payload, rsa_private, 'RS256', header).and_return(jwt_assertion)
       end
 
-      let(:token_params) {
+      let(:token_params) do
         {
           'grant_type'            => 'client_credentials',
           'client_id'             => client_id,
@@ -119,22 +123,24 @@ describe Bosh::AzureCloud::AzureClient2 do
           'client_assertion_type' => 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
           'client_assertion'      => jwt_assertion
         }
-      }
+      end
 
-      it "should use the service principal with certificate to get the token" do
+      it 'should use the service principal with certificate to get the token' do
         stub_request(:post, token_uri).with(body: URI.encode_www_form(token_params)).to_return(
-          :status => 200,
-          :body => {
-            "access_token" => valid_access_token,
-            "expires_on" => expires_on
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
           }.to_json,
-          :headers => {})
+          headers: {}
+        )
         stub_request(:get, resource_uri).to_return(
-          :status => 200,
-          :body => response_body,
-          :headers => {})
+          status: 200,
+          body: response_body,
+          headers: {}
+        )
         expect(
-          azure_client2.get_resource_by_id(url, { 'api-version' => api_version })
+          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
         ).not_to be_nil
       end
     end

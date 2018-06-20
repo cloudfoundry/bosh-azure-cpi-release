@@ -1,22 +1,24 @@
+# frozen_string_literal: true
+
+require 'English'
 require 'spec_helper'
 require 'json'
 require 'tempfile'
 require 'yaml'
 
 describe 'the azure_cpi executable' do
-
   before(:all) do
-    @subscription_id        = ENV['BOSH_AZURE_SUBSCRIPTION_ID']             || raise("Missing BOSH_AZURE_SUBSCRIPTION_ID")
-    @resource_group_name    = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME'] || raise("Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME")
-    @tenant_id              = ENV['BOSH_AZURE_TENANT_ID']                   || raise("Missing BOSH_AZURE_TENANT_ID")
-    @client_id              = ENV['BOSH_AZURE_CLIENT_ID']                   || raise("Missing BOSH_AZURE_CLIENT_ID")
-    @client_secret          = ENV['BOSH_AZURE_CLIENT_SECRET']               || raise("Missing BOSH_AZURE_CLIENT_SECRET")
-    @certificate            = ENV['BOSH_AZURE_CERTIFICATE']                 || raise("Missing BOSH_AZURE_CERTIFICATE")
-    @ssh_public_key         = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']              || raise("Missing BOSH_AZURE_SSH_PUBLIC_KEY")
-    @default_security_group = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']      || raise("Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP")
+    @subscription_id        = ENV['BOSH_AZURE_SUBSCRIPTION_ID']             || raise('Missing BOSH_AZURE_SUBSCRIPTION_ID')
+    @resource_group_name    = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME'] || raise('Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME')
+    @tenant_id              = ENV['BOSH_AZURE_TENANT_ID']                   || raise('Missing BOSH_AZURE_TENANT_ID')
+    @client_id              = ENV['BOSH_AZURE_CLIENT_ID']                   || raise('Missing BOSH_AZURE_CLIENT_ID')
+    @client_secret          = ENV['BOSH_AZURE_CLIENT_SECRET']               || raise('Missing BOSH_AZURE_CLIENT_SECRET')
+    @certificate            = ENV['BOSH_AZURE_CERTIFICATE']                 || raise('Missing BOSH_AZURE_CERTIFICATE')
+    @ssh_public_key         = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']              || raise('Missing BOSH_AZURE_SSH_PUBLIC_KEY')
+    @default_security_group = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']      || raise('Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP')
   end
 
-  let(:azure_environment)   { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
+  let(:azure_environment) { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
 
   before(:each) do
     config_file.write(cloud_properties.to_yaml)
@@ -27,7 +29,7 @@ describe 'the azure_cpi executable' do
 
   context 'when given valid credentials' do
     context 'when using service principal with password (client_secret)' do
-      let(:cloud_properties) {
+      let(:cloud_properties) do
         {
           'cloud' => {
             'properties' => {
@@ -52,18 +54,18 @@ describe 'the azure_cpi executable' do
             }
           }
         }
-      }
+      end
 
       it 'should call Azure management endpoint with a valid access token' do
-        result = run_cpi({'method'=>'has_vm', 'arguments'=>["#{SecureRandom.uuid}"], 'context'=>{'director_uuid' => 'abc123'}})
-        expect(result.keys).to eq(%w(result error log))
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' })
+        expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_falsey
         expect(result['error']).to be_nil
       end
     end
 
     context 'when using service principal with certificate' do
-      let(:cloud_properties) {
+      let(:cloud_properties) do
         {
           'cloud' => {
             'properties' => {
@@ -87,20 +89,20 @@ describe 'the azure_cpi executable' do
             }
           }
         }
-      }
+      end
 
-      let(:config_dir) { "/var/vcap/jobs/azure_cpi/config" }
+      let(:config_dir) { '/var/vcap/jobs/azure_cpi/config' }
       let(:certificate_path) { "#{config_dir}/service_principal_certificate.pem" }
       before(:each) do
         FileUtils.mkdir_p(config_dir)
-        File.open(certificate_path, 'wb') { |f|
+        File.open(certificate_path, 'wb') do |f|
           f.write(@certificate)
-        }
+        end
       end
 
       it 'should call Azure management endpoint with a valid access token' do
-        result = run_cpi({'method'=>'has_vm', 'arguments'=>["#{SecureRandom.uuid}"], 'context'=>{'director_uuid' => 'abc123'}})
-        expect(result.keys).to eq(%w(result error log))
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' })
+        expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_falsey
         expect(result['error']).to be_nil
       end
@@ -137,12 +139,12 @@ describe 'the azure_cpi executable' do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi({'method'=>'ping', 'arguments'=>[], 'context'=>{'director_uuid' => 'abc123'}})
-        expect(result.keys).to eq(%w(result error log))
+        result = run_cpi('method' => 'ping', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
+        expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
-        expect(result['error']['message']).to match(/http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret\/certificate/)
+        expect(result['error']['message']).to match(%r{http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret\/certificate})
         expect(result['error']['ok_to_retry']).to be(false)
-        expect(result['error']['type']).to eq("Bosh::Clouds::CloudError")
+        expect(result['error']['type']).to eq('Bosh::Clouds::CloudError')
         expect(result['log']).to include('backtrace')
       end
     end
@@ -176,12 +178,12 @@ describe 'the azure_cpi executable' do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi({'method'=>'ping', 'arguments'=>[], 'context'=>{'director_uuid' => 'abc123'}})
-        expect(result.keys).to eq(%w(result error log))
+        result = run_cpi('method' => 'ping', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
+        expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
-        expect(result['error']['message']).to match(/http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate/)
+        expect(result['error']['message']).to match(%r{http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate})
         expect(result['error']['ok_to_retry']).to be(false)
-        expect(result['error']['type']).to eq("Bosh::Clouds::CloudError")
+        expect(result['error']['type']).to eq('Bosh::Clouds::CloudError')
         expect(result['log']).to include('backtrace')
       end
     end
@@ -191,20 +193,20 @@ describe 'the azure_cpi executable' do
     let(:cloud_properties) { {} }
 
     it 'will return an appropriate error message when passed an invalid config file' do
-      result = run_cpi({'method'=>'ping', 'arguments'=>[], 'context'=>{'director_uuid' => 'abc123'}})
-      expect(result.keys).to eq(%w(result error log))
+      result = run_cpi('method' => 'ping', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
+      expect(result.keys).to eq(%w[result error log])
       expect(result['result']).to be_nil
-      expect(result['error']).to eq({
+      expect(result['error']).to eq(
         'type' => 'Unknown',
         'message' => 'Could not find cloud properties in the configuration',
         'ok_to_retry' => false
-      })
+      )
       expect(result['log']).to include('backtrace')
     end
   end
 
   context 'when given cpi config in the context' do
-    let(:cloud_properties) {
+    let(:cloud_properties) do
       {
         'cloud' => {
           'properties' => {
@@ -218,8 +220,8 @@ describe 'the azure_cpi executable' do
           }
         }
       }
-    }
-    let(:context) {
+    end
+    let(:context) do
       {
         'director_uuid' => 'abc123',
         'environment' => azure_environment,
@@ -234,11 +236,11 @@ describe 'the azure_cpi executable' do
         'parallel_upload_thread_num' => 16,
         'use_managed_disks' => true
       }
-    }
+    end
 
     it 'merges the context into the cloud_properties' do
-      result = run_cpi({'method'=>'has_vm', 'arguments'=>["#{SecureRandom.uuid}"], 'context'=> context})
-      expect(result.keys).to eq(%w(result error log))
+      result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => context)
+      expect(result.keys).to eq(%w[result error log])
       expect(result['result']).to be_falsey
       expect(result['error']).to be_nil
     end
@@ -250,7 +252,7 @@ describe 'the azure_cpi executable' do
     command_file.close
 
     stdoutput = `bin/azure_cpi #{config_file.path} < #{command_file.path}`
-    status = $?.exitstatus
+    status = $CHILD_STATUS.exitstatus
 
     expect(status).to eq(0)
     JSON.parse(stdoutput)

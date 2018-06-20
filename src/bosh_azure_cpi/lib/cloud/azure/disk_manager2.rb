@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Bosh::AzureCloud
   class DiskManager2
     include Bosh::Exec
@@ -26,15 +28,15 @@ module Bosh::AzureCloud
       resource_group_name = disk_id.resource_group_name()
       disk_name = disk_id.disk_name()
       caching = disk_id.caching()
-      tags = AZURE_TAGS.merge({
-        "caching" => caching
-      })
+      tags = AZURE_TAGS.merge(
+        'caching' => caching
+      )
       disk_params = {
-        :name => disk_name,
-        :location => location,
-        :tags => tags,
-        :disk_size => size,
-        :account_type => storage_account_type
+        name: disk_name,
+        location: location,
+        tags: tags,
+        disk_size: size,
+        account_type: storage_account_type
       }
 
       disk_params[:zone] = zone unless zone.nil?
@@ -48,17 +50,17 @@ module Bosh::AzureCloud
       resource_group_name = disk_id.resource_group_name()
       disk_name = disk_id.disk_name()
       caching = disk_id.caching()
-      tags = AZURE_TAGS.merge({
-        "caching" => caching,
-        "original_blob" => blob_uri
-      })
+      tags = AZURE_TAGS.merge(
+        'caching' => caching,
+        'original_blob' => blob_uri
+      )
       disk_params = {
-        :name => disk_name,
-        :location => location,
-        :tags => tags,
-        :source_uri => blob_uri,
-        :account_type => storage_account_type,
-        :zone => zone
+        name: disk_name,
+        location: location,
+        tags: tags,
+        source_uri: blob_uri,
+        account_type: storage_account_type,
+        zone: zone
       }
       @logger.info("Start to create a managed disk `#{disk_name}' in resource group `#{resource_group_name}' from the source uri `#{blob_uri}'")
       @azure_client2.create_managed_disk_from_blob(resource_group_name, disk_params)
@@ -78,7 +80,7 @@ module Bosh::AzureCloud
           retried = true
           retry
         end
-        @logger.error("delete_disk: Retry still fails due to AzureConflictError, giving up")
+        @logger.error('delete_disk: Retry still fails due to AzureConflictError, giving up')
         raise e
       end
     end
@@ -118,13 +120,13 @@ module Bosh::AzureCloud
     def snapshot_disk(snapshot_id, disk_name, metadata)
       @logger.info("snapshot_disk(#{snapshot_id}, #{disk_name}, #{metadata})")
       resource_group_name = snapshot_id.resource_group_name()
-      snapshot_name = snapshot_id.disk_name()
+      snapshot_name = snapshot_id.disk_name
       snapshot_params = {
-        :name => snapshot_name,
-        :tags => metadata.merge({
-          "original" => disk_name
-        }),
-        :disk_name => disk_name
+        name: snapshot_name,
+        tags: metadata.merge(
+          'original' => disk_name
+        ),
+        disk_name: disk_name
       }
       @logger.info("Start to create a snapshot `#{snapshot_name}' from a managed disk `#{disk_name}'")
       @azure_client2.create_managed_snapshot(resource_group_name, snapshot_params)
@@ -133,7 +135,7 @@ module Bosh::AzureCloud
     def delete_snapshot(snapshot_id)
       @logger.info("delete_snapshot(#{snapshot_id})")
       resource_group_name = snapshot_id.resource_group_name()
-      snapshot_name = snapshot_id.disk_name()
+      snapshot_name = snapshot_id.disk_name
       @azure_client2.delete_managed_snapshot(resource_group_name, snapshot_name)
     end
 
@@ -161,10 +163,10 @@ module Bosh::AzureCloud
       use_root_disk_for_ephemeral_data = @resource_pool.fetch('ephemeral_disk', {}).fetch('use_root_disk', false)
       disk_size = get_os_disk_size(root_disk_size, stemcell_info, use_root_disk_for_ephemeral_data)
 
-      return {
-        :disk_name    => generate_os_disk_name(vm_name),
-        :disk_size    => disk_size,
-        :disk_caching => disk_caching
+      {
+        disk_name: generate_os_disk_name(vm_name),
+        disk_size: disk_size,
+        disk_caching: disk_caching
       }
     end
 
@@ -178,13 +180,13 @@ module Bosh::AzureCloud
       size = ephemeral_disk.fetch('size', nil)
       unless size.nil?
         validate_disk_size(size)
-        disk_size = size/1024
+        disk_size = size / 1024
       end
 
-      return {
-        :disk_name    => generate_ephemeral_disk_name(vm_name),
-        :disk_size    => disk_size,
-        :disk_caching => 'ReadWrite'
+      {
+        disk_name: generate_ephemeral_disk_name(vm_name),
+        disk_size: disk_size,
+        disk_caching: 'ReadWrite'
       }
     end
 
@@ -193,8 +195,8 @@ module Bosh::AzureCloud
       resource_group_name = disk_id.resource_group_name()
       disk_name = disk_id.disk_name()
 
-      snapshot_id = DiskId.create(disk_id.caching(), true, resource_group_name: resource_group_name)
-      snapshot_name = snapshot_id.disk_name()
+      snapshot_id = DiskId.create(disk_id.caching, true, resource_group_name: resource_group_name)
+      snapshot_name = snapshot_id.disk_name
       snapshot_disk(snapshot_id, disk_name, {})
       @logger.info("Snapshot #{snapshot_name} is created for disk #{disk_name} for migration purpose")
 
@@ -207,18 +209,18 @@ module Bosh::AzureCloud
       end
 
       disk_params = {
-        :name                    => disk_name,
-        :location                => disk[:location],
-        :zone                    => zone,
-        :account_type            => disk[:account_type],
-        :tags                    => disk[:tags]
+        name: disk_name,
+        location: disk[:location],
+        zone: zone,
+        account_type: disk[:account_type],
+        tags: disk[:tags]
       }
 
       max_retries = 2
       retry_count = 0
       begin
         @azure_client2.create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
-      rescue => e
+      rescue StandardError => e
         if retry_count < max_retries
           @logger.info("migrate_to_zone - Got error when creating `#{disk_name}' from snapshot `#{snapshot_name}': \n#{e.inspect}\n#{e.backtrace.join('\n')}. \nRetry #{retry_count}: will retry to create the disk.")
           retry_count += 1

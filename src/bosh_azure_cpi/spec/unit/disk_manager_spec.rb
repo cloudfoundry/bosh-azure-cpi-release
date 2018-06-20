@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Bosh::AzureCloud::DiskManager do
@@ -7,13 +9,13 @@ describe Bosh::AzureCloud::DiskManager do
   let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
   let(:snapshot_id) { instance_double(Bosh::AzureCloud::DiskId) }
 
-  let(:storage_account_name) { "fake_storage_account_name" }
-  let(:disk_name) { "fake-disk-name" }
-  let(:caching) { "fake-caching" }
+  let(:storage_account_name) { 'fake_storage_account_name' }
+  let(:disk_name) { 'fake-disk-name' }
+  let(:caching) { 'fake-caching' }
 
-  let(:disk_container) { "bosh" }
-  let(:os_disk_prefix) { "bosh-os" }
-  let(:data_disk_prefix) { "bosh-data" }
+  let(:disk_container) { 'bosh' }
+  let(:os_disk_prefix) { 'bosh-os' }
+  let(:data_disk_prefix) { 'bosh-data' }
 
   before do
     allow(disk_id).to receive(:disk_name).and_return(disk_name)
@@ -21,117 +23,117 @@ describe Bosh::AzureCloud::DiskManager do
     allow(disk_id).to receive(:storage_account_name).and_return(storage_account_name)
   end
 
-  describe "#delete_disk" do
-    context "when the disk exists" do
+  describe '#delete_disk' do
+    context 'when the disk exists' do
       before do
-        allow(blob_manager).to receive(:get_blob_properties).
-          and_return({})
+        allow(blob_manager).to receive(:get_blob_properties)
+          .and_return({})
       end
 
-      it "deletes the disk" do
-        expect(blob_manager).to receive(:delete_blob).
-          with(storage_account_name, disk_container, "#{disk_name}.vhd")
+      it 'deletes the disk' do
+        expect(blob_manager).to receive(:delete_blob)
+          .with(storage_account_name, disk_container, "#{disk_name}.vhd")
 
-        expect {
+        expect do
           disk_manager.delete_disk(storage_account_name, disk_name)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
 
-    context "when the disk does not exist" do
+    context 'when the disk does not exist' do
       before do
-        allow(blob_manager).to receive(:get_blob_properties).
-          and_return(nil)
+        allow(blob_manager).to receive(:get_blob_properties)
+          .and_return(nil)
       end
 
-      it "does not delete the disk" do
+      it 'does not delete the disk' do
         expect(blob_manager).not_to receive(:delete_blob)
 
-        expect {
+        expect do
           disk_manager.delete_disk(storage_account_name, disk_name)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end
 
-  describe "#delete_data_disk" do
-    it "should delete the disk" do
-      expect(disk_manager).to receive(:delete_disk).
-        with(storage_account_name, disk_name)
+  describe '#delete_data_disk' do
+    it 'should delete the disk' do
+      expect(disk_manager).to receive(:delete_disk)
+        .with(storage_account_name, disk_name)
 
-      expect {
+      expect do
         disk_manager.delete_data_disk(disk_id)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#delete_vm_status_files" do
-    context "when there are several vm status file" do
+  describe '#delete_vm_status_files' do
+    context 'when there are several vm status file' do
       before do
-        allow(blob_manager).to receive(:list_blobs).
-          and_return([
-            double("blob", :name => "a.status"),
-            double("blob", :name => "b.status"),
-            double("blob", :name => "a.vhd"),
-            double("blob", :name => "b.vhd")
-          ])
+        allow(blob_manager).to receive(:list_blobs)
+          .and_return([
+                        double('blob', name: 'a.status'),
+                        double('blob', name: 'b.status'),
+                        double('blob', name: 'a.vhd'),
+                        double('blob', name: 'b.vhd')
+                      ])
       end
 
-      it "deletes vm status files" do
-        expect(blob_manager).to receive(:delete_blob).
-          with(storage_account_name, "bosh", "a.status")
-        expect(blob_manager).to receive(:delete_blob).
-          with(storage_account_name, "bosh", "b.status")
+      it 'deletes vm status files' do
+        expect(blob_manager).to receive(:delete_blob)
+          .with(storage_account_name, 'bosh', 'a.status')
+        expect(blob_manager).to receive(:delete_blob)
+          .with(storage_account_name, 'bosh', 'b.status')
 
-        expect {
-          disk_manager.delete_vm_status_files(storage_account_name, "")
-        }.not_to raise_error
+        expect do
+          disk_manager.delete_vm_status_files(storage_account_name, '')
+        end.not_to raise_error
       end
     end
 
-    context "when there are no vm status file" do
+    context 'when there are no vm status file' do
       before do
-        allow(blob_manager).to receive(:list_blobs).
-          and_return([])
+        allow(blob_manager).to receive(:list_blobs)
+          .and_return([])
       end
 
       it "doesn't delete vm status files" do
         expect(blob_manager).not_to receive(:delete_blob)
 
-        expect {
-          disk_manager.delete_vm_status_files(storage_account_name, "")
-        }.not_to raise_error
+        expect do
+          disk_manager.delete_vm_status_files(storage_account_name, '')
+        end.not_to raise_error
       end
     end
 
-    context "when an exception is raised when deleting the files" do
+    context 'when an exception is raised when deleting the files' do
       before do
-        allow(blob_manager).to receive(:list_blobs).
-          and_return([
-            double("blob", :name => "a.status"),
-            double("blob", :name => "b.status"),
-            double("blob", :name => "a.vhd"),
-            double("blob", :name => "b.vhd")
-          ])
+        allow(blob_manager).to receive(:list_blobs)
+          .and_return([
+                        double('blob', name: 'a.status'),
+                        double('blob', name: 'b.status'),
+                        double('blob', name: 'a.vhd'),
+                        double('blob', name: 'b.vhd')
+                      ])
         allow(blob_manager).to receive(:delete_blob).and_raise(StandardError)
       end
 
       it "ignores the exception and doesn't raise error" do
-        expect {
-          disk_manager.delete_vm_status_files(storage_account_name, "")
-        }.not_to raise_error
+        expect do
+          disk_manager.delete_vm_status_files(storage_account_name, '')
+        end.not_to raise_error
       end
     end
   end
 
-  describe "#snapshot_disk" do
+  describe '#snapshot_disk' do
     let(:metadata) { {} }
-    let(:snapshot_time) { "fake-snapshot-time" }
+    let(:snapshot_time) { 'fake-snapshot-time' }
 
-    it "returns the snapshot disk name" do
-      allow(blob_manager).to receive(:snapshot_blob).
-        with(storage_account_name, disk_container, "#{disk_name}.vhd", metadata).
-        and_return(snapshot_time)
+    it 'returns the snapshot disk name' do
+      allow(blob_manager).to receive(:snapshot_blob)
+        .with(storage_account_name, disk_container, "#{disk_name}.vhd", metadata)
+        .and_return(snapshot_time)
 
       snapshot_name = disk_manager.snapshot_disk(storage_account_name, disk_name, metadata)
       expect(snapshot_name).to include(disk_name)
@@ -139,24 +141,24 @@ describe Bosh::AzureCloud::DiskManager do
     end
   end
 
-  describe "#delete_snapshot" do
-    context "when snapshot id is in-valid" do
-      let(:snapshot_name) { "invalide-snapshot-name" }
+  describe '#delete_snapshot' do
+    context 'when snapshot id is in-valid' do
+      let(:snapshot_name) { 'invalide-snapshot-name' }
 
       before do
         allow(snapshot_id).to receive(:storage_account_name).and_return(storage_account_name)
         allow(snapshot_id).to receive(:disk_name).and_return(snapshot_name)
       end
 
-      it "should raise an error" do
-        expect {
+      it 'should raise an error' do
+        expect do
           disk_manager.delete_snapshot(snapshot_id)
-        }.to raise_error /Invalid snapshot id/
+        end.to raise_error /Invalid snapshot id/
       end
     end
 
-    context "when snapshot id is valid" do
-      let(:snapshot_time) { "fake-snapshot-time" }
+    context 'when snapshot id is valid' do
+      let(:snapshot_time) { 'fake-snapshot-time' }
       let(:snapshot_name) { "#{disk_name}--#{snapshot_time}" }
 
       before do
@@ -164,96 +166,96 @@ describe Bosh::AzureCloud::DiskManager do
         allow(snapshot_id).to receive(:disk_name).and_return(snapshot_name)
       end
 
-      it "deletes the snapshot" do
-        expect(blob_manager).to receive(:delete_blob_snapshot).
-          with(storage_account_name, disk_container, "#{disk_name}.vhd", snapshot_time)
+      it 'deletes the snapshot' do
+        expect(blob_manager).to receive(:delete_blob_snapshot)
+          .with(storage_account_name, disk_container, "#{disk_name}.vhd", snapshot_time)
 
-        expect {
+        expect do
           disk_manager.delete_snapshot(snapshot_id)
-        }.not_to raise_error
+        end.not_to raise_error
       end
     end
   end
 
-  describe "#create_disk" do
+  describe '#create_disk' do
     let(:size) { 100 }
     let(:caching) { 'ReadOnly' }
 
-    it "returns the disk name with the specified caching" do
-      expect(blob_manager).to receive(:create_empty_vhd_blob).
-        with(storage_account_name, disk_container, "#{disk_name}.vhd", size)
+    it 'returns the disk name with the specified caching' do
+      expect(blob_manager).to receive(:create_empty_vhd_blob)
+        .with(storage_account_name, disk_container, "#{disk_name}.vhd", size)
 
-      expect {
+      expect do
         disk_manager.create_disk(disk_id, size)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#has_disk?" do
-    context "when the disk exists" do
+  describe '#has_disk?' do
+    context 'when the disk exists' do
       before do
-        allow(blob_manager).to receive(:get_blob_properties).
-          and_return({})
+        allow(blob_manager).to receive(:get_blob_properties)
+          .and_return({})
       end
 
-      it "should return true" do
+      it 'should return true' do
         expect(disk_manager.has_disk?(storage_account_name, disk_name)).to be(true)
       end
     end
 
-    context "when the disk does not exist" do
+    context 'when the disk does not exist' do
       before do
-        allow(blob_manager).to receive(:get_blob_properties).
-          and_return(nil)
+        allow(blob_manager).to receive(:get_blob_properties)
+          .and_return(nil)
       end
 
-      it "should return false" do
+      it 'should return false' do
         expect(disk_manager.has_disk?(storage_account_name, disk_name)).to be(false)
       end
     end
   end
 
-  describe "#has_data_disk?" do
-    it "should delete the disk" do
-      expect(disk_manager).to receive(:has_disk?).
-        with(storage_account_name, disk_name).
-        and_return(true)
+  describe '#has_data_disk?' do
+    it 'should delete the disk' do
+      expect(disk_manager).to receive(:has_disk?)
+        .with(storage_account_name, disk_name)
+        .and_return(true)
 
       expect(disk_manager.has_data_disk?(disk_id)).to be(true)
     end
   end
 
-  describe "#is_migrated?" do
-    context "when the disk does not exist" do
+  describe '#is_migrated?' do
+    context 'when the disk does not exist' do
       before do
-        allow(blob_manager).to receive(:get_blob_properties).
-          and_return(nil)
+        allow(blob_manager).to receive(:get_blob_properties)
+          .and_return(nil)
       end
 
-      it "should return false" do
+      it 'should return false' do
         expect(disk_manager.is_migrated?(disk_id)).to be(false)
       end
     end
 
-    context "when the disk exists" do
+    context 'when the disk exists' do
       before do
-        allow(blob_manager).to receive(:get_blob_properties).
-          and_return({})
+        allow(blob_manager).to receive(:get_blob_properties)
+          .and_return({})
       end
 
-      context "when the disk has the metadata" do
-        let(:metadata) {
+      context 'when the disk has the metadata' do
+        let(:metadata) do
           {
-            "user_agent" => "bosh",
-            "migrated" => "true"
+            'user_agent' => 'bosh',
+            'migrated' => 'true'
           }
-        }
+        end
         before do
-          allow(blob_manager).to receive(:get_blob_metadata).
-            and_return(metadata)
+          allow(blob_manager).to receive(:get_blob_metadata)
+            .and_return(metadata)
         end
 
-        it "should return true" do
+        it 'should return true' do
           expect(disk_manager.is_migrated?(disk_id)).to be(true)
         end
       end
@@ -261,204 +263,196 @@ describe Bosh::AzureCloud::DiskManager do
       context "when the disk doesn't have the metadata" do
         let(:metadata) { {} }
         before do
-          allow(blob_manager).to receive(:get_blob_metadata).
-            and_return(metadata)
+          allow(blob_manager).to receive(:get_blob_metadata)
+            .and_return(metadata)
         end
 
-        it "should return false" do
+        it 'should return false' do
           expect(disk_manager.is_migrated?(disk_id)).to be(false)
         end
       end
     end
   end
 
-  describe "#get_disk_uri" do
-    it "returns the right disk uri" do
-      expect(blob_manager).to receive(:get_blob_uri).
-        with(storage_account_name, disk_container, "#{disk_name}.vhd").
-        and_return("fake-uri")
-      expect(disk_manager.get_disk_uri(storage_account_name, disk_name)).to eq("fake-uri")
+  describe '#get_disk_uri' do
+    it 'returns the right disk uri' do
+      expect(blob_manager).to receive(:get_blob_uri)
+        .with(storage_account_name, disk_container, "#{disk_name}.vhd")
+        .and_return('fake-uri')
+      expect(disk_manager.get_disk_uri(storage_account_name, disk_name)).to eq('fake-uri')
     end
   end
 
-  describe "#get_data_disk_uri" do
-    it "should get disk uri" do
-      expect(disk_manager).to receive(:get_disk_uri).
-        with(storage_account_name, disk_name)
+  describe '#get_data_disk_uri' do
+    it 'should get disk uri' do
+      expect(disk_manager).to receive(:get_disk_uri)
+        .with(storage_account_name, disk_name)
 
-      expect {
+      expect do
         disk_manager.get_data_disk_uri(disk_id)
-      }.not_to raise_error
+      end.not_to raise_error
     end
   end
 
-  describe "#get_disk_size_in_gb" do
+  describe '#get_disk_size_in_gb' do
     let(:disk_size) { 42 * 1024 * 1024 * 1024 }
 
     before do
-      expect(blob_manager).to receive(:get_blob_size_in_bytes).
-        with(storage_account_name, disk_container, "#{disk_name}.vhd").
-        and_return(disk_size)
+      expect(blob_manager).to receive(:get_blob_size_in_bytes)
+        .with(storage_account_name, disk_container, "#{disk_name}.vhd")
+        .and_return(disk_size)
     end
 
-    it "returns the disk size" do
+    it 'returns the disk size' do
       expect(disk_manager.get_disk_size_in_gb(disk_id)).to eq(42)
     end
   end
 
-  describe "#generate_os_disk_name" do
-    let(:vm_name) { "fake-vm-name" }
+  describe '#generate_os_disk_name' do
+    let(:vm_name) { 'fake-vm-name' }
 
-    it "returns the right os disk name" do
+    it 'returns the right os disk name' do
       expect(disk_manager.generate_os_disk_name(vm_name)).to eq("#{os_disk_prefix}-fake-vm-name")
     end
   end
 
-  describe "#generate_ephemeral_disk_name" do
-    let(:vm_name) { "fake-vm-name" }
+  describe '#generate_ephemeral_disk_name' do
+    let(:vm_name) { 'fake-vm-name' }
 
-    it "returns the right ephemeral disk name" do
+    it 'returns the right ephemeral disk name' do
       expect(disk_manager.generate_ephemeral_disk_name(vm_name)).to eq("#{os_disk_prefix}-fake-vm-name-ephemeral-disk")
     end
   end
 
-  describe "#os_disk" do
+  describe '#os_disk' do
     let(:disk_uri) { 'fake-disk-uri' }
     let(:vm_name) { 'fake-vm-name' }
     let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
     let(:image_size) { 3 * 1024 }
 
     before do
-      allow(disk_manager).to receive(:generate_os_disk_name).
-        and_return(disk_name)
-      allow(disk_manager).to receive(:get_disk_uri).
-        and_return(disk_uri)
-      allow(stemcell_info).to receive(:image_size).
-        and_return(image_size)
-      allow(stemcell_info).to receive(:is_windows?).
-        and_return(false)
+      allow(disk_manager).to receive(:generate_os_disk_name)
+        .and_return(disk_name)
+      allow(disk_manager).to receive(:get_disk_uri)
+        .and_return(disk_uri)
+      allow(stemcell_info).to receive(:image_size)
+        .and_return(image_size)
+      allow(stemcell_info).to receive(:is_windows?)
+        .and_return(false)
     end
 
     # Caching
-    context "when caching is not specified" do
-      let(:resource_pool) {
+    context 'when caching is not specified' do
+      let(:resource_pool) do
         {
           'instance_type' => 'STANDARD_A1'
         }
-      }
+      end
 
-      it "should return the default caching for os disk: ReadWrite" do
+      it 'should return the default caching for os disk: ReadWrite' do
         disk_manager.resource_pool = resource_pool
 
         expect(
           disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
         ).to eq(
-          {
-            :disk_name    => disk_name,
-            :disk_uri     => disk_uri,
-            :disk_size    => nil,
-            :disk_caching => 'ReadWrite'
-          }
+          disk_name: disk_name,
+          disk_uri: disk_uri,
+          disk_size: nil,
+          disk_caching: 'ReadWrite'
         )
       end
     end
 
-    context "when caching is specified" do
-      context "when caching is valid" do
+    context 'when caching is specified' do
+      context 'when caching is valid' do
         let(:disk_caching) { 'ReadOnly' }
-        let(:resource_pool) {
+        let(:resource_pool) do
           {
             'instance_type' => 'STANDARD_A1',
             'caching' => disk_caching
           }
-        }
+        end
 
-        it "should return the specified caching" do
+        it 'should return the specified caching' do
           disk_manager.resource_pool = resource_pool
 
           expect(
             disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
           ).to eq(
-            {
-              :disk_name    => disk_name,
-              :disk_uri     => disk_uri,
-              :disk_size    => nil,
-              :disk_caching => disk_caching
-            }
+            disk_name: disk_name,
+            disk_uri: disk_uri,
+            disk_size: nil,
+            disk_caching: disk_caching
           )
         end
       end
 
-      context "when caching is invalid" do
-        let(:resource_pool) {
+      context 'when caching is invalid' do
+        let(:resource_pool) do
           {
             'instance_type' => 'STANDARD_A1',
             'caching' => 'invalid'
           }
-        }
+        end
 
-        it "should raise an error" do
+        it 'should raise an error' do
           disk_manager.resource_pool = resource_pool
 
-          expect {
+          expect do
             disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
-          }.to raise_error /Unknown disk caching/
+          end.to raise_error /Unknown disk caching/
         end
       end
     end
 
     # Disk Size
-    context "without root_disk" do
-      let(:resource_pool) {
+    context 'without root_disk' do
+      let(:resource_pool) do
         {
           'instance_type' => 'STANDARD_A1'
         }
-      }
+      end
 
-      it "should return disk_size: nil" do
+      it 'should return disk_size: nil' do
         disk_manager.resource_pool = resource_pool
 
         expect(
           disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
         ).to eq(
-          {
-            :disk_name    => disk_name,
-            :disk_uri     => disk_uri,
-            :disk_size    => nil,
-            :disk_caching => 'ReadWrite'
-          }
+          disk_name: disk_name,
+          disk_uri: disk_uri,
+          disk_size: nil,
+          disk_caching: 'ReadWrite'
         )
       end
     end
 
-    context "with root_disk" do
-      context "when size is not specified" do
-        context "with the ephemeral disk" do
-          let(:resource_pool) {
+    context 'with root_disk' do
+      context 'when size is not specified' do
+        context 'with the ephemeral disk' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {}
             }
-          }
+          end
 
-          it "should return correct values" do
+          it 'should return correct values' do
             disk_manager.resource_pool = resource_pool
 
             expect(
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_uri     => disk_uri,
-                :disk_size    => nil,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_uri: disk_uri,
+              disk_size: nil,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "without the ephemeral disk" do
-          let(:resource_pool) {
+        context 'without the ephemeral disk' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {},
@@ -466,106 +460,98 @@ describe Bosh::AzureCloud::DiskManager do
                 'use_root_disk' => true
               }
             }
-          }
+          end
 
-          context "when the OS is Linux" do
+          context 'when the OS is Linux' do
             let(:minimum_required_disk_size) { 30 }
-            context "when the image_size is smaller than minimum required disk size" do
+            context 'when the image_size is smaller than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size - 1) * 1024 }
               before do
-                allow(stemcell_info).to receive(:image_size).
-                  and_return(image_size)
+                allow(stemcell_info).to receive(:image_size)
+                  .and_return(image_size)
               end
 
-              it "should return the minimum required disk size" do
+              it 'should return the minimum required disk size' do
                 disk_manager.resource_pool = resource_pool
 
                 expect(
                   disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
                 ).to eq(
-                  {
-                    :disk_name    => disk_name,
-                    :disk_uri     => disk_uri,
-                    :disk_size    => minimum_required_disk_size,
-                    :disk_caching => 'ReadWrite'
-                  }
+                  disk_name: disk_name,
+                  disk_uri: disk_uri,
+                  disk_size: minimum_required_disk_size,
+                  disk_caching: 'ReadWrite'
                 )
               end
             end
 
-            context "when the image_size is larger than minimum required disk size" do
+            context 'when the image_size is larger than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size + 1) * 1024 }
               before do
-                allow(stemcell_info).to receive(:image_size).
-                  and_return(image_size)
+                allow(stemcell_info).to receive(:image_size)
+                  .and_return(image_size)
               end
 
-              it "should return image_size as the disk size" do
+              it 'should return image_size as the disk size' do
                 disk_manager.resource_pool = resource_pool
 
                 expect(
                   disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
                 ).to eq(
-                  {
-                    :disk_name    => disk_name,
-                    :disk_uri     => disk_uri,
-                    :disk_size    => image_size / 1024,
-                    :disk_caching => 'ReadWrite'
-                  }
+                  disk_name: disk_name,
+                  disk_uri: disk_uri,
+                  disk_size: image_size / 1024,
+                  disk_caching: 'ReadWrite'
                 )
               end
             end
           end
 
-          context "when the OS is Windows" do
+          context 'when the OS is Windows' do
             let(:minimum_required_disk_size) { 128 }
             before do
-              allow(stemcell_info).to receive(:is_windows?).
-                and_return(true)
+              allow(stemcell_info).to receive(:is_windows?)
+                .and_return(true)
             end
 
-            context "when the image_size is smaller than minimum required disk size" do
+            context 'when the image_size is smaller than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size - 1) * 1024 }
               before do
-                allow(stemcell_info).to receive(:image_size).
-                  and_return(image_size)
+                allow(stemcell_info).to receive(:image_size)
+                  .and_return(image_size)
               end
 
-              it "should return the minimum required disk size" do
+              it 'should return the minimum required disk size' do
                 disk_manager.resource_pool = resource_pool
 
                 expect(
                   disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
                 ).to eq(
-                  {
-                    :disk_name    => disk_name,
-                    :disk_uri     => disk_uri,
-                    :disk_size    => minimum_required_disk_size,
-                    :disk_caching => 'ReadWrite'
-                  }
+                  disk_name: disk_name,
+                  disk_uri: disk_uri,
+                  disk_size: minimum_required_disk_size,
+                  disk_caching: 'ReadWrite'
                 )
               end
             end
 
-            context "when the image_size is larger than minimum required disk size" do
+            context 'when the image_size is larger than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size + 1) * 1024 }
               before do
-                allow(stemcell_info).to receive(:image_size).
-                  and_return(image_size)
+                allow(stemcell_info).to receive(:image_size)
+                  .and_return(image_size)
               end
 
-              it "should return image_size as the disk size" do
+              it 'should return image_size as the disk size' do
                 disk_manager.resource_pool = resource_pool
 
                 expect(
                   disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
                 ).to eq(
-                  {
-                    :disk_name    => disk_name,
-                    :disk_uri     => disk_uri,
-                    :disk_size    => image_size / 1024,
-                    :disk_caching => 'ReadWrite'
-                  }
+                  disk_name: disk_name,
+                  disk_uri: disk_uri,
+                  disk_size: image_size / 1024,
+                  disk_caching: 'ReadWrite'
                 )
               end
             end
@@ -573,210 +559,198 @@ describe Bosh::AzureCloud::DiskManager do
         end
       end
 
-      context "when size is specified" do
-        context "When the size is not an integer" do
-          let(:resource_pool) {
+      context 'when size is specified' do
+        context 'When the size is not an integer' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 'invalid-size'
               }
             }
-          }
+          end
 
-          it "should raise an error" do
+          it 'should raise an error' do
             disk_manager.resource_pool = resource_pool
 
-            expect {
+            expect do
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
-            }.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
+            end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
           end
         end
 
-        context "When the size is smaller than image_size" do
-          let(:resource_pool) {
+        context 'When the size is smaller than image_size' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 2 * 1024
               }
             }
-          }
+          end
           let(:image_size) { 4 * 1024 }
           before do
-            allow(stemcell_info).to receive(:image_size).
-              and_return(image_size)
+            allow(stemcell_info).to receive(:image_size)
+              .and_return(image_size)
           end
 
-          it "should use the image_size" do
+          it 'should use the image_size' do
             disk_manager.resource_pool = resource_pool
 
             expect(
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_uri     => disk_uri,
-                :disk_size    => 4,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_uri: disk_uri,
+              disk_size: 4,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "When the size is divisible by 1024" do
-          let(:resource_pool) {
+        context 'When the size is divisible by 1024' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 5 * 1024
               }
             }
-          }
+          end
 
-          it "should return the correct disk_size" do
+          it 'should return the correct disk_size' do
             disk_manager.resource_pool = resource_pool
 
             expect(
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_uri     => disk_uri,
-                :disk_size    => 5,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_uri: disk_uri,
+              disk_size: 5,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "When the size is not divisible by 1024" do
-          let(:resource_pool) {
+        context 'When the size is not divisible by 1024' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 5 * 1024 + 512
               }
             }
-          }
+          end
 
-          it "should return the smallest Integer greater than or equal to size/1024 for disk_size" do
+          it 'should return the smallest Integer greater than or equal to size/1024 for disk_size' do
             disk_manager.resource_pool = resource_pool
 
             expect(
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_uri     => disk_uri,
-                :disk_size    => 6,
-                :disk_caching => 'ReadWrite'
-              }
-           )
+              disk_name: disk_name,
+              disk_uri: disk_uri,
+              disk_size: 6,
+              disk_caching: 'ReadWrite'
+            )
           end
         end
       end
     end
   end
 
-  describe "#ephemeral_disk" do
-    let(:disk_name) { 'ephemeral-disk' } #EPHEMERAL_DISK_POSTFIX
+  describe '#ephemeral_disk' do
+    let(:disk_name) { 'ephemeral-disk' } # EPHEMERAL_DISK_POSTFIX
     let(:disk_uri) { 'fake-disk-uri' }
     let(:vm_name) { 'fake-vm-name' }
-    let(:default_ephemeral_disk_size) { 70 } # The default value is default_ephemeral_disk_size for Standard_A1 
+    let(:default_ephemeral_disk_size) { 70 } # The default value is default_ephemeral_disk_size for Standard_A1
 
     before do
-      allow(disk_manager).to receive(:get_disk_uri).
-        and_return(disk_uri)
+      allow(disk_manager).to receive(:get_disk_uri)
+        .and_return(disk_uri)
     end
 
-    context "without ephemeral_disk" do
-      context "with a valid instance_type" do
-        let(:resource_pool) {
+    context 'without ephemeral_disk' do
+      context 'with a valid instance_type' do
+        let(:resource_pool) do
           {
             'instance_type' => 'STANDARD_A1'
           }
-        }
+        end
 
-        it "should return correct values" do
+        it 'should return correct values' do
           disk_manager.resource_pool = resource_pool
 
           expect(
             disk_manager.ephemeral_disk(storage_account_name, vm_name)
           ).to eq(
-            {
-              :disk_name    => disk_name,
-              :disk_uri     => disk_uri,
-              :disk_size    => default_ephemeral_disk_size,
-              :disk_caching => 'ReadWrite'
-            }
+            disk_name: disk_name,
+            disk_uri: disk_uri,
+            disk_size: default_ephemeral_disk_size,
+            disk_caching: 'ReadWrite'
           )
         end
       end
 
-      context "with an invalid instance_type" do
-        let(:resource_pool) {
+      context 'with an invalid instance_type' do
+        let(:resource_pool) do
           {
             'instance_type' => 'invalid-instance-type'
           }
-        }
+        end
 
-        it "should return 30 as the default disk size" do
+        it 'should return 30 as the default disk size' do
           disk_manager.resource_pool = resource_pool
 
           expect(
             disk_manager.ephemeral_disk(storage_account_name, vm_name)
           ).to eq(
-            {
-              :disk_name    => disk_name,
-              :disk_uri     => disk_uri,
-              :disk_size    => 30,
-              :disk_caching => 'ReadWrite'
-            }
+            disk_name: disk_name,
+            disk_uri: disk_uri,
+            disk_size: 30,
+            disk_caching: 'ReadWrite'
           )
         end
       end
     end
 
-    context "with ephemeral_disk" do
-      context "with use_root_disk" do
-        context "when use_root_disk is false" do
-          let(:resource_pool) {
+    context 'with ephemeral_disk' do
+      context 'with use_root_disk' do
+        context 'when use_root_disk is false' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {
                 'use_root_disk' => false
               }
             }
-          }
+          end
 
-          it "should return correct values" do
+          it 'should return correct values' do
             disk_manager.resource_pool = resource_pool
 
             expect(
               disk_manager.ephemeral_disk(storage_account_name, vm_name)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_uri     => disk_uri,
-                :disk_size    => default_ephemeral_disk_size,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_uri: disk_uri,
+              disk_size: default_ephemeral_disk_size,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "when use_root_disk is true" do
-          let(:resource_pool) {
+        context 'when use_root_disk is true' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {
                 'use_root_disk' => true
               }
             }
-          }
+          end
 
-          it "should return correct values" do
+          it 'should return correct values' do
             disk_manager.resource_pool = resource_pool
 
             expect(
@@ -786,74 +760,70 @@ describe Bosh::AzureCloud::DiskManager do
         end
       end
 
-      context "without use_root_disk" do
-        context "without size" do
-          let(:resource_pool) {
+      context 'without use_root_disk' do
+        context 'without size' do
+          let(:resource_pool) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {}
             }
-          }
+          end
 
-          it "should return correct values" do
+          it 'should return correct values' do
             disk_manager.resource_pool = resource_pool
 
             expect(
               disk_manager.ephemeral_disk(storage_account_name, vm_name)
             ).to eq(
-              {
-                :disk_name    => disk_name,
-                :disk_uri     => disk_uri,
-                :disk_size    => default_ephemeral_disk_size,
-                :disk_caching => 'ReadWrite'
-              }
+              disk_name: disk_name,
+              disk_uri: disk_uri,
+              disk_size: default_ephemeral_disk_size,
+              disk_caching: 'ReadWrite'
             )
           end
         end
 
-        context "with size" do
-          context "when the size is valid" do
-            let(:resource_pool) {
+        context 'with size' do
+          context 'when the size is valid' do
+            let(:resource_pool) do
               {
                 'instance_type' => 'STANDARD_A1',
                 'ephemeral_disk' => {
                   'size' => 30 * 1024
                 }
               }
-            }
-            
-            it "should return the specified disk size" do
+            end
+
+            it 'should return the specified disk size' do
               disk_manager.resource_pool = resource_pool
 
               expect(
                 disk_manager.ephemeral_disk(storage_account_name, vm_name)
               ).to eq(
-                {
-                  :disk_name    => disk_name,
-                  :disk_uri     => disk_uri,
-                  :disk_size    => 30,
-                  :disk_caching => 'ReadWrite'
-                }
+                disk_name: disk_name,
+                disk_uri: disk_uri,
+                disk_size: 30,
+                disk_caching: 'ReadWrite'
               )
             end
           end
 
-          context "when the size is not an integer" do
-            let(:resource_pool) {
+          context 'when the size is not an integer' do
+            let(:resource_pool) do
               {
                 'instance_type' => 'STANDARD_A1',
                 'ephemeral_disk' => {
                   'size' => 'invalid-size'
                 }
               }
-            }
+            end
 
-            it "should raise an error" do
+            it 'should raise an error' do
               disk_manager.resource_pool = resource_pool
 
-              expect {
+              expect do
                 disk_manager.ephemeral_disk(storage_account_name, vm_name)
-              }.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
+              end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
             end
           end
         end
@@ -861,41 +831,41 @@ describe Bosh::AzureCloud::DiskManager do
     end
   end
 
-  describe "#list_disks" do
-    context "when the storage account does not contain any disk" do
+  describe '#list_disks' do
+    context 'when the storage account does not contain any disk' do
       let(:blobs) { [] }
 
       before do
-        allow(blob_manager).to receive(:list_blobs).
-          and_return(blobs)
+        allow(blob_manager).to receive(:list_blobs)
+          .and_return(blobs)
       end
 
-      it "should return empty" do
+      it 'should return empty' do
         expect(disk_manager.list_disks(storage_account_name)).to eq([])
       end
     end
 
-    context "when the storage account contains disks" do
-      let(:blobs) {
+    context 'when the storage account contains disks' do
+      let(:blobs) do
         [
-          double("blob", :name => "a.status"),
-          double("blob", :name => "b.status"),
-          double("blob", :name => "c.vhd"),
-          double("blob", :name => "d.vhd")
+          double('blob', name: 'a.status'),
+          double('blob', name: 'b.status'),
+          double('blob', name: 'c.vhd'),
+          double('blob', name: 'd.vhd')
         ]
-      }
-
-      before do
-        allow(blob_manager).to receive(:list_blobs).
-          and_return(blobs)
       end
 
-      it "should return correct value" do
+      before do
+        allow(blob_manager).to receive(:list_blobs)
+          .and_return(blobs)
+      end
+
+      it 'should return correct value' do
         disks = disk_manager.list_disks(storage_account_name)
         expect(disks).to eq(
           [
-            { :disk_name => 'c' },
-            { :disk_name => 'd' },
+            { disk_name: 'c' },
+            { disk_name: 'd' }
           ]
         )
       end
