@@ -767,7 +767,7 @@ module Bosh::AzureCloud
     # ==== Attributes
     #
     # @param [String] resource_group_name  - Name of resource group.
-    # @param [Hash] params                 - Parameters for creating the empty managed disk.
+    # @param [Hash]   params               - Parameters for creating the empty managed disk.
     #
     # ==== params
     #
@@ -777,23 +777,26 @@ module Bosh::AzureCloud
     # * +:tags+                         - Hash. Tags of the empty managed disk.
     # * +:disk_size+                    - Integer. Specifies the size in GB of the empty managed disk.
     # * +:account_type+                 - String. Specifies the account type of the empty managed disk.
-    #                                     Optional values: Standard_LRS or Premium_LRS.
+    #                                     Optional values: Standard_LRS, Premium_LRS.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAnEmptyManagedDisk.json
     #
     def create_empty_managed_disk(resource_group_name, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
       disk = {
         'location'   => params[:location],
         'tags'       => params[:tags],
+        'sku' => {
+          'name' => params[:account_type]
+        },
         'properties' => {
           'creationData' => {
-            'createOption'  => 'Empty'
+            'createOption' => 'Empty'
           },
-          'accountType'  => params[:account_type],
-          'diskSizeGB'   => params[:disk_size]
+          'diskSizeGB' => params[:disk_size]
         }
       }
       disk['zones'] = [params[:zone]] unless params[:zone].nil?
@@ -815,23 +818,26 @@ module Bosh::AzureCloud
     # * +:tags+                         - Hash. Tags of the managed disk.
     # * +:source_uri+                   - String. The SAS URI of the source storage blob.
     # * +:account_type+                 - String. Specifies the account type of the managed disk.
-    #                                     Optional values: Standard_LRS or Premium_LRS.
+    #                                     Optional values: Standard_LRS, Premium_LRS.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAManagedDiskByImportingAnUnmanagedBlobFromTheSameSubscription.json
     #
     def create_managed_disk_from_blob(resource_group_name, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
       disk = {
         'location'   => params[:location],
         'tags'       => params[:tags],
+        'sku' => {
+          'name' => params[:account_type]
+        },
         'properties' => {
           'creationData' => {
-            'createOption'  => 'Import',
+            'createOption' => 'Import',
             'sourceUri' => params[:source_uri]
-          },
-          'accountType'  => params[:account_type]
+          }
         }
       }
       disk['zones'] = [params[:zone]] unless params[:zone].nil?
@@ -853,23 +859,26 @@ module Bosh::AzureCloud
     # * +:location+                     - String. The location where the managed disk will be created.
     # * +:tags+                         - Hash. Tags of the managed disk.
     # * +:account_type+                 - String. Specifies the account type of the managed disk.
-    #                                     Optional values: Standard_LRS or Premium_LRS.
+    #                                     Optional values: Standard_LRS, Premium_LRS.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-create-or-update
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAManagedDiskByCopyingASnapshot.json
     #
     def create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
       disk_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: disk_params[:name])
       snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
       disk = {
-        'location'   => disk_params[:location],
+        'location' => disk_params[:location],
+        'sku' => {
+          'name' => disk_params[:account_type]
+        },
         'properties' => {
           'creationData' => {
             'createOption' => 'Copy',
             'sourceResourceId' => snapshot_url
-          },
-          'accountType' => disk_params[:account_type]
+          }
         }
       }
       disk['zones'] = [disk_params[:zone]] unless disk_params[:zone].nil?
@@ -883,7 +892,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-delete
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
     #
     def delete_managed_disk(resource_group_name, name)
       @logger.debug("delete_managed_disk - trying to delete #{name} from resource group #{resource_group_name}")
@@ -897,7 +906,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-get
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
     #
     def get_managed_disk_by_name(resource_group_name, name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
@@ -909,7 +918,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/disks/disks-get
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
     #
     def get_managed_disk(url)
       result = get_resource_by_id(url)
@@ -933,11 +942,12 @@ module Bosh::AzureCloud
     # * +:os_type+                      - String. OS type. Possible values: linux.
     # * +:source_uri+                   - String. The SAS URI of the source storage blob.
     # * +:account_type+                 - String. Specifies the account type of the user image.
-    #                                     Possible values: Standard_LRS or Premium_LRS.
+    #                                     Possible values: Standard_LRS, Premium_LRS.
     #
     # @return [Boolean]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-create
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAnImageFromABlob.json
     #
     def create_user_image(params)
       @logger.debug("create_user_image - trying to create a user image '#{params[:name]}'")
@@ -949,8 +959,8 @@ module Bosh::AzureCloud
           'storageProfile' => {
             'osDisk' => {
               'osType' => params[:os_type],
-              'blobUri' => params[:source_uri],
               'osState' => 'generalized',
+              'blobUri' => params[:source_uri],
               'caching' => 'readwrite',
               'storageAccountType' => params[:account_type]
             }
@@ -966,7 +976,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-delete
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
     #
     def delete_user_image(name)
       @logger.debug("delete_user_image - trying to delete '#{name}'")
@@ -979,7 +989,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-get
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
     #
     def get_user_image_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: name)
@@ -991,7 +1001,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-get
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
     #
     def get_user_image(url)
       result = get_resource_by_id(url)
@@ -1002,7 +1012,7 @@ module Bosh::AzureCloud
     #
     # @return [Array]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-list-by-resource-group
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
     #
     def list_user_images
       user_images = []
@@ -1034,7 +1044,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/snapshots/snapshots-create-or-update
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
     #
     def create_managed_snapshot(resource_group_name, params)
       snapshot_name = params[:name]
@@ -1043,6 +1053,7 @@ module Bosh::AzureCloud
       disk = get_managed_disk_by_name(resource_group_name, disk_name)
       raise AzureNotFoundError, "The disk '#{disk_name}' cannot be found" if disk.nil?
       snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
+      # By default, the snapshot sku is Standard_LRS. TODO: should the snapshot use the disk sku?
       snapshot = {
         'location'   => disk[:location],
         'tags'       => params[:tags],
@@ -1063,7 +1074,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/compute/manageddisks/snapshots/snapshots-get
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
     #
     def get_managed_snapshot_by_name(resource_group_name, snapshot_name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
@@ -1075,7 +1086,8 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/compute/manageddisks/snapshots/snapshots-get
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    #
     #
     def get_managed_snapshot(url)
       result = get_resource_by_id(url)
@@ -1100,7 +1112,8 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/snapshots/snapshots-delete
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    #
     #
     def delete_managed_snapshot(resource_group_name, name)
       @logger.debug("delete_managed_snapshot - trying to delete '#{name}' from resource group '#{resource_group_name}'")
@@ -1117,7 +1130,7 @@ module Bosh::AzureCloud
     # @param [String] sku       - The sku of the publisher's offer.
     #
     # @return [Array]
-    # @See https://docs.microsoft.com/en-us/rest/api/compute/platformimages/platformimages-list-publisher-offer-sku-versions
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
     #
     def list_platform_image_versions(location, publisher, offer, sku)
       images = []
@@ -1857,13 +1870,11 @@ module Bosh::AzureCloud
         managed_disk[:name]      = result['name']
         managed_disk[:location]  = result['location']
         managed_disk[:tags]      = result['tags']
-
+        managed_disk[:sku_name]  = result['sku']['name']
         managed_disk[:zone]      = result['zones'][0] unless result['zones'].nil?
-
         properties = result['properties']
         managed_disk[:provisioning_state] = properties['provisioningState']
         managed_disk[:disk_size]          = properties['diskSizeGB']
-        managed_disk[:account_type]       = properties['accountType']
       end
       managed_disk
     end

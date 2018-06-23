@@ -51,11 +51,13 @@ describe Bosh::AzureCloud::AzureClient do
           tags: {
             foo: 'bar'
           },
+          sku: {
+            name: 'd'
+          },
           properties: {
             creationData: {
               createOption: 'Empty'
             },
-            accountType: 'd',
             diskSizeGB: 'c'
           }
         }
@@ -108,11 +110,13 @@ describe Bosh::AzureCloud::AzureClient do
             foo: 'bar'
           },
           zones: ['e'],
+          sku: {
+            name: 'd'
+          },
           properties: {
             creationData: {
               createOption: 'Empty'
             },
-            accountType: 'd',
             diskSizeGB: 'c'
           }
         }
@@ -167,12 +171,14 @@ describe Bosh::AzureCloud::AzureClient do
           tags: {
             foo: 'bar'
           },
+          sku: {
+            name: 'd'
+          },
           properties: {
             creationData: {
               createOption: 'Import',
               sourceUri: 'c'
-            },
-            accountType: 'd'
+            }
           }
         }
       end
@@ -224,12 +230,14 @@ describe Bosh::AzureCloud::AzureClient do
             foo: 'bar'
           },
           zones: ['e'],
+          sku: {
+            name: 'd'
+          },
           properties: {
             creationData: {
               createOption: 'Import',
               sourceUri: 'c'
-            },
-            accountType: 'd'
+            }
           }
         }
       end
@@ -284,12 +292,14 @@ describe Bosh::AzureCloud::AzureClient do
           tags: {
             foo: 'bar'
           },
+          sku: {
+            name: 'c'
+          },
           properties: {
             creationData: {
               createOption: 'Copy',
               sourceResourceId: snapshot_url
-            },
-            accountType: 'c'
+            }
           }
         }
       end
@@ -340,12 +350,14 @@ describe Bosh::AzureCloud::AzureClient do
             foo: 'bar'
           },
           zones: ['d'],
+          sku: {
+            name: 'c'
+          },
           properties: {
             creationData: {
               createOption: 'Copy',
               sourceResourceId: snapshot_url
-            },
-            accountType: 'c'
+            }
           }
         }
       end
@@ -390,11 +402,13 @@ describe Bosh::AzureCloud::AzureClient do
         tags: {
           foo: 'bar'
         },
+        sku: {
+          name: 'f'
+        },
         zones: ['fake-zone'],
         properties: {
           provisioningState: 'd',
-          diskSizeGB: 'e',
-          accountType: 'f'
+          diskSizeGB: 'e'
         }
       }
     end
@@ -406,10 +420,10 @@ describe Bosh::AzureCloud::AzureClient do
         tags: {
           'foo' => 'bar'
         },
+        sku_name: 'f',
         zone: 'fake-zone',
         provisioning_state: 'd',
-        disk_size: 'e',
-        account_type: 'f'
+        disk_size: 'e'
       }
     end
 

@@ -724,7 +724,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     let(:disk) do
       {
         location: 'fake-location',
-        account_type: 'fake-account-type',
+        sku_name: 'fake-account-type',
         tags: {}
       }
     end
