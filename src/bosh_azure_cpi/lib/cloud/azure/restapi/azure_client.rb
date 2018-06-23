@@ -784,7 +784,7 @@ module Bosh::AzureCloud
     # * +:tags+                         - Hash. Tags of the empty managed disk.
     # * +:disk_size+                    - Integer. Specifies the size in GB of the empty managed disk.
     # * +:account_type+                 - String. Specifies the account type of the empty managed disk.
-    #                                     Optional values: Standard_LRS, Premium_LRS.
+    #                                     Optional values: Standard_LRS, StandardSSD_LRS, Premium_LRS.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
@@ -825,7 +825,7 @@ module Bosh::AzureCloud
     # * +:tags+                         - Hash. Tags of the managed disk.
     # * +:source_uri+                   - String. The SAS URI of the source storage blob.
     # * +:account_type+                 - String. Specifies the account type of the managed disk.
-    #                                     Optional values: Standard_LRS, Premium_LRS.
+    #                                     Optional values: Standard_LRS, StandardSSD_LRS, Premium_LRS.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
@@ -866,7 +866,7 @@ module Bosh::AzureCloud
     # * +:location+                     - String. The location where the managed disk will be created.
     # * +:tags+                         - Hash. Tags of the managed disk.
     # * +:account_type+                 - String. Specifies the account type of the managed disk.
-    #                                     Optional values: Standard_LRS, Premium_LRS.
+    #                                     Optional values: Standard_LRS, StandardSSD_LRS, Premium_LRS.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
@@ -949,7 +949,7 @@ module Bosh::AzureCloud
     # * +:os_type+                      - String. OS type. Possible values: linux.
     # * +:source_uri+                   - String. The SAS URI of the source storage blob.
     # * +:account_type+                 - String. Specifies the account type of the user image.
-    #                                     Possible values: Standard_LRS, Premium_LRS.
+    #                                     Possible values: Standard_LRS, StandardSSD_LRS, Premium_LRS.
     #
     # @return [Boolean]
     #
