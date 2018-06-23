@@ -19,7 +19,7 @@ module Bosh::AzureCloud
         'resourceManagerEndpointUrl' => 'https://management.azure.com/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
+          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2018-04-01',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2017-09-01',
           AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
@@ -30,7 +30,7 @@ module Bosh::AzureCloud
         'resourceManagerEndpointUrl' => 'https://management.chinacloudapi.cn/',
         'activeDirectoryEndpointUrl' => 'https://login.chinacloudapi.cn',
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
+          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2018-04-01',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
           AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
@@ -41,7 +41,7 @@ module Bosh::AzureCloud
         'resourceManagerEndpointUrl' => 'https://management.usgovcloudapi.net/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.us',
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
+          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2018-04-01',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2017-09-01',
           AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
@@ -61,7 +61,7 @@ module Bosh::AzureCloud
         'resourceManagerEndpointUrl' => 'https://management.microsoftazure.de/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.de',
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
+          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2018-04-01',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2017-09-01',
           AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',

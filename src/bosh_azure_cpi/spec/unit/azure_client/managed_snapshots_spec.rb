@@ -55,10 +55,12 @@ describe Bosh::AzureCloud::AzureClient do
         tags: {
           disk: disk_name
         },
+        sku: {
+          name: 'f'
+        },
         properties: {
           provisioningState: 'd',
-          diskSizeGB: 'e',
-          accountType: 'f'
+          diskSizeGB: 'e'
         }
       }
     end
