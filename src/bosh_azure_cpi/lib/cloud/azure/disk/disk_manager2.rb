@@ -193,7 +193,7 @@ module Bosh::AzureCloud
         name: disk_name,
         location: disk[:location],
         zone: zone,
-        account_type: disk[:account_type],
+        account_type: disk[:sku_name],
         tags: disk[:tags]
       }
 
