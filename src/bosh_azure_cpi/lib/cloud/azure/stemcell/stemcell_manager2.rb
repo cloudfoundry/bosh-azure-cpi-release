@@ -59,6 +59,7 @@ module Bosh::AzureCloud
       user_image_name_deprecated = "#{stemcell_name}-#{storage_account_type}-#{location}"
       user_image_name = user_image_name_deprecated.sub("#{STEMCELL_PREFIX}-", '')
                                                   .sub(STORAGE_ACCOUNT_TYPE_STANDARD_LRS, 'S')
+                                                  .sub(STORAGE_ACCOUNT_TYPE_STANDARDSSD_LRS, 'SSSD')
                                                   .sub(STORAGE_ACCOUNT_TYPE_PREMIUM_LRS, 'P')
       user_image = @azure_client.get_user_image_by_name(user_image_name)
       return user_image unless user_image.nil?
