@@ -295,28 +295,5 @@ describe Bosh::AzureCloud::Cloud do
         end.not_to raise_error
       end
     end
-
-    # workaround for issue 280
-    context 'when vm does not have an ephemeral disk' do
-      before do
-        vm[:data_disks] = []
-        allow(instance_id_object).to receive(:vm_name)
-          .and_return(vm_name)
-      end
-
-      it 'should sleep 30 seconds before attaching disk to the vm' do
-        expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
-                                                   .and_return(lun)
-        expect(registry).to receive(:read_settings).with(instance_id)
-                                                   .and_return(old_settings)
-        expect(registry).to receive(:update_settings)
-          .with(instance_id, new_settings).and_return(true)
-        expect(cloud).to receive(:sleep).with(30)
-
-        expect do
-          cloud.attach_disk(instance_id, disk_id)
-        end.not_to raise_error
-      end
-    end
   end
 end
