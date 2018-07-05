@@ -27,9 +27,9 @@
     sudo tar -C /usr/local -xzf go1.9.3.linux-amd64.tar.gz
     rm go1.9.3.linux-amd64.tar.gz
     mkdir ~/go
-    echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
-    echo 'export GOPATH=$HOME/go' >> ~/.bashrc
-    exec $SHELL
+    echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.profile
+    echo 'export GOPATH=$HOME/go' >> ~/.profile
+    source ~/.profile
     ```
 
 1. Install direnv
@@ -43,13 +43,13 @@
       make
       sudo make install
     popd
-    echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
-    exec $SHELL
+    echo 'eval "$(direnv hook bash)"' >> ~/.profile
+    source ~/.profile
     ```
 
 1. Install ruby
 
-    Please make sure you have installed ruby `2.4.2` before you start.
+    Please make sure you have installed ruby `2.4.4` before you start.
 
     ```bash
     cd ~/workspace
@@ -57,9 +57,9 @@
     tar -xzvf chruby-0.3.9.tar.gz
     pushd chruby-0.3.9/
       sudo make install
-      echo 'source /usr/local/share/chruby/chruby.sh' >> ~/.bashrc
+      echo 'source /usr/local/share/chruby/chruby.sh' >> ~/.profile
     popd
-    exec $SHELL
+    source ~/.profile
 
     wget -O ruby-install-0.6.1.tar.gz https://github.com/postmodern/ruby-install/archive/v0.6.1.tar.gz
     tar -xzvf ruby-install-0.6.1.tar.gz
@@ -67,9 +67,9 @@
       sudo make install
     popd
 
-    ruby-install ruby 2.4.2
-    echo 'chruby 2.4.2' >> ~/.bashrc
-    exec $SHELL
+    ruby-install ruby 2.4.4
+    echo 'chruby 2.4.4' >> ~/.profile
+    source ~/.profile
     ruby -v
     ```
 
@@ -142,7 +142,7 @@ You can use `bosh_azure_console` to test your code changes quickly.
   gem install pg --version 0.20.0 --no-ri --no-rdoc
 
   # Workaround for the issue https://github.com/cloudfoundry/bosh/issues/1621
-  sed -i -e '23s/^/#/' ~/.gem/ruby/2.4.2/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
+  sed -i -e '23s/^/#/' ~/.gem/ruby/2.4.4/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
 
   cat > ~/workspace/registry.cfg <<EOS
   ---

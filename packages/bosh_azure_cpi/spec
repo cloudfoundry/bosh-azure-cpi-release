@@ -1,7 +1,7 @@
 ---
 name: bosh_azure_cpi
 dependencies:
-- ruby-2.4-r3
+- ruby-2.4-r4
 files:
 - bosh_azure_cpi/Gemfile
 - bosh_azure_cpi/Gemfile.lock
