@@ -71,6 +71,8 @@ The parameter `sshKeyData` should be a string which starts with `ssh-rsa`.
   2. Use the public key as `sshKeyData`.
   3. Save the private key as a .ppk file.
   4. When you login the dev-box, use the .ppk file as the private key file for authentication.
+  
+  Optionally, you can follow the same steps for Linux users if you prefer to use the Windows Subsystem for Linux.
 
   Reference: [How to Use SSH with Windows on Azure](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-windows-use-ssh-key/)
 
