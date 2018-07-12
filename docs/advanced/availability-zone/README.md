@@ -21,7 +21,7 @@ An Azure [Availability Zone](https://docs.microsoft.com/en-us/azure/availability
 
 ## Create Standard SKU Load Balancer
 
-Since Basic SKU public IP or LB does **NOT** work with AZs. You can refer to the [doc](../standard-load-balancers) to create a [Standard SKU public IP address](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-public-ip-address) and a [Standard SKU load balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview), and note down the load balancer name and the public IP address.
+Azure Availability Zone requires Standard Load Balancer. You can refer to the [doc](../standard-load-balancers) to create a [Standard SKU public IP address](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-public-ip-address) and a [Standard SKU load balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview), and write down the load balancer name and the public IP address.
 
 ## Fresh Deployment
 
