@@ -49,6 +49,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
 * CPI Settings
   * [Use availability zones in Cloud Foundry](./advanced/availability-zone/)
   * [Deploy Cloud Foundry using availability sets](./advanced/deploy-cloudfoundry-with-availability-sets/)
+  * [Use Standard SKU Load Balancers](./advanced/standard-load-balancers)
   * [Use managed disks in Cloud Foundry](./advanced/managed-disks/)
   * [Deploy Cloud Foundry using multiple storage accounts](./advanced/deploy-cloudfoundry-with-multiple-storage-accounts/)
   * [Configure resource groups](./advanced/configure-resource-groups/)
