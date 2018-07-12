@@ -65,6 +65,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Integrating Traffic Manager](./advanced/traffic-manager/)
   * [Backup and restore Cloud Foundry](./advanced/backup-and-restore-cloud-foundry/)
   * [SSH into the application](./advanced/cf-ssh-application/)
+  * [Migrate Cloud Foundry blobs from an NFS blobstore to an Azure Storage blobstore](./advanced/migrate-blobs/)
   * [Deploy multiple HAProxy instances behind Azure Load Balancer](./advanced/deploy-multiple-haproxy/)
   * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
   * [Azure DNS](./advanced/deploy-azuredns/)
