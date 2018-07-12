@@ -4,11 +4,11 @@
   "parameters": {
     "loadBalancerName": {
       "type": "string",
-      "defaultValue": "cf-lb-standard"
+      "defaultValue": "router-lb-standard"
     },
     "loadBalancerPublicIPAddressName": {
       "type": "string",
-      "defaultValue": "cf-ip-standard"
+      "defaultValue": "router-ip-standard"
     }
   },
   "variables": {

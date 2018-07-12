@@ -21,37 +21,7 @@ An Azure [Availability Zone](https://docs.microsoft.com/en-us/azure/availability
 
 ## Create Standard SKU Load Balancer
 
-Since Basic SKU public IP or LB does **NOT** work with AZs. You must create a [Standard SKU public IP address](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-public-ip-address) and a [Standard SKU load balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview).
-
-* Via Azure Portal
-
-    <a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fcloudfoundry-incubator%2Fbosh-azure-cpi-release%2Fmaster%2Fdocs%2Fadvanced%2Favailability-zone%2Fload-balancer-standard-sku.json" target="_blank">
-    <img src="http://azuredeploy.net/deploybutton.png"/>
-    </a>
-
-* Via Azure CLI
-
-    1. Login Azure CLI.
-
-        ```
-        AZURE_SUBSCRIPTION_ID="<your-subscription-id>"
-        AZURE_TENANT_ID="<your-tenant-id>"
-        AZURE_CLIENT_ID="<your-client-id>"
-        AZURE_CLIENT_SECRET="<your-client-secret>"
-        az login --service-principal --tenant ${AZURE_TENANT_ID} -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET}
-        az account set -s ${AZURE_SUBSCRIPTION_ID}
-        ```
-
-    1. Create a Standard SKU LB if you don't have one.
-
-        ```
-        rg_name="<your-resource-group-name>"
-        lb_name="<your-standard-load-balancer-name>"
-        lb_ip_name="<your-public-ip-address-name-for-standard-load-balancer>"
-        az group deployment create -g ${rg_name} --template-file load-balancer-standard-sku.json --parameters loadBalancerName=${lb_name} loadBalancerPublicIPAddressName=${lb_ip_name} | jq '.properties.outputs.loadBalancerPublicIPAdress.value' -r
-        ```
-
-Please note down the load balancer name and the public IP address in the output.
+Since Basic SKU public IP or LB does **NOT** work with AZs. You can refer to the [doc](../standard-load-balancers) to create a [Standard SKU public IP address](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-public-ip-address) and a [Standard SKU load balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview), and note down the load balancer name and the public IP address.
 
 ## Fresh Deployment
 
