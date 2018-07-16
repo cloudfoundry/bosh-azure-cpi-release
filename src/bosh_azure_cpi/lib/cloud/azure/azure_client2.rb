@@ -1619,23 +1619,27 @@ module Bosh::AzureCloud
     # Storage/StorageAccounts
 
     # Create a storage account
-    # @param [String] name         - Name of storage account.
-    # @param [String] location     - Location where the storage account will be created.
-    # @param [String] account_type - Type of storage account. Options: Standard_LRS, Standard_ZRS, Standard_GRS, Standard_RAGRS or Premium_LRS.
-    # @param [Hash] tags           - Tags of storage account.
+    # @param [String] name     - Name of storage account.
+    # @param [String] location - Location where the storage account will be created.
+    # @param [String] sku      - SKU of storage account. In older versions, sku name was called accountType.
+    #                            Options: Standard_LRS, Standard_ZRS, Standard_GRS, Standard_RAGRS or Premium_LRS.
+    # @param [String] kind     - Kind of storage account.
+    # @param [Hash]   tags     - Tags of storage account.
     #
     # @return [Boolean]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_Create
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
-    def create_storage_account(name, location, account_type, tags)
+    def create_storage_account(name, location, sku, kind, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
       storage_account = {
-        'location'   => location,
-        'tags'       => tags,
-        'properties' => {
-          'accountType' => account_type
-        }
+        'location' => location,
+        'sku'      => {
+          'name' => sku
+        },
+        'kind'     => kind,
+        'tags'     => tags
       }
 
       uri = http_url(url)
@@ -1706,7 +1710,8 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2015-06-15/storage.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def check_storage_account_name_availability(name)
       url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
@@ -1731,7 +1736,8 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_GetProperties
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def get_storage_account_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
@@ -1743,25 +1749,12 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_GetProperties
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def get_storage_account(url)
-      storage_account = nil
       result = get_resource_by_id(url)
-      unless result.nil?
-        storage_account = {}
-        storage_account[:id]        = result['id']
-        storage_account[:name]      = result['name']
-        storage_account[:location]  = result['location']
-        storage_account[:tags]      = result['tags']
-
-        properties = result['properties']
-        storage_account[:provisioning_state] = properties['provisioningState']
-        storage_account[:account_type]       = properties['accountType']
-        storage_account[:storage_blob_host]  = properties['primaryEndpoints']['blob']
-        storage_account[:storage_table_host] = properties['primaryEndpoints']['table'] if properties['primaryEndpoints'].key?('table')
-      end
-      storage_account
+      parse_storage_account(result)
     end
 
     # Get access keys of a storage account
@@ -1769,7 +1762,8 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_ListKeys
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def get_storage_account_keys_by_name(name)
       result = nil
@@ -1782,8 +1776,9 @@ module Bosh::AzureCloud
 
       keys = []
       unless result.nil?
-        keys << result['key1']
-        keys << result['key2']
+        result['keys'].each do |key|
+          keys << key['value']
+        end
       end
       keys
     end
@@ -1792,7 +1787,8 @@ module Bosh::AzureCloud
     #
     # @return [Array]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/storagerp/storageaccounts#StorageAccounts_ListByResourceGroup
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def list_storage_accounts
       storage_accounts = []
@@ -1800,17 +1796,7 @@ module Bosh::AzureCloud
       result = get_resource_by_id(url)
       unless result.nil?
         result['value'].each do |value|
-          storage_account = {}
-          storage_account[:id]        = value['id']
-          storage_account[:name]      = value['name']
-          storage_account[:location]  = value['location']
-          storage_account[:tags]      = value['tags']
-
-          properties = value['properties']
-          storage_account[:provisioning_state] = properties['provisioningState']
-          storage_account[:account_type]       = properties['accountType']
-          storage_account[:storage_blob_host]  = properties['primaryEndpoints']['blob']
-          storage_account[:storage_table_host] = properties['primaryEndpoints']['table'] if properties['primaryEndpoints'].key?('table')
+          storage_account = parse_storage_account(value)
           storage_accounts << storage_account
         end
       end
@@ -1823,6 +1809,8 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def update_tags_of_storage_account(name, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
@@ -2003,6 +1991,25 @@ module Bosh::AzureCloud
         end
       end
       ip_address
+    end
+
+    def parse_storage_account(result)
+      storage_account = nil
+      unless result.nil?
+        storage_account = {}
+        storage_account[:id]       = result['id']
+        storage_account[:name]     = result['name']
+        storage_account[:location] = result['location']
+        storage_account[:sku_name] = result['sku']['name']
+        storage_account[:sku_tier] = result['sku']['tier']
+        storage_account[:kind]     = result['kind']
+        storage_account[:tags]     = result['tags']
+        properties = result['properties']
+        storage_account[:provisioning_state] = properties['provisioningState']
+        storage_account[:storage_blob_host]  = properties['primaryEndpoints']['blob']
+        storage_account[:storage_table_host] = properties['primaryEndpoints']['table'] if properties['primaryEndpoints'].key?('table')
+      end
+      storage_account
     end
 
     def filter_credential_in_logs(uri)

@@ -83,7 +83,7 @@ module Bosh::AzureCloud
       else
         # The storage account will only be used when preparing a stemcell in the target location for user image, ANY storage account type is ok.
         # To make it consistent, `Standard_LRS' is used.
-        storage_account = @storage_account_manager.get_or_create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [STEMCELL_CONTAINER], false)
+        storage_account = @storage_account_manager.get_or_create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1, location, [STEMCELL_CONTAINER], false)
         storage_account_name = storage_account[:name]
 
         flock("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", File::LOCK_EX) do

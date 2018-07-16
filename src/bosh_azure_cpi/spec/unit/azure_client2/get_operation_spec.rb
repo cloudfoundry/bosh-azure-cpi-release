@@ -1068,7 +1068,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe '#get_storage_account_by_name' do
-    let(:storage_account_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}?api-version=#{api_version}" }
+    let(:storage_account_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}?api-version=#{AZURE_RESOURCE_PROVIDER_STORAGE}" }
     context 'when token is valid, getting response succeeds' do
       context 'if response body is null' do
         it 'should return null' do
@@ -1101,9 +1101,13 @@ describe Bosh::AzureCloud::AzureClient2 do
               'tags' => {
                 'foo' => 'bar'
               },
+              'sku' => {
+                'name' => 'fake-type',
+                'tier' => 'fake-tier'
+              },
+              'kind' => 'fake-kind',
               'properties' => {
                 'provisioningState' => 'fake-state',
-                'accountType' => 'fake-type',
                 'primaryEndpoints' => {
                   'blob' => 'fake-blob-endpoint',
                   'table' => 'fake-table-endpoint'
@@ -1120,7 +1124,9 @@ describe Bosh::AzureCloud::AzureClient2 do
                 'foo' => 'bar'
               },
               provisioning_state: 'fake-state',
-              account_type: 'fake-type',
+              sku_name: 'fake-type',
+              sku_tier: 'fake-tier',
+              kind: 'fake-kind',
               storage_blob_host: 'fake-blob-endpoint',
               storage_table_host: 'fake-table-endpoint'
             }
@@ -1155,9 +1161,13 @@ describe Bosh::AzureCloud::AzureClient2 do
               'tags' => {
                 'foo' => 'bar'
               },
+              'sku' => {
+                'name' => 'fake-type',
+                'tier' => 'fake-tier'
+              },
+              'kind' => 'fake-kind',
               'properties' => {
                 'provisioningState' => 'fake-state',
-                'accountType' => 'fake-type',
                 'primaryEndpoints' => {
                   'blob' => 'fake-blob-endpoint'
                 }
@@ -1173,7 +1183,9 @@ describe Bosh::AzureCloud::AzureClient2 do
                 'foo' => 'bar'
               },
               provisioning_state: 'fake-state',
-              account_type: 'fake-type',
+              sku_name: 'fake-type',
+              sku_tier: 'fake-tier',
+              kind: 'fake-kind',
               storage_blob_host: 'fake-blob-endpoint'
             }
           end
@@ -1202,7 +1214,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe '#list_storage_accounts' do
-    let(:storage_accounts_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts?api-version=#{api_version}" }
+    let(:storage_accounts_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts?api-version=#{AZURE_RESOURCE_PROVIDER_STORAGE}" }
 
     context 'when token is valid, getting response succeeds' do
       context 'if response body is null' do
@@ -1237,9 +1249,13 @@ describe Bosh::AzureCloud::AzureClient2 do
                 'tags' => {
                   'foo' => 'bar1'
                 },
+                'sku' => {
+                  'name' => 'fake-type',
+                  'tier' => 'fake-tier'
+                },
+                'kind' => 'fake-kind',
                 'properties' => {
                   'provisioningState' => 'fake-state',
-                  'accountType' => 'fake-type',
                   'primaryEndpoints' => {
                     'blob' => 'fake-blob-endpoint',
                     'table' => 'fake-table-endpoint'
@@ -1252,9 +1268,13 @@ describe Bosh::AzureCloud::AzureClient2 do
                 'tags' => {
                   'foo' => 'bar2'
                 },
+                'sku' => {
+                  'name' => 'fake-type',
+                  'tier' => 'fake-tier'
+                },
+                'kind' => 'fake-kind',
                 'properties' => {
                   'provisioningState' => 'fake-state',
-                  'accountType' => 'fake-type',
                   'primaryEndpoints' => {
                     'blob' => 'fake-blob-endpoint'
                   }
@@ -1273,7 +1293,9 @@ describe Bosh::AzureCloud::AzureClient2 do
                 'foo' => 'bar1'
               },
               provisioning_state: 'fake-state',
-              account_type: 'fake-type',
+              sku_name: 'fake-type',
+              sku_tier: 'fake-tier',
+              kind: 'fake-kind',
               storage_blob_host: 'fake-blob-endpoint',
               storage_table_host: 'fake-table-endpoint'
             }, {
@@ -1284,7 +1306,9 @@ describe Bosh::AzureCloud::AzureClient2 do
                 'foo' => 'bar2'
               },
               provisioning_state: 'fake-state',
-              account_type: 'fake-type',
+              sku_name: 'fake-type',
+              sku_tier: 'fake-tier',
+              kind: 'fake-kind',
               storage_blob_host: 'fake-blob-endpoint'
             }
           ]
@@ -1975,19 +1999,24 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe '#get_storage_account_keys_by_name' do
-    let(:storage_account_list_keys_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}/listKeys?api-version=#{api_version}" }
+    let(:storage_account_list_keys_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}/listKeys?api-version=#{AZURE_RESOURCE_PROVIDER_STORAGE}" }
     let(:storage_account_list_keys_response_body) do
       {
-        'key1' => 'fake-key-1',
-        'key2' => 'fake-key-2'
+        "keys": [
+          {
+            'keyName': 'key1',
+            'permissions': 'Full',
+            'value': 'fake-key-1'
+          },
+          {
+            'keyName': 'key2',
+            'permissions': 'Full',
+            'value': 'fake-key-2'
+          }
+        ]
       }.to_json
     end
-    let(:fake_keys) do
-      [
-        'fake-key-1',
-        'fake-key-2'
-      ]
-    end
+    let(:fake_keys) { ['fake-key-1', 'fake-key-2'] }
 
     context 'when token is valid but cannot find the storage account' do
       it 'should return []' do
