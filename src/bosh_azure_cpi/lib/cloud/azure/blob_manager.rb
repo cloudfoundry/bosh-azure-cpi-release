@@ -5,7 +5,6 @@ module Bosh::AzureCloud
     include Helpers
 
     MAX_CHUNK_SIZE = 2 * 1024 * 1024 # 2MB
-    HASH_OF_2MB_EMPTY_CONTENT = 'b2d1236c286a3c0704224fe4105eca49' # The hash value of 2MB empty content
     TIMEOUT_FOR_BLOB_OPERATIONS = 120 # Timeout in seconds for Blob Service Operations. https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations
 
     def initialize(azure_properties, azure_client2)
@@ -13,7 +12,7 @@ module Bosh::AzureCloud
       @parallel_upload_thread_num = azure_properties['parallel_upload_thread_num'].to_i unless azure_properties['parallel_upload_thread_num'].nil?
       @azure_properties = azure_properties
       @azure_client2 = azure_client2
-
+      @empty_chunk_content = Array.new(MAX_CHUNK_SIZE, 0).pack('c*')
       @logger = Bosh::Clouds::Config.logger
       @blob_client_mutex = Mutex.new
       @storage_accounts = {}
@@ -350,7 +349,7 @@ module Bosh::AzureCloud
           File.open(file_path, 'rb') do |file|
             while chunk = chunks.shift
               content = chunk.read(file)
-              if Digest::MD5.hexdigest(content) == HASH_OF_2MB_EMPTY_CONTENT
+              if content == @empty_chunk_content
                 @logger.debug("upload_page_blob_in_threads: Thread #{id}: Skip empty chunk: #{chunk}")
                 next
               end
