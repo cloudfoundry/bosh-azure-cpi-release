@@ -411,7 +411,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
               it 'should create a new user image and return the user image information' do
                 expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
-                  .with(STEMCELL_STORAGE_ACCOUNT_TAGS, storage_account_type, location, ['stemcell'], false)
+                  .with(STEMCELL_STORAGE_ACCOUNT_TAGS, storage_account_type, 'Storage', location, ['stemcell'], false)
                   .and_return(storage_account)
                 expect(stemcell_manager2).to receive(:flock)
                   .with("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{new_storage_account_name}", File::LOCK_EX)

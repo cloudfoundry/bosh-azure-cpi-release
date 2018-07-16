@@ -21,7 +21,7 @@ module Bosh::AzureCloud
         'apiVersion' => {
           AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2017-09-01',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
@@ -32,7 +32,7 @@ module Bosh::AzureCloud
         'apiVersion' => {
           AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
@@ -43,7 +43,7 @@ module Bosh::AzureCloud
         'apiVersion' => {
           AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
@@ -52,7 +52,7 @@ module Bosh::AzureCloud
         'apiVersion' => {
           AZURE_RESOURCE_PROVIDER_COMPUTE          => '2015-06-15',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2016-01-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
@@ -63,7 +63,7 @@ module Bosh::AzureCloud
         'apiVersion' => {
           AZURE_RESOURCE_PROVIDER_COMPUTE          => '2016-04-30-preview',
           AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
           AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
         }
@@ -89,7 +89,9 @@ module Bosh::AzureCloud
     # Storage Account
     STORAGE_ACCOUNT_TYPE_STANDARD_LRS = 'Standard_LRS'
     STORAGE_ACCOUNT_TYPE_PREMIUM_LRS  = 'Premium_LRS'
-    STEMCELL_STORAGE_ACCOUNT_TAGS     = AZURE_TAGS.merge(
+    STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1 = 'Storage'
+    STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V2 = 'StorageV2'
+    STEMCELL_STORAGE_ACCOUNT_TAGS = AZURE_TAGS.merge(
       'type' => 'stemcell'
     )
     DIAGNOSTICS_STORAGE_ACCOUNT_TAGS = AZURE_TAGS.merge(
