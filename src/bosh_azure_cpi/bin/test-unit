@@ -1,17 +1,44 @@
 #!/usr/bin/env bash
+skip_ruby_check=1
+specs=spec/unit/*
 
-args=$@
-[[ "$#" != "1" ]] && args=spec/unit/*
-
-pushd $SRC_DIR
-  . bin/check-ruby-version
+while [[ $# -gt 0 ]]
+do
+key="$1"
+case $key in
+    -s|--spec)
+    specs="$2"
+    shift # past argument
+    shift # past value
+    ;;
+    -sb|--skip-ruby-check)
+    echo "will skip the ruby check."
+    skip_ruby_check=0
+    shift
+    ;;
+    *)    # unknown option
+    echo "Usage: ./test-unit [[-s|--spec] spec/unit/*] [-sb|--skip-ruby-check]"
+    break
+    ;;
+esac
+done
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+pushd $DIR/..
+  if [[ "$skip_ruby_check" -ne "0" ]]; then
+    . ./bin/check-ruby-version
+  fi
 
   echo "Running unit tests with Ruby version $RUBY_VERSION..."
   bundle install
+
   # AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY are specified fake values as a workaround
   # to make sure Azure::Storage::Client is mocked successfully in unit tests.
   # After https://github.com/Azure/azure-storage-ruby/issues/87 is resolved, they can be removed.
   # echo "bar" | base64 => YmFyCg==
-  AZURE_STORAGE_ACCOUNT="foo" AZURE_STORAGE_ACCESS_KEY="YmFyCg==" bundle exec rspec ${args} --format documentation
+  AZURE_STORAGE_ACCOUNT="foo" AZURE_STORAGE_ACCESS_KEY="YmFyCg==" bundle exec rspec ${specs} --format documentation
+  if [ $? -ne 0 ]; then
+    echo "rspec find some issues."
+    popd
+    exit 1
+  fi
 popd
-

@@ -2,9 +2,15 @@
 which rubocop > /dev/null 2>&1
 [[ "$?" -eq "1" ]] && {
   echo "You need to install rubocop using 'gem install rubocop'"
-  exit
+  exit 1
 }
+export XDG_CACHE_HOME=$(pwd)
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 pushd $DIR/..
-rubocop -P
+  rubocop -P
+    if [ "$?" != "0" ]; then
+      echo "rubocop find some issues."
+      popd
+      exit 1
+    fi
 popd
