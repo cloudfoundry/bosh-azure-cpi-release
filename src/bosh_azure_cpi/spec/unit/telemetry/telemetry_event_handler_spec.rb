@@ -82,7 +82,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
 
     before do
       allow(Bosh::AzureCloud::WireClient).to receive(:new).and_return(wire_client)
-      Dir.mkdir(cpi_events_dir) unless Dir.exist?(cpi_events_dir)
+      FileUtils.mkdir_p(cpi_events_dir)
     end
 
     after do
@@ -133,7 +133,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
 
     before do
       allow(Bosh::AzureCloud::WireClient).to receive(:new).and_return(wire_client)
-      Dir.mkdir(cpi_events_dir) unless Dir.exist?(cpi_events_dir)
+      FileUtils.mkdir_p(cpi_events_dir)
 
       (0...event_number).each do |number|
         File.open("#{cpi_events_dir}/collect-events-test-#{number}.tld", 'w') do |file|

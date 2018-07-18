@@ -695,7 +695,7 @@ module Bosh::AzureCloud
 
     def init_cpi_lock_dir
       @logger.info('init_cpi_lock_dir: Initializing the CPI lock directory')
-      ignore_exception(Errno::EEXIST) { Dir.mkdir(CPI_LOCK_DIR) } unless Dir.exist?(CPI_LOCK_DIR)
+      FileUtils.mkdir_p(CPI_LOCK_DIR)
     end
 
     # Generates initial agent settings. These settings will be read by agent
