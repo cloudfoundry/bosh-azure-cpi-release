@@ -86,23 +86,12 @@ module Bosh::AzureCloud
         storage_account = @storage_account_manager.get_or_create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, location, [STEMCELL_CONTAINER], false)
         storage_account_name = storage_account[:name]
 
-        mutex = FileMutex.new("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", @logger, CPI_LOCK_COPY_STEMCELL_TIMEOUT)
-        begin
-          if mutex.lock
-            unless has_stemcell?(storage_account_name, stemcell_name)
-              @logger.info("get_user_image: Copying the stemcell from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}'")
-              stemcell_source_blob_uri = @blob_manager.get_blob_uri(default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
-              @blob_manager.copy_blob(storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd", stemcell_source_blob_uri) do
-                mutex.update
-              end
-            end
-            mutex.unlock
-          else
-            mutex.wait
+        flock("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", File::LOCK_EX) do
+          unless has_stemcell?(storage_account_name, stemcell_name)
+            @logger.info("get_user_image: Copying the stemcell from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}'")
+            stemcell_source_blob_uri = @blob_manager.get_blob_uri(default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
+            @blob_manager.copy_blob(storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd", stemcell_source_blob_uri)
           end
-        rescue StandardError => e
-          mark_deleting_locks
-          cloud_error("get_user_image: Failed to finish the copying process of the stemcell `#{stemcell_name}' from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
 
@@ -115,22 +104,18 @@ module Bosh::AzureCloud
         source_uri: stemcell_info.uri,
         account_type: storage_account_type
       }
-      begin
-        mutex = FileMutex.new("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", @logger)
-        if mutex.lock
-          @azure_client2.delete_user_image(user_image_name_deprecated) # CPI will cleanup the user image with the old format name
+
+      flock("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX) do
+        @azure_client2.delete_user_image(user_image_name_deprecated) # CPI will cleanup the user image with the old format name
+
+        user_image = @azure_client2.get_user_image_by_name(user_image_name)
+        if user_image.nil?
           @azure_client2.create_user_image(user_image_params)
-          mutex.unlock
-        else
-          mutex.wait
+          user_image = @azure_client2.get_user_image_by_name(user_image_name)
+          cloud_error("get_user_image: Can not find a user image with the name `#{user_image_name}'") if user_image.nil?
         end
-      rescue StandardError => e
-        mark_deleting_locks
-        cloud_error("get_user_image: Failed to create the user image `#{user_image_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
 
-      user_image = @azure_client2.get_user_image_by_name(user_image_name)
-      cloud_error("get_user_image: Can not find a user image with the name `#{user_image_name}'") if user_image.nil?
       user_image
     end
   end

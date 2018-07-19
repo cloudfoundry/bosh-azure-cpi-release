@@ -66,193 +66,168 @@ describe Bosh::AzureCloud::StorageAccountManager do
     let(:is_default_storage_account) { false }
 
     let(:storage_account) { double('storage-account') }
-    let(:lock_creating_storage_account) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-    let(:lock_file) { "bosh-lock-create-storage-account-#{name}" }
 
-    before do
-      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new)
-        .with(lock_file, anything, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT)
-        .and_return(lock_creating_storage_account)
-    end
-
-    context 'when lock is not acquired' do
+    context 'when the storage account is already created by other process' do
       before do
-        allow(lock_creating_storage_account).to receive(:lock).and_return(false)
-      end
-
-      it 'should wait and return the storage account if the storage account is created by other process' do
-        expect(lock_creating_storage_account).to receive(:wait)
+        expect(storage_account_manager).to receive(:flock)
+          .with("#{CPI_LOCK_PREFIX_STORAGE_ACCOUNT}-#{name}", File::LOCK_EX)
+          .and_call_original
         expect(storage_account_manager).to receive(:find_storage_account_by_name)
           .and_return(storage_account)
+      end
+
+      it 'should try to prepare containers and then return the storage account' do
+        expect(blob_manager).to receive(:prepare_containers)
         expect(
           storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
         ).to be(storage_account)
       end
-
-      it 'should raise error if the storage account is not created by other process' do
-        expect(lock_creating_storage_account).to receive(:wait)
-        expect(storage_account_manager).to receive(:find_storage_account_by_name)
-          .and_return(nil)
-        expect do
-          storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-        end.to raise_error("Storage account `#{name}' is not created.")
-      end
-
-      it 'should raise error if error happens' do
-        expect(lock_creating_storage_account).to receive(:wait)
-          .and_raise('timeout')
-        expect do
-          storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-        end.to raise_error(/Failed to create storage account in location `#{location}' with name `#{name}' and tags `#{tags}'/)
-      end
     end
 
-    context 'when lock is acquired' do
-      before do
-        allow(lock_creating_storage_account).to receive(:lock).and_return(true)
-        allow(lock_creating_storage_account).to receive(:unlock)
-      end
-
-      context 'when the storage account is already created by other process' do
+    context 'if the storage account is going to be created' do
+      context 'when the storage account name is invalid' do
+        let(:result) do
+          {
+            available: false,
+            reason: 'AccountNameInvalid',
+            message: 'fake-message'
+          }
+        end
         before do
-          expect(storage_account_manager).to receive(:find_storage_account_by_name)
-            .and_return(storage_account)
+          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
+          allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
         end
 
-        it 'should return the storage account directly' do
+        it 'should raise an error' do
+          expect do
+            storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+          end.to raise_error(/The storage account name `#{name}' is invalid./)
+        end
+      end
+
+      context 'when the storage account is not available' do
+        let(:result) do
+          {
+            available: false,
+            reason: 'fake-reason',
+            message: 'fake-message'
+          }
+        end
+        before do
+          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
+          allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
+        end
+
+        it 'should raise an error' do
+          expect do
+            storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+          end.to raise_error(/The storage account with the name `#{name}' is not available/)
+        end
+      end
+
+      context 'when name is not nil' do
+        let(:result) { { available: true } }
+        let(:name) { nil }
+
+        before do
+          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
+          allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
+        end
+
+        it 'should raise an error' do
+          expect do
+            storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+          end.to raise_error(/Require name to create a new storage account/)
+        end
+      end
+
+      context 'when type is not provided' do
+        let(:result) { { available: true } }
+        let(:type) { nil }
+
+        before do
+          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
+          allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
+        end
+
+        it 'should raise an error' do
+          expect do
+            storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+          end.to raise_error(/Require type to create a new storage account/)
+        end
+      end
+
+      context 'when location not provided' do
+        let(:result) { { available: true } }
+        let(:location) { nil }
+
+        before do
+          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
+          allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
+        end
+
+        it 'should raise an error' do
+          expect do
+            storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+          end.to raise_error(/Require location to create a new storage account/)
+        end
+      end
+
+      context 'when everything is ok' do
+        let(:result) { { available: true } }
+
+        before do
+          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil, storage_account)
+          allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
+        end
+
+        it 'should create the storage account and prepare the containers' do
+          expect(blob_manager).to receive(:prepare_containers)
+            .with(name, containers, is_default_storage_account)
+          expect(client2).to receive(:create_storage_account)
+            .with(name, location, type, tags)
           expect(
             storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
           ).to be(storage_account)
         end
       end
 
-      context 'if the storage account is going to be created' do
-        context 'when the storage account name is invalid' do
-          let(:result) do
-            {
-              available: false,
-              reason: 'AccountNameInvalid',
-              message: 'fake-message'
-            }
-          end
-          before do
-            allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
-            allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-          end
+      context 'when the storage account is not found after creating' do
+        let(:result) { { available: true } }
 
-          it 'should raise an error' do
-            expect do
-              storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            end.to raise_error(/The storage account name `#{name}' is invalid./)
-          end
+        before do
+          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil, nil)
+          allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
+          allow(client2).to receive(:create_storage_account)
+            .with(name, location, type, tags)
+            .and_return(true)
         end
 
-        context 'when the storage account is not available' do
-          let(:result) do
-            {
-              available: false,
-              reason: 'fake-reason',
-              message: 'fake-message'
-            }
-          end
-          before do
-            allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
-            allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-          end
+        it 'should raise an error' do
+          expect do
+            storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+          end.to raise_error(/Storage account `#{name}' is not created/)
+        end
+      end
 
-          it 'should raise an error' do
-            expect do
-              storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            end.to raise_error(/The storage account with the name `#{name}' is not available/)
-          end
+      context 'when it fails to prepare containers' do
+        let(:result) { { available: true } }
+
+        before do
+          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil, storage_account)
+          allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
+          allow(client2).to receive(:create_storage_account)
+            .with(name, location, type, tags)
+            .and_return(true)
+          expect(blob_manager).to receive(:prepare_containers)
+            .with(name, containers, is_default_storage_account)
+            .and_raise('failed to create container')
         end
 
-        context 'when name is not nil' do
-          let(:result) { { available: true } }
-          let(:name) { nil }
-
-          before do
-            allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
-            allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-          end
-
-          it 'should raise an error' do
-            expect do
-              storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            end.to raise_error(/Require name to create a new storage account/)
-          end
-        end
-
-        context 'when type is not provided' do
-          let(:result) { { available: true } }
-          let(:type) { nil }
-
-          before do
-            allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
-            allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-          end
-
-          it 'should raise an error' do
-            expect do
-              storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            end.to raise_error(/Require type to create a new storage account/)
-          end
-        end
-
-        context 'when location not provided' do
-          let(:result) { { available: true } }
-          let(:location) { nil }
-
-          before do
-            allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
-            allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-          end
-
-          it 'should raise an error' do
-            expect do
-              storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            end.to raise_error(/Require location to create a new storage account/)
-          end
-        end
-
-        context 'when everything is ok' do
-          let(:result) { { available: true } }
-
-          before do
-            allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil, storage_account)
-            allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-          end
-
-          it 'should create the storage account and prepare the containers' do
-            expect(blob_manager).to receive(:prepare_containers)
-              .with(name, containers, is_default_storage_account)
-            expect(client2).to receive(:create_storage_account)
-              .with(name, location, type, tags)
-            expect(
-              storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            ).to be(storage_account)
-          end
-        end
-
-        context 'when it fails to prepare containers' do
-          let(:result) { { available: true } }
-
-          before do
-            allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
-            allow(client2).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-            allow(client2).to receive(:create_storage_account)
-              .with(name, location, type, tags)
-              .and_return(true)
-            expect(blob_manager).to receive(:prepare_containers)
-              .with(name, containers, is_default_storage_account)
-              .and_raise('failed to create')
-          end
-
-          it 'should create the storage account and prepare the containers' do
-            expect do
-              storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-            end.to raise_error(/it failed to prepare the containers/)
-          end
+        it 'should raise an error' do
+          expect do
+            storage_account_manager.get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
+          end.to raise_error(/failed to create container/)
         end
       end
     end
@@ -265,111 +240,73 @@ describe Bosh::AzureCloud::StorageAccountManager do
     let(:containers) { ['bosh'] }
     let(:is_default_storage_account) { false }
 
-    let(:lock) { instance_double(Bosh::AzureCloud::Helpers::FileMutex) }
-    let(:lock_file) { "bosh-lock-create-storage-account-#{location}-#{Digest::MD5.hexdigest(tags.to_s)}" }
-
     let(:storage_account) { { name: 'fake-name' } }
 
-    before do
-      allow(Bosh::AzureCloud::Helpers::FileMutex).to receive(:new)
-        .with(lock_file, anything, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT)
-        .and_return(lock)
-    end
-
-    context 'when lock is acquired' do
+    context 'when the storage account is already created' do
       before do
-        allow(lock).to receive(:lock).and_return(true)
-        allow(lock).to receive(:unlock)
-      end
-
-      context 'when the storage account is already created' do
-        before do
-          allow(storage_account_manager).to receive(:find_storage_account_by_tags)
-            .with(tags, location)
-            .and_return(storage_account)
-        end
-
-        it 'should return the storage account directly' do
-          expect(
-            storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
-          ).to be(storage_account)
-        end
-      end
-
-      context 'when the storage account does not exist' do
-        let(:name) { 'fake-name' }
-
-        before do
-          allow(storage_account_manager).to receive(:generate_storage_account_name)
-            .and_return(name)
-          allow(storage_account_manager).to receive(:find_storage_account_by_tags)
-            .with(tags, location)
-            .and_return(nil)
-        end
-
-        it 'should create a new storage account' do
-          expect(storage_account_manager).to receive(:get_or_create_storage_account)
-            .with(name, tags, type, location, containers, is_default_storage_account)
-            .and_return(storage_account)
-          expect(
-            storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
-          ).to be(storage_account)
-        end
-      end
-
-      context 'when the storage account does not exist and get error when creating a new one' do
-        let(:name) { 'fake-name' }
-
-        before do
-          allow(storage_account_manager).to receive(:generate_storage_account_name)
-            .and_return(name)
-          allow(storage_account_manager).to receive(:find_storage_account_by_tags)
-            .with(tags, location)
-            .and_return(nil)
-        end
-
-        it 'should raise an error' do
-          expect(storage_account_manager).to receive(:get_or_create_storage_account)
-            .with(name, tags, type, location, containers, is_default_storage_account)
-            .and_raise('failed to create')
-          expect do
-            storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
-          end.to raise_error(/Failed to create storage account in location `#{location}' with tags `#{tags}'/)
-        end
-      end
-    end
-
-    context 'when lock is not acquired' do
-      let(:storage_account) { { name: 'fake-name' } }
-
-      before do
-        allow(lock).to receive(:lock).and_return(false)
-      end
-
-      it 'should wait and then find the storage account' do
-        expect(lock).to receive(:wait)
-        expect(storage_account_manager).to receive(:find_storage_account_by_tags)
+        allow(storage_account_manager).to receive(:find_storage_account_by_tags)
           .with(tags, location)
           .and_return(storage_account)
+        expect(storage_account_manager).to receive(:flock)
+          .with("#{CPI_LOCK_PREFIX_STORAGE_ACCOUNT}-#{location}-#{Digest::MD5.hexdigest(tags.to_s)}", File::LOCK_EX)
+          .and_call_original
+      end
+
+      it 'should return the storage account directly' do
         expect(
           storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
         ).to be(storage_account)
       end
     end
 
-    context 'when storage account is not created' do
+    context 'when the storage account does not exist' do
+      let(:name) { 'fake-name' }
+
       before do
-        allow(lock).to receive(:lock).and_return(false)
+        allow(storage_account_manager).to receive(:generate_storage_account_name)
+          .and_return(name)
+        allow(storage_account_manager).to receive(:find_storage_account_by_tags)
+          .with(tags, location)
+          .and_return(nil)
       end
 
-      it 'should raise an error' do
-        expect(lock).to receive(:wait)
-        expect(storage_account_manager).to receive(:find_storage_account_by_tags)
-          .with(tags, location)
+      it 'should create a new storage account' do
+        expect(storage_account_manager).to receive(:get_or_create_storage_account)
+          .with(name, tags, type, location, containers, is_default_storage_account)
+          .and_return(storage_account)
+        expect(
+          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
+        ).to be(storage_account)
+      end
+
+      it 'should raise an error if it fails to get the storage account after creating' do
+        expect(storage_account_manager).to receive(:get_or_create_storage_account)
+          .with(name, tags, type, location, containers, is_default_storage_account)
           .and_return(nil)
         expect do
           storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
-        end.to raise_error(/Storage account for tags `#{tags}' is not created./)
+        end.to raise_error(/Storage account for tags `#{tags}' is not creat/)
+      end
+    end
+
+    context 'when the storage account does not exist and get error when creating a new one' do
+      let(:name) { 'fake-name' }
+
+      before do
+        allow(storage_account_manager).to receive(:generate_storage_account_name)
+          .and_return(name)
+        allow(storage_account_manager).to receive(:find_storage_account_by_tags)
+          .with(tags, location)
+          .and_return(nil)
+      end
+
+      it 'should raise an error' do
+        expect(storage_account_manager).to receive(:get_or_create_storage_account)
+          .with(name, tags, type, location, containers, is_default_storage_account)
+          .and_raise('failed to create storage account')
+        expect do
+          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
+        end.to raise_error(/failed to create storage account/)
       end
     end
   end

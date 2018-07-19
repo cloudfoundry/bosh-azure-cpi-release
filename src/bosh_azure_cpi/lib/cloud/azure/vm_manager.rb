@@ -190,7 +190,14 @@ module Bosh::AzureCloud
 
       if vm
         # Delete the VM
-        @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+        if vm[:availability_set].nil?
+          @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+        else
+          availability_set_name = vm[:availability_set][:name]
+          flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH) do
+            @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+          end
+        end
 
         # Delete the empty availability set
         delete_empty_availability_set(resource_group_name, vm[:availability_set][:name]) if vm[:availability_set]
@@ -500,58 +507,41 @@ module Bosh::AzureCloud
       @azure_properties['environment'] == ENVIRONMENT_AZURESTACK ? 1 : 5
     end
 
-    def create_availability_set(resource_group_name, availability_set_params)
+    def get_or_create_availability_set(resource_group_name, availability_set_params)
       availability_set_name = availability_set_params[:name]
-      availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
-
-      if availability_set.nil?
-        @logger.info("create_availability_set - the availability set `#{availability_set_name}' doesn't exist. Will create a new one.")
-      # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
-      elsif !availability_set[:location].casecmp(availability_set_params[:location]).zero?
-        cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists, but in a different location `#{availability_set[:location].downcase}' instead of `#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
-      elsif !@use_managed_disks && availability_set[:managed]
-        cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
-      elsif @use_managed_disks && !availability_set[:managed]
-        @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
-        availability_set_params.merge!(
-          platform_update_domain_count: availability_set[:platform_update_domain_count],
-          platform_fault_domain_count: availability_set[:platform_fault_domain_count],
-          managed: true
-        )
-      else
-        @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists. No need to update.")
-        return availability_set
-      end
-
-      mutex = FileMutex.new("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-create-#{availability_set_name}", @logger)
-      begin
-        if mutex.lock
+      availability_set = nil
+      flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX) do
+        availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
+        if availability_set.nil?
+          @logger.info("create_availability_set - the availability set `#{availability_set_name}' doesn't exist. Will create a new one.")
           @azure_client2.create_availability_set(resource_group_name, availability_set_params)
-          mutex.unlock
+          availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
+        # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
+        elsif !availability_set[:location].casecmp(availability_set_params[:location]).zero?
+          cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists, but in a different location `#{availability_set[:location].downcase}' instead of `#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
+        elsif !@use_managed_disks && availability_set[:managed]
+          cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
+        elsif @use_managed_disks && !availability_set[:managed]
+          @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
+          availability_set_params.merge!(
+            platform_update_domain_count: availability_set[:platform_update_domain_count],
+            platform_fault_domain_count: availability_set[:platform_fault_domain_count],
+            managed: true
+          )
+          @azure_client2.create_availability_set(resource_group_name, availability_set_params)
+          availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
         else
-          mutex.wait
+          @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists. No need to update.")
         end
-      rescue StandardError => e
-        mark_deleting_locks
-        cloud_error("Failed to create the availability set `#{availability_set_name}' in the resource group `#{resource_group_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
-
-      @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
+      cloud_error("get_or_create_availability_set - availability set `#{availability_set_name}' is not created.") if availability_set.nil?
+      availability_set
     end
 
-    def delete_empty_availability_set(resource_group_name, name)
-      availability_set_rw_lock = ReadersWriterLock.new("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{name}", @logger)
-      if availability_set_rw_lock.acquire_write_lock
-        begin
-          availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, name)
-          @azure_client2.delete_availability_set(resource_group_name, name) if availability_set && availability_set[:virtual_machines].empty?
-          # CPI will release the write lock only when the availability set is deleted successfully.
-          # If any error is raised above, the lock should NOT be released so that other tasks can't acquire the read lock.
-          availability_set_rw_lock.release_write_lock
-        rescue StandardError => e
-          mark_deleting_locks
-          cloud_error("Failed to delete of the availability set `#{name}' in the resource group `#{resource_group_name}': #{e.inspect}\n#{e.backtrace.join("\n")}")
-        end
+    def delete_empty_availability_set(resource_group_name, availability_set_name)
+      flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB) do
+        availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
+        @azure_client2.delete_availability_set(resource_group_name, availability_set_name) if availability_set && availability_set[:virtual_machines].empty?
       end
     end
 
@@ -562,36 +552,17 @@ module Bosh::AzureCloud
       retry_create_count = 0
       begin
         @keep_failed_vms = false
-        is_vm_created = false
         availability_set = nil
         availability_set_name = availability_set_params[:name]
         if !availability_set_name.nil?
-          # The RW lock allows concurrent access for creating VMs in the availability set, while deleting the availability set requires exclusive access.
-          # This means that multiple tasks can create VMs in the availability set in parallel but an exclusive lock is needed for deleting the availability set.
-          # When a task is deleting the availability set, all other tasks will be blocked until the task is finished deleting.
-          # If a task acquires the readers lock, it can:
-          #   1. create/update the availability set if needed. When multiple tasks acquire the readers lock, an additional file mutex is needed to make sure
-          #      that only one task is creating/updating the availability set.
-          #   2. create the VM in the availability set. Before releasing the lock, CPI needs to make sure the VM is added into the availability set.
-          # If a task acquires the writer lock, it can delete the availability set if no VMs are in it.
-          availability_set_rw_lock = ReadersWriterLock.new("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", @logger)
-          availability_set_rw_lock.acquire_read_lock
-          begin
-            availability_set = create_availability_set(resource_group_name, availability_set_params)
+          availability_set = get_or_create_availability_set(resource_group_name, availability_set_params)
+          flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH) do
             @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
-            is_vm_created = true
-          ensure
-            availability_set_rw_lock.release_read_lock
           end
         else
           @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
         end
       rescue StandardError => e
-        if e.is_a?(LockError)
-          mark_deleting_locks
-          cloud_error("create_virtual_machine - Lock error: #{e.inspect}\n#{e.backtrace.join("\n")}") unless is_vm_created
-        end
-
         retry_create = false
         if e.instance_of?(AzureAsynchronousError) && e.status == PROVISIONING_STATE_FAILED
           if (retry_create_count += 1) <= max_retries
@@ -607,10 +578,17 @@ module Bosh::AzureCloud
           retry_delete_count = 0
           begin
             @logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{vm_name} from resource group #{resource_group_name}. Retry #{retry_delete_count}.")
-            @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
 
-            # Delete the empty availability set
-            delete_empty_availability_set(resource_group_name, availability_set[:name]) if availability_set
+            if availability_set
+              flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_SH) do
+                @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+              end
+
+              # Delete the empty availability set
+              delete_empty_availability_set(resource_group_name, availability_set[:name])
+            else
+              @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+            end
 
             if @use_managed_disks
               os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)

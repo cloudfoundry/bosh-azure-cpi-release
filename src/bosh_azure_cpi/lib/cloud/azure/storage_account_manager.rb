@@ -40,56 +40,44 @@ module Bosh::AzureCloud
     # @return [Hash]
     def get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
       @logger.debug("get_or_create_storage_account(#{name}, #{tags}, #{type}, #{location}, #{containers}, #{is_default_storage_account})")
-      lock_file = "#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{name}"
-      mutex = FileMutex.new(lock_file, @logger, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT)
-      begin
-        if mutex.lock
-          storage_account = find_storage_account_by_name(name) # make sure the storage account is not yet created by other process
-          if storage_account.nil?
-            @logger.debug("Cannot find any storage account with name `#{name}', creating a new one...")
-            result = @azure_client2.check_storage_account_name_availability(name)
-            @logger.debug("get_or_create_storage_account - The result of check_storage_account_name_availability is #{result}")
-            unless result[:available]
-              if result[:reason] == 'AccountNameInvalid'
-                raise "The storage account name `#{name}' is invalid. Storage account names must be between 3 and 24 characters in length and use numbers and lower-case letters only. #{result[:message]}"
-              else
-                # AlreadyExists
-                raise "The storage account with the name `#{name}' is not available. Error: #{result[:message]}"
-              end
+      storage_account = nil
+      flock("#{CPI_LOCK_PREFIX_STORAGE_ACCOUNT}-#{name}", File::LOCK_EX) do
+        storage_account = find_storage_account_by_name(name) # make sure the storage account is not yet created by other process
+        if storage_account.nil?
+          @logger.debug("Cannot find any storage account with name `#{name}', creating a new one...")
+          result = @azure_client2.check_storage_account_name_availability(name)
+          @logger.debug("get_or_create_storage_account - The result of check_storage_account_name_availability is #{result}")
+          unless result[:available]
+            if result[:reason] == 'AccountNameInvalid'
+              raise "The storage account name `#{name}' is invalid. Storage account names must be between 3 and 24 characters in length and use numbers and lower-case letters only. #{result[:message]}"
+            else
+              # AlreadyExists
+              raise "The storage account with the name `#{name}' is not available. Error: #{result[:message]}"
             end
-
-            begin
-              raise 'Require name to create a new storage account' if name.nil?
-              raise "Require type to create a new storage account. If you specify `storage_account_name' in resource pool to use & create a new storage account, please also provide `storage_account_type'" if type.nil?
-              raise 'Require location to create a new storage account' if location.nil?
-
-              @logger.debug("Creating storage account `#{name}' with the tags `#{tags}' in the location `#{location}'")
-              created = @azure_client2.create_storage_account(name, location, type, tags)
-              @blob_manager.prepare_containers(name, containers, is_default_storage_account) unless containers.empty?
-            rescue StandardError => e
-              error_msg = 'get_or_create_storage_account - '
-              if created
-                error_msg += "The storage account `#{name}' is created successfully.\n"
-                error_msg += "But it failed to prepare the containers `#{containers}'.\n"
-                error_msg += "You need to manually create them if they don't exist.\n"
-                error_msg += "And set the public access level of the container `#{STEMCELL_CONTAINER}' to `#{PUBLIC_ACCESS_LEVEL_BLOB}'.\n" if is_default_storage_account
-                # TODO: clean up the storage account if it failed to create containers.
-              end
-              error_msg += "Error: #{e.inspect}\n#{e.backtrace.join("\n")}"
-              raise error_msg
-            end
-            storage_account = find_storage_account_by_name(name)
           end
-          mutex.unlock
-        else
-          mutex.wait
+
+          raise 'Require name to create a new storage account' if name.nil?
+          raise "Require type to create a new storage account. If you specify `storage_account_name' in resource pool to use & create a new storage account, please also provide `storage_account_type'" if type.nil?
+          raise 'Require location to create a new storage account' if location.nil?
+
+          @logger.debug("Creating storage account `#{name}' with the tags `#{tags}' in the location `#{location}'")
+          @azure_client2.create_storage_account(name, location, type, tags)
           storage_account = find_storage_account_by_name(name)
+          cloud_error("Storage account `#{name}' is not created.") if storage_account.nil?
         end
-      rescue StandardError => e
-        mark_deleting_locks
-        cloud_error("Failed to create storage account in location `#{location}' with name `#{name}' and tags `#{tags}'. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+
+        begin
+          @blob_manager.prepare_containers(name, containers, is_default_storage_account) unless containers.empty?
+        rescue StandardError => e
+          error_msg = 'get_or_create_storage_account - ' \
+                      "The storage account `#{name}' is created successfully.\n" \
+                      "But it failed to prepare the containers `#{containers}'.\n" \
+                      "You need to manually create them if they don't exist.\n"
+          error_msg += "And set the public access level of the container `#{STEMCELL_CONTAINER}' to `#{PUBLIC_ACCESS_LEVEL_BLOB}'.\n" if is_default_storage_account
+          error_msg += "Error: #{e.inspect}\n#{e.backtrace.join("\n")}"
+          raise error_msg
+        end
       end
-      cloud_error("Storage account `#{name}' is not created.") if storage_account.nil?
       storage_account
     end
 
@@ -102,24 +90,15 @@ module Bosh::AzureCloud
     # @return [Hash]
     def get_or_create_storage_account_by_tags(tags, type, location, containers, is_default_storage_account)
       @logger.debug("get_or_create_storage_account_by_tags(#{tags}, #{type}, #{location}, #{containers}, #{is_default_storage_account})")
-      lock_file = "#{CPI_LOCK_CREATE_STORAGE_ACCOUNT}-#{location}-#{Digest::MD5.hexdigest(tags.to_s)}"
-      mutex = FileMutex.new(lock_file, @logger, CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT)
-      begin
-        if mutex.lock
-          storage_account = find_storage_account_by_tags(tags, location) # make sure the storage account is not yet created by other process
-          if storage_account.nil?
-            @logger.debug("Cannot find any storage account in the location `#{location}' with tags `#{tags}', creating a new one...")
-            name = generate_storage_account_name
-            storage_account = get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
-          end
-          mutex.unlock
-        else
-          mutex.wait
-          storage_account = find_storage_account_by_tags(tags, location)
+      storage_account = nil
+      lock_file = "#{CPI_LOCK_PREFIX_STORAGE_ACCOUNT}-#{location}-#{Digest::MD5.hexdigest(tags.to_s)}"
+      flock(lock_file, File::LOCK_EX) do
+        storage_account = find_storage_account_by_tags(tags, location) # make sure the storage account is not yet created by other process
+        if storage_account.nil?
+          @logger.debug("Cannot find any storage account in the location `#{location}' with tags `#{tags}', creating a new one...")
+          name = generate_storage_account_name
+          storage_account = get_or_create_storage_account(name, tags, type, location, containers, is_default_storage_account)
         end
-      rescue StandardError => e
-        mark_deleting_locks
-        cloud_error("Failed to create storage account in location `#{location}' with tags `#{tags}'. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
       end
       cloud_error("Storage account for tags `#{tags}' is not created.") if storage_account.nil?
       storage_account

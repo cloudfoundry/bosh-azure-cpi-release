@@ -12,7 +12,6 @@ require 'json'
 require 'net/http'
 require 'stringio'
 require 'fileutils'
-require 'bosh/cpi'
 
 MOCK_AZURE_SUBSCRIPTION_ID        = 'aa643f05-5b67-4d58-b433-54c2e9131a59'
 MOCK_DEFAULT_STORAGE_ACCOUNT_NAME = '8853f441db154b438550a853'
@@ -46,7 +45,13 @@ STEMCELL_STORAGE_ACCOUNT_TAGS   = {
   'type' => 'stemcell'
 }.freeze
 
-CPI_LOCK_CREATE_STORAGE_ACCOUNT_TIMEOUT = 300
+CPI_LOCK_DIR                            = '/tmp/azure_cpi'
+CPI_LOCK_PREFIX                         = 'bosh-lock'
+CPI_LOCK_PREFIX_STORAGE_ACCOUNT         = "#{CPI_LOCK_PREFIX}-storage-account"
+CPI_LOCK_COPY_STEMCELL                  = "#{CPI_LOCK_PREFIX}-copy-stemcell"
+CPI_LOCK_CREATE_USER_IMAGE              = "#{CPI_LOCK_PREFIX}-create-user-image"
+CPI_LOCK_PREFIX_AVAILABILITY_SET        = "#{CPI_LOCK_PREFIX}-availability-set"
+CPI_LOCK_EVENT_HANDLER                  = "#{CPI_LOCK_PREFIX}-event-handler"
 
 def mock_cloud_options
   {
@@ -132,6 +137,18 @@ def mock_cloud(options = nil)
   Bosh::AzureCloud::Cloud.new(options || mock_cloud_options['properties'])
 end
 
+def time_measure
+  start = Time.now
+  yield
+  Time.now - start
+end
+
+def run_in_new_process
+  fork do
+    yield
+  end
+end
+
 class MockTelemetryManager
   def monitor(*)
     yield
@@ -143,5 +160,6 @@ RSpec.configure do |config|
     logger = Logger.new('/dev/null')
     allow(Bosh::Clouds::Config).to receive(:logger).and_return(logger)
     allow(logger).to receive(:set_request_id).with(MOCK_REQUEST_ID)
+    RSpec::Support::ObjectFormatter.default_instance.max_formatted_output_length = 500
   end
 end

@@ -29,6 +29,49 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
+        context 'when vm is created in an availability set' do
+          let(:availability_set_name) { 'fake-avset-name' }
+          let(:availability_set) do
+            {
+              name: availability_set_name,
+              location: location,
+              virtual_machines: []
+            }
+          end
+
+          before do
+            resource_pool['availability_set'] = availability_set_name
+
+            allow(client2).to receive(:create_virtual_machine)
+              .and_raise('virtual machine is not created')
+            allow(client2).to receive(:get_availability_set_by_name)
+              .and_return(availability_set)
+          end
+
+          it 'should delete vm, avset and nics and then raise an error' do
+            expect(client2).to receive(:delete_virtual_machine).once
+            expect(client2).to receive(:delete_availability_set).once
+            expect(disk_manager).to receive(:delete_disk).with(storage_account_name, os_disk_name).once
+            expect(disk_manager).to receive(:delete_disk).with(storage_account_name, ephemeral_disk_name).once
+            expect(disk_manager).to receive(:delete_vm_status_files)
+              .with(storage_account_name, vm_name).once
+            expect(client2).to receive(:delete_network_interface).twice
+            expect(vm_manager).to receive(:flock)
+              .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_EX) # get_or_create_availability_set
+              .and_call_original
+            expect(vm_manager).to receive(:flock)
+              .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_SH) # create vm, delete vm
+              .and_call_original
+              .twice
+            expect(vm_manager).to receive(:flock)
+              .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_EX | File::LOCK_NB) # delete empty avset
+              .and_call_original
+            expect do
+              vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            end.to raise_error /virtual machine is not created/
+          end
+        end
+
         context 'and an error occurs when deleting nic' do
           before do
             allow(client2).to receive(:create_virtual_machine)
