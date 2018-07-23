@@ -332,6 +332,16 @@ describe 'cpi.json.erb' do
         end
       end
     end
+
+    context 'when isv_tracking_guid is provided' do
+      before do
+        manifest['properties']['azure']['isv_tracking_guid'] = 'fake-tracking-guid'
+      end
+
+      it 'is able to render isv_tracking_guid' do
+        expect(subject['cloud']['properties']['azure']['isv_tracking_guid']).to eq('fake-tracking-guid')
+      end
+    end
   end
 
   context 'when parsing the registry property' do

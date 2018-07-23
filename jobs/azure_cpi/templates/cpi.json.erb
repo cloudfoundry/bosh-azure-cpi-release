@@ -75,6 +75,10 @@
     params['cloud']['properties']['azure']['azure_stack']['endpoint_prefix'] = p('azure.azure_stack.endpoint_prefix')
   end
 
+  if_p('azure.isv_tracking_guid') do |isv_tracking_guid|
+    params['cloud']['properties']['azure']['isv_tracking_guid'] = isv_tracking_guid
+  end
+
   if_p('registry.endpoint') do |endpoint|
     params['cloud']['properties']['registry']['endpoint'] = endpoint
   end.else do

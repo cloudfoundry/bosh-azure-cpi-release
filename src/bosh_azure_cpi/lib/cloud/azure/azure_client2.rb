@@ -2417,7 +2417,10 @@ module Bosh::AzureCloud
     end
 
     def merge_http_common_headers(request)
-      request['User-Agent'] = USER_AGENT_FOR_REST
+      user_agents = ["#{USER_AGENT_FOR_REST}/#{Bosh::AzureCloud::VERSION}"]
+      isv_tracking_guid = @azure_properties['isv_tracking_guid'].nil? ? DEFAULT_ISV_TRACKING_GUID : @azure_properties['isv_tracking_guid']
+      user_agents.push("pid-#{isv_tracking_guid}")
+      request['User-Agent'] = user_agents.join(' ')
       # https://msdn.microsoft.com/en-us/library/mt766820.aspx
       # Caller-specified request ID, in the form of a GUID with no decoration such as curly braces.
       # If specified, this will be included in response information as a way to map the request.
