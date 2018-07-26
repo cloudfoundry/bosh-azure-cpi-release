@@ -917,6 +917,7 @@ describe Bosh::AzureCloud::Helpers do
       context 'with exclusive lock' do
         let(:mode) { File::LOCK_EX }
         let(:accuracy) { 0.05 }
+        let(:lock_name) { 'fake-exclusive-lock' }
 
         it 'the processes should get the lock sequentially and then call the block' do
           # process 1 - child process
@@ -945,6 +946,7 @@ describe Bosh::AzureCloud::Helpers do
       context 'with share lock' do
         let(:mode) { File::LOCK_SH }
         let(:accuracy) { 0.05 }
+        let(:lock_name) { 'fake-share-lock' }
 
         it 'the processes should get the lock in parallel and then call the block' do
           # process 1 - child process
@@ -972,6 +974,7 @@ describe Bosh::AzureCloud::Helpers do
       context 'with exclusive but no block lock' do
         let(:mode) { File::LOCK_EX | File::LOCK_NB }
         let(:accuracy) { 0.05 }
+        let(:lock_name) { 'fake-exclusive-nb-lock' }
 
         it 'only the process gets the lock and calls the block, the other process should return directly' do
           # process 1 - child process
