@@ -43,7 +43,7 @@ module Bosh::AzureCloud
       vm_params = {
         name: vm_name,
         location: location,
-        tags: AZURE_TAGS,
+        tags: get_tags(resource_pool),
         vm_size: vm_size,
         os_disk: os_disk,
         ephemeral_disk: ephemeral_disk,
@@ -491,6 +491,12 @@ module Bosh::AzureCloud
       end
 
       availability_set_name
+    end
+
+    def get_tags(resource_pool)
+      tags = AZURE_TAGS.dup
+      custom_tags = resource_pool.fetch('tags', {})
+      tags.merge!(custom_tags)
     end
 
     # In AzureStack, availability sets can only be configured with 1 fault domain and 1 update domain.
