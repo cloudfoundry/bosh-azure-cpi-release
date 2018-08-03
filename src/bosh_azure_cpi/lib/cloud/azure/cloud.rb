@@ -168,39 +168,16 @@ module Bosh::AzureCloud
 
           if @use_managed_disks
             instance_id = InstanceId.create(resource_group_name, agent_id)
-
-            storage_account_type = resource_pool['storage_account_type']
-            storage_account_type = get_storage_account_type_by_instance_type(resource_pool['instance_type']) if storage_account_type.nil?
-
-            if is_light_stemcell_id?(stemcell_id)
-              raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
-              stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
-            else
-              begin
-                # Treat user_image_info as stemcell_info
-                stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_id, storage_account_type, location)
-              rescue StandardError => e
-                raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell `#{stemcell_id}': #{e.inspect}\n#{e.backtrace.join("\n")}"
-              end
-            end
           else
             cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') unless resource_pool['availability_zone'].nil?
             storage_account = @storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
             instance_id = InstanceId.create(resource_group_name, agent_id, storage_account[:name])
-
-            if is_light_stemcell_id?(stemcell_id)
-              raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
-              stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
-            else
-              raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell `#{stemcell_id}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)
-              stemcell_info = @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_id)
-            end
           end
 
           vm_params = @vm_manager.create(
             instance_id,
             location,
-            stemcell_info,
+            stemcell_id,
             resource_pool,
             network_configurator,
             env
@@ -687,7 +664,7 @@ module Bosh::AzureCloud
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client2)
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @table_manager, @storage_account_manager, @azure_client2)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client2)
-      @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_properties, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client2, @storage_account_manager)
+      @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_properties, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client2, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager
