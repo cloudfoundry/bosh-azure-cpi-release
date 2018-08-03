@@ -13,6 +13,8 @@ describe Bosh::AzureCloud::VMManager do
     context 'when VM is created' do
       before do
         allow(client2).to receive(:create_virtual_machine)
+        allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager2).to receive(:get_stemcell_info).and_return(stemcell_info)
       end
 
       # Dynamic Public IP
@@ -34,7 +36,7 @@ describe Bosh::AzureCloud::VMManager do
             Bosh::AzureCloud::VMManager.new(
               mock_azure_config_merge(
                 'pip_idle_timeout_in_minutes' => idle_timeout
-              ), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager
+              ), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
             )
           end
           let(:public_ip_params) do
@@ -44,6 +46,10 @@ describe Bosh::AzureCloud::VMManager do
               is_static: false,
               idle_timeout_in_minutes: idle_timeout
             }
+          end
+
+          before do
+            allow(vm_manager_for_pip).to receive(:get_stemcell_info).and_return(stemcell_info)
           end
 
           it 'creates a public IP and assigns it to the primary NIC' do
@@ -59,7 +65,7 @@ describe Bosh::AzureCloud::VMManager do
                                            application_gateway: application_gateway
                                          )).once
 
-            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -87,7 +93,7 @@ describe Bosh::AzureCloud::VMManager do
                                            application_gateway: application_gateway
                                          ))
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -137,7 +143,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
             expect(client2).to receive(:create_virtual_machine)
               .with(resource_group_name, vm_params, network_interfaces, nil)
-            result = vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            result = vm_manager2.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(result[:name]).to eq(vm_name)
           end
         end
@@ -183,7 +189,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(resource_group_name, vm_params, network_interfaces, nil)
             expect(SecureRandom).to receive(:uuid).exactly(3).times
             expect do
-              vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager2.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -210,7 +216,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -233,7 +239,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager2.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end
