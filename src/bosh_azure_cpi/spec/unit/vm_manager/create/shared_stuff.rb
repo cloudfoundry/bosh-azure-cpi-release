@@ -14,15 +14,19 @@ shared_context 'shared stuff for vm manager' do
   let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
   let(:client2) { instance_double(Bosh::AzureCloud::AzureClient) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
+  let(:stemcell_manager) { instance_double(Bosh::AzureCloud::StemcellManager) }
+  let(:stemcell_manager2) { instance_double(Bosh::AzureCloud::StemcellManager2) }
+  let(:light_stemcell_manager) { instance_double(Bosh::AzureCloud::LightStemcellManager) }
 
   # VM manager for unmanaged disks
-  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
   # VM manager for managed disks
-  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
   # Parameters of create
   let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
+  let(:stemcell_id) { 'fake-stemcell-id' }
   let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
   let(:vm_properties) do
     {

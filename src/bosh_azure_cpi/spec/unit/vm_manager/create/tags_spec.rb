@@ -10,6 +10,10 @@ describe Bosh::AzureCloud::VMManager do
   #   - resource_group_name
   #   - default_security_group
   describe '#create' do
+    before do
+      allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
+    end
+
     context 'when VM is created' do
       # Tags
       context '#tags' do
@@ -32,7 +36,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:create_virtual_machine)
               .with(resource_group_name, hash_including(tags: custom_tags.merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end

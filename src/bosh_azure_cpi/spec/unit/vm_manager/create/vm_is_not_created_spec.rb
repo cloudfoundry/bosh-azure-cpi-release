@@ -7,6 +7,11 @@ describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
 
   describe '#create' do
+    before do
+      allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
+      allow(vm_manager2).to receive(:get_stemcell_info).and_return(stemcell_info)
+    end
+
     context 'when VM is not created' do
       context 'and client2.create_virtual_machine raises an normal error' do
         context 'and no more error occurs' do
@@ -24,7 +29,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:delete_network_interface).twice
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.to raise_error /virtual machine is not created/
           end
         end
@@ -67,7 +72,7 @@ describe Bosh::AzureCloud::VMManager do
               .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_EX | File::LOCK_NB) # delete empty avset
               .and_call_original
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.to raise_error /virtual machine is not created/
           end
         end
@@ -89,7 +94,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:delete_network_interface).once
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.to raise_error /cannot delete nic/
           end
         end
@@ -111,7 +116,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:delete_network_interface).twice
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.to raise_error { |error|
               expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
               expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
@@ -143,7 +148,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).to receive(:delete_network_interface).twice
 
                   expect do
-                    vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                    vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                   end.to raise_error { |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
@@ -163,7 +168,7 @@ describe Bosh::AzureCloud::VMManager do
                     expect(client2).to receive(:delete_network_interface).twice
 
                     expect do
-                      vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                      vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                     end.to raise_error { |error|
                       expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                       expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
@@ -187,7 +192,7 @@ describe Bosh::AzureCloud::VMManager do
                     expect(client2).not_to receive(:delete_network_interface)
 
                     expect do
-                      vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                      vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                     end.to raise_error { |error|
                       expect(error.inspect).to match(/The VM fails in provisioning./)
                       expect(error.inspect).to match(/fake error message/)
@@ -218,7 +223,7 @@ describe Bosh::AzureCloud::VMManager do
                     expect(client2).to receive(:delete_network_interface).twice
 
                     expect do
-                      vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                      vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                     end.to raise_error { |error|
                       expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                       expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
@@ -243,7 +248,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).to receive(:delete_network_interface).twice
 
                   expect do
-                    vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                    vm_manager2.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                   end.to raise_error { |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
@@ -260,7 +265,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).to receive(:delete_network_interface).twice
 
                   expect do
-                    vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                    vm_manager2.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                   end.to raise_error { |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
@@ -276,14 +281,19 @@ describe Bosh::AzureCloud::VMManager do
                 'keep_failed_vms' => true
               )
             end
-            let(:vm_manager_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+            let(:vm_manager_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
             let(:azure_config_managed_to_keep_failed_vms) do
               mock_azure_config_merge(
                 'use_managed_disks' => true,
                 'keep_failed_vms'   => true
               )
             end
-            let(:vm_manager2_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_managed_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+            let(:vm_manager2_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_managed_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+
+            before do
+              allow(vm_manager_to_keep_failed_vms).to receive(:get_stemcell_info).and_return(stemcell_info)
+              allow(vm_manager2_to_keep_failed_vms).to receive(:get_stemcell_info).and_return(stemcell_info)
+            end
 
             context 'and use_managed_disks is false' do
               context 'and ephemeral_disk does not exist' do
@@ -302,7 +312,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).not_to receive(:delete_network_interface)
 
                   expect do
-                    vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                    vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                   end.to raise_error { |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
@@ -322,7 +332,7 @@ describe Bosh::AzureCloud::VMManager do
                     expect(client2).not_to receive(:delete_network_interface)
 
                     expect do
-                      vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                      vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                     end.to raise_error { |error|
                       expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                       expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
@@ -346,7 +356,7 @@ describe Bosh::AzureCloud::VMManager do
                     expect(client2).not_to receive(:delete_network_interface)
 
                     expect do
-                      vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                      vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                     end.to raise_error { |error|
                       expect(error.inspect).to match(/The VM fails in provisioning./)
                       expect(error.inspect).to match(/fake error message/)
@@ -377,7 +387,7 @@ describe Bosh::AzureCloud::VMManager do
                     expect(client2).not_to receive(:delete_network_interface)
 
                     expect do
-                      vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                      vm_manager_to_keep_failed_vms.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                     end.to raise_error { |error|
                       expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                       expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
@@ -402,7 +412,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).not_to receive(:delete_network_interface)
 
                   expect do
-                    vm_manager2_to_keep_failed_vms.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                    vm_manager2_to_keep_failed_vms.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                   end.to raise_error { |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
@@ -419,7 +429,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).not_to receive(:delete_network_interface)
 
                   expect do
-                    vm_manager2_to_keep_failed_vms.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                    vm_manager2_to_keep_failed_vms.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                   end.to raise_error { |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)

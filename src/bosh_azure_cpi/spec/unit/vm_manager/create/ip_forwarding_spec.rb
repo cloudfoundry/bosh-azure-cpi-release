@@ -13,6 +13,7 @@ describe Bosh::AzureCloud::VMManager do
     context 'when VM is created' do
       before do
         allow(client2).to receive(:create_virtual_machine)
+        allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
       end
 
       # IP Forwarding
@@ -35,7 +36,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -53,7 +54,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -71,7 +72,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -95,7 +96,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -113,7 +114,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -131,7 +132,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end

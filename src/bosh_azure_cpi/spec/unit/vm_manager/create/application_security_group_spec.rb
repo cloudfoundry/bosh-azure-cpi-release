@@ -13,6 +13,8 @@ describe Bosh::AzureCloud::VMManager do
     context 'when VM is created' do
       before do
         allow(client2).to receive(:create_virtual_machine)
+        allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager2).to receive(:get_stemcell_info).and_return(stemcell_info)
       end
 
       # Resource group
@@ -28,7 +30,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(client2).to receive(:create_resource_group)
             .with(resource_group_name, location)
 
-          vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+          vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
           expect(vm_params[:name]).to eq(vm_name)
         end
       end
@@ -74,7 +76,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:create_network_interface)
               .with(resource_group_name, hash_including(application_security_groups: asgs_in_network_spec), any_args).twice
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
 
@@ -125,7 +127,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).not_to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(application_security_groups: asgs_in_network_spec), any_args)
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -176,7 +178,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(application_security_groups: asgs), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -210,7 +212,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).to receive(:create_network_interface)
                   .with(rg_name_for_asg, hash_including(application_security_groups: asgs), any_args).twice
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                 end.not_to raise_error
               end
             end
@@ -228,7 +230,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).to receive(:create_network_interface)
                   .with(resource_group_name, hash_including(application_security_groups: asgs), any_args).twice
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                 end.not_to raise_error
               end
             end
@@ -247,7 +249,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).to receive(:list_network_interfaces_by_keyword).and_return([])
                 expect(client2).not_to receive(:delete_network_interface)
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
                 end.to raise_error /Cannot find the application security group '#{asg_name}'/
               end
             end
@@ -275,7 +277,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -293,7 +295,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -311,7 +313,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -335,7 +337,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -353,7 +355,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -371,7 +373,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -398,7 +400,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -416,7 +418,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -434,7 +436,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -458,7 +460,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -476,7 +478,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -494,7 +496,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -509,7 +511,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect(client2).to receive(:create_network_interface).exactly(2).times
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:image_uri]).to eq(stemcell_uri)
             expect(vm_params[:os_type]).to eq(os_type)
@@ -538,7 +540,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect(client2).to receive(:create_network_interface).twice
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:os_type]).to eq(os_type)
           end
@@ -564,7 +566,7 @@ describe Bosh::AzureCloud::VMManager do
             Bosh::AzureCloud::VMManager.new(
               mock_azure_config_merge(
                 'pip_idle_timeout_in_minutes' => idle_timeout
-              ), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager
+              ), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
             )
           end
           let(:public_ip_params) do
@@ -574,6 +576,10 @@ describe Bosh::AzureCloud::VMManager do
               is_static: false,
               idle_timeout_in_minutes: idle_timeout
             }
+          end
+
+          before do
+            allow(vm_manager_for_pip).to receive(:get_stemcell_info).and_return(stemcell_info)
           end
 
           it 'creates a public IP and assigns it to the primary NIC' do
@@ -589,7 +595,7 @@ describe Bosh::AzureCloud::VMManager do
                                            application_gateway: application_gateway
                                          )).once
 
-            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -617,7 +623,7 @@ describe Bosh::AzureCloud::VMManager do
                                            application_gateway: application_gateway
                                          ))
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -667,7 +673,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
             expect(client2).to receive(:create_virtual_machine)
               .with(resource_group_name, vm_params, network_interfaces, nil)
-            result = vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            result = vm_manager2.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(result[:name]).to eq(vm_name)
           end
         end
@@ -713,7 +719,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(resource_group_name, vm_params, network_interfaces, nil)
             expect(SecureRandom).to receive(:uuid).exactly(3).times
             expect do
-              vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager2.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -740,7 +746,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -763,7 +769,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager2.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -777,7 +783,7 @@ describe Bosh::AzureCloud::VMManager do
               'enable_vm_boot_diagnostics' => true
             )
           end
-          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
           let(:vm_location) { location }
           let(:diag_storage_uri) { 'fake-diag-storage-uri' }
@@ -804,7 +810,7 @@ describe Bosh::AzureCloud::VMManager do
               'environment' => 'AzureStack'
             )
           end
-          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
           let(:vm_location) { location }
 
@@ -846,7 +852,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -859,7 +865,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -876,7 +882,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq('1')
           end
         end
