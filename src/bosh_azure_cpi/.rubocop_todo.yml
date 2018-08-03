@@ -108,6 +108,8 @@ Metrics/ModuleLength:
 # Configuration parameters: CountKeywordArgs.
 Metrics/ParameterLists:
   Max: 7
+  Exclude:
+    - 'lib/cloud/azure/vm_manager.rb'
 
 # Offense count: 28
 Metrics/PerceivedComplexity:

@@ -4,33 +4,63 @@ module Bosh::AzureCloud
   class VMManager
     include Helpers
 
-    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager)
+    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager)
       @azure_config = azure_config
       @registry_endpoint = registry_endpoint
       @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
       @azure_client = azure_client
       @storage_account_manager = storage_account_manager
-      @use_managed_disks = @azure_config['use_managed_disks']
+      @stemcell_manager = stemcell_manager
+      @stemcell_manager2 = stemcell_manager2
+      @light_stemcell_manager = light_stemcell_manager
+      @use_managed_disks = azure_config['use_managed_disks']
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+    def create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
-      @logger.info("create(#{instance_id}, #{location}, #{stemcell_info.inspect}, #{vm_properties}, ..., ...)")
+      @logger.info("create(#{instance_id}, #{location}, #{stemcell_id}, #{vm_properties}, ..., ...)")
       resource_group_name = instance_id.resource_group_name()
       vm_name = instance_id.vm_name()
-      vm_size = vm_properties.fetch('instance_type', nil)
 
       # When both availability_zone and availability_set are specified, raise an error
       cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_properties['availability_zone'].nil? && !vm_properties['availability_set'].nil?
+      zone = vm_properties.fetch('availability_zone', nil)
+      unless zone.nil?
+        cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
+      end
 
       check_resource_group(resource_group_name, location)
 
+      stemcell_info = get_stemcell_info(stemcell_id, vm_properties, location)
+
+      # When availability_zone is specified, VM won't be in any availability set;
+      # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
+      availability_set_name = vm_properties['availability_zone'].nil? ? get_availability_set_name(vm_properties, env) : nil
+
+      primary_nic_tags = AZURE_TAGS.dup
+      # Store the availability set name in the tags of the NIC
+      primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
+      network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, vm_properties, network_configurator, primary_nic_tags)
+
+      availability_set = get_or_create_availability_set(resource_group_name, availability_set_name, vm_properties, location)
+
+      diagnostics_storage_account = get_diagnostics_storage_account(location)
+
+      # create vm params
+      vm_params = {
+        name: vm_name,
+        location: location,
+        tags: get_tags(vm_properties),
+        vm_size: vm_properties['instance_type'],
+        managed: @use_managed_disks
+      }
+
+      vm_params[:zone] = zone.to_s unless zone.nil?
+
       @disk_manager.vm_properties = vm_properties
       @disk_manager2.vm_properties = vm_properties
-
-      # Raise errors if the properties are not valid before doing others.
       if @use_managed_disks
         os_disk = @disk_manager2.os_disk(vm_name, stemcell_info)
         ephemeral_disk = @disk_manager2.ephemeral_disk(vm_name)
@@ -39,17 +69,10 @@ module Bosh::AzureCloud
         os_disk = @disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
         ephemeral_disk = @disk_manager.ephemeral_disk(storage_account_name, vm_name)
       end
+      vm_params[:os_disk] = os_disk
+      vm_params[:ephemeral_disk] = ephemeral_disk
 
-      vm_params = {
-        name: vm_name,
-        location: location,
-        tags: get_tags(vm_properties),
-        vm_size: vm_size,
-        os_disk: os_disk,
-        ephemeral_disk: ephemeral_disk,
-        os_type: stemcell_info.os_type,
-        managed: @use_managed_disks
-      }
+      vm_params[:os_type] = stemcell_info.os_type
       if stemcell_info.is_light_stemcell?
         vm_params[:image_reference] = stemcell_info.image_reference
       elsif @use_managed_disks
@@ -87,37 +110,9 @@ module Bosh::AzureCloud
         vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns, computer_name)
       end
 
-      zone = vm_properties.fetch('availability_zone', nil)
-      unless zone.nil?
-        cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
-        vm_params[:zone] = zone.to_s
-      end
+      vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host] unless diagnostics_storage_account.nil?
 
-      if @azure_config['enable_vm_boot_diagnostics'] && (@azure_config['environment'] != ENVIRONMENT_AZURESTACK)
-        diagnostics_storage_account = @storage_account_manager.get_or_create_diagnostics_storage_account(location)
-        vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host]
-      end
-
-      primary_nic_tags = AZURE_TAGS.dup
-
-      # When availability_zone is specified, VM won't be in any availability set;
-      # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
-      availability_set_name = vm_properties['availability_zone'].nil? ? get_availability_set_name(vm_properties, env) : nil
-
-      # Store the availability set name in the tags of the NIC
-      primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
-
-      network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, vm_properties, network_configurator, primary_nic_tags)
-      availability_set_params = {
-        name: availability_set_name,
-        location: location,
-        tags: AZURE_TAGS,
-        platform_update_domain_count: vm_properties['platform_update_domain_count'] || default_update_domain_count,
-        platform_fault_domain_count: vm_properties['platform_fault_domain_count'] || default_fault_domain_count,
-        managed: @use_managed_disks
-      }
-
-      create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set_params)
+      create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
 
       vm_params
     rescue StandardError => e
@@ -188,8 +183,8 @@ module Bosh::AzureCloud
       vm_name = instance_id.vm_name()
       vm = @azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
 
+      # Delete the VM
       if vm
-        # Delete the VM
         if vm[:availability_set].nil?
           @azure_client.delete_virtual_machine(resource_group_name, vm_name)
         else
@@ -198,30 +193,24 @@ module Bosh::AzureCloud
             @azure_client.delete_virtual_machine(resource_group_name, vm_name)
           end
         end
+      end
 
-        # Delete the empty availability set
-        delete_empty_availability_set(resource_group_name, vm[:availability_set][:name]) if vm[:availability_set]
-
-        # Delete NICs
-        vm[:network_interfaces].each do |network_interface|
-          @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
-        end
+      # Delete availability set
+      availability_set_name = nil
+      if vm
+        availability_set_name = vm[:availability_set][:name] unless vm[:availability_set].nil?
       else
         # If the VM is deleted but the availability sets are not deleted due to some reason, BOSH will retry and VM will be nil.
         # CPI needs to get the availability set name from the primary NIC's tags, and delete it.
-        # If CPI deleted the primary NIC successfully but failed deleting the second NIC, then NICs[0] is not the primary NIC when retrying.
-        # It still works since no avset name in the tags of the second NIC.
         network_interfaces = @azure_client.list_network_interfaces_by_keyword(resource_group_name, vm_name)
-        unless network_interfaces.empty?
-          network_interfaces.each do |network_interface|
-            availability_set_name = network_interface[:tags]['availability_set']
-            delete_empty_availability_set(resource_group_name, availability_set_name) unless availability_set_name.nil?
-            @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
-          end
+        network_interfaces.each do |network_interface|
+          availability_set_name = network_interface[:tags]['availability_set'] unless network_interface[:tags]['availability_set'].nil?
         end
       end
+      delete_empty_availability_set(resource_group_name, availability_set_name) unless availability_set_name.nil?
 
-      # Delete the dynamic public IP
+      # Delete network interfaces and dynamic public IP
+      delete_possible_network_interfaces(resource_group_name, vm_name)
       dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
       @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
 
@@ -234,6 +223,7 @@ module Bosh::AzureCloud
         @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
       else
         storage_account_name = instance_id.storage_account_name()
+
         os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
         @disk_manager.delete_disk(storage_account_name, os_disk_name)
 
@@ -307,6 +297,43 @@ module Bosh::AzureCloud
     end
 
     private
+
+    def get_stemcell_info(stemcell_id, vm_properties, location)
+      stemcell_info = nil
+      if @use_managed_disks
+        storage_account_type = vm_properties['storage_account_type']
+        storage_account_type = get_storage_account_type_by_instance_type(vm_properties['instance_type']) if storage_account_type.nil?
+
+        if is_light_stemcell_id?(stemcell_id)
+          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
+          stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
+        else
+          begin
+            # Treat user_image_info as stemcell_info
+            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_id, storage_account_type, location)
+          rescue StandardError => e
+            raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell '#{stemcell_id}': #{e.inspect}\n#{e.backtrace.join("\n")}"
+          end
+        end
+      else
+        storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+
+        if is_light_stemcell_id?(stemcell_id)
+          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
+          stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
+        else
+          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)
+          stemcell_info = @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_id)
+        end
+      end
+
+      @logger.debug("get_stemcell_info - got stemcell '#{stemcell_info.inspect}'")
+      stemcell_info
+    end
+
+    def get_diagnostics_storage_account(location)
+      @azure_config['enable_vm_boot_diagnostics'] && (@azure_config['environment'] != ENVIRONMENT_AZURESTACK) ? @storage_account_manager.get_or_create_diagnostics_storage_account(location) : nil
+    end
 
     # Example -
     # For Linux:     {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"server":{"name":"<instance-id>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
@@ -413,8 +440,7 @@ module Bosh::AzureCloud
       application_gateway
     end
 
-    def create_network_interfaces(resource_group_name, vm_name, location, vm_properties, network_configurator, primary_nic_tags = AZURE_TAGS)
-      network_interfaces = []
+    def get_or_create_public_ip(resource_group_name, vm_name, location, vm_properties, network_configurator)
       public_ip = get_public_ip(network_configurator.vip_network)
       if public_ip.nil? && vm_properties['assign_dynamic_public_ip'] == true
         # create dynamic public ip
@@ -430,6 +456,15 @@ module Bosh::AzureCloud
         @azure_client.create_public_ip(resource_group_name, public_ip_params)
         public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
       end
+      public_ip
+    end
+
+    def create_network_interfaces(resource_group_name, vm_name, location, vm_properties, network_configurator, primary_nic_tags = AZURE_TAGS)
+      network_interfaces = []
+      public_ip = get_or_create_public_ip(resource_group_name, vm_name, location, vm_properties, network_configurator)
+      load_balancer = get_load_balancer(vm_properties)
+      application_gateway = get_application_gateway(vm_properties)
+
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
         network_security_group = get_network_security_group(vm_properties, network)
@@ -451,8 +486,8 @@ module Bosh::AzureCloud
         if index.zero?
           nic_params[:public_ip] = public_ip
           nic_params[:tags] = primary_nic_tags
-          nic_params[:load_balancer] = get_load_balancer(vm_properties)
-          nic_params[:application_gateway] = get_application_gateway(vm_properties)
+          nic_params[:load_balancer] = load_balancer
+          nic_params[:application_gateway] = application_gateway
         else
           nic_params[:public_ip] = nil
           nic_params[:tags] = AZURE_TAGS
@@ -513,8 +548,17 @@ module Bosh::AzureCloud
       @azure_config['environment'] == ENVIRONMENT_AZURESTACK ? 1 : 5
     end
 
-    def get_or_create_availability_set(resource_group_name, availability_set_params)
-      availability_set_name = availability_set_params[:name]
+    def get_or_create_availability_set(resource_group_name, availability_set_name, vm_properties, location)
+      return nil if availability_set_name.nil?
+
+      availability_set_params = {
+        name: availability_set_name,
+        location: location,
+        tags: AZURE_TAGS,
+        platform_update_domain_count: vm_properties['platform_update_domain_count'] || default_update_domain_count,
+        platform_fault_domain_count: vm_properties['platform_fault_domain_count'] || default_fault_domain_count,
+        managed: @use_managed_disks
+      }
       availability_set = nil
       flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX) do
         availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
@@ -551,22 +595,20 @@ module Bosh::AzureCloud
       end
     end
 
-    def create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set_params)
+    def create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
       resource_group_name = instance_id.resource_group_name()
       vm_name = instance_id.vm_name()
       max_retries = 2
       retry_create_count = 0
       begin
         @keep_failed_vms = false
-        availability_set = nil
-        availability_set_name = availability_set_params[:name]
-        if !availability_set_name.nil?
-          availability_set = get_or_create_availability_set(resource_group_name, availability_set_params)
+        if availability_set.nil?
+          @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
+        else
+          availability_set_name = availability_set[:name]
           flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH) do
             @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
           end
-        else
-          @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
         end
       rescue StandardError => e
         retry_create = false

@@ -13,6 +13,7 @@ describe Bosh::AzureCloud::VMManager do
     context 'when VM is created' do
       before do
         allow(client2).to receive(:create_virtual_machine)
+        allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
       end
 
       # Boot diagnostics
@@ -23,7 +24,7 @@ describe Bosh::AzureCloud::VMManager do
               'enable_vm_boot_diagnostics' => true
             )
           end
-          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
           let(:vm_location) { location }
           let(:diag_storage_uri) { 'fake-diag-storage-uri' }
@@ -50,7 +51,7 @@ describe Bosh::AzureCloud::VMManager do
               'environment' => 'AzureStack'
             )
           end
-          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
           let(:vm_location) { location }
 
@@ -92,7 +93,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -105,7 +106,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -122,10 +123,67 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq('1')
           end
         end
+      end
+    end
+  end
+
+  describe '#get_diagnostics_storage_account' do
+    context 'when enable_vm_boot_diagnostics is true in azure_config' do
+      let(:azure_config_debug) do
+        mock_azure_config_merge(
+          'enable_vm_boot_diagnostics' => true
+        )
+      end
+      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+      let(:location) { 'fake-location' }
+      let(:diagnostics_storage_account) { double('storage-account') }
+
+      it 'should get the diagnostics account' do
+        expect(storage_account_manager).to receive(:get_or_create_diagnostics_storage_account)
+          .with(location)
+          .and_return(diagnostics_storage_account)
+        expect(
+          vm_manager.send(:get_diagnostics_storage_account, location)
+        ).to be(diagnostics_storage_account)
+      end
+    end
+
+    context 'when enable_vm_boot_diagnostics is false in azure_config' do
+      let(:azure_config_debug) do
+        mock_azure_config_merge(
+          'enable_vm_boot_diagnostics' => false
+        )
+      end
+      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+      let(:location) { 'fake-location' }
+
+      it 'should not get the diagnostics account' do
+        expect(storage_account_manager).not_to receive(:get_or_create_diagnostics_storage_account)
+        expect(
+          vm_manager.send(:get_diagnostics_storage_account, location)
+        ).to be(nil)
+      end
+    end
+
+    context 'when enable_vm_boot_diagnostics is true, but environment is AzureStack in azure_config' do
+      let(:azure_config_debug) do
+        mock_azure_config_merge(
+          'enable_vm_boot_diagnostics' => true,
+          'environment' => 'AzureStack'
+        )
+      end
+      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+      let(:location) { 'fake-location' }
+
+      it 'should not get the diagnostics account' do
+        expect(storage_account_manager).not_to receive(:get_or_create_diagnostics_storage_account)
+        expect(
+          vm_manager.send(:get_diagnostics_storage_account, location)
+        ).to be(nil)
       end
     end
   end
