@@ -90,7 +90,7 @@ describe Bosh::AzureCloud::Cloud do
         let(:zone) { nil }
 
         before do
-          allow(client2).to receive(:get_resource_group).and_return(resource_group)
+          allow(azure_client).to receive(:get_resource_group).and_return(resource_group)
         end
 
         it 'should create a managed disk with the default location and storage account type' do
@@ -137,7 +137,7 @@ describe Bosh::AzureCloud::Cloud do
           before do
             allow(instance_id_object).to receive(:use_managed_disks?)
               .and_return(true)
-            allow(client2).to receive(:get_virtual_machine_by_name)
+            allow(azure_client).to receive(:get_virtual_machine_by_name)
               .with(resource_group_name, vm_name)
               .and_return(vm)
           end

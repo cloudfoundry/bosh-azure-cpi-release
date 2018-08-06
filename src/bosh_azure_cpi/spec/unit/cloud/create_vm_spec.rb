@@ -12,6 +12,7 @@ describe Bosh::AzureCloud::Cloud do
     let(:stemcell_id) { 'bosh-stemcell-xxx' }
     let(:light_stemcell_id) { 'bosh-light-stemcell-xxx' }
     let(:vm_properties) { { 'instance_type' => 'fake-vm-size' } }
+    let(:vm_props) { cloud.props_factory.parse_vm_props(vm_properties) }
     let(:networks_spec) { {} }
     let(:disk_locality) { double('disk locality') }
     let(:environment) { double('environment') }
@@ -30,17 +31,24 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(default_resource_group_name)
       allow(network).to receive(:virtual_network_name)
         .and_return(virtual_network_name)
-      allow(client2).to receive(:get_virtual_network_by_name)
+      allow(azure_client).to receive(:get_virtual_network_by_name)
         .with(default_resource_group_name, virtual_network_name)
         .and_return(vnet)
       allow(telemetry_manager).to receive(:monitor)
         .with('create_vm', id: agent_id, extras: { 'instance_type' => 'fake-vm-size' })
         .and_call_original
+      allow(cloud.props_factory).to receive(:parse_vm_props)
+        .and_return(vm_props)
+      allow(managed_cloud.props_factory).to receive(:parse_vm_props)
+        .and_return(vm_props)
     end
 
     context 'when instance_type is not provided' do
       let(:vm_properties) { {} }
-
+      before do
+        allow(cloud.props_factory).to receive(:parse_vm_props)
+          .and_call_original
+      end
       it 'should raise an error' do
         expect do
           cloud.create_vm(
@@ -60,7 +68,7 @@ describe Bosh::AzureCloud::Cloud do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
           .with(azure_config, networks_spec)
           .and_return(network_configurator)
-        allow(client2).to receive(:get_virtual_network_by_name)
+        allow(azure_client).to receive(:get_virtual_network_by_name)
           .with(default_resource_group_name, virtual_network_name)
           .and_return(nil)
       end
@@ -84,9 +92,9 @@ describe Bosh::AzureCloud::Cloud do
       let(:cloud_with_location) { mock_cloud(cloud_properties_with_location) }
       before do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-          .with(cloud_properties_with_location['azure'], networks_spec)
+          .with(cloud_with_location.config.azure, networks_spec)
           .and_return(network_configurator)
-        allow(client2).to receive(:get_virtual_network_by_name)
+        allow(azure_client).to receive(:get_virtual_network_by_name)
           .with(default_resource_group_name, virtual_network_name)
           .and_return(vnet)
       end
@@ -129,7 +137,7 @@ describe Bosh::AzureCloud::Cloud do
 
       before do
         allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
-          .with(vm_properties, location)
+          .with(vm_props, location)
           .and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?)
           .with(storage_account_name, stemcell_id)
@@ -155,14 +163,25 @@ describe Bosh::AzureCloud::Cloud do
             }
           end
 
+          let(:vm_props) do
+            cloud.props_factory.parse_vm_props(
+              vm_properties
+            )
+          end
+
+          before do
+            allow(cloud.props_factory).to receive(:parse_vm_props)
+              .and_return(vm_props)
+          end
+
           it 'should create the VM in the specified resource group' do
             expect(Bosh::AzureCloud::InstanceId).to receive(:create)
               .with(resource_group_name, agent_id, storage_account_name)
               .and_return(instance_id)
             expect(vm_manager).to receive(:create)
-              .with(instance_id, location, stemcell_id, vm_properties, network_configurator, environment)
+              .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
               .and_return(vm_params)
-            expect(registry).to receive(:update_settings)
+            expect(registry_client).to receive(:update_settings)
 
             expect(
               cloud.create_vm(
@@ -240,7 +259,7 @@ describe Bosh::AzureCloud::Cloud do
       context 'when registry fails to update' do
         before do
           allow(vm_manager).to receive(:create)
-          allow(registry).to receive(:update_settings).and_raise(StandardError)
+          allow(registry_client).to receive(:update_settings).and_raise(StandardError)
         end
 
         it 'deletes the vm' do
@@ -289,15 +308,16 @@ describe Bosh::AzureCloud::Cloud do
             'resource_group_name' => resource_group_name
           }
         end
+        let(:vm_props) { managed_cloud.props_factory.parse_vm_props(vm_properties) }
 
         it 'should create the VM in the specified resource group' do
           expect(Bosh::AzureCloud::InstanceId).to receive(:create)
             .with(resource_group_name, agent_id)
             .and_return(instance_id)
           expect(vm_manager).to receive(:create)
-            .with(instance_id, location, stemcell_id, vm_properties, network_configurator, environment)
+            .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
             .and_return(vm_params)
-          expect(registry).to receive(:update_settings)
+          expect(registry_client).to receive(:update_settings)
 
           expect(
             managed_cloud.create_vm(

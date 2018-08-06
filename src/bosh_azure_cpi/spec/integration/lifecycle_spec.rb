@@ -37,7 +37,7 @@ describe Bosh::AzureCloud::Cloud do
   let(:network_spec)               { {} }
   let(:vm_properties)              { { 'instance_type' => instance_type } }
 
-  let(:azure_config) do
+  let(:azure_config_hash) do
     {
       'environment' => azure_environment,
       'subscription_id' => @subscription_id,
@@ -51,9 +51,14 @@ describe Bosh::AzureCloud::Cloud do
       'parallel_upload_thread_num' => 16
     }
   end
+
+  let(:azure_config) do
+    Bosh::AzureCloud::AzureConfig.new(azure_config_hash)
+  end
+
   let(:cloud_options) do
     {
-      'azure' => azure_config,
+      'azure' => azure_config_hash,
       'registry' => {
         'endpoint' => 'fake',
         'user' => 'fake',

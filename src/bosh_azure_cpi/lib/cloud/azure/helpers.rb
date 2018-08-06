@@ -202,33 +202,33 @@ module Bosh::AzureCloud
     end
 
     def get_arm_endpoint(azure_config)
-      if azure_config['environment'] == ENVIRONMENT_AZURESTACK
-        "https://#{azure_config['azure_stack']['endpoint_prefix']}.#{azure_config['azure_stack']['domain']}"
+      if azure_config.environment == ENVIRONMENT_AZURESTACK
+        "https://#{azure_config.azure_stack.endpoint_prefix}.#{azure_config.azure_stack.domain}"
       else
-        AZURE_ENVIRONMENTS[azure_config['environment']]['resourceManagerEndpointUrl']
+        AZURE_ENVIRONMENTS[azure_config.environment]['resourceManagerEndpointUrl']
       end
     end
 
     def get_token_resource(azure_config)
-      if azure_config['environment'] == ENVIRONMENT_AZURESTACK
-        azure_config['azure_stack']['resource']
+      if azure_config.environment == ENVIRONMENT_AZURESTACK
+        azure_config.azure_stack.resource
       else
-        AZURE_ENVIRONMENTS[azure_config['environment']]['resourceManagerEndpointUrl']
+        AZURE_ENVIRONMENTS[azure_config.environment]['resourceManagerEndpointUrl']
       end
     end
 
     def get_azure_authentication_endpoint_and_api_version(azure_config)
       url = nil
       api_version = get_api_version(azure_config, AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY)
-      if azure_config['environment'] == ENVIRONMENT_AZURESTACK
-        domain = azure_config['azure_stack']['domain']
-        authentication = azure_config['azure_stack']['authentication']
+      if azure_config.environment == ENVIRONMENT_AZURESTACK
+        domain = azure_config.azure_stack.domain
+        authentication = azure_config.azure_stack.authentication
 
         if authentication == AZURESTACK_AUTHENTICATION_TYPE_AZUREAD
-          url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['activeDirectoryEndpointUrl']}/#{azure_config['tenant_id']}/oauth2/token"
+          url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['activeDirectoryEndpointUrl']}/#{azure_config.tenant_id}/oauth2/token"
           api_version = AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
         elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_AZURECHINACLOUDAD
-          url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECHINACLOUD]['activeDirectoryEndpointUrl']}/#{azure_config['tenant_id']}/oauth2/token"
+          url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECHINACLOUD]['activeDirectoryEndpointUrl']}/#{azure_config.tenant_id}/oauth2/token"
           api_version = AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECHINACLOUD]['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
         elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_ADFS
           url = "https://adfs.#{domain}/adfs/oauth2/token"
@@ -236,7 +236,7 @@ module Bosh::AzureCloud
           cloud_error("No support for the AzureStack authentication: '#{authentication}'")
         end
       else
-        url = "#{AZURE_ENVIRONMENTS[azure_config['environment']]['activeDirectoryEndpointUrl']}/#{azure_config['tenant_id']}/oauth2/token"
+        url = "#{AZURE_ENVIRONMENTS[azure_config.environment]['activeDirectoryEndpointUrl']}/#{azure_config.tenant_id}/oauth2/token"
       end
 
       [url, api_version]
@@ -280,7 +280,7 @@ module Bosh::AzureCloud
         storage_dns_suffix: URI.parse(storage_account[:storage_blob_host]).host.split('.')[2..-1].join('.'),
         user_agent_prefix: USER_AGENT_FOR_REST
       }
-      options[:ca_file] = get_ca_cert_path if azure_config['environment'] == ENVIRONMENT_AZURESTACK
+      options[:ca_file] = get_ca_cert_path if azure_config.environment == ENVIRONMENT_AZURESTACK
 
       Azure::Storage::Client.create(options)
     end
@@ -290,7 +290,7 @@ module Bosh::AzureCloud
     end
 
     def get_api_version(azure_config, resource_provider)
-      AZURE_ENVIRONMENTS[azure_config['environment']]['apiVersion'][resource_provider]
+      AZURE_ENVIRONMENTS[azure_config.environment]['apiVersion'][resource_provider]
     end
 
     def validate_disk_size(size)
@@ -304,9 +304,7 @@ module Bosh::AzureCloud
     end
 
     def is_debug_mode(azure_config)
-      debug_mode = false
-      debug_mode = azure_config['debug_mode'] unless azure_config['debug_mode'].nil?
-      debug_mode
+      azure_config.is_debug_mode
     end
 
     def merge_storage_common_options(options = {})

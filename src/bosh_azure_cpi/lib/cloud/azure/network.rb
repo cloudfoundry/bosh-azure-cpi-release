@@ -23,7 +23,7 @@ module Bosh::AzureCloud
       @cloud_properties = spec['cloud_properties']
       @spec = spec
       @resource_group_name = if @cloud_properties.nil? || @cloud_properties['resource_group_name'].nil?
-                               @azure_config['resource_group_name']
+                               @azure_config.resource_group_name
                              else
                                @cloud_properties['resource_group_name']
                              end

@@ -14,37 +14,37 @@ module Bosh::AzureCloud
       @stemcell_manager = stemcell_manager
       @stemcell_manager2 = stemcell_manager2
       @light_stemcell_manager = light_stemcell_manager
-      @use_managed_disks = azure_config['use_managed_disks']
+      @use_managed_disks = azure_config.use_managed_disks
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(instance_id, location, stemcell_id, vm_properties, network_configurator, env)
+    def create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
-      @logger.info("create(#{instance_id}, #{location}, #{stemcell_id}, #{vm_properties}, ..., ...)")
+      @logger.info("create(#{instance_id}, #{location}, #{stemcell_id}, #{vm_props}, ..., ...)")
       resource_group_name = instance_id.resource_group_name()
       vm_name = instance_id.vm_name()
 
       # When both availability_zone and availability_set are specified, raise an error
-      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_properties['availability_zone'].nil? && !vm_properties['availability_set'].nil?
-      zone = vm_properties.fetch('availability_zone', nil)
+      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_props.availability_zone.nil? && !vm_props.availability_set.nil?
+      zone = vm_props.availability_zone
       unless zone.nil?
         cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
       end
 
       check_resource_group(resource_group_name, location)
 
-      stemcell_info = get_stemcell_info(stemcell_id, vm_properties, location)
+      stemcell_info = get_stemcell_info(stemcell_id, vm_props, location)
 
       # When availability_zone is specified, VM won't be in any availability set;
       # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
-      availability_set_name = vm_properties['availability_zone'].nil? ? get_availability_set_name(vm_properties, env) : nil
+      availability_set_name = vm_props.availability_zone.nil? ? get_availability_set_name(vm_props, env) : nil
 
       primary_nic_tags = AZURE_TAGS.dup
       # Store the availability set name in the tags of the NIC
       primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
-      network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, vm_properties, network_configurator, primary_nic_tags)
+      network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
 
-      availability_set = get_or_create_availability_set(resource_group_name, availability_set_name, vm_properties, location)
+      availability_set = get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
 
       diagnostics_storage_account = get_diagnostics_storage_account(location)
 
@@ -52,15 +52,15 @@ module Bosh::AzureCloud
       vm_params = {
         name: vm_name,
         location: location,
-        tags: get_tags(vm_properties),
-        vm_size: vm_properties['instance_type'],
+        tags: get_tags(vm_props),
+        vm_size: vm_props.instance_type,
         managed: @use_managed_disks
       }
 
       vm_params[:zone] = zone.to_s unless zone.nil?
 
-      @disk_manager.vm_properties = vm_properties
-      @disk_manager2.vm_properties = vm_properties
+      @disk_manager.vm_props = vm_props
+      @disk_manager2.vm_props = vm_props
       if @use_managed_disks
         os_disk = @disk_manager2.os_disk(vm_name, stemcell_info)
         ephemeral_disk = @disk_manager2.ephemeral_disk(vm_name)
@@ -80,11 +80,10 @@ module Bosh::AzureCloud
       else
         vm_params[:image_uri] = stemcell_info.uri
       end
-
       case stemcell_info.os_type
       when 'linux'
-        vm_params[:ssh_username]  = @azure_config['ssh_user']
-        vm_params[:ssh_cert_data] = @azure_config['ssh_public_key']
+        vm_params[:ssh_username]  = @azure_config.ssh_user
+        vm_params[:ssh_cert_data] = @azure_config.ssh_public_key
         vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns)
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
@@ -298,11 +297,11 @@ module Bosh::AzureCloud
 
     private
 
-    def get_stemcell_info(stemcell_id, vm_properties, location)
+    def get_stemcell_info(stemcell_id, vm_props, location)
       stemcell_info = nil
       if @use_managed_disks
-        storage_account_type = vm_properties['storage_account_type']
-        storage_account_type = get_storage_account_type_by_instance_type(vm_properties['instance_type']) if storage_account_type.nil?
+        storage_account_type = vm_props.storage_account_type
+        storage_account_type = get_storage_account_type_by_instance_type(vm_props.instance_type) if storage_account_type.nil?
 
         if is_light_stemcell_id?(stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
@@ -316,7 +315,7 @@ module Bosh::AzureCloud
           end
         end
       else
-        storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+        storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
 
         if is_light_stemcell_id?(stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
@@ -332,7 +331,7 @@ module Bosh::AzureCloud
     end
 
     def get_diagnostics_storage_account(location)
-      @azure_config['enable_vm_boot_diagnostics'] && (@azure_config['environment'] != ENVIRONMENT_AZURESTACK) ? @storage_account_manager.get_or_create_diagnostics_storage_account(location) : nil
+      @azure_config.enable_vm_boot_diagnostics && (@azure_config.environment != ENVIRONMENT_AZURESTACK) ? @storage_account_manager.get_or_create_diagnostics_storage_account(location) : nil
     end
 
     # Example -
@@ -356,18 +355,18 @@ module Bosh::AzureCloud
       subnet
     end
 
-    def get_network_security_group(vm_properties, network)
+    def get_network_security_group(vm_props, network)
       network_security_group = nil
       # Network security group name can be specified in vm_types or vm_extensions, networks and global configuration (ordered by priority)
-      network_security_group_name = vm_properties.fetch('security_group', network.security_group)
-      network_security_group_name = @azure_config['default_security_group'] if network_security_group_name.nil?
+      network_security_group_name = vm_props.security_group.nil? ? network.security_group : vm_props.security_group
+      network_security_group_name = @azure_config.default_security_group if network_security_group_name.nil?
       return nil if network_security_group_name.nil?
       cloud_error('Cannot specify an empty string to the network security group') if network_security_group_name.empty?
       # The resource group which the NSG belongs to can be specified in networks and global configuration (ordered by priority)
       resource_group_name = network.resource_group_name
       network_security_group = @azure_client.get_network_security_group_by_name(resource_group_name, network_security_group_name)
       # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
-      default_resource_group_name = @azure_config['resource_group_name']
+      default_resource_group_name = @azure_config.resource_group_name
       if network_security_group.nil? && resource_group_name != default_resource_group_name
         @logger.info("Cannot find the network security group '#{network_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
         network_security_group = @azure_client.get_network_security_group_by_name(default_resource_group_name, network_security_group_name)
@@ -376,16 +375,16 @@ module Bosh::AzureCloud
       network_security_group
     end
 
-    def get_application_security_groups(vm_properties, network)
+    def get_application_security_groups(vm_props, network)
       application_security_groups = []
       # Application security group name can be specified in vm_types or vm_extensions and networks (ordered by priority)
-      application_security_group_names = vm_properties.fetch('application_security_groups', network.application_security_groups)
+      application_security_group_names = vm_props.application_security_groups.nil? ? network.application_security_groups : vm_props.application_security_groups
       application_security_group_names.each do |application_security_group_name|
         # The resource group which the ASG belongs to can be specified in networks and global configuration (ordered by priority)
         resource_group_name = network.resource_group_name
         application_security_group = @azure_client.get_application_security_group_by_name(resource_group_name, application_security_group_name)
         # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
-        default_resource_group_name = @azure_config['resource_group_name']
+        default_resource_group_name = @azure_config.resource_group_name
         if application_security_group.nil? && resource_group_name != default_resource_group_name
           @logger.info("Cannot find the application security group '#{application_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
           application_security_group = @azure_client.get_application_security_group_by_name(default_resource_group_name, application_security_group_name)
@@ -396,17 +395,17 @@ module Bosh::AzureCloud
       application_security_groups
     end
 
-    def get_ip_forwarding(vm_properties, network)
+    def get_ip_forwarding(vm_props, network)
       ip_forwarding = false
       # ip_forwarding can be specified in vm_types or vm_extensions and networks (ordered by priority)
-      ip_forwarding = vm_properties.fetch('ip_forwarding', network.ip_forwarding)
+      ip_forwarding = vm_props.ip_forwarding.nil? ? network.ip_forwarding : vm_props.ip_forwarding
       ip_forwarding
     end
 
-    def get_accelerated_networking(vm_properties, network)
+    def get_accelerated_networking(vm_props, network)
       accelerated_networking = false
       # accelerated_networking can be specified in vm_types or vm_extensions and networks (ordered by priority)
-      accelerated_networking = vm_properties.fetch('accelerated_networking', network.accelerated_networking)
+      accelerated_networking = vm_props.accelerated_networking.nil? ? network.accelerated_networking : vm_props.accelerated_networking
       accelerated_networking
     end
 
@@ -420,31 +419,31 @@ module Bosh::AzureCloud
       public_ip
     end
 
-    def get_load_balancer(vm_properties)
+    def get_load_balancer(vm_props)
       load_balancer = nil
-      unless vm_properties['load_balancer'].nil?
-        load_balancer_name = vm_properties['load_balancer']
+      unless vm_props.load_balancer.nil?
+        load_balancer_name = vm_props.load_balancer
         load_balancer = @azure_client.get_load_balancer_by_name(load_balancer_name)
         cloud_error("Cannot find the load balancer '#{load_balancer_name}'") if load_balancer.nil?
       end
       load_balancer
     end
 
-    def get_application_gateway(vm_properties)
+    def get_application_gateway(vm_props)
       application_gateway = nil
-      unless vm_properties['application_gateway'].nil?
-        application_gateway_name = vm_properties['application_gateway']
+      unless vm_props.application_gateway.nil?
+        application_gateway_name = vm_props.application_gateway
         application_gateway = @azure_client.get_application_gateway_by_name(application_gateway_name)
         cloud_error("Cannot find the application gateway '#{application_gateway_name}'") if application_gateway.nil?
       end
       application_gateway
     end
 
-    def get_or_create_public_ip(resource_group_name, vm_name, location, vm_properties, network_configurator)
+    def get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
       public_ip = get_public_ip(network_configurator.vip_network)
-      if public_ip.nil? && vm_properties['assign_dynamic_public_ip'] == true
+      if public_ip.nil? && vm_props.assign_dynamic_public_ip == true
         # create dynamic public ip
-        idle_timeout_in_minutes = @azure_config.fetch('pip_idle_timeout_in_minutes', 4)
+        idle_timeout_in_minutes = @azure_config.pip_idle_timeout_in_minutes
         validate_idle_timeout(idle_timeout_in_minutes)
         public_ip_params = {
           name: vm_name,
@@ -452,25 +451,25 @@ module Bosh::AzureCloud
           is_static: false,
           idle_timeout_in_minutes: idle_timeout_in_minutes
         }
-        public_ip_params[:zone] = vm_properties['availability_zone'].to_s unless vm_properties['availability_zone'].nil?
+        public_ip_params[:zone] = vm_props.availability_zone.to_s unless vm_props.availability_zone.nil?
         @azure_client.create_public_ip(resource_group_name, public_ip_params)
         public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
       end
       public_ip
     end
 
-    def create_network_interfaces(resource_group_name, vm_name, location, vm_properties, network_configurator, primary_nic_tags = AZURE_TAGS)
+    def create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
       network_interfaces = []
-      public_ip = get_or_create_public_ip(resource_group_name, vm_name, location, vm_properties, network_configurator)
-      load_balancer = get_load_balancer(vm_properties)
-      application_gateway = get_application_gateway(vm_properties)
+      public_ip = get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
+      load_balancer = get_load_balancer(vm_props)
+      application_gateway = get_application_gateway(vm_props)
 
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
-        network_security_group = get_network_security_group(vm_properties, network)
-        application_security_groups = get_application_security_groups(vm_properties, network)
-        ip_forwarding = get_ip_forwarding(vm_properties, network)
-        accelerated_networking = get_accelerated_networking(vm_properties, network)
+        network_security_group = get_network_security_group(vm_props, network)
+        application_security_groups = get_application_security_groups(vm_props, network)
+        ip_forwarding = get_ip_forwarding(vm_props, network)
+        accelerated_networking = get_accelerated_networking(vm_props, network)
         nic_name = "#{vm_name}-#{index}"
         nic_params = {
           name: nic_name,
@@ -507,8 +506,8 @@ module Bosh::AzureCloud
       end
     end
 
-    def get_availability_set_name(vm_properties, env)
-      availability_set_name = vm_properties.fetch('availability_set', nil)
+    def get_availability_set_name(vm_props, env)
+      availability_set_name = vm_props.availability_set
       if availability_set_name.nil?
         unless env.nil? || env['bosh'].nil? || env['bosh']['group'].nil?
           availability_set_name = env['bosh']['group']
@@ -528,35 +527,21 @@ module Bosh::AzureCloud
       availability_set_name
     end
 
-    def get_tags(vm_properties)
+    def get_tags(vm_props)
       tags = AZURE_TAGS.dup
-      custom_tags = vm_properties.fetch('tags', {})
+      custom_tags = vm_props.tags
       tags.merge!(custom_tags)
     end
 
-    # In AzureStack, availability sets can only be configured with 1 fault domain and 1 update domain.
-    # In Azure, the max fault domain count of an unmanaged availability set is 3;
-    #           the max fault domain count of a managed availability set is 2 in some regions.
-    #           When all regions support 3 fault domains, the default value should be changed to 3.
-    def default_fault_domain_count
-      @azure_config['environment'] == ENVIRONMENT_AZURESTACK ? 1 : (@use_managed_disks ? 2 : 3)
-    end
-
-    # In AzureStack, availability sets can only be configured with 1 update domain.
-    # In Azure, the max update domain count of a managed/unmanaged availability set is 5.
-    def default_update_domain_count
-      @azure_config['environment'] == ENVIRONMENT_AZURESTACK ? 1 : 5
-    end
-
-    def get_or_create_availability_set(resource_group_name, availability_set_name, vm_properties, location)
+    def get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
       return nil if availability_set_name.nil?
 
       availability_set_params = {
         name: availability_set_name,
         location: location,
         tags: AZURE_TAGS,
-        platform_update_domain_count: vm_properties['platform_update_domain_count'] || default_update_domain_count,
-        platform_fault_domain_count: vm_properties['platform_fault_domain_count'] || default_fault_domain_count,
+        platform_update_domain_count: vm_props.platform_update_domain_count || default_update_domain_count,
+        platform_fault_domain_count: vm_props.platform_fault_domain_count || default_fault_domain_count,
         managed: @use_managed_disks
       }
       availability_set = nil
@@ -618,7 +603,7 @@ module Bosh::AzureCloud
             retry_create = true
           else
             # Keep the VM which fails in provisioning after multiple retries if "keep_failed_vms" is true in global configuration
-            @keep_failed_vms = @azure_config['keep_failed_vms']
+            @keep_failed_vms = @azure_config.keep_failed_vms
           end
         end
 

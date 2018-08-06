@@ -3,8 +3,9 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::DiskManager2 do
-  let(:client2) { instance_double(Bosh::AzureCloud::AzureClient) }
-  let(:disk_manager2) { Bosh::AzureCloud::DiskManager2.new(client2) }
+  let(:props_factory) { Bosh::AzureCloud::PropsFactory.new(Bosh::AzureCloud::ConfigFactory.build(mock_cloud_options)) }
+  let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
+  let(:disk_manager2) { Bosh::AzureCloud::DiskManager2.new(azure_client) }
   let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
   let(:snapshot_id) { instance_double(Bosh::AzureCloud::DiskId) }
 
@@ -50,7 +51,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
 
     it 'creates the disk with the specified caching and storage account type' do
-      expect(client2).to receive(:create_empty_managed_disk)
+      expect(azure_client).to receive(:create_empty_managed_disk)
         .with(resource_group_name, disk_params)
       expect do
         disk_manager2.create_disk(disk_id, location, size, storage_account_type, zone)
@@ -81,7 +82,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
 
     it 'creates the managed disk from the blob uri' do
-      expect(client2).to receive(:create_managed_disk_from_blob)
+      expect(azure_client).to receive(:create_managed_disk_from_blob)
         .with(resource_group_name, disk_params)
       expect do
         disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, zone)
@@ -92,14 +93,14 @@ describe Bosh::AzureCloud::DiskManager2 do
   describe '#delete_disk' do
     context 'when the disk exists' do
       before do
-        allow(client2).to receive(:get_managed_disk_by_name)
+        allow(azure_client).to receive(:get_managed_disk_by_name)
           .with(resource_group_name, disk_name)
           .and_return({})
       end
 
       context 'when AzureConflictError is not thrown' do
         it 'deletes the disk' do
-          expect(client2).to receive(:delete_managed_disk)
+          expect(azure_client).to receive(:delete_managed_disk)
             .with(resource_group_name, disk_name).once
 
           expect do
@@ -110,10 +111,10 @@ describe Bosh::AzureCloud::DiskManager2 do
 
       context 'when AzureConflictError is thrown only one time' do
         it 'do one retry and deletes the disk' do
-          expect(client2).to receive(:delete_managed_disk)
+          expect(azure_client).to receive(:delete_managed_disk)
             .with(resource_group_name, disk_name)
             .and_raise(Bosh::AzureCloud::AzureConflictError)
-          expect(client2).to receive(:delete_managed_disk)
+          expect(azure_client).to receive(:delete_managed_disk)
             .with(resource_group_name, disk_name).once
 
           expect do
@@ -124,7 +125,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
       context 'when AzureConflictError is thrown every time' do
         before do
-          allow(client2).to receive(:delete_managed_disk)
+          allow(azure_client).to receive(:delete_managed_disk)
             .with(resource_group_name, disk_name)
             .and_raise(Bosh::AzureCloud::AzureConflictError)
         end
@@ -139,13 +140,13 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     context 'when the disk does not exist' do
       before do
-        allow(client2).to receive(:get_managed_disk_by_name)
+        allow(azure_client).to receive(:get_managed_disk_by_name)
           .with(resource_group_name, disk_name)
           .and_return(nil)
       end
 
       it 'does not delete the disk' do
-        expect(client2).not_to receive(:delete_managed_disk)
+        expect(azure_client).not_to receive(:delete_managed_disk)
           .with(resource_group_name, disk_name)
 
         expect do
@@ -169,7 +170,7 @@ describe Bosh::AzureCloud::DiskManager2 do
   describe '#has_disk?' do
     context 'when the disk exists' do
       before do
-        allow(client2).to receive(:get_managed_disk_by_name)
+        allow(azure_client).to receive(:get_managed_disk_by_name)
           .with(resource_group_name, disk_name)
           .and_return({})
       end
@@ -181,7 +182,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     context 'when the disk does not exist' do
       before do
-        allow(client2).to receive(:get_managed_disk_by_name)
+        allow(azure_client).to receive(:get_managed_disk_by_name)
           .with(resource_group_name, disk_name)
           .and_return(nil)
       end
@@ -207,7 +208,7 @@ describe Bosh::AzureCloud::DiskManager2 do
       { name: 'fake-name' }
     end
     before do
-      allow(client2).to receive(:get_managed_disk_by_name)
+      allow(azure_client).to receive(:get_managed_disk_by_name)
         .with(resource_group_name, disk_name)
         .and_return(disk)
     end
@@ -242,7 +243,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
 
     it 'creates the managed snapshot' do
-      expect(client2).to receive(:create_managed_snapshot).with(resource_group_name, snapshot_params)
+      expect(azure_client).to receive(:create_managed_snapshot).with(resource_group_name, snapshot_params)
 
       expect do
         disk_manager2.snapshot_disk(snapshot_id, disk_name, metadata)
@@ -252,7 +253,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
   describe '#delete_snapshot' do
     it 'deletes the snapshot' do
-      expect(client2).to receive(:delete_managed_snapshot).with(resource_group_name, snapshot_name)
+      expect(azure_client).to receive(:delete_managed_snapshot).with(resource_group_name, snapshot_name)
 
       expect do
         disk_manager2.delete_snapshot(snapshot_id)
@@ -263,7 +264,7 @@ describe Bosh::AzureCloud::DiskManager2 do
   describe '#has_snapshot?' do
     context 'when the snapshot exists' do
       before do
-        allow(client2).to receive(:get_managed_snapshot_by_name)
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
           .with(resource_group_name, snapshot_name)
           .and_return({})
       end
@@ -275,7 +276,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     context 'when the snapshot does not exist' do
       before do
-        allow(client2).to receive(:get_managed_snapshot_by_name)
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
           .with(resource_group_name, snapshot_name)
           .and_return(nil)
       end
@@ -319,14 +320,14 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     # Caching
     context 'when caching is not specified' do
-      let(:vm_properties) do
-        {
+      let(:vm_props) do
+        props_factory.parse_vm_props(
           'instance_type' => 'STANDARD_A1'
-        }
+        )
       end
 
       it 'should return the default caching for os disk: ReadWrite' do
-        disk_manager2.vm_properties = vm_properties
+        disk_manager2.vm_props = vm_props
 
         expect(
           disk_manager2.os_disk(vm_name, stemcell_info)
@@ -341,15 +342,15 @@ describe Bosh::AzureCloud::DiskManager2 do
     context 'when caching is specified' do
       context 'when caching is valid' do
         let(:disk_caching) { 'ReadOnly' }
-        let(:vm_properties) do
-          {
+        let(:vm_props) do
+          props_factory.parse_vm_props(
             'instance_type' => 'STANDARD_A1',
             'caching' => disk_caching
-          }
+          )
         end
 
         it 'should return the specified caching' do
-          disk_manager2.vm_properties = vm_properties
+          disk_manager2.vm_props = vm_props
 
           expect(
             disk_manager2.os_disk(vm_name, stemcell_info)
@@ -362,15 +363,15 @@ describe Bosh::AzureCloud::DiskManager2 do
       end
 
       context 'when caching is invalid' do
-        let(:vm_properties) do
-          {
+        let(:vm_props) do
+          props_factory.parse_vm_props(
             'instance_type' => 'STANDARD_A1',
             'caching' => 'invalid'
-          }
+          )
         end
 
         it 'should raise an error' do
-          disk_manager2.vm_properties = vm_properties
+          disk_manager2.vm_props = vm_props
 
           expect do
             disk_manager2.os_disk(vm_name, stemcell_info)
@@ -381,14 +382,14 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     # Disk Size
     context 'without root_disk' do
-      let(:vm_properties) do
-        {
+      let(:vm_props) do
+        props_factory.parse_vm_props(
           'instance_type' => 'STANDARD_A1'
-        }
+        )
       end
 
       it 'should return disk_size: nil' do
-        disk_manager2.vm_properties = vm_properties
+        disk_manager2.vm_props = vm_props
 
         expect(
           disk_manager2.os_disk(vm_name, stemcell_info)
@@ -403,15 +404,15 @@ describe Bosh::AzureCloud::DiskManager2 do
     context 'with root_disk' do
       context 'when size is not specified' do
         context 'with the ephemeral disk' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {}
-            }
+            )
           end
 
           it 'should return correct values' do
-            disk_manager2.vm_properties = vm_properties
+            disk_manager2.vm_props = vm_props
 
             expect(
               disk_manager2.os_disk(vm_name, stemcell_info)
@@ -424,14 +425,14 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         context 'without the ephemeral disk' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {},
               'ephemeral_disk' => {
                 'use_root_disk' => true
               }
-            }
+            )
           end
 
           context 'when the OS is Linux' do
@@ -444,7 +445,7 @@ describe Bosh::AzureCloud::DiskManager2 do
               end
 
               it 'should return the minimum required disk size' do
-                disk_manager2.vm_properties = vm_properties
+                disk_manager2.vm_props = vm_props
 
                 expect(
                   disk_manager2.os_disk(vm_name, stemcell_info)
@@ -464,7 +465,7 @@ describe Bosh::AzureCloud::DiskManager2 do
               end
 
               it 'should return image_size as the disk size' do
-                disk_manager2.vm_properties = vm_properties
+                disk_manager2.vm_props = vm_props
 
                 expect(
                   disk_manager2.os_disk(vm_name, stemcell_info)
@@ -492,7 +493,7 @@ describe Bosh::AzureCloud::DiskManager2 do
               end
 
               it 'should return the minimum required disk size' do
-                disk_manager2.vm_properties = vm_properties
+                disk_manager2.vm_props = vm_props
 
                 expect(
                   disk_manager2.os_disk(vm_name, stemcell_info)
@@ -512,7 +513,7 @@ describe Bosh::AzureCloud::DiskManager2 do
               end
 
               it 'should return image_size as the disk size' do
-                disk_manager2.vm_properties = vm_properties
+                disk_manager2.vm_props = vm_props
 
                 expect(
                   disk_manager2.os_disk(vm_name, stemcell_info)
@@ -529,17 +530,17 @@ describe Bosh::AzureCloud::DiskManager2 do
 
       context 'when size is specified' do
         context 'When the size is not an integer' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 'invalid-size'
               }
-            }
+            )
           end
 
           it 'should raise an error' do
-            disk_manager2.vm_properties = vm_properties
+            disk_manager2.vm_props = vm_props
 
             expect do
               disk_manager2.os_disk(vm_name, stemcell_info)
@@ -548,13 +549,13 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         context 'When the size is smaller than image_size' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 2 * 1024
               }
-            }
+            )
           end
           let(:image_size) { 4 * 1024 }
           before do
@@ -563,7 +564,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should use the image_size' do
-            disk_manager2.vm_properties = vm_properties
+            disk_manager2.vm_props = vm_props
 
             expect(
               disk_manager2.os_disk(vm_name, stemcell_info)
@@ -576,17 +577,17 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         context 'When the size is divisible by 1024' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 5 * 1024
               }
-            }
+            )
           end
 
           it 'should return the correct disk_size' do
-            disk_manager2.vm_properties = vm_properties
+            disk_manager2.vm_props = vm_props
 
             expect(
               disk_manager2.os_disk(vm_name, stemcell_info)
@@ -599,17 +600,17 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         context 'When the size is not divisible by 1024' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
                 'size' => 5 * 1024 + 512
               }
-            }
+            )
           end
 
           it 'should return the smallest Integer greater than or equal to size/1024 for disk_size' do
-            disk_manager2.vm_properties = vm_properties
+            disk_manager2.vm_props = vm_props
 
             expect(
               disk_manager2.os_disk(vm_name, stemcell_info)
@@ -631,14 +632,14 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     context 'without ephemeral_disk' do
       context 'with a valid instance_type' do
-        let(:vm_properties) do
-          {
+        let(:vm_props) do
+          props_factory.parse_vm_props(
             'instance_type' => 'STANDARD_A1'
-          }
+          )
         end
 
         it 'should return correct values' do
-          disk_manager2.vm_properties = vm_properties
+          disk_manager2.vm_props = vm_props
 
           expect(
             disk_manager2.ephemeral_disk(vm_name)
@@ -651,14 +652,14 @@ describe Bosh::AzureCloud::DiskManager2 do
       end
 
       context 'with an invalid instance_type' do
-        let(:vm_properties) do
-          {
+        let(:vm_props) do
+          props_factory.parse_vm_props(
             'instance_type' => 'invalid-instance-type'
-          }
+          )
         end
 
         it 'should return 30 as the default disk size' do
-          disk_manager2.vm_properties = vm_properties
+          disk_manager2.vm_props = vm_props
 
           expect(
             disk_manager2.ephemeral_disk(vm_name)
@@ -674,17 +675,17 @@ describe Bosh::AzureCloud::DiskManager2 do
     context 'with ephemeral_disk' do
       context 'with use_root_disk' do
         context 'when use_root_disk is false' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {
                 'use_root_disk' => false
               }
-            }
+            )
           end
 
           it 'should return correct values' do
-            disk_manager2.vm_properties = vm_properties
+            disk_manager2.vm_props = vm_props
 
             expect(
               disk_manager2.ephemeral_disk(vm_name)
@@ -697,17 +698,17 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         context 'when use_root_disk is true' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {
                 'use_root_disk' => true
               }
-            }
+            )
           end
 
           it 'should return correct values' do
-            disk_manager2.vm_properties = vm_properties
+            disk_manager2.vm_props = vm_props
 
             expect(
               disk_manager2.ephemeral_disk(vm_name)
@@ -718,15 +719,15 @@ describe Bosh::AzureCloud::DiskManager2 do
 
       context 'without use_root_disk' do
         context 'without size' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {}
-            }
+            )
           end
 
           it 'should return correct values' do
-            disk_manager2.vm_properties = vm_properties
+            disk_manager2.vm_props = vm_props
 
             expect(
               disk_manager2.ephemeral_disk(vm_name)
@@ -740,17 +741,17 @@ describe Bosh::AzureCloud::DiskManager2 do
 
         context 'with size' do
           context 'when the size is valid' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'STANDARD_A1',
                 'ephemeral_disk' => {
                   'size' => 30 * 1024
                 }
-              }
+              )
             end
 
             it 'should return the specified size' do
-              disk_manager2.vm_properties = vm_properties
+              disk_manager2.vm_props = vm_props
 
               expect(
                 disk_manager2.ephemeral_disk(vm_name)
@@ -763,17 +764,17 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           context 'when the size is not an integer' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'STANDARD_A1',
                 'ephemeral_disk' => {
                   'size' => 'invalid-size'
                 }
-              }
+              )
             end
 
             it 'should raise an error' do
-              disk_manager2.vm_properties = vm_properties
+              disk_manager2.vm_props = vm_props
 
               expect do
                 disk_manager2.ephemeral_disk(vm_name)
@@ -813,7 +814,7 @@ describe Bosh::AzureCloud::DiskManager2 do
         .and_return(true)
       allow(disk_manager2).to receive(:delete_disk)
         .with(resource_group_name, disk_name)
-      allow(client2).to receive(:create_managed_disk_from_snapshot)
+      allow(azure_client).to receive(:create_managed_disk_from_snapshot)
         .with(resource_group_name, disk_params, snapshot_name)
       allow(disk_manager2).to receive(:has_data_disk?)
         .with(disk_id)
@@ -846,13 +847,13 @@ describe Bosh::AzureCloud::DiskManager2 do
 
     context 'When it fails to create disk from snapshot' do
       before do
-        allow(client2).to receive(:create_managed_disk_from_snapshot)
+        allow(azure_client).to receive(:create_managed_disk_from_snapshot)
           .with(resource_group_name, disk_params, snapshot_name)
           .and_raise('fails to create disk')
       end
 
       it 'should retry and raise an error finally' do
-        expect(client2).to receive(:create_managed_disk_from_snapshot).exactly(3).times
+        expect(azure_client).to receive(:create_managed_disk_from_snapshot).exactly(3).times
 
         expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
@@ -863,13 +864,13 @@ describe Bosh::AzureCloud::DiskManager2 do
     context 'When it fails to create disk from snapshot but succeeds with retry' do
       it 'should migrate the disk without error' do
         count = 0
-        allow(client2).to receive(:create_managed_disk_from_snapshot)
+        allow(azure_client).to receive(:create_managed_disk_from_snapshot)
           .with(resource_group_name, disk_params, snapshot_name) do
             count += 1
             count == 1 ? raise('fails to create disk') : nil
           end
 
-        expect(client2).to receive(:create_managed_disk_from_snapshot).exactly(2).times
+        expect(azure_client).to receive(:create_managed_disk_from_snapshot).exactly(2).times
 
         expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
