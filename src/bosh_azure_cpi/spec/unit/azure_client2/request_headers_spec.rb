@@ -25,7 +25,7 @@ describe Bosh::AzureCloud::AzureClient2 do
     allow(azure_client2).to receive(:sleep)
   end
 
-  describe '#create_virtual_machine' do  # Use function create_virtual_machine to validate user agent
+  describe '#create_virtual_machine' do # Use function create_virtual_machine to validate user agent
     let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}&validating=true" }
 
     let(:vm_params) do
@@ -83,12 +83,12 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           stub_request(:put, vm_uri)
-            .with{ |request|
+            .with do |request|
               headers = request.headers
               expect(headers['Content-Type']).to eq('application/json')
               expect(headers['User-Agent']).to include("BOSH-AZURE-CPI/#{Bosh::AzureCloud::VERSION}")
               expect(headers['User-Agent']).to include(default_isv_tracking_guid)
-            }
+            end
             .to_return(
               status: 200,
               body: '',
@@ -128,12 +128,12 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           stub_request(:put, vm_uri)
-            .with{ |request|
+            .with do |request|
               headers = request.headers
               expect(headers['Content-Type']).to eq('application/json')
               expect(headers['User-Agent']).to include("BOSH-AZURE-CPI/#{Bosh::AzureCloud::VERSION}")
               expect(headers['User-Agent']).to include("pid-#{isv_tracking_guid}")
-            }
+            end
             .to_return(
               status: 200,
               body: '',

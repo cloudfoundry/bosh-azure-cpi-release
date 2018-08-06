@@ -2418,7 +2418,7 @@ module Bosh::AzureCloud
 
     def merge_http_common_headers(request)
       user_agents = ["#{USER_AGENT_FOR_REST}/#{Bosh::AzureCloud::VERSION}"]
-      isv_tracking_guid = @azure_properties['isv_tracking_guid'].nil? ? DEFAULT_ISV_TRACKING_GUID : @azure_properties['isv_tracking_guid']
+      isv_tracking_guid = @azure_properties.fetch('isv_tracking_guid', DEFAULT_ISV_TRACKING_GUID)
       user_agents.push("pid-#{isv_tracking_guid}")
       request['User-Agent'] = user_agents.join(' ')
       # https://msdn.microsoft.com/en-us/library/mt766820.aspx

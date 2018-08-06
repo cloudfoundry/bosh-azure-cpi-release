@@ -76,6 +76,7 @@
   end
 
   if_p('azure.isv_tracking_guid') do |isv_tracking_guid|
+    raise 'Invalide "isv_tracking_guid", length of guid must be 36.' if isv_tracking_guid.length != 36
     params['cloud']['properties']['azure']['isv_tracking_guid'] = isv_tracking_guid
   end
 
