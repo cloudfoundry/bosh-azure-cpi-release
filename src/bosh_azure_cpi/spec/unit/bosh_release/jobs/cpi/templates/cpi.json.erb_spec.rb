@@ -340,7 +340,7 @@ describe 'cpi.json.erb' do
         end
 
         it 'raise an error' do
-          expect { subject }.to raise_error('Invalide "isv_tracking_guid", length of guid must be 36.')
+          expect { subject }.to raise_error('Invalid "isv_tracking_guid", length of guid must be 36.')
         end
       end
 
