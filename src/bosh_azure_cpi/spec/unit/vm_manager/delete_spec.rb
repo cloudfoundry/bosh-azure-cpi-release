@@ -10,7 +10,10 @@ describe Bosh::AzureCloud::VMManager do
     let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
     let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
     let(:azure_properties) { mock_azure_properties }
-    let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+    let(:stemcell_manager) { instance_double(Bosh::AzureCloud::StemcellManager) }
+    let(:stemcell_manager2) { instance_double(Bosh::AzureCloud::StemcellManager2) }
+    let(:light_stemcell_manager) { instance_double(Bosh::AzureCloud::LightStemcellManager) }
+    let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
     let(:resource_group_name) { 'fake-resource-group-name' }
     let(:storage_account_name) { 'fake-storage-account-name' }
@@ -32,6 +35,19 @@ describe Bosh::AzureCloud::VMManager do
 
     let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
 
+    let(:network_interfaces) do
+      [
+        {
+          name: 'fake-nic-1',
+          tags: {}
+        },
+        {
+          name: 'fake-nic-2',
+          tags: {}
+        }
+      ]
+    end
+
     before do
       allow(instance_id).to receive(:resource_group_name)
         .and_return(resource_group_name)
@@ -46,6 +62,9 @@ describe Bosh::AzureCloud::VMManager do
         .with(resource_group_name, vm_name).and_return(network_interface)
       allow(client2).to receive(:get_public_ip_by_name)
         .with(resource_group_name, vm_name).and_return(public_ip)
+
+      allow(client2).to receive(:list_network_interfaces_by_keyword)
+        .with(resource_group_name, vm_name).and_return(network_interfaces)
     end
 
     context 'When vm is not nil' do
@@ -70,6 +89,7 @@ describe Bosh::AzureCloud::VMManager do
             ]
           }
         end
+
         before do
           allow(client2).to receive(:get_virtual_machine_by_name)
             .with(resource_group_name, vm_name).and_return(vm)
@@ -178,11 +198,12 @@ describe Bosh::AzureCloud::VMManager do
               expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB).and_call_original # exclusive unblock lock to delete avset
               expect(client2).to receive(:delete_virtual_machine).with(resource_group_name, vm_name)
               expect(client2).to receive(:delete_availability_set).and_raise(StandardError)
-              expect(client2).not_to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-1')
-              expect(client2).not_to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-2')
-              expect(client2).not_to receive(:delete_public_ip).with(resource_group_name, vm_name)
-              expect(disk_manager2).not_to receive(:delete_disk).with(resource_group_name, os_disk_name)
-              expect(disk_manager2).not_to receive(:delete_disk).with(resource_group_name, ephemeral_disk_name)
+              expect(client2).to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-1')
+              expect(client2).to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-2')
+              expect(client2).to receive(:delete_public_ip).with(resource_group_name, vm_name)
+              expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, os_disk_name)
+              expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, ephemeral_disk_name)
+
 
               expect do
                 vm_manager.delete(instance_id)
