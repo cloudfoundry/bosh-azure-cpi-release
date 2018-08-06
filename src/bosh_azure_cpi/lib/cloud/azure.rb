@@ -42,6 +42,10 @@ require 'bosh/cpi/registry_client'
 
 require 'cloud'
 require 'cloud/azure/helpers'
+require 'cloud/azure/models/config'
+require 'cloud/azure/models/config_factory'
+require 'cloud/azure/models/props_factory'
+require 'cloud/azure/models/vm_cloud_props'
 require 'cloud/azure/cloud'
 require 'cloud/azure/azure_client'
 

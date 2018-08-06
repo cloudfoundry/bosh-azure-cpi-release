@@ -8,8 +8,7 @@ module Bosh::AzureCloud
     TIMEOUT_FOR_BLOB_OPERATIONS = 120 # Timeout in seconds for Blob Service Operations. https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations
 
     def initialize(azure_config, azure_client)
-      @parallel_upload_thread_num = 16
-      @parallel_upload_thread_num = azure_config['parallel_upload_thread_num'].to_i unless azure_config['parallel_upload_thread_num'].nil?
+      @parallel_upload_thread_num = azure_config.parallel_upload_thread_num
       @azure_config = azure_config
       @azure_client = azure_client
       @empty_chunk_content = Array.new(MAX_CHUNK_SIZE, 0).pack('c*')

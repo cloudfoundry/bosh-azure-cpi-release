@@ -4,6 +4,7 @@ require 'spec_helper'
 
 describe Bosh::AzureCloud::StorageAccountManager do
   let(:azure_config) { mock_azure_config }
+  let(:props_factory) { Bosh::AzureCloud::PropsFactory.new(Bosh::AzureCloud::ConfigFactory.build(mock_cloud_options)) }
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:disk_manager) { instance_double(Bosh::AzureCloud::DiskManager) }
   let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
@@ -404,30 +405,30 @@ describe Bosh::AzureCloud::StorageAccountManager do
     end
 
     context 'when vm_properties does not contain storage_account_name' do
-      let(:vm_properties) do
-        {
+      let(:vm_props) do
+        props_factory.parse_vm_props(
           'instance_type' => 'fake-vm-size'
-        }
+        )
       end
 
       it 'should return the default storage account' do
         storage_account_manager.default_storage_account_name
 
         expect(
-          storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+          storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
         ).to be(default_storage_account)
       end
     end
 
     context 'when vm_properties contains storage_account_name' do
       context 'when the storage account name is not a pattern' do
-        let(:vm_properties) do
-          {
+        let(:vm_props) do
+          props_factory.parse_vm_props(
             'instance_type' => 'fake-vm-size',
             'storage_account_name' => storage_account_name,
             'storage_account_type' => 'fake-storage_account_type',
             'storage_account_kind' => 'StorageV2'
-          }
+          )
         end
 
         it 'should try to get or create the storage account' do
@@ -435,18 +436,18 @@ describe Bosh::AzureCloud::StorageAccountManager do
             .with(storage_account_name, {}, 'fake-storage_account_type', 'StorageV2', location, %w[bosh stemcell], false)
             .and_return(storage_account)
           expect(
-            storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+            storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
           ).to be(storage_account)
         end
       end
 
       context 'when the storage account name is a pattern' do
         context 'when the pattern is valid' do
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'fake-vm-size',
               'storage_account_name' => '*pattern*'
-            }
+            )
           end
           let(:storage_accounts) do
             [
@@ -504,17 +505,17 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks).with('patten')
                 expect(disk_manager).not_to receive(:list_disks).with('foo')
 
-                storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
               end
             end
 
             context 'with 2 as storage_account_max_disk_number' do
-              let(:vm_properties) do
-                {
+              let(:vm_props) do
+                props_factory.parse_vm_props(
                   'instance_type' => 'fake-vm-size',
                   'storage_account_name' => '*pattern*',
                   'storage_account_max_disk_number' => 2
-                }
+                )
               end
 
               before do
@@ -529,7 +530,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks).with('foo')
 
                 expect(
-                  storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                  storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
                 ).to eq(
                   name: '4pattern4',
                   location: 'fake-location'
@@ -551,7 +552,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect do
-                  storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                  storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
                 end.to raise_error(/get_storage_account_from_vm_properties - Cannot find an available storage account./)
               end
             end
@@ -568,7 +569,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(azure_client).not_to receive(:create_storage_account)
 
                 expect do
-                  storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                  storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
                 end.to raise_error(/get_storage_account_from_vm_properties - Cannot find an available storage account./)
               end
             end
@@ -578,11 +579,11 @@ describe Bosh::AzureCloud::StorageAccountManager do
         context 'when the pattern is invalid' do
           context 'when the pattern contains one asterisk' do
             context 'when the pattern starts with one asterisk' do
-              let(:vm_properties) do
-                {
+              let(:vm_props) do
+                props_factory.parse_vm_props(
                   'instance_type' => 'fake-vm-size',
                   'storage_account_name' => '*pattern'
-                }
+                )
               end
 
               it 'should raise an error' do
@@ -591,17 +592,17 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect do
-                  storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                  storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
                 end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
               end
             end
 
             context 'when the pattern ends with one asterisk' do
-              let(:vm_properties) do
-                {
+              let(:vm_props) do
+                props_factory.parse_vm_props(
                   'instance_type' => 'fake-vm-size',
                   'storage_account_name' => 'pattern*'
-                }
+                )
               end
 
               it 'should raise an error' do
@@ -611,18 +612,18 @@ describe Bosh::AzureCloud::StorageAccountManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect do
-                  storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                  storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
                 end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
               end
             end
           end
 
           context 'when the pattern contains more than two asterisks' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'fake-vm-size',
                 'storage_account_name' => '**pattern*'
-              }
+              )
             end
 
             it 'should raise an error' do
@@ -632,17 +633,17 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect do
-                storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
               end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
             end
           end
 
           context 'when the pattern contains upper-case letters' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'fake-vm-size',
                 'storage_account_name' => '*PATTERN*'
-              }
+              )
             end
 
             it 'should raise an error' do
@@ -652,17 +653,17 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect do
-                storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
               end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
             end
           end
 
           context 'when the pattern contains special characters' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'fake-vm-size',
                 'storage_account_name' => '*pat+tern*'
-              }
+              )
             end
 
             it 'should raise an error' do
@@ -672,7 +673,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect do
-                storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+                storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
               end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
             end
           end
@@ -691,7 +692,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
     context 'When the global configurations do not contain storage_account_name' do
       it 'should return the storage account' do
-        azure_config.delete('storage_account_name')
+        azure_config.storage_account_name = nil
         expect(storage_account_manager).to receive(:default_storage_account).and_return(name: 'default_storage_account')
         expect(storage_account_manager.default_storage_account_name).to eq('default_storage_account')
       end
@@ -802,7 +803,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         end
 
         it 'should return the storage account' do
-          azure_config.delete('storage_account_name')
+          azure_config.storage_account_name = nil
           expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
 
           expect(storage_account_manager.default_storage_account).to eq(targeted_storage_account)
@@ -868,7 +869,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
             end
 
             it 'should return the storage account' do
-              azure_config.delete('storage_account_name')
+              azure_config.storage_account_name = nil
               expect(Azure::Storage::Client).to receive(:create)
                 .with(
                   storage_account_name: targeted_storage_account[:name],
@@ -915,7 +916,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
             end
 
             it 'should raise an error' do
-              azure_config.delete('storage_account_name')
+              azure_config.storage_account_name = nil
               expect(Azure::Storage::Client).to receive(:create)
                 .with(
                   storage_account_name: targeted_storage_account[:name],
@@ -959,7 +960,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
           end
 
           it 'should create a new storage account' do
-            azure_config.delete('storage_account_name')
+            azure_config.storage_account_name = nil
             expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
             expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
               .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
@@ -1003,7 +1004,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
           end
 
           it 'should create a new storage account' do
-            azure_config.delete('storage_account_name')
+            azure_config.storage_account_name = nil
             expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
               .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
               .and_return(targeted_storage_account)
@@ -1023,7 +1024,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         end
 
         it 'should create a new storage account' do
-          azure_config.delete('storage_account_name')
+          azure_config.storage_account_name = nil
           expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
             .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
             .and_return(targeted_storage_account)

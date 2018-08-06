@@ -53,7 +53,7 @@ describe Bosh::AzureCloud::Cloud do
             }
           end
           it 'should return the cloud_properties' do
-            expect(client2).to receive(:list_available_virtual_machine_sizes).with(location).and_return(available_vm_sizes)
+            expect(azure_client).to receive(:list_available_virtual_machine_sizes).with(location).and_return(available_vm_sizes)
             expect(instance_type_mapper).to receive(:map)
               .with(vm_resources, available_vm_sizes)
               .and_return(instance_type)
@@ -75,7 +75,7 @@ describe Bosh::AzureCloud::Cloud do
             }
           end
           it 'should return the cloud_properties' do
-            expect(client2).to receive(:list_available_virtual_machine_sizes).with(location).and_return(available_vm_sizes)
+            expect(azure_client).to receive(:list_available_virtual_machine_sizes).with(location).and_return(available_vm_sizes)
             expect(instance_type_mapper).to receive(:map)
               .with(vm_resources, available_vm_sizes)
               .and_return(instance_type)

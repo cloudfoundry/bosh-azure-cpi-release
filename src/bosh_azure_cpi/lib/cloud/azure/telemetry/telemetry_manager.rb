@@ -21,7 +21,7 @@ module Bosh::AzureCloud
     # @return - return value of the block
     #
     def monitor(operation, id: '', extras: {})
-      if @azure_config.fetch('enable_telemetry', false) == true && @azure_config['environment'] != ENVIRONMENT_AZURESTACK
+      if @azure_config.enable_telemetry == true && @azure_config.environment != ENVIRONMENT_AZURESTACK
         error_raised = false
 
         event_param_name              = Bosh::AzureCloud::TelemetryEventParam.new('Name', CPI_TELEMETRY_NAME)
@@ -34,7 +34,7 @@ module Bosh::AzureCloud
 
         message_value = {
           'msg' => 'Successed',
-          'subscription_id' => @azure_config['subscription_id']
+          'subscription_id' => @azure_config.subscription_id
         }
         message_value.merge!(extras)
 

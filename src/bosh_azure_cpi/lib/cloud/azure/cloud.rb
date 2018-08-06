@@ -3,11 +3,11 @@
 module Bosh::AzureCloud
   class Cloud < Bosh::Cloud
     attr_reader   :registry
-    attr_reader   :options
+    attr_reader   :config
     # Below defines are for test purpose
     attr_reader   :azure_client, :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper
     attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
-
+    attr_reader   :props_factory
     include Helpers
 
     ##
@@ -15,16 +15,21 @@ module Bosh::AzureCloud
     #
     # @param [Hash] options cloud options
     def initialize(options)
-      @options = options.dup.freeze
+      options_dup = options.dup.freeze
 
       @logger = Bosh::Clouds::Config.logger
 
-      request_id = options['azure']['request_id']
+      @config = Bosh::AzureCloud::ConfigFactory.build(options_dup)
+
+      request_id = options_dup['azure']['request_id']
       @logger.set_request_id(request_id) if request_id
 
-      @use_managed_disks = azure_config['use_managed_disks']
+      @use_managed_disks = azure_config.use_managed_disks
 
       init_cpi_lock_dir
+
+      @props_factory = Bosh::AzureCloud::PropsFactory.new(@config)
+
       @telemetry_manager = Bosh::AzureCloud::TelemetryManager.new(azure_config)
       @telemetry_manager.monitor('initialize') do
         init_registry
@@ -152,8 +157,10 @@ module Bosh::AzureCloud
       # env may contain credentials so we must not log it
       @logger.info("create_vm(#{agent_id}, #{stemcell_id}, #{vm_properties}, #{networks}, #{disk_locality}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        cloud_error("missing required cloud property 'instance_type'.") if vm_properties['instance_type'].nil?
-        extras = { 'instance_type' => vm_properties.fetch('instance_type', 'unknown_instance_type') }
+        vm_props = @props_factory.parse_vm_props(vm_properties)
+        # TODO: move the validation into the factory's methods
+        cloud_error("missing required cloud property 'instance_type'.") if vm_props.instance_type.nil?
+        extras = { 'instance_type' => vm_props.instance_type.nil? ? 'unknown_instance_type' : vm_props.instance_type }
         @telemetry_manager.monitor('create_vm', id: agent_id, extras: extras) do
           # These resources should be in the same location for a VM: VM, NIC, disk(storage account or managed disk).
           # And NIC must be in the same location with VNET, so CPI will use VNET's location as default location for the resources related to the VM.
@@ -162,15 +169,15 @@ module Bosh::AzureCloud
           vnet = @azure_client.get_virtual_network_by_name(network.resource_group_name, network.virtual_network_name)
           cloud_error("Cannot find the virtual network '#{network.virtual_network_name}' under resource group '#{network.resource_group_name}'") if vnet.nil?
           location = vnet[:location]
-          location_in_global_configuration = azure_config['location']
+          location_in_global_configuration = azure_config.location
           cloud_error("The location in the global configuration '#{location_in_global_configuration}' is different from the location of the virtual network '#{location}'") if !location_in_global_configuration.nil? && location_in_global_configuration != location
-          resource_group_name = vm_properties.fetch('resource_group_name', azure_config['resource_group_name'])
+          resource_group_name = vm_props.resource_group_name
 
           if @use_managed_disks
             instance_id = InstanceId.create(resource_group_name, agent_id)
           else
-            cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') unless vm_properties['availability_zone'].nil?
-            storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
+            cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') unless vm_props.availability_zone.nil?
+            storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
             instance_id = InstanceId.create(resource_group_name, agent_id, storage_account[:name])
           end
 
@@ -178,7 +185,7 @@ module Bosh::AzureCloud
             instance_id,
             location,
             stemcell_id,
-            vm_properties,
+            vm_props,
             network_configurator,
             env
           )
@@ -300,7 +307,7 @@ module Bosh::AzureCloud
     def calculate_vm_cloud_properties(vm_resources)
       @telemetry_manager.monitor('calculate_vm_cloud_properties') do
         @logger.info("calculate_vm_cloud_properties(#{vm_resources})")
-        location = azure_config['location']
+        location = azure_config.location
         cloud_error("Missing the property 'location' in the global configuration") if location.nil?
 
         required_keys = %w[cpu ram ephemeral_disk_size]
@@ -364,7 +371,7 @@ module Bosh::AzureCloud
           if @use_managed_disks
             if instance_id.nil?
               # If instance_id is nil, the managed disk will be created in the resource group location.
-              resource_group_name = azure_config['resource_group_name']
+              resource_group_name = azure_config.resource_group_name
               resource_group = @azure_client.get_resource_group(resource_group_name)
               location = resource_group[:location]
               default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
@@ -386,7 +393,7 @@ module Bosh::AzureCloud
             disk_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
             @disk_manager2.create_disk(disk_id, location, size / 1024, storage_account_type, zone)
           else
-            storage_account_name = azure_config['storage_account_name']
+            storage_account_name = azure_config.storage_account_name
             caching = cloud_properties.fetch('caching', 'None')
             validate_disk_caching(caching)
             unless instance_id.nil?
@@ -635,23 +642,14 @@ module Bosh::AzureCloud
 
     private
 
-    def agent_properties
-      @agent_properties ||= options.fetch('agent', {})
-    end
-
     def azure_config
-      @azure_config ||= options.fetch('azure')
+      @config.azure
     end
 
     def init_registry
-      registry_properties = options.fetch('registry')
-      registry_endpoint   = registry_properties.fetch('endpoint')
-      registry_user       = registry_properties.fetch('user')
-      registry_password   = registry_properties.fetch('password')
-
       # Registry updates are not really atomic in relation to
       # Azure API calls, so they might get out of sync.
-      @registry = Bosh::Cpi::RegistryClient.new(registry_endpoint, registry_user, registry_password)
+      @registry = Bosh::Cpi::RegistryClient.new(@config.registry.endpoint, @config.registry.user, @config.registry.password)
     end
 
     def init_azure
@@ -715,7 +713,7 @@ module Bosh::AzureCloud
       end
 
       settings['env'] = environment if environment
-      settings.merge(agent_properties)
+      settings.merge(@config.agent.to_h)
     end
 
     def update_agent_settings(instance_id)

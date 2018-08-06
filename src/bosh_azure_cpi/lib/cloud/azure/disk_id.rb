@@ -57,9 +57,9 @@ module Bosh::AzureCloud
           ret = item.match('^([^:]*):(.*)$')
           id_hash[ret[1]] = ret[2]
         end
-        disk_id = new(VERSION2, id: id_hash, default_resource_group_name: azure_config['resource_group_name'])
+        disk_id = new(VERSION2, id: id_hash, default_resource_group_name: azure_config.resource_group_name)
       else
-        disk_id = new(VERSION1, id: id, default_resource_group_name: azure_config['resource_group_name'])
+        disk_id = new(VERSION1, id: id, default_resource_group_name: azure_config.resource_group_name)
       end
 
       disk_id.validate
