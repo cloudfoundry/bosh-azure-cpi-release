@@ -84,6 +84,8 @@ properties:
       -----BEGIN CERTIFICATE-----
       MII...
       -----END CERTIFICATE-----
+  azure.isv_tracking_guid:
+    description: ISV tracking GUID for usage association
 
   registry.username:
     description: User to access the Registry

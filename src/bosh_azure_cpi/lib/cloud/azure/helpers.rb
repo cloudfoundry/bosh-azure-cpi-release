@@ -83,6 +83,8 @@ module Bosh::AzureCloud
     AZURE_TAGS                    = {
       'user-agent' => USER_AGENT_FOR_AZURE_RESOURCE
     }.freeze
+    # ISV Tracking
+    DEFAULT_ISV_TRACKING_GUID = '563bbbca-7944-4791-b9c6-8af0928114ac'
 
     AZURE_MAX_RETRY_COUNT = 10
 

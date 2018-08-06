@@ -332,6 +332,28 @@ describe 'cpi.json.erb' do
         end
       end
     end
+
+    context 'when isv_tracking_guid is provided' do
+      context 'when guid is invalid' do
+        before do
+          manifest['properties']['azure']['isv_tracking_guid'] = 'fake-tracking-guid'
+        end
+
+        it 'raise an error' do
+          expect { subject }.to raise_error('Invalid "isv_tracking_guid", length of guid must be 36.')
+        end
+      end
+
+      context 'when guid is valid' do
+        before do
+          manifest['properties']['azure']['isv_tracking_guid'] = 'cd237ace-be2a-425c-a30f-dd91d5e93d96'
+        end
+
+        it 'is able to render isv_tracking_guid' do
+          expect(subject['cloud']['properties']['azure']['isv_tracking_guid']).to eq('cd237ace-be2a-425c-a30f-dd91d5e93d96')
+        end
+      end
+    end
   end
 
   context 'when parsing the registry property' do
