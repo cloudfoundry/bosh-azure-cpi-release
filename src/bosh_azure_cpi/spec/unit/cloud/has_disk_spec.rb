@@ -82,7 +82,7 @@ describe Bosh::AzureCloud::Cloud do
       context 'when use_managed_disks is false' do
         before do
           allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-            .with(disk_id, azure_properties)
+            .with(disk_id, azure_config)
             .and_return(disk_id_object)
         end
 

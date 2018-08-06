@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::DynamicNetwork do
-  let(:azure_properties) { mock_azure_properties }
+  let(:azure_config) { mock_azure_config }
 
   context 'when all properties are specified' do
     let(:dns) { 'fake-dns' }
@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::DynamicNetwork do
     end
 
     it 'should return properties with right values' do
-      network = Bosh::AzureCloud::DynamicNetwork.new(azure_properties, 'default', network_spec)
+      network = Bosh::AzureCloud::DynamicNetwork.new(azure_config, 'default', network_spec)
       expect(network.resource_group_name).to eq(rg_name)
       expect(network.virtual_network_name).to eq(vnet_name)
       expect(network.subnet_name).to eq(subnet_name)
@@ -52,7 +52,7 @@ describe Bosh::AzureCloud::DynamicNetwork do
 
     it 'should raise an error' do
       expect do
-        Bosh::AzureCloud::DynamicNetwork.new(azure_properties, 'default', network_spec)
+        Bosh::AzureCloud::DynamicNetwork.new(azure_config, 'default', network_spec)
       end.to raise_error(/cloud_properties required for dynamic network/)
     end
   end
@@ -69,7 +69,7 @@ describe Bosh::AzureCloud::DynamicNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::DynamicNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::DynamicNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/virtual_network_name required for dynamic network/)
       end
     end
@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::DynamicNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::DynamicNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::DynamicNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/virtual_network_name required for dynamic network/)
       end
     end
@@ -104,7 +104,7 @@ describe Bosh::AzureCloud::DynamicNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::DynamicNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::DynamicNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/subnet_name required for dynamic network/)
       end
     end
@@ -121,7 +121,7 @@ describe Bosh::AzureCloud::DynamicNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::DynamicNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::DynamicNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/subnet_name required for dynamic network/)
       end
     end
@@ -138,12 +138,12 @@ describe Bosh::AzureCloud::DynamicNetwork do
     end
 
     it 'should return default values for the optional cloud properties' do
-      network = Bosh::AzureCloud::DynamicNetwork.new(azure_properties, 'default', network_spec)
+      network = Bosh::AzureCloud::DynamicNetwork.new(azure_config, 'default', network_spec)
       expect(network.security_group).to be_nil
       expect(network.application_security_groups).to eq([])
       expect(network.ip_forwarding).to be false
       expect(network.accelerated_networking).to be false
-      expect(network.resource_group_name).to eq(azure_properties['resource_group_name'])
+      expect(network.resource_group_name).to eq(azure_config['resource_group_name'])
       expect(network.dns).to be_nil
       expect(network.has_default_dns?).to be false
       expect(network.has_default_dns?).to be false

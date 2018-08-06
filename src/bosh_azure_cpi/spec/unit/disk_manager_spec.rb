@@ -3,9 +3,9 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::DiskManager do
-  let(:azure_properties) { mock_azure_properties }
+  let(:azure_config) { mock_azure_config }
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
-  let(:disk_manager) { Bosh::AzureCloud::DiskManager.new(azure_properties, blob_manager) }
+  let(:disk_manager) { Bosh::AzureCloud::DiskManager.new(azure_config, blob_manager) }
   let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
   let(:snapshot_id) { instance_double(Bosh::AzureCloud::DiskId) }
 
@@ -343,14 +343,14 @@ describe Bosh::AzureCloud::DiskManager do
 
     # Caching
     context 'when caching is not specified' do
-      let(:resource_pool) do
+      let(:vm_properties) do
         {
           'instance_type' => 'STANDARD_A1'
         }
       end
 
       it 'should return the default caching for os disk: ReadWrite' do
-        disk_manager.resource_pool = resource_pool
+        disk_manager.vm_properties = vm_properties
 
         expect(
           disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -366,7 +366,7 @@ describe Bosh::AzureCloud::DiskManager do
     context 'when caching is specified' do
       context 'when caching is valid' do
         let(:disk_caching) { 'ReadOnly' }
-        let(:resource_pool) do
+        let(:vm_properties) do
           {
             'instance_type' => 'STANDARD_A1',
             'caching' => disk_caching
@@ -374,7 +374,7 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         it 'should return the specified caching' do
-          disk_manager.resource_pool = resource_pool
+          disk_manager.vm_properties = vm_properties
 
           expect(
             disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -388,7 +388,7 @@ describe Bosh::AzureCloud::DiskManager do
       end
 
       context 'when caching is invalid' do
-        let(:resource_pool) do
+        let(:vm_properties) do
           {
             'instance_type' => 'STANDARD_A1',
             'caching' => 'invalid'
@@ -396,7 +396,7 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         it 'should raise an error' do
-          disk_manager.resource_pool = resource_pool
+          disk_manager.vm_properties = vm_properties
 
           expect do
             disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -407,14 +407,14 @@ describe Bosh::AzureCloud::DiskManager do
 
     # Disk Size
     context 'without root_disk' do
-      let(:resource_pool) do
+      let(:vm_properties) do
         {
           'instance_type' => 'STANDARD_A1'
         }
       end
 
       it 'should return disk_size: nil' do
-        disk_manager.resource_pool = resource_pool
+        disk_manager.vm_properties = vm_properties
 
         expect(
           disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -430,7 +430,7 @@ describe Bosh::AzureCloud::DiskManager do
     context 'with root_disk' do
       context 'when size is not specified' do
         context 'with the ephemeral disk' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {}
@@ -438,7 +438,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           it 'should return correct values' do
-            disk_manager.resource_pool = resource_pool
+            disk_manager.vm_properties = vm_properties
 
             expect(
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -452,7 +452,7 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         context 'without the ephemeral disk' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {},
@@ -472,7 +472,7 @@ describe Bosh::AzureCloud::DiskManager do
               end
 
               it 'should return the minimum required disk size' do
-                disk_manager.resource_pool = resource_pool
+                disk_manager.vm_properties = vm_properties
 
                 expect(
                   disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -493,7 +493,7 @@ describe Bosh::AzureCloud::DiskManager do
               end
 
               it 'should return image_size as the disk size' do
-                disk_manager.resource_pool = resource_pool
+                disk_manager.vm_properties = vm_properties
 
                 expect(
                   disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -522,7 +522,7 @@ describe Bosh::AzureCloud::DiskManager do
               end
 
               it 'should return the minimum required disk size' do
-                disk_manager.resource_pool = resource_pool
+                disk_manager.vm_properties = vm_properties
 
                 expect(
                   disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -543,7 +543,7 @@ describe Bosh::AzureCloud::DiskManager do
               end
 
               it 'should return image_size as the disk size' do
-                disk_manager.resource_pool = resource_pool
+                disk_manager.vm_properties = vm_properties
 
                 expect(
                   disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -561,7 +561,7 @@ describe Bosh::AzureCloud::DiskManager do
 
       context 'when size is specified' do
         context 'When the size is not an integer' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
@@ -571,7 +571,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           it 'should raise an error' do
-            disk_manager.resource_pool = resource_pool
+            disk_manager.vm_properties = vm_properties
 
             expect do
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -580,7 +580,7 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         context 'When the size is smaller than image_size' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
@@ -595,7 +595,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           it 'should use the image_size' do
-            disk_manager.resource_pool = resource_pool
+            disk_manager.vm_properties = vm_properties
 
             expect(
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -609,7 +609,7 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         context 'When the size is divisible by 1024' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
@@ -619,7 +619,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           it 'should return the correct disk_size' do
-            disk_manager.resource_pool = resource_pool
+            disk_manager.vm_properties = vm_properties
 
             expect(
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -633,7 +633,7 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         context 'When the size is not divisible by 1024' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
@@ -643,7 +643,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           it 'should return the smallest Integer greater than or equal to size/1024 for disk_size' do
-            disk_manager.resource_pool = resource_pool
+            disk_manager.vm_properties = vm_properties
 
             expect(
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
@@ -672,14 +672,14 @@ describe Bosh::AzureCloud::DiskManager do
 
     context 'without ephemeral_disk' do
       context 'with a valid instance_type' do
-        let(:resource_pool) do
+        let(:vm_properties) do
           {
             'instance_type' => 'STANDARD_A1'
           }
         end
 
         it 'should return correct values' do
-          disk_manager.resource_pool = resource_pool
+          disk_manager.vm_properties = vm_properties
 
           expect(
             disk_manager.ephemeral_disk(storage_account_name, vm_name)
@@ -693,14 +693,14 @@ describe Bosh::AzureCloud::DiskManager do
       end
 
       context 'with an invalid instance_type' do
-        let(:resource_pool) do
+        let(:vm_properties) do
           {
             'instance_type' => 'invalid-instance-type'
           }
         end
 
         it 'should return 30 as the default disk size' do
-          disk_manager.resource_pool = resource_pool
+          disk_manager.vm_properties = vm_properties
 
           expect(
             disk_manager.ephemeral_disk(storage_account_name, vm_name)
@@ -717,7 +717,7 @@ describe Bosh::AzureCloud::DiskManager do
     context 'with ephemeral_disk' do
       context 'with use_root_disk' do
         context 'when use_root_disk is false' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {
@@ -727,7 +727,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           it 'should return correct values' do
-            disk_manager.resource_pool = resource_pool
+            disk_manager.vm_properties = vm_properties
 
             expect(
               disk_manager.ephemeral_disk(storage_account_name, vm_name)
@@ -741,7 +741,7 @@ describe Bosh::AzureCloud::DiskManager do
         end
 
         context 'when use_root_disk is true' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {
@@ -751,7 +751,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           it 'should return correct values' do
-            disk_manager.resource_pool = resource_pool
+            disk_manager.vm_properties = vm_properties
 
             expect(
               disk_manager.ephemeral_disk(storage_account_name, vm_name)
@@ -762,7 +762,7 @@ describe Bosh::AzureCloud::DiskManager do
 
       context 'without use_root_disk' do
         context 'without size' do
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'STANDARD_A1',
               'ephemeral_disk' => {}
@@ -770,7 +770,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           it 'should return correct values' do
-            disk_manager.resource_pool = resource_pool
+            disk_manager.vm_properties = vm_properties
 
             expect(
               disk_manager.ephemeral_disk(storage_account_name, vm_name)
@@ -785,7 +785,7 @@ describe Bosh::AzureCloud::DiskManager do
 
         context 'with size' do
           context 'when the size is valid' do
-            let(:resource_pool) do
+            let(:vm_properties) do
               {
                 'instance_type' => 'STANDARD_A1',
                 'ephemeral_disk' => {
@@ -795,7 +795,7 @@ describe Bosh::AzureCloud::DiskManager do
             end
 
             it 'should return the specified disk size' do
-              disk_manager.resource_pool = resource_pool
+              disk_manager.vm_properties = vm_properties
 
               expect(
                 disk_manager.ephemeral_disk(storage_account_name, vm_name)
@@ -809,7 +809,7 @@ describe Bosh::AzureCloud::DiskManager do
           end
 
           context 'when the size is not an integer' do
-            let(:resource_pool) do
+            let(:vm_properties) do
               {
                 'instance_type' => 'STANDARD_A1',
                 'ephemeral_disk' => {
@@ -819,7 +819,7 @@ describe Bosh::AzureCloud::DiskManager do
             end
 
             it 'should raise an error' do
-              disk_manager.resource_pool = resource_pool
+              disk_manager.vm_properties = vm_properties
 
               expect do
                 disk_manager.ephemeral_disk(storage_account_name, vm_name)

@@ -65,16 +65,16 @@ module Bosh::AzureCloud
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret customData].freeze
 
-    def initialize(azure_properties, logger)
+    def initialize(azure_config, logger)
       @logger = logger
 
-      @azure_properties = azure_properties
+      @azure_config = azure_config
     end
 
     # Common
     def rest_api_url(resource_provider, resource_type, resource_group_name: nil, name: nil, others: nil)
-      url = "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
-      resource_group_name = @azure_properties['resource_group_name'] if resource_group_name.nil?
+      url = "/subscriptions/#{URI.escape(@azure_config['subscription_id'])}"
+      resource_group_name = @azure_config['resource_group_name'] if resource_group_name.nil?
       url += "/resourceGroups/#{URI.escape(resource_group_name)}"
       url += "/providers/#{resource_provider}"
       url += "/#{resource_type}"
@@ -117,7 +117,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/resources/resourcegroups#ResourceGroups_CreateOrUpdate
     #
     def create_resource_group(resource_group_name, location)
-      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url =  "/subscriptions/#{URI.escape(@azure_config['subscription_id'])}"
       url += "/resourceGroups/#{URI.escape(resource_group_name)}"
 
       resource_group = {
@@ -138,7 +138,7 @@ module Bosh::AzureCloud
     def get_resource_group(resource_group_name)
       resource_group = nil
 
-      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url =  "/subscriptions/#{URI.escape(@azure_config['subscription_id'])}"
       url += "/resourceGroups/#{URI.escape(resource_group_name)}"
       result = get_resource_by_id(url)
 
@@ -377,7 +377,7 @@ module Bosh::AzureCloud
     #
     def list_available_virtual_machine_sizes(location)
       vm_sizes = []
-      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url =  "/subscriptions/#{URI.escape(@azure_config['subscription_id'])}"
       url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
       url += "/locations/#{location}"
       url += "/#{REST_API_VM_SIZES}"
@@ -1100,7 +1100,7 @@ module Bosh::AzureCloud
     #
     def list_platform_image_versions(location, publisher, offer, sku)
       images = []
-      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url =  "/subscriptions/#{URI.escape(@azure_config['subscription_id'])}"
       url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
       url += "/locations/#{location}"
       url += "/publishers/#{publisher}"
@@ -1657,7 +1657,7 @@ module Bosh::AzureCloud
         end
 
         uri = URI(response['Location'])
-        api_version = get_api_version(@azure_properties, AZURE_RESOURCE_PROVIDER_STORAGE)
+        api_version = get_api_version(@azure_config, AZURE_RESOURCE_PROVIDER_STORAGE)
         request = Net::HTTP::Get.new(uri.request_uri)
         request.add_field('x-ms-version', api_version)
         loop do
@@ -1709,7 +1709,7 @@ module Bosh::AzureCloud
     #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def check_storage_account_name_availability(name)
-      url =  "/subscriptions/#{URI.escape(@azure_properties['subscription_id'])}"
+      url =  "/subscriptions/#{URI.escape(@azure_config['subscription_id'])}"
       url += "/providers/#{REST_API_PROVIDER_STORAGE}"
       url += '/checkNameAvailability'
       storage_account = {
@@ -2008,7 +2008,7 @@ module Bosh::AzureCloud
     end
 
     def filter_credential_in_logs(uri)
-      return true if !is_debug_mode(@azure_properties) && uri.request_uri.include?('/listKeys')
+      return true if !is_debug_mode(@azure_config) && uri.request_uri.include?('/listKeys')
       false
     end
 
@@ -2017,11 +2017,11 @@ module Bosh::AzureCloud
     end
 
     def redact_credentials_in_request_body(body)
-      is_debug_mode(@azure_properties) ? body.to_json : redact_credentials(CREDENTIAL_KEYWORD_LIST, body).to_json
+      is_debug_mode(@azure_config) ? body.to_json : redact_credentials(CREDENTIAL_KEYWORD_LIST, body).to_json
     end
 
     def redact_credentials_in_response_body(body)
-      is_debug_mode(@azure_properties) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body)).to_json
+      is_debug_mode(@azure_config) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body)).to_json
     rescue StandardError => e
       body
     end
@@ -2029,14 +2029,14 @@ module Bosh::AzureCloud
     def http(uri)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true
-      if @azure_properties['environment'] == ENVIRONMENT_AZURESTACK
+      if @azure_config['environment'] == ENVIRONMENT_AZURESTACK
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
-        http.ca_file = get_ca_cert_path if uri.host.include?(@azure_properties['azure_stack']['domain'])
+        http.ca_file = get_ca_cert_path if uri.host.include?(@azure_config['azure_stack']['domain'])
       end
       # The default value for read_timeout is 60 seconds.
       # The default value for open_timeout is nil before ruby 2.3.0 so set it to 60 seconds here.
       http.open_timeout = 60
-      http.set_debug_output($stdout) if is_debug_mode(@azure_properties)
+      http.set_debug_output($stdout) if is_debug_mode(@azure_config)
       http
     end
 
@@ -2044,7 +2044,7 @@ module Bosh::AzureCloud
     def get_token(force_refresh = false)
       if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.now) <= 0 || force_refresh
         @logger.info('get_token - trying to get/refresh Azure authentication token')
-        endpoint, api_version = get_azure_authentication_endpoint_and_api_version(@azure_properties)
+        endpoint, api_version = get_azure_authentication_endpoint_and_api_version(@azure_config)
         uri = URI(endpoint)
         params = {
           'api-version' => api_version
@@ -2058,15 +2058,15 @@ module Bosh::AzureCloud
         @logger.debug('get_token - request.header:')
         request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
 
-        client_id = @azure_properties['client_id']
+        client_id = @azure_config['client_id']
         request_body = {
           'grant_type' => 'client_credentials',
           'client_id'  => client_id,
-          'resource'   => get_token_resource(@azure_properties),
+          'resource'   => get_token_resource(@azure_config),
           'scope'      => 'user_impersonation'
         }
-        if @azure_properties.key?('client_secret')
-          request_body['client_secret'] = @azure_properties['client_secret']
+        if @azure_config.key?('client_secret')
+          request_body['client_secret'] = @azure_config['client_secret']
         else
           request_body['client_assertion_type'] = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
           request_body['client_assertion']      = get_jwt_assertion(endpoint, client_id)
@@ -2104,9 +2104,9 @@ module Bosh::AzureCloud
                             else
                               AZURE_RESOURCE_PROVIDER_GROUP
                             end
-        params['api-version'] = get_api_version(@azure_properties, resource_provider)
+        params['api-version'] = get_api_version(@azure_config, resource_provider)
       end
-      uri = URI(get_arm_endpoint(@azure_properties) + url)
+      uri = URI(get_arm_endpoint(@azure_config) + url)
       uri.query = URI.encode_www_form(params)
       uri
     end
@@ -2418,7 +2418,7 @@ module Bosh::AzureCloud
 
     def merge_http_common_headers(request)
       user_agents = ["#{USER_AGENT_FOR_REST}/#{Bosh::AzureCloud::VERSION}"]
-      isv_tracking_guid = @azure_properties.fetch('isv_tracking_guid', DEFAULT_ISV_TRACKING_GUID)
+      isv_tracking_guid = @azure_config.fetch('isv_tracking_guid', DEFAULT_ISV_TRACKING_GUID)
       user_agents.push("pid-#{isv_tracking_guid}")
       request['User-Agent'] = user_agents.join(' ')
       # https://msdn.microsoft.com/en-us/library/mt766820.aspx

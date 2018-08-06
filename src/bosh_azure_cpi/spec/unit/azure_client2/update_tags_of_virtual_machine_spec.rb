@@ -6,12 +6,12 @@ require 'webmock/rspec'
 WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient2 do
-  let(:azure_properties) { mock_azure_properties }
+  let(:azure_config) { mock_azure_config }
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) { Bosh::AzureCloud::AzureClient2.new(azure_properties, logger) }
+  let(:azure_client2) { Bosh::AzureCloud::AzureClient2.new(azure_config, logger) }
 
-  let(:subscription_id) { mock_azure_properties['subscription_id'] }
-  let(:tenant_id) { mock_azure_properties['tenant_id'] }
+  let(:subscription_id) { mock_azure_config['subscription_id'] }
+  let(:tenant_id) { mock_azure_config['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
   let(:resource_group) { 'fake-resource-group-name' }

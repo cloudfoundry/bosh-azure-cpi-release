@@ -23,8 +23,8 @@ describe Bosh::AzureCloud::VMManager do
             allow(dynamic_network).to receive(:accelerated_networking).and_return(false)
           end
 
-          context 'when accelerated networking is not specified in resource_pool' do
-            let(:resource_pool) do
+          context 'when accelerated networking is not specified in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1'
               }
@@ -35,13 +35,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
 
-          context 'when accelerated networking is disabled in resource_pool' do
-            let(:resource_pool) do
+          context 'when accelerated networking is disabled in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'accelerated_networking' => false
@@ -53,13 +53,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
 
-          context 'when accelerated networking is enabled in resource_pool' do
-            let(:resource_pool) do
+          context 'when accelerated networking is enabled in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'accelerated_networking' => true
@@ -71,7 +71,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -83,8 +83,8 @@ describe Bosh::AzureCloud::VMManager do
             allow(dynamic_network).to receive(:accelerated_networking).and_return(true)
           end
 
-          context 'when accelerated networking is not specified in resource_pool' do
-            let(:resource_pool) do
+          context 'when accelerated networking is not specified in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1'
               }
@@ -95,13 +95,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
 
-          context 'when accelerated networking is disabled in resource_pool' do
-            let(:resource_pool) do
+          context 'when accelerated networking is disabled in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'accelerated_networking' => false
@@ -113,13 +113,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
 
-          context 'when accelerated networking is enabled in resource_pool' do
-            let(:resource_pool) do
+          context 'when accelerated networking is enabled in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'accelerated_networking' => true
@@ -131,7 +131,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end

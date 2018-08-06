@@ -23,16 +23,16 @@ module Bosh::AzureCloud
     #
     # networks[0] is always the primary network for the VM
     #
-    # @param [Hash] azure_properties global azure properties
+    # @param [Hash] azure_config global azure properties
     # @param [Hash] spec raw network spec passed by director
-    def initialize(azure_properties, spec)
+    def initialize(azure_config, spec)
       unless spec.is_a?(Hash)
         raise ArgumentError, 'Invalid spec, Hash expected, ' \
                              "'#{spec.class}' provided"
       end
 
       @logger = Bosh::Clouds::Config.logger
-      @azure_properties = azure_properties
+      @azure_config = azure_config
       @networks = []
       @vip_network = nil
 
@@ -43,14 +43,14 @@ module Bosh::AzureCloud
 
         case network_type
         when 'dynamic'
-          network = DynamicNetwork.new(@azure_properties, name, network_spec)
+          network = DynamicNetwork.new(@azure_config, name, network_spec)
 
         when 'manual'
-          network = ManualNetwork.new(@azure_properties, name, network_spec)
+          network = ManualNetwork.new(@azure_config, name, network_spec)
 
         when 'vip'
           cloud_error("More than one vip network for '#{name}'") if @vip_network
-          @vip_network = VipNetwork.new(@azure_properties, name, network_spec)
+          @vip_network = VipNetwork.new(@azure_config, name, network_spec)
 
         else
           cloud_error("Invalid network type '#{network_type}' for Azure, " \

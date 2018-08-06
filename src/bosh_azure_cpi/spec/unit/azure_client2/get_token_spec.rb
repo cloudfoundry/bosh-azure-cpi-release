@@ -7,9 +7,9 @@ WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient2 do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:subscription_id) { mock_azure_properties['subscription_id'] }
-  let(:tenant_id) { mock_azure_properties['tenant_id'] }
-  let(:client_id) { mock_azure_properties['client_id'] }
+  let(:subscription_id) { mock_azure_config['subscription_id'] }
+  let(:tenant_id) { mock_azure_config['tenant_id'] }
+  let(:client_id) { mock_azure_config['client_id'] }
   let(:resource_group) { 'fake-resource-group-name' }
   let(:authentication_endpoint) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token" }
   let(:api_version) { AZURE_API_VERSION }
@@ -30,7 +30,7 @@ describe Bosh::AzureCloud::AzureClient2 do
     context 'when the client_secret is provided' do
       let(:azure_client2) do
         Bosh::AzureCloud::AzureClient2.new(
-          mock_azure_properties,
+          mock_azure_config,
           logger
         )
       end
@@ -40,7 +40,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           'client_id'     => client_id,
           'resource'      => 'https://management.azure.com/',
           'scope'         => 'user_impersonation',
-          'client_secret' => mock_azure_properties['client_secret']
+          'client_secret' => mock_azure_config['client_secret']
         }
       end
 
@@ -65,14 +65,14 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
 
     context 'when the client_secret is not provided' do
-      let(:azure_properties_without_client_secret) do
-        properties = mock_azure_properties.clone
+      let(:azure_config_without_client_secret) do
+        properties = mock_azure_config.clone
         properties.delete('client_secret')
         properties
       end
       let(:azure_client2) do
         Bosh::AzureCloud::AzureClient2.new(
-          azure_properties_without_client_secret,
+          azure_config_without_client_secret,
           logger
         )
       end

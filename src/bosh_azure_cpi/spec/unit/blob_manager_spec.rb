@@ -3,9 +3,9 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::BlobManager do
-  let(:azure_properties) { mock_azure_properties }
+  let(:azure_config) { mock_azure_config }
   let(:azure_client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
-  let(:blob_manager) { Bosh::AzureCloud::BlobManager.new(azure_properties, azure_client2) }
+  let(:blob_manager) { Bosh::AzureCloud::BlobManager.new(azure_config, azure_client2) }
 
   let(:container_name) { 'fake-container-name' }
   let(:blob_name) { 'fake-blob-name' }

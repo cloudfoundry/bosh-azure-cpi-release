@@ -16,7 +16,7 @@ module Bosh::AzureCloud
     #   instance_id = InstanceId.create(resource_group_name, agent_id, storage_account_name) # Create V2 instance id with unmanaged disks
     #   instance_id = InstanceId.create(resource_group_name, agent_id)                       # Create V2 instance id with managed disks
     #  Paring id for an existing VM
-    #   instance_id = InstanceId.parse(id, azure_properties)
+    #   instance_id = InstanceId.parse(id, azure_config)
 
     VERSION1 = 'v1' # class properties: version (string), id (string), default_resource_group_name (string)
     VERSION2 = 'v2' # class properties: version (string), id (json)
@@ -39,7 +39,7 @@ module Bosh::AzureCloud
       new(VERSION2, id: id)
     end
 
-    def self.parse(id, azure_properties)
+    def self.parse(id, azure_config)
       instance_id = nil
 
       if id.include?(';')
@@ -51,7 +51,7 @@ module Bosh::AzureCloud
         end
         instance_id = new(VERSION2, id: id_hash)
       else
-        instance_id = new(VERSION1, id: id, default_resource_group_name: azure_properties['resource_group_name'])
+        instance_id = new(VERSION1, id: id, default_resource_group_name: azure_config['resource_group_name'])
       end
 
       instance_id.validate

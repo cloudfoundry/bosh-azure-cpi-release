@@ -65,14 +65,14 @@ def get_cpi(repo, branch, managed, force_renew: false)
   load_bosh_azure_cpi(cpi_dir, config)
 end
 
-def create_vm(cpi, resource_pool)
+def create_vm(cpi, vm_properties)
   stemcell_id = @stemcell_id
 
   agent_id = SecureRandom.uuid
 
   networks = JSON('{"private":{"cloud_properties":{"subnet_name":"Bosh","virtual_network_name":"boshvnet-crp"},"default":["dns","gateway"],"dns":["168.63.129.16","8.8.8.8"],"gateway":"10.0.0.1","ip":"10.0.0.57","netmask":"255.255.255.0","type":"manual"}}')
 
-  instance_id = cpi.create_vm(agent_id, stemcell_id, resource_pool, networks)
+  instance_id = cpi.create_vm(agent_id, stemcell_id, vm_properties, networks)
   check_vm(cpi, instance_id)
 
   instance_id

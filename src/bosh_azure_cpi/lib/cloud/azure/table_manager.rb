@@ -4,18 +4,18 @@ module Bosh::AzureCloud
   class TableManager
     include Helpers
 
-    def initialize(azure_properties, storage_account_manager, azure_client2)
-      @azure_properties = azure_properties
+    def initialize(azure_config, storage_account_manager, azure_client2)
+      @azure_config = azure_config
       @storage_account_manager = storage_account_manager
       @azure_client2 = azure_client2
       @logger = Bosh::Clouds::Config.logger
 
       storage_account = @storage_account_manager.default_storage_account
       storage_account[:key] = @azure_client2.get_storage_account_keys_by_name(storage_account[:name])[0]
-      azure_storage_client = initialize_azure_storage_client(storage_account, @azure_properties)
+      azure_storage_client = initialize_azure_storage_client(storage_account, @azure_config)
       @table_service_client = azure_storage_client.table_client
       @table_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
-      @table_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties)
+      @table_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_config)
     end
 
     def has_table?(table_name)
