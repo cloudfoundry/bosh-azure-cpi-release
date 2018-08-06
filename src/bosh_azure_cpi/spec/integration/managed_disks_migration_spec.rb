@@ -26,7 +26,7 @@ describe Bosh::AzureCloud::Cloud do
   let(:instance_type)        { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
   let(:vm_metadata)          { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
   let(:network_spec)         { {} }
-  let(:resource_pool)        do
+  let(:vm_properties)        do
     {
       'instance_type' => instance_type,
       'resource_group_name' => @additional_resource_group_name
@@ -110,7 +110,7 @@ describe Bosh::AzureCloud::Cloud do
         begin
           # Create an unmanaged VM
           logger.info("Creating unmanaged VM with stemcell_id='#{@stemcell_id}'")
-          unmanaged_instance_id = cpi_unmanaged.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
+          unmanaged_instance_id = cpi_unmanaged.create_vm(SecureRandom.uuid, @stemcell_id, vm_properties, network_spec)
           logger.info("Checking unmanaged VM existence instance_id='#{unmanaged_instance_id}'")
           expect(cpi_unmanaged.has_vm?(unmanaged_instance_id)).to be(true)
           logger.info("Setting VM metadata instance_id='#{unmanaged_instance_id}'")
@@ -148,7 +148,7 @@ describe Bosh::AzureCloud::Cloud do
 
           # Create a managed VM
           logger.info("Creating managed VM with stemcell_id='#{@stemcell_id}'")
-          managed_instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
+          managed_instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, vm_properties, network_spec)
           logger.info("Checking managed VM existence instance_id='#{managed_instance_id}'")
           expect(cpi.has_vm?(managed_instance_id)).to be(true)
 
@@ -178,7 +178,7 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'With availability set' do
-      let(:resource_pool) do
+      let(:vm_properties) do
         {
           'instance_type' => instance_type,
           'availability_set' => SecureRandom.uuid,
@@ -200,7 +200,7 @@ describe Bosh::AzureCloud::Cloud do
             unmanaged_vm_lifecycles[i] = Thread.new do
               # Create an unmanaged VM
               logger.info("Creating VM with stemcell_id='#{@stemcell_id}'")
-              instance_id = cpi_unmanaged.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
+              instance_id = cpi_unmanaged.create_vm(SecureRandom.uuid, @stemcell_id, vm_properties, network_spec)
               expect(instance_id).to be
               unmanaged_instance_id_pool.push(instance_id)
               logger.info("Checking VM existence instance_id='#{instance_id}'")
@@ -238,7 +238,7 @@ describe Bosh::AzureCloud::Cloud do
 
               # Create a managed VM
               logger.info("Creating managed VM with stemcell_id='#{@stemcell_id}'")
-              managed_instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
+              managed_instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, vm_properties, network_spec)
               logger.info("Checking managed VM existence instance_id='#{managed_instance_id}'")
               expect(cpi.has_vm?(managed_instance_id)).to be(true)
               managed_instance_id_pool.push(managed_instance_id)

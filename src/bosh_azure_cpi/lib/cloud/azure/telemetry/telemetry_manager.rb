@@ -8,8 +8,8 @@ module Bosh::AzureCloud
     PROVIDER_ID = '69B669B9-4AF8-4C50-BDC4-6006FA76E975'
     CPI_TELEMETRY_NAME = 'BOSH-CPI'
 
-    def initialize(azure_properties)
-      @azure_properties = azure_properties
+    def initialize(azure_config)
+      @azure_config = azure_config
       @logger = Bosh::Cpi::Logger.new(CPI_TELEMETRY_LOG_FILE)
     end
 
@@ -21,7 +21,7 @@ module Bosh::AzureCloud
     # @return - return value of the block
     #
     def monitor(operation, id: '', extras: {})
-      if @azure_properties.fetch('enable_telemetry', false) == true && @azure_properties['environment'] != ENVIRONMENT_AZURESTACK
+      if @azure_config.fetch('enable_telemetry', false) == true && @azure_config['environment'] != ENVIRONMENT_AZURESTACK
         error_raised = false
 
         event_param_name              = Bosh::AzureCloud::TelemetryEventParam.new('Name', CPI_TELEMETRY_NAME)
@@ -34,7 +34,7 @@ module Bosh::AzureCloud
 
         message_value = {
           'msg' => 'Successed',
-          'subscription_id' => @azure_properties['subscription_id']
+          'subscription_id' => @azure_config['subscription_id']
         }
         message_value.merge!(extras)
 

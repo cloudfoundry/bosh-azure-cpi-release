@@ -23,8 +23,8 @@ describe Bosh::AzureCloud::VMManager do
             allow(dynamic_network).to receive(:ip_forwarding).and_return(false)
           end
 
-          context 'when ip forwarding is not specified in resource_pool' do
-            let(:resource_pool) do
+          context 'when ip forwarding is not specified in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1'
               }
@@ -35,13 +35,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
 
-          context 'when ip forwarding is disabled in resource_pool' do
-            let(:resource_pool) do
+          context 'when ip forwarding is disabled in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => false
@@ -53,13 +53,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
 
-          context 'when ip forwarding is enabled in resource_pool' do
-            let(:resource_pool) do
+          context 'when ip forwarding is enabled in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => true
@@ -71,7 +71,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -83,8 +83,8 @@ describe Bosh::AzureCloud::VMManager do
             allow(dynamic_network).to receive(:ip_forwarding).and_return(true)
           end
 
-          context 'when ip forwarding is not specified in resource_pool' do
-            let(:resource_pool) do
+          context 'when ip forwarding is not specified in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1'
               }
@@ -95,13 +95,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
 
-          context 'when ip forwarding is disabled in resource_pool' do
-            let(:resource_pool) do
+          context 'when ip forwarding is disabled in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => false
@@ -113,13 +113,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end
 
-          context 'when ip forwarding is enabled in resource_pool' do
-            let(:resource_pool) do
+          context 'when ip forwarding is enabled in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => true
@@ -131,7 +131,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.not_to raise_error
             end
           end

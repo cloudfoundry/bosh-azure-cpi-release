@@ -13,7 +13,7 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
-        .with(instance_id, azure_properties)
+        .with(instance_id, azure_config)
         .and_return(instance_id_object)
 
       allow(telemetry_manager).to receive(:monitor)

@@ -20,7 +20,7 @@ describe Bosh::AzureCloud::VMManager do
         let(:availability_zone) { '1' }
 
         before do
-          resource_pool['availability_zone'] = availability_zone
+          vm_properties['availability_zone'] = availability_zone
 
           allow(network_configurator).to receive(:vip_network)
             .and_return(nil)
@@ -30,7 +30,7 @@ describe Bosh::AzureCloud::VMManager do
           let(:dynamic_public_ip) { 'fake-dynamic-public-ip' }
 
           before do
-            resource_pool['assign_dynamic_public_ip'] = true
+            vm_properties['assign_dynamic_public_ip'] = true
             allow(client2).to receive(:get_public_ip_by_name)
               .with(resource_group_name, vm_name).and_return(dynamic_public_ip)
           end
@@ -46,7 +46,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -59,14 +59,14 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
 
         context 'and availability_zone is an integer' do
           before do
-            resource_pool['availability_zone'] = 1
+            vm_properties['availability_zone'] = 1
           end
 
           it 'convert availability_zone to string' do
@@ -76,7 +76,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             expect(vm_params[:zone]).to eq('1')
           end
         end

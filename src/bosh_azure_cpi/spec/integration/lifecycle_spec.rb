@@ -35,9 +35,9 @@ describe Bosh::AzureCloud::Cloud do
   let(:image_path)                 { ENV.fetch('BOSH_AZURE_STEMCELL_PATH', '/tmp/image') }
   let(:vm_metadata)                { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
   let(:network_spec)               { {} }
-  let(:resource_pool)              { { 'instance_type' => instance_type } }
+  let(:vm_properties)              { { 'instance_type' => instance_type } }
 
-  let(:azure_properties) do
+  let(:azure_config) do
     {
       'environment' => azure_environment,
       'subscription_id' => @subscription_id,
@@ -53,7 +53,7 @@ describe Bosh::AzureCloud::Cloud do
   end
   let(:cloud_options) do
     {
-      'azure' => azure_properties,
+      'azure' => azure_config,
       'registry' => {
         'endpoint' => 'fake',
         'user' => 'fake',
@@ -234,7 +234,7 @@ describe Bosh::AzureCloud::Cloud do
           new_instance_id = cpi.create_vm(
             SecureRandom.uuid,
             @stemcell_id,
-            resource_pool,
+            vm_properties,
             network_spec
           )
 
@@ -250,7 +250,7 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'when application_gateway is specified in resource pool' do
-      let(:resource_pool) do
+      let(:vm_properties) do
         {
           'instance_type' => instance_type,
           'application_gateway' => @application_gateway_name
@@ -298,7 +298,7 @@ describe Bosh::AzureCloud::Cloud do
               new_instance_id = cpi.create_vm(
                 agent_id,
                 @stemcell_id,
-                resource_pool,
+                vm_properties,
                 network_specs[i]
               )
               ag = cpi.azure_client2.get_resource_by_id(ag_url)
@@ -380,12 +380,12 @@ describe Bosh::AzureCloud::Cloud do
         instance_id = cpi_without_default_nsg.create_vm(
           SecureRandom.uuid,
           @stemcell_id,
-          resource_pool,
+          vm_properties,
           network_spec
         )
         expect(instance_id).to be
 
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_properties)
+        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
         network_interface = cpi_without_default_nsg.azure_client2.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         nsg = network_interface[:network_security_group]
         expect(nsg).to be_nil
@@ -428,7 +428,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   context 'Creating multiple VMs in availability sets' do
-    let(:resource_pool) do
+    let(:vm_properties) do
       {
         'instance_type' => instance_type,
         'availability_set' => SecureRandom.uuid,
@@ -531,7 +531,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   context 'When the resource group name is specified for the vm' do
-    let(:resource_pool) do
+    let(:vm_properties) do
       {
         'instance_type' => instance_type,
         'resource_group_name' => @additional_resource_group_name,
@@ -596,7 +596,7 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
     end
-    let(:resource_pool) do
+    let(:vm_properties) do
       {
         'instance_type' => instance_type,
         'assign_dynamic_public_ip' => true
@@ -620,7 +620,7 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
     end
-    let(:resource_pool) do
+    let(:vm_properties) do
       {
         'instance_type' => instance_type,
         'storage_account_name' => extra_storage_account_name
@@ -650,7 +650,7 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
     end
-    let(:resource_pool) do
+    let(:vm_properties) do
       {
         'instance_type' => instance_type,
         'application_security_groups' => [@application_security_group]
@@ -659,7 +659,7 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_properties)
+        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
         network_interface = cpi.azure_client2.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         asgs = network_interface[:application_security_groups]
         asg_names = []
@@ -684,7 +684,7 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
     end
-    let(:resource_pool) do
+    let(:vm_properties) do
       {
         'instance_type' => instance_type,
         'availability_zone' => availability_zone,
@@ -694,7 +694,7 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_properties)
+        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
         vm = cpi.azure_client2.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name)
         dynamic_public_ip = cpi.azure_client2.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
         expect(vm[:zone]).to eq(availability_zone)
@@ -702,7 +702,7 @@ describe Bosh::AzureCloud::Cloud do
 
         disk_id = cpi.create_disk(2048, {}, instance_id)
         expect(disk_id).not_to be_nil
-        disk_id_obj = Bosh::AzureCloud::DiskId.parse(disk_id, azure_properties)
+        disk_id_obj = Bosh::AzureCloud::DiskId.parse(disk_id, azure_config)
         disk = cpi.azure_client2.get_managed_disk_by_name(@default_resource_group_name, disk_id_obj.disk_name)
         expect(disk[:zone]).to eq(availability_zone)
         @disk_id_pool.push(disk_id)
@@ -736,7 +736,7 @@ describe Bosh::AzureCloud::Cloud do
     instance_id = cpi.create_vm(
       SecureRandom.uuid,
       @stemcell_id,
-      resource_pool,
+      vm_properties,
       network_spec
     )
     expect(instance_id).to be

@@ -90,12 +90,12 @@ def mock_cloud_options
   }
 end
 
-def mock_azure_properties
+def mock_azure_config
   mock_cloud_options['properties']['azure']
 end
 
-def mock_azure_properties_merge(override_options)
-  mock_cloud_options_merge(override_options, mock_azure_properties)
+def mock_azure_config_merge(override_options)
+  mock_cloud_options_merge(override_options, mock_azure_config)
 end
 
 def mock_cloud_properties_merge(override_options)

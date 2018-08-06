@@ -14,7 +14,7 @@ describe Bosh::AzureCloud::AzureClient2 do
     let(:response) { double('response') }
     let(:azure_client2) do
       Bosh::AzureCloud::AzureClient2.new(
-        mock_azure_properties,
+        mock_azure_config,
         logger
       )
     end

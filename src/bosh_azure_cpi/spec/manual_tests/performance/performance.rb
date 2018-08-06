@@ -38,7 +38,7 @@ else
 end
 
 agent_id = SecureRandom.uuid
-resource_pool = {
+vm_properties = {
   'instance_type' => 'Standard_D1'
 }
 i = 0
@@ -50,7 +50,7 @@ while i < times
   networks = JSON(json_str)
   t1 = Time.now
   puts 'testing create_vm...'
-  instance_id = cpi.create_vm(agent_id, stemcell_id_to_use, resource_pool, networks)
+  instance_id = cpi.create_vm(agent_id, stemcell_id_to_use, vm_properties, networks)
   create_cost = (Time.now - t1)
   puts "perf result, create_vm costs #{create_cost}"
   total_create_cost += create_cost

@@ -3,9 +3,9 @@
 shared_context 'shared stuff' do
   let(:cloud) { mock_cloud }
   let(:registry) { mock_registry }
-  let(:azure_properties) { mock_azure_properties }
-  let(:azure_properties_managed) do
-    mock_azure_properties_merge(
+  let(:azure_config) { mock_azure_config }
+  let(:azure_config_managed) do
+    mock_azure_config_merge(
       'use_managed_disks' => true
     )
   end

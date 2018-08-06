@@ -13,8 +13,8 @@ describe Bosh::AzureCloud::AzureClient2 do
       logger
     )
   end
-  let(:subscription_id) { mock_azure_properties['subscription_id'] }
-  let(:tenant_id) { mock_azure_properties['tenant_id'] }
+  let(:subscription_id) { mock_azure_config['subscription_id'] }
+  let(:tenant_id) { mock_azure_config['tenant_id'] }
   let(:token_api_version) { AZURE_API_VERSION }
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{token_api_version}" }
   let(:valid_access_token) { 'valid-access-token' }

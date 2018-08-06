@@ -21,7 +21,7 @@ describe Bosh::AzureCloud::VMManager do
         let(:tags) { { 'user-agent' => 'bosh' } }
 
         before do
-          resource_pool['assign_dynamic_public_ip'] = true
+          vm_properties['assign_dynamic_public_ip'] = true
           allow(network_configurator).to receive(:vip_network)
             .and_return(nil)
           allow(client2).to receive(:get_public_ip_by_name)
@@ -32,7 +32,7 @@ describe Bosh::AzureCloud::VMManager do
           let(:idle_timeout) { 20 }
           let(:vm_manager_for_pip) do
             Bosh::AzureCloud::VMManager.new(
-              mock_azure_properties_merge(
+              mock_azure_config_merge(
                 'pip_idle_timeout_in_minutes' => idle_timeout
               ), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager
             )
@@ -59,7 +59,7 @@ describe Bosh::AzureCloud::VMManager do
                                            application_gateway: application_gateway
                                          )).once
 
-            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -87,7 +87,7 @@ describe Bosh::AzureCloud::VMManager do
                                            application_gateway: application_gateway
                                          ))
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -117,8 +117,8 @@ describe Bosh::AzureCloud::VMManager do
               location: location,
               tags: { 'user-agent' => 'bosh' },
               vm_size: 'Standard_D1',
-              ssh_username: azure_properties_managed['ssh_user'],
-              ssh_cert_data: azure_properties_managed['ssh_public_key'],
+              ssh_username: azure_config_managed['ssh_user'],
+              ssh_cert_data: azure_config_managed['ssh_public_key'],
               custom_data: Base64.strict_encode64(JSON.dump(user_data)),
               os_disk: os_disk_managed,
               ephemeral_disk: ephemeral_disk_managed,
@@ -137,7 +137,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
             expect(client2).to receive(:create_virtual_machine)
               .with(resource_group_name, vm_params, network_interfaces, nil)
-            result = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            result = vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             expect(result[:name]).to eq(vm_name)
           end
         end
@@ -183,7 +183,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(resource_group_name, vm_params, network_interfaces, nil)
             expect(SecureRandom).to receive(:uuid).exactly(3).times
             expect do
-              vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -210,7 +210,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -233,7 +233,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             end.not_to raise_error
           end
         end

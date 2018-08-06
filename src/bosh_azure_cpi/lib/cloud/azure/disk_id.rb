@@ -24,7 +24,7 @@ module Bosh::AzureCloud
     #   disk_id = DiskId.create(caching, false, storage_account_name: 'ss') # Create V2 unmanaged disk id
     #   disk_id = DiskId.create(caching, true, resource_group_name: 'rr')  # Create V2 managed disk id
     #  Parsing id for an existing disk
-    #   disk_id = DiskId.parse(id, azure_properties)
+    #   disk_id = DiskId.parse(id, azure_config)
 
     VERSION1 = 'v1' # class properties: version (string), id (string), default_resource_group_name (string)
     VERSION2 = 'v2' # class properties: version (string), id (json)
@@ -47,7 +47,7 @@ module Bosh::AzureCloud
       new(VERSION2, id: id)
     end
 
-    def self.parse(id, azure_properties)
+    def self.parse(id, azure_config)
       disk_id = nil
 
       if id.include?(';')
@@ -57,9 +57,9 @@ module Bosh::AzureCloud
           ret = item.match('^([^:]*):(.*)$')
           id_hash[ret[1]] = ret[2]
         end
-        disk_id = new(VERSION2, id: id_hash, default_resource_group_name: azure_properties['resource_group_name'])
+        disk_id = new(VERSION2, id: id_hash, default_resource_group_name: azure_config['resource_group_name'])
       else
-        disk_id = new(VERSION1, id: id, default_resource_group_name: azure_properties['resource_group_name'])
+        disk_id = new(VERSION1, id: id, default_resource_group_name: azure_config['resource_group_name'])
       end
 
       disk_id.validate

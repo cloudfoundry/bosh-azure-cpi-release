@@ -3,9 +3,9 @@
 # The following default configurations are shared. If one case needs a specific configuration, it should overwrite it.
 shared_context 'shared stuff for vm manager' do
   # Parameters of VMManager.initialize
-  let(:azure_properties) { mock_azure_properties }
-  let(:azure_properties_managed) do
-    mock_azure_properties_merge(
+  let(:azure_config) { mock_azure_config }
+  let(:azure_config_managed) do
+    mock_azure_config_merge(
       'use_managed_disks' => true
     )
   end
@@ -16,15 +16,15 @@ shared_context 'shared stuff for vm manager' do
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
 
   # VM manager for unmanaged disks
-  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
   # VM manager for managed disks
-  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_properties_managed, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
 
   # Parameters of create
   let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
   let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
-  let(:resource_pool) do
+  let(:vm_properties) do
     {
       'instance_type'         => 'Standard_D1',
       'storage_account_name'  => 'dfe03ad623f34d42999e93ca',
@@ -96,10 +96,10 @@ shared_context 'shared stuff for vm manager' do
       .with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP)
       .and_return(default_security_group)
     allow(client2).to receive(:get_load_balancer_by_name)
-      .with(resource_pool['load_balancer'])
+      .with(vm_properties['load_balancer'])
       .and_return(load_balancer)
     allow(client2).to receive(:get_application_gateway_by_name)
-      .with(resource_pool['application_gateway'])
+      .with(vm_properties['application_gateway'])
       .and_return(application_gateway)
     allow(client2).to receive(:get_public_ip_by_name)
       .with(resource_group_name, vm_name)
@@ -202,7 +202,7 @@ shared_context 'shared stuff for vm manager' do
       .and_return(os_disk_name)
     allow(disk_manager).to receive(:generate_ephemeral_disk_name)
       .and_return(ephemeral_disk_name)
-    allow(disk_manager).to receive(:resource_pool=)
+    allow(disk_manager).to receive(:vm_properties=)
     allow(disk_manager).to receive(:os_disk)
       .and_return(os_disk)
     allow(disk_manager).to receive(:ephemeral_disk)
@@ -214,7 +214,7 @@ shared_context 'shared stuff for vm manager' do
       .and_return(os_disk_name)
     allow(disk_manager2).to receive(:generate_ephemeral_disk_name)
       .and_return(ephemeral_disk_name)
-    allow(disk_manager2).to receive(:resource_pool=)
+    allow(disk_manager2).to receive(:vm_properties=)
     allow(disk_manager2).to receive(:os_disk)
       .and_return(os_disk_managed)
     allow(disk_manager2).to receive(:ephemeral_disk)

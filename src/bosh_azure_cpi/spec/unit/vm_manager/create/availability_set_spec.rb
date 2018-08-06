@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::VMManager do
         context 'when availability set is not created' do
           let(:env) { nil }
           let(:availability_set_name) { SecureRandom.uuid.to_s }
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type' => 'Standard_D1',
               'availability_set' => availability_set_name,
@@ -43,15 +43,15 @@ describe Bosh::AzureCloud::VMManager do
             expect(client2).to receive(:delete_network_interface).exactly(2).times
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             end.to raise_error /availability set is not created/
           end
         end
 
-        context 'with env is nil and availability_set is specified in resource_pool' do
+        context 'with env is nil and availability_set is specified in vm_types or vm_extensions' do
           let(:env) { nil }
           let(:availability_set_name) { SecureRandom.uuid.to_s }
-          let(:resource_pool) do
+          let(:vm_properties) do
             {
               'instance_type'                => 'Standard_D1',
               'availability_set'             => availability_set_name,
@@ -61,11 +61,11 @@ describe Bosh::AzureCloud::VMManager do
           end
           let(:avset_params) do
             {
-              name: resource_pool['availability_set'],
+              name: vm_properties['availability_set'],
               location: location,
               tags: { 'user-agent' => 'bosh' },
-              platform_update_domain_count: resource_pool['platform_update_domain_count'],
-              platform_fault_domain_count: resource_pool['platform_fault_domain_count'],
+              platform_update_domain_count: vm_properties['platform_update_domain_count'],
+              platform_fault_domain_count: vm_properties['platform_fault_domain_count'],
               managed: false
             }
           end
@@ -77,11 +77,11 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(client2).to receive(:get_availability_set_by_name)
-              .with(resource_group_name, resource_pool['availability_set'])
+              .with(resource_group_name, vm_properties['availability_set'])
               .and_return(nil, availability_set)
           end
 
-          it 'should create availability set with the name specified in resource_pool' do
+          it 'should create availability set with the name specified in vm_types or vm_extensions' do
             expect(vm_manager).to receive(:flock)
               .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
               .and_call_original
@@ -93,13 +93,13 @@ describe Bosh::AzureCloud::VMManager do
               .with(resource_group_name, avset_params)
             expect(client2).to receive(:create_network_interface).twice
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
 
         context 'with bosh.group specified in env' do
-          context 'when availability_set is specified in resource_pool' do
+          context 'when availability_set is specified in vm_types or vm_extensions' do
             let(:env) do
               {
                 'bosh' => {
@@ -108,7 +108,7 @@ describe Bosh::AzureCloud::VMManager do
               }
             end
             let(:availability_set_name) { SecureRandom.uuid.to_s }
-            let(:resource_pool) do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'availability_set' => availability_set_name,
@@ -118,11 +118,11 @@ describe Bosh::AzureCloud::VMManager do
             end
             let(:avset_params) do
               {
-                name: resource_pool['availability_set'],
+                name: vm_properties['availability_set'],
                 location: location,
                 tags: { 'user-agent' => 'bosh' },
-                platform_update_domain_count: resource_pool['platform_update_domain_count'],
-                platform_fault_domain_count: resource_pool['platform_fault_domain_count'],
+                platform_update_domain_count: vm_properties['platform_update_domain_count'],
+                platform_fault_domain_count: vm_properties['platform_fault_domain_count'],
                 managed: false
               }
             end
@@ -134,11 +134,11 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(client2).to receive(:get_availability_set_by_name)
-                .with(resource_group_name, resource_pool['availability_set'])
+                .with(resource_group_name, vm_properties['availability_set'])
                 .and_return(nil, availability_set)
             end
 
-            it 'should create availability set with the name specified in resource_pool' do
+            it 'should create availability set with the name specified in vm_types or vm_extensions' do
               expect(vm_manager).to receive(:flock)
                 .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
                 .and_call_original
@@ -149,13 +149,13 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_availability_set)
                 .with(resource_group_name, avset_params)
 
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               expect(vm_params[:name]).to eq(vm_name)
             end
           end
 
-          context 'when availability_set is not specified in resource_pool' do
-            let(:resource_pool) do
+          context 'when availability_set is not specified in vm_types or vm_extensions' do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1'
               }
@@ -200,7 +200,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).to receive(:create_availability_set)
                   .with(resource_group_name, avset_params)
 
-                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -234,7 +234,7 @@ describe Bosh::AzureCloud::VMManager do
 
                 expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
 
-                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -256,7 +256,7 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when platform_update_domain_count and platform_fault_domain_count are set' do
-            let(:resource_pool) do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'availability_set' => availability_set_name,
@@ -266,7 +266,7 @@ describe Bosh::AzureCloud::VMManager do
             end
             let(:avset_params) do
               {
-                name: resource_pool['availability_set'],
+                name: vm_properties['availability_set'],
                 location: location,
                 tags: { 'user-agent' => 'bosh' },
                 platform_update_domain_count: 4,
@@ -290,7 +290,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                 expect(client2).to receive(:create_network_interface).twice
 
-                vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -311,14 +311,14 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                 expect(client2).to receive(:create_network_interface).twice
 
-                vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_params = vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
           end
 
           context 'when platform_update_domain_count and platform_fault_domain_count are not set' do
-            let(:resource_pool) do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'availability_set' => availability_set_name
@@ -326,7 +326,7 @@ describe Bosh::AzureCloud::VMManager do
             end
             let(:avset_params) do
               {
-                name: resource_pool['availability_set'],
+                name: vm_properties['availability_set'],
                 location: location,
                 tags: { 'user-agent' => 'bosh' }
               }
@@ -351,7 +351,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                   expect(client2).to receive(:create_network_interface).twice
 
-                  vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -374,7 +374,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                   expect(client2).to receive(:create_network_interface).twice
 
-                  vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  vm_params = vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -382,12 +382,12 @@ describe Bosh::AzureCloud::VMManager do
 
             context 'when the environment is AzureStack' do
               # VM manager for AzureStack
-              let(:azure_properties_azure_stack) do
-                mock_azure_properties_merge(
+              let(:azure_config_azure_stack) do
+                mock_azure_config_merge(
                   'environment' => 'AzureStack'
                 )
               end
-              let(:vm_manager_azure_stack) { Bosh::AzureCloud::VMManager.new(azure_properties_azure_stack, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+              let(:vm_manager_azure_stack) { Bosh::AzureCloud::VMManager.new(azure_config_azure_stack, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
 
               # Only unmanaged availability set is supported on AzureStack
               context 'when the availability set is unmanaged' do
@@ -408,7 +408,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
                   expect(client2).to receive(:create_network_interface).twice
 
-                  vm_params = vm_manager_azure_stack.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                  vm_params = vm_manager_azure_stack.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -430,7 +430,7 @@ describe Bosh::AzureCloud::VMManager do
                 location: "different-from-#{location}"
               }
             end
-            let(:resource_pool) do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'availability_set' => availability_set_name,
@@ -441,7 +441,7 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(client2).to receive(:get_availability_set_by_name)
-                .with(resource_group_name, resource_pool['availability_set'])
+                .with(resource_group_name, vm_properties['availability_set'])
                 .and_return(availability_set)
             end
 
@@ -451,7 +451,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:delete_network_interface).exactly(2).times
 
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               end.to raise_error /create_availability_set - the availability set '#{availability_set_name}' already exists, but in a different location/
             end
           end
@@ -469,7 +469,7 @@ describe Bosh::AzureCloud::VMManager do
                 location: location.to_s
               }
             end
-            let(:resource_pool) do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'availability_set' => availability_set_name,
@@ -480,21 +480,21 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(client2).to receive(:get_availability_set_by_name)
-                .with(resource_group_name, resource_pool['availability_set'])
+                .with(resource_group_name, vm_properties['availability_set'])
                 .and_return(availability_set)
             end
 
             it 'should not create availability set' do
               expect(client2).not_to receive(:create_availability_set)
 
-              vm_params = vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               expect(vm_params[:name]).to eq(vm_name)
             end
           end
 
           context 'when the managed property is not aligned with @use_managed_disks' do
             let(:availability_set_name) { SecureRandom.uuid.to_s }
-            let(:resource_pool) do
+            let(:vm_properties) do
               {
                 'instance_type' => 'Standard_D1',
                 'availability_set' => availability_set_name
@@ -503,7 +503,7 @@ describe Bosh::AzureCloud::VMManager do
 
             let(:existing_avset) do
               {
-                name: resource_pool['availability_set'],
+                name: vm_properties['availability_set'],
                 location: location,
                 tags: { 'user-agent' => 'bosh' },
                 platform_update_domain_count: 5,
@@ -524,7 +524,7 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(client2).to receive(:get_availability_set_by_name)
-                .with(resource_group_name, resource_pool['availability_set'])
+                .with(resource_group_name, vm_properties['availability_set'])
                 .and_return(existing_avset)
             end
 
@@ -539,7 +539,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(client2).to receive(:create_availability_set).with(resource_group_name, avset_params)
               expect(client2).to receive(:create_network_interface).twice
 
-              vm_params = vm_manager2.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
+              vm_params = vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
               expect(vm_params[:name]).to eq(vm_name)
             end
           end

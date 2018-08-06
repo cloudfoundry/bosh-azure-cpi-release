@@ -59,14 +59,14 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when the block is executed successfully' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge('enable_telemetry' => true)) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_config_merge('enable_telemetry' => true)) }
       let(:result) { 'fake-result' }
 
       context 'when operation is not initialize' do
         it 'should return the result and report the event' do
           expect(event_param_message).to receive(:value=)
             .with('msg' => 'Successed',
-                  'subscription_id' => mock_azure_properties['subscription_id'],
+                  'subscription_id' => mock_azure_config['subscription_id'],
                   'fake-key' => 'fake-value')
           expect(telemetry_manager).to receive(:report_event)
 
@@ -84,7 +84,7 @@ describe Bosh::AzureCloud::TelemetryManager do
         it 'should return the result but do not report the event' do
           expect(event_param_message).to receive(:value=)
             .with('msg' => 'Successed',
-                  'subscription_id' => mock_azure_properties['subscription_id'],
+                  'subscription_id' => mock_azure_config['subscription_id'],
                   'fake-key' => 'fake-value')
           expect(telemetry_manager).not_to receive(:report_event)
 
@@ -98,7 +98,7 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when the block raises an error' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge('enable_telemetry' => true)) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_config_merge('enable_telemetry' => true)) }
 
       context 'when length of the message exceeds 3.9 kB' do
         let(:error) { 'x' * 3994 }
@@ -163,7 +163,7 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when telemetry is not enabled' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge('enable_telemetry' => false)) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_config_merge('enable_telemetry' => false)) }
       let(:result) { 'fake-result' }
 
       it 'should return the result and does not report the event' do
@@ -177,7 +177,7 @@ describe Bosh::AzureCloud::TelemetryManager do
       end
     end
     context 'when environment is AzureStack' do
-      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties_merge('enable_telemetry' => true, 'environment' => 'AzureStack')) }
+      let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_config_merge('enable_telemetry' => true, 'environment' => 'AzureStack')) }
       let(:result) { 'fake-result' }
 
       it 'should return the result and does not report the event' do
@@ -194,7 +194,7 @@ describe Bosh::AzureCloud::TelemetryManager do
 
   describe '#report_event' do
     let(:logger) { instance_double(Bosh::Cpi::Logger) }
-    let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_properties) }
+    let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_config) }
     let(:telemetry_event) { instance_double(Bosh::AzureCloud::TelemetryEvent) }
     let(:telemetry_event_handler) { instance_double(Bosh::AzureCloud::TelemetryEventHandler) }
     let(:file) { double('file') }

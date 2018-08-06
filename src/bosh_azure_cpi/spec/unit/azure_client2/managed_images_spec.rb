@@ -13,11 +13,11 @@ describe Bosh::AzureCloud::AzureClient2 do
       logger
     )
   end
-  let(:subscription_id) { mock_azure_properties['subscription_id'] }
-  let(:tenant_id) { mock_azure_properties['tenant_id'] }
+  let(:subscription_id) { mock_azure_config['subscription_id'] }
+  let(:tenant_id) { mock_azure_config['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
-  let(:resource_group) { mock_azure_properties['resource_group_name'] }
+  let(:resource_group) { mock_azure_config['resource_group_name'] }
   let(:request_id) { 'fake-request-id' }
 
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }

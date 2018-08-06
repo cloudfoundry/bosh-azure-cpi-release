@@ -7,10 +7,10 @@ module Bosh::AzureCloud
     MAX_CHUNK_SIZE = 2 * 1024 * 1024 # 2MB
     TIMEOUT_FOR_BLOB_OPERATIONS = 120 # Timeout in seconds for Blob Service Operations. https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations
 
-    def initialize(azure_properties, azure_client2)
+    def initialize(azure_config, azure_client2)
       @parallel_upload_thread_num = 16
-      @parallel_upload_thread_num = azure_properties['parallel_upload_thread_num'].to_i unless azure_properties['parallel_upload_thread_num'].nil?
-      @azure_properties = azure_properties
+      @parallel_upload_thread_num = azure_config['parallel_upload_thread_num'].to_i unless azure_config['parallel_upload_thread_num'].nil?
+      @azure_config = azure_config
       @azure_client2 = azure_client2
       @empty_chunk_content = Array.new(MAX_CHUNK_SIZE, 0).pack('c*')
       @logger = Bosh::Clouds::Config.logger
@@ -412,10 +412,10 @@ module Bosh::AzureCloud
           storage_account[:key] = keys[0]
           @storage_accounts[storage_account_name] = storage_account
         end
-        @azure_storage_client = initialize_azure_storage_client(@storage_accounts[storage_account_name], @azure_properties)
+        @azure_storage_client = initialize_azure_storage_client(@storage_accounts[storage_account_name], @azure_config)
         @blob_service_client = @azure_storage_client.blob_client
         @blob_service_client.with_filter(CustomizedRetryPolicyFilter.new)
-        @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_properties) && !disable_debug_mode
+        @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_config) && !disable_debug_mode
         yield
       end
     end

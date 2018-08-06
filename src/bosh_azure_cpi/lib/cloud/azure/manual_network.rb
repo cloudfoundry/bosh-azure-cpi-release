@@ -28,7 +28,7 @@ module Bosh::AzureCloud
     #     }
     #   }
     # }
-    def initialize(azure_properties, name, spec)
+    def initialize(azure_config, name, spec)
       super
 
       cloud_error('cloud_properties required for manual network') if @cloud_properties.nil?

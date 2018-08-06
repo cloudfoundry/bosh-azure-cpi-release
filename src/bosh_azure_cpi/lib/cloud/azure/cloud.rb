@@ -22,10 +22,10 @@ module Bosh::AzureCloud
       request_id = options['azure']['request_id']
       @logger.set_request_id(request_id) if request_id
 
-      @use_managed_disks = azure_properties['use_managed_disks']
+      @use_managed_disks = azure_config['use_managed_disks']
 
       init_cpi_lock_dir
-      @telemetry_manager = Bosh::AzureCloud::TelemetryManager.new(azure_properties)
+      @telemetry_manager = Bosh::AzureCloud::TelemetryManager.new(azure_config)
       @telemetry_manager.monitor('initialize') do
         init_registry
         init_azure
@@ -140,7 +140,7 @@ module Bosh::AzureCloud
     # @param [String] agent_id UUID for the agent that will be used later on by the director
     #                 to locate and talk to the agent
     # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
-    # @param [Hash] resource_pool cloud specific properties describing the resources needed
+    # @param [Hash] vm_properties cloud specific properties describing the resources needed
     #               for this VM
     # @param [Hash] networks list of networks and their settings needed for this VM
     # @param [optional, String, Array] disk_locality disk name(s) if known of the disk(s) that will be
@@ -148,29 +148,29 @@ module Bosh::AzureCloud
     # @param [optional, Hash] env environment that will be passed to this vm
     # @return [String] opaque id later used by {#configure_networks}, {#attach_disk},
     #                  {#detach_disk}, and {#delete_vm}
-    def create_vm(agent_id, stemcell_id, resource_pool, networks, disk_locality = nil, env = nil)
+    def create_vm(agent_id, stemcell_id, vm_properties, networks, disk_locality = nil, env = nil)
       # env may contain credentials so we must not log it
-      @logger.info("create_vm(#{agent_id}, #{stemcell_id}, #{resource_pool}, #{networks}, #{disk_locality}, ...)")
+      @logger.info("create_vm(#{agent_id}, #{stemcell_id}, #{vm_properties}, #{networks}, #{disk_locality}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        cloud_error("missing required cloud property 'instance_type'.") if resource_pool['instance_type'].nil?
-        extras = { 'instance_type' => resource_pool.fetch('instance_type', 'unknown_instance_type') }
+        cloud_error("missing required cloud property 'instance_type'.") if vm_properties['instance_type'].nil?
+        extras = { 'instance_type' => vm_properties.fetch('instance_type', 'unknown_instance_type') }
         @telemetry_manager.monitor('create_vm', id: agent_id, extras: extras) do
           # These resources should be in the same location for a VM: VM, NIC, disk(storage account or managed disk).
           # And NIC must be in the same location with VNET, so CPI will use VNET's location as default location for the resources related to the VM.
-          network_configurator = NetworkConfigurator.new(azure_properties, networks)
+          network_configurator = NetworkConfigurator.new(azure_config, networks)
           network = network_configurator.networks[0]
           vnet = @azure_client2.get_virtual_network_by_name(network.resource_group_name, network.virtual_network_name)
           cloud_error("Cannot find the virtual network '#{network.virtual_network_name}' under resource group '#{network.resource_group_name}'") if vnet.nil?
           location = vnet[:location]
-          location_in_global_configuration = azure_properties['location']
+          location_in_global_configuration = azure_config['location']
           cloud_error("The location in the global configuration '#{location_in_global_configuration}' is different from the location of the virtual network '#{location}'") if !location_in_global_configuration.nil? && location_in_global_configuration != location
-          resource_group_name = resource_pool.fetch('resource_group_name', azure_properties['resource_group_name'])
+          resource_group_name = vm_properties.fetch('resource_group_name', azure_config['resource_group_name'])
 
           if @use_managed_disks
             instance_id = InstanceId.create(resource_group_name, agent_id)
 
-            storage_account_type = resource_pool['storage_account_type']
-            storage_account_type = get_storage_account_type_by_instance_type(resource_pool['instance_type']) if storage_account_type.nil?
+            storage_account_type = vm_properties['storage_account_type']
+            storage_account_type = get_storage_account_type_by_instance_type(vm_properties['instance_type']) if storage_account_type.nil?
 
             if is_light_stemcell_id?(stemcell_id)
               raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
@@ -184,8 +184,8 @@ module Bosh::AzureCloud
               end
             end
           else
-            cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') unless resource_pool['availability_zone'].nil?
-            storage_account = @storage_account_manager.get_storage_account_from_resource_pool(resource_pool, location)
+            cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') unless vm_properties['availability_zone'].nil?
+            storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_properties, location)
             instance_id = InstanceId.create(resource_group_name, agent_id, storage_account[:name])
 
             if is_light_stemcell_id?(stemcell_id)
@@ -201,7 +201,7 @@ module Bosh::AzureCloud
             instance_id,
             location,
             stemcell_info,
-            resource_pool,
+            vm_properties,
             network_configurator,
             env
           )
@@ -236,7 +236,7 @@ module Bosh::AzureCloud
       with_thread_name("delete_vm(#{instance_id})") do
         @telemetry_manager.monitor('delete_vm', id: instance_id) do
           @logger.info("Deleting instance '#{instance_id}'")
-          @vm_manager.delete(InstanceId.parse(instance_id, azure_properties))
+          @vm_manager.delete(InstanceId.parse(instance_id, azure_config))
         end
       end
     end
@@ -249,7 +249,7 @@ module Bosh::AzureCloud
     def has_vm?(instance_id)
       with_thread_name("has_vm?(#{instance_id})") do
         @telemetry_manager.monitor('has_vm?', id: instance_id) do
-          vm = @vm_manager.find(InstanceId.parse(instance_id, azure_properties))
+          vm = @vm_manager.find(InstanceId.parse(instance_id, azure_config))
           !vm.nil? && vm[:provisioning_state] != 'Deleting'
         end
       end
@@ -263,7 +263,7 @@ module Bosh::AzureCloud
     def has_disk?(disk_id)
       with_thread_name("has_disk?(#{disk_id})") do
         @telemetry_manager.monitor('has_disk?', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, azure_properties)
+          disk_id = DiskId.parse(disk_id, azure_config)
           if disk_id.disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
             return @disk_manager2.has_data_disk?(disk_id)
           else
@@ -294,7 +294,7 @@ module Bosh::AzureCloud
     def reboot_vm(instance_id, options = nil)
       with_thread_name("reboot_vm(#{instance_id}, #{options})") do
         @telemetry_manager.monitor('reboot_vm', id: instance_id) do
-          @vm_manager.reboot(InstanceId.parse(instance_id, azure_properties))
+          @vm_manager.reboot(InstanceId.parse(instance_id, azure_config))
         end
       end
     end
@@ -310,7 +310,7 @@ module Bosh::AzureCloud
     def set_vm_metadata(instance_id, metadata)
       @telemetry_manager.monitor('set_vm_metadata', id: instance_id) do
         @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
-        @vm_manager.set_metadata(InstanceId.parse(instance_id, azure_properties), encode_metadata(metadata))
+        @vm_manager.set_metadata(InstanceId.parse(instance_id, azure_config), encode_metadata(metadata))
       end
     end
 
@@ -323,7 +323,7 @@ module Bosh::AzureCloud
     def calculate_vm_cloud_properties(vm_resources)
       @telemetry_manager.monitor('calculate_vm_cloud_properties') do
         @logger.info("calculate_vm_cloud_properties(#{vm_resources})")
-        location = azure_properties['location']
+        location = azure_config['location']
         cloud_error("Missing the property 'location' in the global configuration") if location.nil?
 
         required_keys = %w[cpu ram ephemeral_disk_size]
@@ -387,13 +387,13 @@ module Bosh::AzureCloud
           if @use_managed_disks
             if instance_id.nil?
               # If instance_id is nil, the managed disk will be created in the resource group location.
-              resource_group_name = azure_properties['resource_group_name']
+              resource_group_name = azure_config['resource_group_name']
               resource_group = @azure_client2.get_resource_group(resource_group_name)
               location = resource_group[:location]
               default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
               zone = nil
             else
-              instance_id = InstanceId.parse(instance_id, azure_properties)
+              instance_id = InstanceId.parse(instance_id, azure_config)
               cloud_error('Cannot create a managed disk for a VM with unmanaged disks') unless instance_id.use_managed_disks?
               resource_group_name = instance_id.resource_group_name()
               # If the instance is a managed VM, the managed disk will be created in the location of the VM.
@@ -409,11 +409,11 @@ module Bosh::AzureCloud
             disk_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
             @disk_manager2.create_disk(disk_id, location, size / 1024, storage_account_type, zone)
           else
-            storage_account_name = azure_properties['storage_account_name']
+            storage_account_name = azure_config['storage_account_name']
             caching = cloud_properties.fetch('caching', 'None')
             validate_disk_caching(caching)
             unless instance_id.nil?
-              instance_id = InstanceId.parse(instance_id, azure_properties)
+              instance_id = InstanceId.parse(instance_id, azure_config)
               @logger.info("Create disk for vm '#{instance_id.vm_name}'")
               storage_account_name = instance_id.storage_account_name()
             end
@@ -434,7 +434,7 @@ module Bosh::AzureCloud
     def delete_disk(disk_id)
       with_thread_name("delete_disk(#{disk_id})") do
         @telemetry_manager.monitor('delete_disk', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, azure_properties)
+          disk_id = DiskId.parse(disk_id, azure_config)
           if @use_managed_disks
             # A managed disk may be created from an old blob disk, so its name still starts with 'bosh-data' instead of 'bosh-disk-data'
             # CPI checks whether the managed disk with the name exists. If not, delete the old blob disk.
@@ -457,8 +457,8 @@ module Bosh::AzureCloud
     def attach_disk(instance_id, disk_id)
       with_thread_name("attach_disk(#{instance_id},#{disk_id})") do
         @telemetry_manager.monitor('attach_disk', id: instance_id) do
-          instance_id = InstanceId.parse(instance_id, azure_properties)
-          disk_id = DiskId.parse(disk_id, azure_properties)
+          instance_id = InstanceId.parse(instance_id, azure_config)
+          disk_id = DiskId.parse(disk_id, azure_config)
           vm_name = instance_id.vm_name()
           disk_name = disk_id.disk_name()
 
@@ -555,8 +555,8 @@ module Bosh::AzureCloud
           end
 
           @vm_manager.detach_disk(
-            InstanceId.parse(instance_id, azure_properties),
-            DiskId.parse(disk_id, azure_properties)
+            InstanceId.parse(instance_id, azure_config),
+            DiskId.parse(disk_id, azure_config)
           )
 
           @logger.info("Detached '#{disk_id}' from '#{instance_id}'")
@@ -572,7 +572,7 @@ module Bosh::AzureCloud
       with_thread_name("get_disks(#{instance_id})") do
         @telemetry_manager.monitor('get_disks', id: instance_id) do
           disks = []
-          vm = @vm_manager.find(InstanceId.parse(instance_id, azure_properties))
+          vm = @vm_manager.find(InstanceId.parse(instance_id, azure_config))
           raise Bosh::Clouds::VMNotFound, "VM '#{instance_id}' cannot be found" if vm.nil?
           vm[:data_disks].each do |disk|
             disks << disk[:disk_bosh_id] unless is_ephemeral_disk?(disk[:name])
@@ -589,7 +589,7 @@ module Bosh::AzureCloud
     def snapshot_disk(disk_id, metadata = {})
       with_thread_name("snapshot_disk(#{disk_id},#{metadata})") do
         @telemetry_manager.monitor('snapshot_disk', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, azure_properties)
+          disk_id = DiskId.parse(disk_id, azure_config)
           resource_group_name = disk_id.resource_group_name()
           disk_name = disk_id.disk_name()
           caching = disk_id.caching()
@@ -620,7 +620,7 @@ module Bosh::AzureCloud
     def delete_snapshot(snapshot_id)
       with_thread_name("delete_snapshot(#{snapshot_id})") do
         @telemetry_manager.monitor('delete_snapshot', id: snapshot_id) do
-          snapshot_id = DiskId.parse(snapshot_id, azure_properties)
+          snapshot_id = DiskId.parse(snapshot_id, azure_config)
           snapshot_name = snapshot_id.disk_name
           if snapshot_name.start_with?(MANAGED_DATA_DISK_PREFIX)
             @disk_manager2.delete_snapshot(snapshot_id)
@@ -662,8 +662,8 @@ module Bosh::AzureCloud
       @agent_properties ||= options.fetch('agent', {})
     end
 
-    def azure_properties
-      @azure_properties ||= options.fetch('azure')
+    def azure_config
+      @azure_config ||= options.fetch('azure')
     end
 
     def init_registry
@@ -678,16 +678,16 @@ module Bosh::AzureCloud
     end
 
     def init_azure
-      @azure_client2           = Bosh::AzureCloud::AzureClient2.new(azure_properties, @logger)
-      @blob_manager            = Bosh::AzureCloud::BlobManager.new(azure_properties, @azure_client2)
-      @disk_manager            = Bosh::AzureCloud::DiskManager.new(azure_properties, @blob_manager)
-      @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(azure_properties, @blob_manager, @disk_manager, @azure_client2)
-      @table_manager           = Bosh::AzureCloud::TableManager.new(azure_properties, @storage_account_manager, @azure_client2)
+      @azure_client2           = Bosh::AzureCloud::AzureClient2.new(azure_config, @logger)
+      @blob_manager            = Bosh::AzureCloud::BlobManager.new(azure_config, @azure_client2)
+      @disk_manager            = Bosh::AzureCloud::DiskManager.new(azure_config, @blob_manager)
+      @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(azure_config, @blob_manager, @disk_manager, @azure_client2)
+      @table_manager           = Bosh::AzureCloud::TableManager.new(azure_config, @storage_account_manager, @azure_client2)
       @stemcell_manager        = Bosh::AzureCloud::StemcellManager.new(@blob_manager, @table_manager, @storage_account_manager)
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client2)
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @table_manager, @storage_account_manager, @azure_client2)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client2)
-      @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_properties, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client2, @storage_account_manager)
+      @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_config, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client2, @storage_account_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager

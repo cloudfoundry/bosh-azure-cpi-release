@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::ManualNetwork do
-  let(:azure_properties) { mock_azure_properties }
+  let(:azure_config) { mock_azure_config }
 
   context 'when all properties are specified' do
     let(:private_ip) { 'fake-private-ip' }
@@ -31,7 +31,7 @@ describe Bosh::AzureCloud::ManualNetwork do
     end
 
     it 'should return properties with right values' do
-      network = Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+      network = Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
       expect(network.private_ip).to eq(private_ip)
       expect(network.resource_group_name).to eq(rg_name)
       expect(network.virtual_network_name).to eq(vnet_name)
@@ -55,7 +55,7 @@ describe Bosh::AzureCloud::ManualNetwork do
 
     it 'should raise an error' do
       expect do
-        Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+        Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
       end.to raise_error(/cloud_properties required for manual network/)
     end
   end
@@ -72,7 +72,7 @@ describe Bosh::AzureCloud::ManualNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/virtual_network_name required for manual network/)
       end
     end
@@ -89,7 +89,7 @@ describe Bosh::AzureCloud::ManualNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/virtual_network_name required for manual network/)
       end
     end
@@ -107,7 +107,7 @@ describe Bosh::AzureCloud::ManualNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/subnet_name required for manual network/)
       end
     end
@@ -124,7 +124,7 @@ describe Bosh::AzureCloud::ManualNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/subnet_name required for manual network/)
       end
     end
@@ -143,7 +143,7 @@ describe Bosh::AzureCloud::ManualNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/ip address required for manual network/)
       end
     end
@@ -161,7 +161,7 @@ describe Bosh::AzureCloud::ManualNetwork do
 
       it 'should raise an error' do
         expect do
-          Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+          Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
         end.to raise_error(/ip address required for manual network/)
       end
     end
@@ -179,12 +179,12 @@ describe Bosh::AzureCloud::ManualNetwork do
     end
 
     it 'should return default values for the optional cloud properties' do
-      network = Bosh::AzureCloud::ManualNetwork.new(azure_properties, 'default', network_spec)
+      network = Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
       expect(network.security_group).to be_nil
       expect(network.application_security_groups).to eq([])
       expect(network.ip_forwarding).to be false
       expect(network.accelerated_networking).to be false
-      expect(network.resource_group_name).to eq(azure_properties['resource_group_name'])
+      expect(network.resource_group_name).to eq(azure_config['resource_group_name'])
       expect(network.dns).to be_nil
       expect(network.has_default_dns?).to be false
       expect(network.has_default_dns?).to be false

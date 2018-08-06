@@ -18,7 +18,7 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should delete an instance' do
       expect(Bosh::AzureCloud::InstanceId).to receive(:parse)
-        .with(instance_id, azure_properties)
+        .with(instance_id, azure_config)
         .and_return(instance_id_object)
 
       expect(vm_manager).to receive(:delete).with(instance_id_object)

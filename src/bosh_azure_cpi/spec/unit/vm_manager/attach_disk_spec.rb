@@ -9,8 +9,8 @@ describe Bosh::AzureCloud::VMManager do
     let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
     let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
     let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
-    let(:azure_properties) { mock_azure_properties }
-    let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_properties, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+    let(:azure_config) { mock_azure_config }
+    let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
 
     let(:caching) { 'fake-caching' }
     let(:lun) { 1 }

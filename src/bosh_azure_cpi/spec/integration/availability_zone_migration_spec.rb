@@ -36,7 +36,7 @@ describe Bosh::AzureCloud::Cloud do
     }
   end
   let(:availability_zone)    { Random.rand(1..3).to_s }
-  let(:resource_pool)        do
+  let(:vm_properties)        do
     {
       'instance_type' => instance_type,
       'resource_group_name' => @additional_resource_group_name,
@@ -106,7 +106,7 @@ describe Bosh::AzureCloud::Cloud do
 
           # Create a zonal VM
           logger.info("Creating managed zonal VM with stemcell_id='#{@stemcell_id}'")
-          instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
+          instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, vm_properties, network_spec)
 
           logger.info("Checking managed VM existence instance_id='#{instance_id}'")
           expect(cpi.has_vm?(instance_id)).to be(true)
@@ -140,7 +140,7 @@ describe Bosh::AzureCloud::Cloud do
 
           # Create a zonal VM
           logger.info("Creating managed zonal VM with stemcell_id='#{@stemcell_id}'")
-          instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
+          instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, vm_properties, network_spec)
 
           logger.info("Checking zonal VM existence instance_id='#{instance_id}'")
           expect(cpi.has_vm?(instance_id)).to be(true)

@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::VipNetwork do
-  let(:azure_properties) { mock_azure_properties }
+  let(:azure_config) { mock_azure_config }
 
   context 'with resource_group_name' do
     let(:network_spec) do
@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::VipNetwork do
     end
 
     it 'should get resource_group_name from cloud_properties' do
-      nc = Bosh::AzureCloud::VipNetwork.new(azure_properties, 'vip', network_spec)
+      nc = Bosh::AzureCloud::VipNetwork.new(azure_config, 'vip', network_spec)
       expect(nc.public_ip).to eq('fake-vip')
       expect(nc.resource_group_name).to eq('foo')
     end
@@ -33,9 +33,9 @@ describe Bosh::AzureCloud::VipNetwork do
     end
 
     it 'should get resource_group_name from global azure properties' do
-      nc = Bosh::AzureCloud::VipNetwork.new(azure_properties, 'vip', network_spec)
+      nc = Bosh::AzureCloud::VipNetwork.new(azure_config, 'vip', network_spec)
       expect(nc.public_ip).to eq('fake-vip')
-      expect(nc.resource_group_name).to eq(azure_properties['resource_group_name'])
+      expect(nc.resource_group_name).to eq(azure_config['resource_group_name'])
     end
   end
 end

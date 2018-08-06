@@ -148,37 +148,37 @@ describe Bosh::AzureCloud::Helpers do
 
   describe '#get_arm_endpoint' do
     context 'when environment is Azure' do
-      let(:azure_properties) { { 'environment' => 'AzureCloud' } }
+      let(:azure_config) { { 'environment' => 'AzureCloud' } }
 
       it 'should return Azure ARM endpoint' do
         expect(
-          helpers_tester.get_arm_endpoint(azure_properties)
+          helpers_tester.get_arm_endpoint(azure_config)
         ).to eq('https://management.azure.com/')
       end
     end
 
     context 'when environment is AzureChinaCloud' do
-      let(:azure_properties) { { 'environment' => 'AzureChinaCloud' } }
+      let(:azure_config) { { 'environment' => 'AzureChinaCloud' } }
 
       it 'should return AzureChinaCloud ARM endpoint' do
         expect(
-          helpers_tester.get_arm_endpoint(azure_properties)
+          helpers_tester.get_arm_endpoint(azure_config)
         ).to eq('https://management.chinacloudapi.cn/')
       end
     end
 
     context 'when environment is AzureUSGovernment' do
-      let(:azure_properties) { { 'environment' => 'AzureUSGovernment' } }
+      let(:azure_config) { { 'environment' => 'AzureUSGovernment' } }
 
       it 'should return AzureUSGovernment ARM endpoint' do
         expect(
-          helpers_tester.get_arm_endpoint(azure_properties)
+          helpers_tester.get_arm_endpoint(azure_config)
         ).to eq('https://management.usgovcloudapi.net/')
       end
     end
 
     context 'when environment is AzureStack' do
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureStack',
           'azure_stack' => {
@@ -191,17 +191,17 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should return AzureStack ARM endpoint' do
         expect(
-          helpers_tester.get_arm_endpoint(azure_properties)
+          helpers_tester.get_arm_endpoint(azure_config)
         ).to eq('https://api.fake-domain')
       end
     end
 
     context 'when environment is AzureGermanCloud' do
-      let(:azure_properties) { { 'environment' => 'AzureGermanCloud' } }
+      let(:azure_config) { { 'environment' => 'AzureGermanCloud' } }
 
       it 'should return AzureGermanCloud ARM endpoint' do
         expect(
-          helpers_tester.get_arm_endpoint(azure_properties)
+          helpers_tester.get_arm_endpoint(azure_config)
         ).to eq('https://management.microsoftazure.de/')
       end
     end
@@ -209,37 +209,37 @@ describe Bosh::AzureCloud::Helpers do
 
   describe '#get_token_resource' do
     context 'when environment is Azure' do
-      let(:azure_properties) { { 'environment' => 'AzureCloud' } }
+      let(:azure_config) { { 'environment' => 'AzureCloud' } }
 
       it 'should return Azure resource' do
         expect(
-          helpers_tester.get_token_resource(azure_properties)
+          helpers_tester.get_token_resource(azure_config)
         ).to eq('https://management.azure.com/')
       end
     end
 
     context 'when environment is AzureChinaCloud' do
-      let(:azure_properties) { { 'environment' => 'AzureChinaCloud' } }
+      let(:azure_config) { { 'environment' => 'AzureChinaCloud' } }
 
       it 'should return AzureChinaCloud resource' do
         expect(
-          helpers_tester.get_token_resource(azure_properties)
+          helpers_tester.get_token_resource(azure_config)
         ).to eq('https://management.chinacloudapi.cn/')
       end
     end
 
     context 'when environment is AzureUSGovernment' do
-      let(:azure_properties) { { 'environment' => 'AzureUSGovernment' } }
+      let(:azure_config) { { 'environment' => 'AzureUSGovernment' } }
 
       it 'should return AzureUSGovernment resource' do
         expect(
-          helpers_tester.get_token_resource(azure_properties)
+          helpers_tester.get_token_resource(azure_config)
         ).to eq('https://management.usgovcloudapi.net/')
       end
     end
 
     context 'when environment is AzureStack' do
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureStack',
           'azure_stack' => {
@@ -250,17 +250,17 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should return AzureStack resource' do
         expect(
-          helpers_tester.get_token_resource(azure_properties)
+          helpers_tester.get_token_resource(azure_config)
         ).to eq('https://azurestack.local-api/')
       end
     end
 
     context 'when environment is AzureGermanCloud' do
-      let(:azure_properties) { { 'environment' => 'AzureGermanCloud' } }
+      let(:azure_config) { { 'environment' => 'AzureGermanCloud' } }
 
       it 'should return AzureGermanCloud resource' do
         expect(
-          helpers_tester.get_token_resource(azure_properties)
+          helpers_tester.get_token_resource(azure_config)
         ).to eq('https://management.microsoftazure.de/')
       end
     end
@@ -268,7 +268,7 @@ describe Bosh::AzureCloud::Helpers do
 
   describe '#get_azure_authentication_endpoint_and_api_version' do
     context 'when environment is Azure' do
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureCloud',
           'tenant_id'   => 'fake-tenant-id'
@@ -277,13 +277,13 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should return Azure authentication endpoint and api version' do
         expect(
-          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
         ).to eq(['https://login.microsoftonline.com/fake-tenant-id/oauth2/token', api_version])
       end
     end
 
     context 'when environment is AzureChinaCloud' do
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureChinaCloud',
           'tenant_id'   => 'fake-tenant-id'
@@ -292,13 +292,13 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should return AzureChinaCloud authentication endpoint and api version' do
         expect(
-          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
         ).to eq(['https://login.chinacloudapi.cn/fake-tenant-id/oauth2/token', azure_china_api_version])
       end
     end
 
     context 'when environment is AzureUSGovernment' do
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureUSGovernment',
           'tenant_id'   => 'fake-tenant-id'
@@ -307,13 +307,13 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should return AzureUSGovernment authentication endpoint and api version' do
         expect(
-          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
         ).to eq(['https://login.microsoftonline.us/fake-tenant-id/oauth2/token', azure_usgov_api_version])
       end
     end
 
     context 'when environment is AzureStack' do
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureStack',
           'azure_stack' => {
@@ -326,55 +326,55 @@ describe Bosh::AzureCloud::Helpers do
 
       context 'when azure_stack.authentication is AzureAD' do
         before do
-          azure_properties['azure_stack']['authentication'] = 'AzureAD'
+          azure_config['azure_stack']['authentication'] = 'AzureAD'
         end
 
         it 'should return Azure authentication endpoint and api version' do
           expect(
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
           ).to eq(['https://login.microsoftonline.com/fake-tenant-id/oauth2/token', api_version])
         end
       end
 
       context 'when azure_stack.authentication is AzureChinaClouadAD' do
         before do
-          azure_properties['azure_stack']['authentication'] = 'AzureChinaCloudAD'
+          azure_config['azure_stack']['authentication'] = 'AzureChinaCloudAD'
         end
 
         it 'should return Azure China Cloud authentication endpoint and api version' do
           expect(
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
           ).to eq(['https://login.chinacloudapi.cn/fake-tenant-id/oauth2/token', api_version])
         end
       end
 
       context 'when azure_stack.authentication is ADFS' do
         before do
-          azure_properties['azure_stack']['authentication'] = 'ADFS'
+          azure_config['azure_stack']['authentication'] = 'ADFS'
         end
 
         it 'should return ADFS authentication endpoint and api version' do
           expect(
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
           ).to eq(['https://adfs.fake-domain/adfs/oauth2/token', azure_stack_api_version])
         end
       end
 
       context 'when the value of azure_stack.authentication is not supported' do
         before do
-          azure_properties['azure_stack']['authentication'] = 'NotSupportedValue'
+          azure_config['azure_stack']['authentication'] = 'NotSupportedValue'
         end
 
         it 'should raise an error' do
           expect do
-            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+            helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
           end.to raise_error(/No support for the AzureStack authentication: 'NotSupportedValue'/)
         end
       end
     end
 
     context 'when environment is AzureGermanCloud' do
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureGermanCloud',
           'tenant_id'   => 'fake-tenant-id'
@@ -383,7 +383,7 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should return AzureGermanCloud authentication endpoint and api version' do
         expect(
-          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
+          helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
         ).to eq(['https://login.microsoftonline.de/fake-tenant-id/oauth2/token', azure_german_api_version])
       end
     end
@@ -476,7 +476,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when the environment is not AzureStack' do
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureCloud'
         }
@@ -494,14 +494,14 @@ describe Bosh::AzureCloud::Helpers do
         expect(Azure::Storage::Client).to receive(:create).with(options)
                                                           .and_return(azure_client)
         expect(
-          helpers_tester.initialize_azure_storage_client(storage_account, azure_properties)
+          helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
         ).to eq(azure_client)
       end
     end
 
     context 'when the environment is AzureStack' do
       let(:azure_stack_domain) { 'fake-azure-stack-domain' }
-      let(:azure_properties) do
+      let(:azure_config) do
         {
           'environment' => 'AzureStack',
           'azure_stack' => {
@@ -523,7 +523,7 @@ describe Bosh::AzureCloud::Helpers do
         expect(Azure::Storage::Client).to receive(:create).with(options)
                                                           .and_return(azure_client)
         expect(
-          helpers_tester.initialize_azure_storage_client(storage_account, azure_properties)
+          helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
         ).to eq(azure_client)
       end
     end
@@ -604,31 +604,31 @@ describe Bosh::AzureCloud::Helpers do
 
   describe '#is_debug_mode' do
     context 'debug_mode is not set' do
-      let(:azure_properties) { {} }
+      let(:azure_config) { {} }
 
       it 'should return false' do
         expect(
-          helpers_tester.is_debug_mode(azure_properties)
+          helpers_tester.is_debug_mode(azure_config)
         ).to be false
       end
     end
 
     context 'debug_mode is set to false' do
-      let(:azure_properties) { { 'debug_mode' => false } }
+      let(:azure_config) { { 'debug_mode' => false } }
 
       it 'should return false' do
         expect(
-          helpers_tester.is_debug_mode(azure_properties)
+          helpers_tester.is_debug_mode(azure_config)
         ).to be false
       end
     end
 
     context 'debug_mode is set to true' do
-      let(:azure_properties) { { 'debug_mode' => true } }
+      let(:azure_config) { { 'debug_mode' => true } }
 
       it 'should return true' do
         expect(
-          helpers_tester.is_debug_mode(azure_properties)
+          helpers_tester.is_debug_mode(azure_config)
         ).to be true
       end
     end
