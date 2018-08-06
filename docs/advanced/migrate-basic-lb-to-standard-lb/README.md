@@ -2,27 +2,25 @@
 
 [Standard Load Balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview) is a new Load Balancer product for all TCP and UDP applications with an expanded and more granular feature set over Basic Load Balancer.
 
-The problems during migrating:
+Note when planning the migration, you need to be aware of following restrictions.
 
-* Matching SKUs must be used for Load Balancer and Public IP resources. You can't have a mixture of Basic SKU resources and Standard SKU resources. The IP address of the Cloud Foundry endpoints (e.g. system domain, apps domain, tcp routing, ...) will **CHANGE** when you migrate from Basic to Standard SKU.
+* Matching SKUs must be used for Load Balancer and Public IP resources. You can't have a mixture of Basic SKU resources and Standard SKU resources. It means that, when you migrate your load balancers from `Basic SKU` to `Standard SKU`, you have to use the Standard SKU Public IP and the IP address will **CHANGE**.
 
 * You can't attach standalone virtual machines, virtual machines in an availability set resource, or a virtual machine scale set resources to both SKUs simultaneously. You have to remove the Basic SKU load balancers first and then add the Standard SKU load balancers. You can't switch the load balancer in **ONE** step.
 
-The above limits may cause downtime before the DNS propagations are finished globally. This guidance can help to reduce the downtime.
+The above [limits](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview#migration-between-skus) may cause downtime before the DNS propagations are finished globally. This guidance can help to reduce the downtime.
 
 ## How to Migrate
 
-You may have four load balancers (`Router`, `TCP Router`, `Diego Brain` and `MySQL Proxy`).
+This guidance assumes you have created 4 load balancers (`Router`, `TCP Router`, `Diego Brain` and `MySQL Proxy`), although each can be migrated independently. This section briefly describes how to migrate load balancers. For detailed steps, you can follow the sections [Migrate Load Balancers in cf-deployment](#migrate-load-balancers-in-cf-deployment) and [Migrate Load Balancers in Pivotal Application Service](#migrate-load-balancers-in-pivotal-application-service).
 
-* Switching traffic to haproxy for the load balancers of `Router`, `TCP Router` and `Diego Brain`:
+* For the load balancers of `Router`, `TCP Router` and `Diego Brain`:
 
-    * The `HAProxy` instances also terminates HTTP/HTTPS traffic for applications and forwards the Diego brain port (2222) and TCP router ports (1024-1123 by default).
+    * Switching traffic from `router/tcp-router/diego-brain` to `HAProxy`. The `HAProxy` instances also terminates HTTP/HTTPS traffic for applications and forwards the Diego brain port (2222) and TCP router ports (1024-1123 by default). You could make a new load balancer and attach it to `HAProxy` instead of the `router/tcp-router/diego-brain`.
 
-    * You could make a new load balancer and attach it to `HAProxy` instead of the `router/tcp-router/diego-brain` (or the `router/tcp-router/diego-brain` instead of `HAProxy`, depending on what you did originally).
+    * Once DNS is propagated, you can delete the old basic load balancers of `router/tcp-router/diego-brain`.
 
-    * Once DNS is propagated, you can delete the old load balancers of `router/tcp-router/diego-brain`.
-
-    * Repeat the process with a 2nd new load balancer if you want to move the traffic back to where it was before.
+    * Repeat the process with a 2nd new load balancer to move the traffic back to `router/tcp-router/diego-brain`.
 
 * For the load balancer of `MySQL Proxy`:
 
@@ -54,7 +52,7 @@ In the following steps, we assume that there are no HAProxy instances in your de
 
 ### Steps
 
-1. Create a load balancer for HAProxy instances using the [template](../standard-load-balancers/load-balancer-for-haproxy.json). The LB will be used in the next step.
+1. Create a load balancer for HAProxy instances using the [template](../standard-load-balancers/load-balancer-for-haproxy.json). Please check the load balancer rules carefully, and add rules if it does not exist in the template. The LB will be used in the next step.
 
 1. Add an HAProxy instance with a LB to your deployment. **Deploy!**
 
@@ -112,7 +110,7 @@ In the following steps, we assume that there are no HAProxy instances in your de
     ```
 
 
-1. Navigate to your DNS provider, and create entries for the following domains.
+1. Navigate to your DNS provider, and create entries for the following domains. Wait until DNS propagations are finished globally.
 
     * `*.<your-domain>` is resolved to the new public IP address of Router load balancer (Standard SKU).
 
@@ -178,7 +176,7 @@ In the following steps, we assume that there are no HAProxy instances in your de
 
     1. Add the Standard SKU load balancer in the **Load Balancers** field of `Router`, `TCP Router` and `Diego Brain`. **Apply changes!**
 
-    1. Navigate to your DNS provider, and create entries for the following domains.
+    1. Navigate to your DNS provider, and create entries for the following domains. Wait until DNS propagations are finished globally.
 
         * `*.apps.<your-domain>` is resolved to the new public IP address of `Router` load balancer (Standard SKU).
 
@@ -196,6 +194,6 @@ In the following steps, we assume that there are no HAProxy instances in your de
 
     1. Configure `MySQL Service Hostname` in [`Step 12: (Optional) Configure Internal MySQL`](https://docs.pivotal.io/pivotalcf/2-1/customizing/azure-er-config.html#internal-mysql) and add the Standard SKU load balancer in the **Load Balancers** field of `MySQL Proxy`. **Apply changes!**
 
-    1. Navigate to your DNS provider, and create entries for the following domains.
+    1. Navigate to your DNS provider, and create entries for the following domains. Wait until DNS propagations are finished globally.
 
         * `mysql.<your-domain>` is resolved to the new IP address of `MySQL` load balancer (Standard SKU).
