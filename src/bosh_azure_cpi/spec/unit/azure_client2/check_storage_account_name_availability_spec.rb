@@ -80,7 +80,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect do
           azure_client2.check_storage_account_name_availability(storage_account_name)
-        end.to raise_error(/Cannot check the availability of the storage account name `#{storage_account_name}'/)
+        end.to raise_error(/Cannot check the availability of the storage account name '#{storage_account_name}'/)
       end
     end
   end

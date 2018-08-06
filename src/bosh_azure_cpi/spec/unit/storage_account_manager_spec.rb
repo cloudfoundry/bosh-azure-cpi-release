@@ -105,7 +105,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         it 'should raise an error' do
           expect do
             storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
-          end.to raise_error(/The storage account name `#{name}' is invalid./)
+          end.to raise_error(/The storage account name '#{name}' is invalid./)
         end
       end
 
@@ -125,7 +125,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         it 'should raise an error' do
           expect do
             storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
-          end.to raise_error(/The storage account with the name `#{name}' is not available/)
+          end.to raise_error(/The storage account with the name '#{name}' is not available/)
         end
       end
 
@@ -210,7 +210,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         it 'should raise an error' do
           expect do
             storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
-          end.to raise_error(/Storage account `#{name}' is not created/)
+          end.to raise_error(/Storage account '#{name}' is not created/)
         end
       end
 
@@ -292,7 +292,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
           .and_return(nil)
         expect do
           storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account)
-        end.to raise_error(/Storage account for tags `#{tags}' is not created/)
+        end.to raise_error(/Storage account for tags '#{tags}' is not created/)
       end
 
       it 'should raise an error if it fails to create a new storage account' do
@@ -717,7 +717,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         it 'should raise an error' do
           expect do
             storage_account_manager.default_storage_account
-          end.to raise_error /The default storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' is specified in Global Configuration, but it does not exist./
+          end.to raise_error /The default storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' is specified in Global Configuration, but it does not exist./
         end
       end
 
@@ -926,7 +926,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
               expect do
                 storage_account_manager.default_storage_account
-              end.to raise_error(/The existing default storage account `#{targeted_storage_account[:name]}' has a different location other than the resource group location./)
+              end.to raise_error(/The existing default storage account '#{targeted_storage_account[:name]}' has a different location other than the resource group location./)
             end
           end
         end

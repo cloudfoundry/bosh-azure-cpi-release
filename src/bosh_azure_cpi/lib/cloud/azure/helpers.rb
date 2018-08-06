@@ -231,7 +231,7 @@ module Bosh::AzureCloud
         elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_ADFS
           url = "https://adfs.#{domain}/adfs/oauth2/token"
         else
-          cloud_error("No support for the AzureStack authentication: `#{authentication}'")
+          cloud_error("No support for the AzureStack authentication: '#{authentication}'")
         end
       else
         url = "#{AZURE_ENVIRONMENTS[azure_properties['environment']]['activeDirectoryEndpointUrl']}/#{azure_properties['tenant_id']}/oauth2/token"
@@ -248,10 +248,10 @@ module Bosh::AzureCloud
     def get_jwt_assertion(authentication_endpoint, client_id)
       certificate_path = get_service_principal_certificate_path
       certificate_data = File.read(certificate_path)
-      @logger.info("Reading the certificate from `#{certificate_path}'")
+      @logger.info("Reading the certificate from '#{certificate_path}'")
       cert = OpenSSL::X509::Certificate.new(certificate_data)
       thumbprint = OpenSSL::Digest::SHA1.new(cert.to_der).to_s
-      @logger.debug("The certificate thumbprint is `#{thumbprint}'")
+      @logger.debug("The certificate thumbprint is '#{thumbprint}'")
       header = {
         "alg": 'RS256',
         "typ": 'JWT',
@@ -298,7 +298,7 @@ module Bosh::AzureCloud
     end
 
     def validate_disk_size_type(size)
-      raise ArgumentError, "The disk size needs to be an integer. The current value is `#{size}'." unless size.is_a?(Integer)
+      raise ArgumentError, "The disk size needs to be an integer. The current value is '#{size}'." unless size.is_a?(Integer)
     end
 
     def is_debug_mode(azure_properties)
@@ -522,7 +522,7 @@ module Bosh::AzureCloud
       unless root_disk_size.nil?
         validate_disk_size_type(root_disk_size)
         if root_disk_size < image_size
-          @logger.warn("root_disk.size `#{root_disk_size}' MiB is smaller than the default OS disk size `#{image_size}' MiB. root_disk.size is ignored and use `#{image_size}' MiB as root disk size.")
+          @logger.warn("root_disk.size '#{root_disk_size}' MiB is smaller than the default OS disk size '#{image_size}' MiB. root_disk.size is ignored and use '#{image_size}' MiB as root disk size.")
           root_disk_size = image_size
         end
         disk_size = (root_disk_size / 1024.0).ceil
@@ -543,7 +543,7 @@ module Bosh::AzureCloud
     # When the lock is acquired, the process will execute the code in the block
     #
     # @param [String] lock_name   - lock name
-    # @param [Constants] mode     - lock mode, a logical `or' of the values in LOCK_EX, LOCK_NB, LOCK_SH. See detail in http://ruby-doc.org/core-2.4.2/File.html#method-i-flock
+    # @param [Constants] mode     - lock mode, a logical 'or' of the values in LOCK_EX, LOCK_NB, LOCK_SH. See detail in http://ruby-doc.org/core-2.4.2/File.html#method-i-flock
     # @return - return value of the block
     #
     def flock(lock_name, mode)

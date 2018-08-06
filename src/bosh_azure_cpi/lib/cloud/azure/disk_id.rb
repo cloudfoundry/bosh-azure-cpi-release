@@ -103,13 +103,13 @@ module Bosh::AzureCloud
 
     def validate
       if @version == VERSION2
-        cloud_error("Invalid disk_name in disk id (version 2) `#{@id}'") if disk_name.nil? || disk_name.empty?
-        cloud_error("Invalid caching in disk id (version 2) `#{@id}'") if caching.nil? || caching.empty?
+        cloud_error("Invalid disk_name in disk id (version 2) '#{@id}'") if disk_name.nil? || disk_name.empty?
+        cloud_error("Invalid caching in disk id (version 2) '#{@id}'") if caching.nil? || caching.empty?
         unless resource_group_name.nil?
-          cloud_error("Invalid resource_group_name in disk id (version 2) `#{@id}'") if resource_group_name.empty?
+          cloud_error("Invalid resource_group_name in disk id (version 2) '#{@id}'") if resource_group_name.empty?
         end
         if disk_name.start_with?(DATA_DISK_PREFIX)
-          cloud_error("Invalid storage_account_name in disk id (version 2) `#{@id}'") if storage_account_name.nil? || storage_account_name.empty?
+          cloud_error("Invalid storage_account_name in disk id (version 2) '#{@id}'") if storage_account_name.nil? || storage_account_name.empty?
         end
       end
     end

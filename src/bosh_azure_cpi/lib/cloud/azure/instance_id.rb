@@ -90,12 +90,12 @@ module Bosh::AzureCloud
 
     def validate
       if @version == VERSION1
-        cloud_error("Invalid instance id (version 1) `#{@id}'") if @id.length != UUID_LENGTH && parse_v1_with_unmanaged_disks(@id)[1].length != UUID_LENGTH
+        cloud_error("Invalid instance id (version 1) '#{@id}'") if @id.length != UUID_LENGTH && parse_v1_with_unmanaged_disks(@id)[1].length != UUID_LENGTH
       else
-        cloud_error("Invalid resource_group_name in instance id (version 2) `#{@id}'") if resource_group_name.nil? || resource_group_name.empty?
-        cloud_error("Invalid vm_name in instance id (version 2)' `#{@id}'") if vm_name.nil? || vm_name.empty?
+        cloud_error("Invalid resource_group_name in instance id (version 2) '#{@id}'") if resource_group_name.nil? || resource_group_name.empty?
+        cloud_error("Invalid vm_name in instance id (version 2)' '#{@id}'") if vm_name.nil? || vm_name.empty?
         unless storage_account_name.nil?
-          cloud_error("Invalid storage_account_name in instance id (version 2) `#{@id}'") if storage_account_name.empty?
+          cloud_error("Invalid storage_account_name in instance id (version 2) '#{@id}'") if storage_account_name.empty?
         end
       end
     end
@@ -105,7 +105,7 @@ module Bosh::AzureCloud
     # @Return [storage_account_name, agent_id]
     def parse_v1_with_unmanaged_disks(id)
       ret = id.match('^([^-]*)-(.*)$')
-      cloud_error("Invalid instance id (version 1) `#{id}'") if ret.nil?
+      cloud_error("Invalid instance id (version 1) '#{id}'") if ret.nil?
       [ret[1], ret[2]]
     end
   end

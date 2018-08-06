@@ -48,10 +48,10 @@ module Bosh::AzureCloud
                "Available VM sizes:\n",
                available_vm_sizes.map { |vm_size| "#{vm_size[:name]}: #{vm_size[:number_of_cores]} CPU, #{vm_size[:memory_in_mb]} MB RAM\n" }].join
       end
-      @logger.debug("The possible VM sizes are `#{possible_vm_sizes}'")
+      @logger.debug("The possible VM sizes are '#{possible_vm_sizes}'")
 
       closest_matched_vm_size = find_closest_matched_vm_size(possible_vm_sizes)
-      @logger.debug("The closest matched VM size is `#{closest_matched_vm_size}'")
+      @logger.debug("The closest matched VM size is '#{closest_matched_vm_size}'")
 
       closest_matched_vm_size[:name]
     end

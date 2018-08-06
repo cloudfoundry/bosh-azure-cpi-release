@@ -27,7 +27,7 @@ describe Bosh::AzureCloud::VMManager do
 
         expect do
           vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-        end.to raise_error /Only one of `availability_zone' and `availability_set' is allowed to be configured for the VM but you have configured both/
+        end.to raise_error /Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both/
       end
     end
 
@@ -51,7 +51,7 @@ describe Bosh::AzureCloud::VMManager do
 
         expect do
           vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-        end.to raise_error /`#{zone}' is not a valid zone/
+        end.to raise_error /'#{zone}' is not a valid zone/
       end
     end
 
@@ -79,7 +79,7 @@ describe Bosh::AzureCloud::VMManager do
         it 'should raise an error' do
           expect do
             vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-          end.to raise_error %r{Cannot find the subnet `fake-virtual-network-name\/fake-subnet-name' in the resource group `#{MOCK_RESOURCE_GROUP_NAME}'}
+          end.to raise_error %r{Cannot find the subnet 'fake-virtual-network-name\/fake-subnet-name' in the resource group '#{MOCK_RESOURCE_GROUP_NAME}'}
         end
       end
 
@@ -106,7 +106,7 @@ describe Bosh::AzureCloud::VMManager do
         it 'should raise an error' do
           expect do
             vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-          end.to raise_error /Cannot find the network security group `fake-default-nsg-name'/
+          end.to raise_error /Cannot find the network security group 'fake-default-nsg-name'/
         end
       end
     end
@@ -140,7 +140,7 @@ describe Bosh::AzureCloud::VMManager do
             .and_return(nil)
           expect do
             vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-          end.to raise_error %r{Cannot find the subnet `fake-virtual-network-name\/fake-subnet-name' in the resource group `fake-resource-group-name'}
+          end.to raise_error %r{Cannot find the subnet 'fake-virtual-network-name\/fake-subnet-name' in the resource group 'fake-resource-group-name'}
         end
       end
 
@@ -160,7 +160,7 @@ describe Bosh::AzureCloud::VMManager do
         it 'should raise an error' do
           expect do
             vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-          end.to raise_error /Cannot find the network security group `fake-default-nsg-name'/
+          end.to raise_error /Cannot find the network security group 'fake-default-nsg-name'/
         end
       end
     end

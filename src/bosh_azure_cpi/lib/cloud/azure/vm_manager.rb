@@ -23,7 +23,7 @@ module Bosh::AzureCloud
       vm_size = resource_pool.fetch('instance_type', nil)
 
       # When both availability_zone and availability_set are specified, raise an error
-      cloud_error("Only one of `availability_zone' and `availability_set' is allowed to be configured for the VM but you have configured both.") if !resource_pool['availability_zone'].nil? && !resource_pool['availability_set'].nil?
+      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !resource_pool['availability_zone'].nil? && !resource_pool['availability_set'].nil?
 
       check_resource_group(resource_group_name, location)
 
@@ -66,7 +66,7 @@ module Bosh::AzureCloud
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
         # Users do not use this credential to logon to Windows VMs
-        # If users want to logon to Windows VMs, they need to add a new user via the job `user_add'
+        # If users want to logon to Windows VMs, they need to add a new user via the job 'user_add'
         # https://github.com/cloudfoundry/bosh-deployment/blob/master/jumpbox-user.yml
         #
         # https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
@@ -89,7 +89,7 @@ module Bosh::AzureCloud
 
       zone = resource_pool.fetch('availability_zone', nil)
       unless zone.nil?
-        cloud_error("`#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
+        cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
         vm_params[:zone] = zone.to_s
       end
 
@@ -325,7 +325,7 @@ module Bosh::AzureCloud
 
     def get_network_subnet(network)
       subnet = @azure_client2.get_network_subnet_by_name(network.resource_group_name, network.virtual_network_name, network.subnet_name)
-      cloud_error("Cannot find the subnet `#{network.virtual_network_name}/#{network.subnet_name}' in the resource group `#{network.resource_group_name}'") if subnet.nil?
+      cloud_error("Cannot find the subnet '#{network.virtual_network_name}/#{network.subnet_name}' in the resource group '#{network.resource_group_name}'") if subnet.nil?
       subnet
     end
 
@@ -342,10 +342,10 @@ module Bosh::AzureCloud
       # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
       default_resource_group_name = @azure_properties['resource_group_name']
       if network_security_group.nil? && resource_group_name != default_resource_group_name
-        @logger.info("Cannot find the network security group `#{network_security_group_name}' in the resource group `#{resource_group_name}', trying to search it in the default resource group `#{default_resource_group_name}'")
+        @logger.info("Cannot find the network security group '#{network_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
         network_security_group = @azure_client2.get_network_security_group_by_name(default_resource_group_name, network_security_group_name)
       end
-      cloud_error("Cannot find the network security group `#{network_security_group_name}'") if network_security_group.nil?
+      cloud_error("Cannot find the network security group '#{network_security_group_name}'") if network_security_group.nil?
       network_security_group
     end
 
@@ -360,10 +360,10 @@ module Bosh::AzureCloud
         # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
         default_resource_group_name = @azure_properties['resource_group_name']
         if application_security_group.nil? && resource_group_name != default_resource_group_name
-          @logger.info("Cannot find the application security group `#{application_security_group_name}' in the resource group `#{resource_group_name}', trying to search it in the default resource group `#{default_resource_group_name}'")
+          @logger.info("Cannot find the application security group '#{application_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
           application_security_group = @azure_client2.get_application_security_group_by_name(default_resource_group_name, application_security_group_name)
         end
-        cloud_error("Cannot find the application security group `#{application_security_group_name}'") if application_security_group.nil?
+        cloud_error("Cannot find the application security group '#{application_security_group_name}'") if application_security_group.nil?
         application_security_groups.push(application_security_group)
       end
       application_security_groups
@@ -388,7 +388,7 @@ module Bosh::AzureCloud
       unless vip_network.nil?
         resource_group_name = vip_network.resource_group_name
         public_ip = @azure_client2.list_public_ips(resource_group_name).find { |ip| ip[:ip_address] == vip_network.public_ip }
-        cloud_error("Cannot find the public IP address `#{vip_network.public_ip}' in the resource group `#{resource_group_name}'") if public_ip.nil?
+        cloud_error("Cannot find the public IP address '#{vip_network.public_ip}' in the resource group '#{resource_group_name}'") if public_ip.nil?
       end
       public_ip
     end
@@ -398,7 +398,7 @@ module Bosh::AzureCloud
       unless resource_pool['load_balancer'].nil?
         load_balancer_name = resource_pool['load_balancer']
         load_balancer = @azure_client2.get_load_balancer_by_name(load_balancer_name)
-        cloud_error("Cannot find the load balancer `#{load_balancer_name}'") if load_balancer.nil?
+        cloud_error("Cannot find the load balancer '#{load_balancer_name}'") if load_balancer.nil?
       end
       load_balancer
     end
@@ -408,7 +408,7 @@ module Bosh::AzureCloud
       unless resource_pool['application_gateway'].nil?
         application_gateway_name = resource_pool['application_gateway']
         application_gateway = @azure_client2.get_application_gateway_by_name(application_gateway_name)
-        cloud_error("Cannot find the application gateway `#{application_gateway_name}'") if application_gateway.nil?
+        cloud_error("Cannot find the application gateway '#{application_gateway_name}'") if application_gateway.nil?
       end
       application_gateway
     end
@@ -519,16 +519,16 @@ module Bosh::AzureCloud
       flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX) do
         availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
         if availability_set.nil?
-          @logger.info("create_availability_set - the availability set `#{availability_set_name}' doesn't exist. Will create a new one.")
+          @logger.info("create_availability_set - the availability set '#{availability_set_name}' doesn't exist. Will create a new one.")
           @azure_client2.create_availability_set(resource_group_name, availability_set_params)
           availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
         # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
         elsif !availability_set[:location].casecmp(availability_set_params[:location]).zero?
-          cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists, but in a different location `#{availability_set[:location].downcase}' instead of `#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
+          cloud_error("create_availability_set - the availability set '#{availability_set_name}' already exists, but in a different location '#{availability_set[:location].downcase}' instead of '#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
         elsif !@use_managed_disks && availability_set[:managed]
-          cloud_error("create_availability_set - the availability set `#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
+          cloud_error("create_availability_set - the availability set '#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
         elsif @use_managed_disks && !availability_set[:managed]
-          @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
+          @logger.info("create_availability_set - the availability set '#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
           availability_set_params.merge!(
             platform_update_domain_count: availability_set[:platform_update_domain_count],
             platform_fault_domain_count: availability_set[:platform_fault_domain_count],
@@ -537,10 +537,10 @@ module Bosh::AzureCloud
           @azure_client2.create_availability_set(resource_group_name, availability_set_params)
           availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
         else
-          @logger.info("create_availability_set - the availability set `#{availability_set_name}' exists. No need to update.")
+          @logger.info("create_availability_set - the availability set '#{availability_set_name}' exists. No need to update.")
         end
       end
-      cloud_error("get_or_create_availability_set - availability set `#{availability_set_name}' is not created.") if availability_set.nil?
+      cloud_error("get_or_create_availability_set - availability set '#{availability_set_name}' is not created.") if availability_set.nil?
       availability_set
     end
 

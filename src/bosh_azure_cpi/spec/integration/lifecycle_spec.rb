@@ -96,7 +96,7 @@ describe Bosh::AzureCloud::Cloud do
   before { @disk_id_pool = [] }
   after do
     @disk_id_pool.each do |disk_id|
-      logger.info("Cleanup: Deleting the disk `#{disk_id}'")
+      logger.info("Cleanup: Deleting the disk '#{disk_id}'")
       cpi.delete_disk(disk_id) if disk_id
     end
   end
@@ -376,7 +376,7 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       begin
-        logger.info("Creating VM with stemcell_id=`#{@stemcell_id}'")
+        logger.info("Creating VM with stemcell_id='#{@stemcell_id}'")
         instance_id = cpi_without_default_nsg.create_vm(
           SecureRandom.uuid,
           @stemcell_id,
@@ -732,7 +732,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   def vm_lifecycle
-    logger.info("Creating VM with stemcell_id=`#{@stemcell_id}'")
+    logger.info("Creating VM with stemcell_id='#{@stemcell_id}'")
     instance_id = cpi.create_vm(
       SecureRandom.uuid,
       @stemcell_id,
@@ -741,10 +741,10 @@ describe Bosh::AzureCloud::Cloud do
     )
     expect(instance_id).to be
 
-    logger.info("Checking VM existence instance_id=`#{instance_id}'")
+    logger.info("Checking VM existence instance_id='#{instance_id}'")
     expect(cpi.has_vm?(instance_id)).to be(true)
 
-    logger.info("Setting VM metadata instance_id=`#{instance_id}'")
+    logger.info("Setting VM metadata instance_id='#{instance_id}'")
     cpi.set_vm_metadata(instance_id, vm_metadata)
 
     cpi.reboot_vm(instance_id)

@@ -575,7 +575,7 @@ describe Bosh::AzureCloud::DiskManager do
 
             expect do
               disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
-            end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
+            end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is 'invalid-size'."
           end
         end
 
@@ -823,7 +823,7 @@ describe Bosh::AzureCloud::DiskManager do
 
               expect do
                 disk_manager.ephemeral_disk(storage_account_name, vm_name)
-              end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
+              end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is 'invalid-size'."
             end
           end
         end

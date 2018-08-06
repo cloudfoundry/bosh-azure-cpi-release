@@ -452,7 +452,7 @@ describe Bosh::AzureCloud::VMManager do
 
               expect do
                 vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-              end.to raise_error /create_availability_set - the availability set `#{availability_set_name}' already exists, but in a different location/
+              end.to raise_error /create_availability_set - the availability set '#{availability_set_name}' already exists, but in a different location/
             end
           end
 

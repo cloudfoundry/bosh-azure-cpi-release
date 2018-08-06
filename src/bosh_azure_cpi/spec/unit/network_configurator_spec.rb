@@ -126,7 +126,7 @@ describe Bosh::AzureCloud::NetworkConfigurator do
     it 'should raise an error' do
       expect do
         Bosh::AzureCloud::NetworkConfigurator.new(azure_properties, network_spec)
-      end.to raise_error Bosh::Clouds::CloudError, "More than one vip network for `network2'"
+      end.to raise_error Bosh::Clouds::CloudError, "More than one vip network for 'network2'"
     end
   end
 
@@ -140,8 +140,8 @@ describe Bosh::AzureCloud::NetworkConfigurator do
     it 'should raise an error' do
       expect do
         Bosh::AzureCloud::NetworkConfigurator.new(azure_properties, network_spec)
-      end.to raise_error Bosh::Clouds::CloudError, "Invalid network type `foo' for Azure, " \
-                        "can only handle `dynamic', `vip', or `manual' network types"
+      end.to raise_error Bosh::Clouds::CloudError, "Invalid network type 'foo' for Azure, " \
+                        "can only handle 'dynamic', 'vip', or 'manual' network types"
     end
   end
 

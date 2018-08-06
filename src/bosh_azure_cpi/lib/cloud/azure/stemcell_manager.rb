@@ -71,7 +71,7 @@ module Bosh::AzureCloud
       @logger.info("get_stemcell_info(#{storage_account_name}, #{name})")
       uri = @blob_manager.get_blob_uri(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
       metadata = @blob_manager.get_blob_metadata(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
-      cloud_error("The stemcell `#{name}' does not exist in the storage account `#{storage_account_name}'") if metadata.nil?
+      cloud_error("The stemcell '#{name}' does not exist in the storage account '#{storage_account_name}'") if metadata.nil?
       StemcellInfo.new(uri, metadata)
     end
 

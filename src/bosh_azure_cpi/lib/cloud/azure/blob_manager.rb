@@ -289,7 +289,7 @@ module Bosh::AzureCloud
     def prepare_containers(storage_account_name, containers, is_default_storage_account)
       @logger.info("prepare_containers(#{storage_account_name}, #{containers}, #{is_default_storage_account})")
       containers.each do |container|
-        @logger.debug("Creating the container `#{container}' in the storage account `#{storage_account_name}'")
+        @logger.debug("Creating the container '#{container}' in the storage account '#{storage_account_name}'")
         create_container(storage_account_name, container)
       end
       set_stemcell_container_acl_to_public(storage_account_name) if is_default_storage_account
@@ -315,13 +315,13 @@ module Bosh::AzureCloud
 
     def set_stemcell_container_acl_to_public(storage_account_name)
       @logger.info("set_stemcell_container_acl_to_public(#{storage_account_name})")
-      @logger.debug("Set the public access level to `#{PUBLIC_ACCESS_LEVEL_BLOB}' for the container `#{STEMCELL_CONTAINER}' in the storage account `#{storage_account_name}'")
+      @logger.debug("Set the public access level to '#{PUBLIC_ACCESS_LEVEL_BLOB}' for the container '#{STEMCELL_CONTAINER}' in the storage account '#{storage_account_name}'")
       initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options
           @blob_service_client.set_container_acl(STEMCELL_CONTAINER, PUBLIC_ACCESS_LEVEL_BLOB, options)
         rescue StandardError => e
-          cloud_error("set_stemcell_container_acl_to_public: Failed to set the public access level to `#{PUBLIC_ACCESS_LEVEL_BLOB}': #{e.inspect}\n#{e.backtrace.join("\n")}")
+          cloud_error("set_stemcell_container_acl_to_public: Failed to set the public access level to '#{PUBLIC_ACCESS_LEVEL_BLOB}': #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -407,7 +407,7 @@ module Bosh::AzureCloud
       @blob_client_mutex.synchronize do
         unless @storage_accounts.key?(storage_account_name)
           storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
-          cloud_error("initialize_blob_client: Storage account `#{storage_account_name}' not found") if storage_account.nil?
+          cloud_error("initialize_blob_client: Storage account '#{storage_account_name}' not found") if storage_account.nil?
           keys = @azure_client2.get_storage_account_keys_by_name(storage_account_name)
           storage_account[:key] = keys[0]
           @storage_accounts[storage_account_name] = storage_account

@@ -82,7 +82,7 @@ module Bosh::AzureCloud
       FileUtils.mkdir_p(CPI_EVENTS_DIR)
       stdout, stderr, status = Open3.capture3("mv #{filename} #{CPI_EVENTS_DIR}")
       if status != 0
-        @logger.warn("[Telemetry] Failed to move `#{filename}' to `#{CPI_EVENTS_DIR}', error: #{stderr}")
+        @logger.warn("[Telemetry] Failed to move '#{filename}' to '#{CPI_EVENTS_DIR}', error: #{stderr}")
       else
         # trigger event handler to send the event in a different process
         fork do

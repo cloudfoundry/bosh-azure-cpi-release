@@ -209,7 +209,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
           expect do
             azure_client2.delete_virtual_machine(resource_group, vm_name)
-          end.to raise_error /The body of the asynchronous response does not contain `status'/
+          end.to raise_error /The body of the asynchronous response does not contain 'status'/
         end
 
         it 'should raise an error if check completion operation is not accepeted' do

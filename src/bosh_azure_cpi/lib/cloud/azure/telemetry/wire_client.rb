@@ -60,10 +60,10 @@ module Bosh::AzureCloud
             @logger.debug('[Telemetry] Failed to post data, retrying...')
             retry
           else
-            @logger.warn("[Telemetry] Failed to post data to uri `#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
+            @logger.warn("[Telemetry] Failed to post data to uri '#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
           end
         rescue StandardError => e
-          @logger.warn("[Telemetry] Failed to post data to uri `#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
+          @logger.warn("[Telemetry] Failed to post data to uri '#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -123,7 +123,7 @@ module Bosh::AzureCloud
         end
       end
 
-      @logger.warn("Can't find endpoint from leases_path `#{leases_path}'")
+      @logger.warn("Can't find endpoint from leases_path '#{leases_path}'")
       nil
     end
 

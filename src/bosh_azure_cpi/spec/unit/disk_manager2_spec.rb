@@ -543,7 +543,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
             expect do
               disk_manager2.os_disk(vm_name, stemcell_info)
-            end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
+            end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is 'invalid-size'."
           end
         end
 
@@ -777,7 +777,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
               expect do
                 disk_manager2.ephemeral_disk(vm_name)
-              end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is `invalid-size'."
+              end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is 'invalid-size'."
             end
           end
         end
@@ -840,7 +840,7 @@ describe Bosh::AzureCloud::DiskManager2 do
       it 'should raise an error' do
         expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        end.to raise_error /migrate_to_zone - Can'n find snapshot `#{snapshot_name}' in resource group `#{resource_group_name}'/
+        end.to raise_error /migrate_to_zone - Can'n find snapshot '#{snapshot_name}' in resource group '#{resource_group_name}'/
       end
     end
 
@@ -889,7 +889,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
         expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        end.to raise_error /migrate_to_zone - Can'n find disk `#{disk_name}' in resource group `#{resource_group_name}' after migration/
+        end.to raise_error /migrate_to_zone - Can'n find disk '#{disk_name}' in resource group '#{resource_group_name}' after migration/
       end
     end
   end
