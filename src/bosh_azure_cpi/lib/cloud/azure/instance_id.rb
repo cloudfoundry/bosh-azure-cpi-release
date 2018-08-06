@@ -51,7 +51,7 @@ module Bosh::AzureCloud
         end
         instance_id = new(VERSION2, id: id_hash)
       else
-        instance_id = new(VERSION1, id: id, default_resource_group_name: azure_config['resource_group_name'])
+        instance_id = new(VERSION1, id: id, default_resource_group_name: azure_config.resource_group_name)
       end
 
       instance_id.validate

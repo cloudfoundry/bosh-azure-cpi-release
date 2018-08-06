@@ -35,7 +35,7 @@ describe Bosh::AzureCloud::VipNetwork do
     it 'should get resource_group_name from global azure properties' do
       nc = Bosh::AzureCloud::VipNetwork.new(azure_config, 'vip', network_spec)
       expect(nc.public_ip).to eq('fake-vip')
-      expect(nc.resource_group_name).to eq(azure_config['resource_group_name'])
+      expect(nc.resource_group_name).to eq(azure_config.resource_group_name)
     end
   end
 end

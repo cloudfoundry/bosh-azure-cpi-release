@@ -9,12 +9,12 @@ describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
   let(:azure_client) do
     Bosh::AzureCloud::AzureClient.new(
-      mock_cloud_options['properties']['azure'],
+      mock_azure_config,
       logger
     )
   end
-  let(:subscription_id) { mock_azure_config['subscription_id'] }
-  let(:tenant_id) { mock_azure_config['tenant_id'] }
+  let(:subscription_id) { mock_azure_config.subscription_id }
+  let(:tenant_id) { mock_azure_config.tenant_id }
   let(:token_api_version) { AZURE_API_VERSION }
   let(:group_api_version) { AZURE_RESOURCE_PROVIDER_GROUP }
   let(:resource_group_name) { 'fake-resource-group-name' }

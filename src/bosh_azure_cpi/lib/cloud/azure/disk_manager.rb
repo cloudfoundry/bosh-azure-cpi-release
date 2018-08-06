@@ -5,7 +5,7 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    attr_writer :vm_properties
+    attr_writer :vm_props
 
     def initialize(azure_config, blob_manager)
       @azure_config = azure_config
@@ -121,11 +121,11 @@ module Bosh::AzureCloud
     def os_disk(storage_account_name, vm_name, stemcell_info)
       disk_name = generate_os_disk_name(vm_name)
       disk_uri = get_disk_uri(storage_account_name, disk_name)
-      disk_caching = @vm_properties.fetch('caching', 'ReadWrite')
+      disk_caching = @vm_props.caching
       validate_disk_caching(disk_caching)
 
-      root_disk_size = @vm_properties.fetch('root_disk', {}).fetch('size', nil)
-      use_root_disk_for_ephemeral_data = @vm_properties.fetch('ephemeral_disk', {}).fetch('use_root_disk', false)
+      root_disk_size = @vm_props.root_disk.fetch('size', nil)
+      use_root_disk_for_ephemeral_data = @vm_props.ephemeral_disk.fetch('use_root_disk', false)
       disk_size = get_os_disk_size(root_disk_size, stemcell_info, use_root_disk_for_ephemeral_data)
 
       {
@@ -137,11 +137,11 @@ module Bosh::AzureCloud
     end
 
     def ephemeral_disk(storage_account_name, vm_name)
-      ephemeral_disk = @vm_properties.fetch('ephemeral_disk', {})
+      ephemeral_disk = @vm_props.ephemeral_disk
       use_root_disk = ephemeral_disk.fetch('use_root_disk', false)
       return nil if use_root_disk
 
-      disk_info = DiskInfo.for(@vm_properties['instance_type'])
+      disk_info = DiskInfo.for(@vm_props.instance_type)
       disk_size = disk_info.size
       size = ephemeral_disk.fetch('size', nil)
       unless size.nil?

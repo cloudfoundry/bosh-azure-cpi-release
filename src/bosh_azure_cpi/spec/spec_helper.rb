@@ -90,12 +90,18 @@ def mock_cloud_options
   }
 end
 
-def mock_azure_config
-  mock_cloud_options['properties']['azure']
+def mock_azure_config(options = nil)
+  if options.nil?
+    Bosh::AzureCloud::AzureConfig.new(mock_cloud_options['properties']['azure'])
+  else
+    Bosh::AzureCloud::AzureConfig.new(options)
+  end
 end
 
 def mock_azure_config_merge(override_options)
-  mock_cloud_options_merge(override_options, mock_azure_config)
+  Bosh::AzureCloud::AzureConfig.new(
+    mock_cloud_options_merge(override_options, mock_cloud_options['properties']['azure'])
+  )
 end
 
 def mock_cloud_properties_merge(override_options)
@@ -113,7 +119,6 @@ def mock_cloud_options_merge(override_options, base_hash = mock_cloud_options)
                             value
                           end
   end
-
   extra_keys = base_hash.keys - override_options.keys
   extra_keys.each { |key| merged_options[key] = base_hash[key] }
 
@@ -129,7 +134,6 @@ def mock_registry
                     endpoint: mock_registry_properties['endpoint'],
                     user: mock_registry_properties['user'],
                     password: mock_registry_properties['password'])
-  allow(Bosh::Cpi::RegistryClient).to receive(:new).and_return(registry)
   registry
 end
 

@@ -88,7 +88,7 @@ describe Bosh::AzureCloud::DiskId do
   end
 
   describe '#self.parse' do
-    let(:azure_config) { { 'resource_group_name' => 'default-resource-group-name' } }
+    let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'default-resource-group-name') }
     let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
 
     before do
@@ -156,7 +156,7 @@ describe Bosh::AzureCloud::DiskId do
 
   describe '#to_s' do
     context 'when disk id is a v1 id' do
-      let(:azure_config) { { 'resource_group_name' => 'default-resource-group-name' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'default-resource-group-name') }
       let(:disk_id_string) { 'fake-disk-id' }
       let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
 
@@ -167,7 +167,7 @@ describe Bosh::AzureCloud::DiskId do
 
     context 'when disk id is a v2 id' do
       context 'when disk id is initialized by self.parse' do
-        let(:azure_config) { { 'resource_group_name' => 'default-resource-group-name' } }
+        let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'default-resource-group-name') }
         let(:disk_id_string) { 'caching:c;disk_name:bosh-disk-data-d;resource_group_name:r' }
         let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
 
@@ -177,7 +177,7 @@ describe Bosh::AzureCloud::DiskId do
       end
 
       context 'when disk id is initialized by self.create' do
-        let(:azure_config) { { 'resource_group_name' => 'default-resource-group-name' } }
+        let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'default-resource-group-name') }
         let(:caching) { 'None' }
         let(:disk_name) { 'bosh-disk-data-fake-disk-name' }
         let(:resource_group_name) { 'fake-resource-group-name' }
@@ -190,7 +190,7 @@ describe Bosh::AzureCloud::DiskId do
       end
 
       context 'when the same disk id is initialized by self.create and self.parse' do
-        let(:azure_config) { { 'resource_group_name' => 'default-resource-group-name' } }
+        let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'default-resource-group-name') }
         let(:caching) { 'None' }
         let(:disk_name) { 'bosh-disk-data-fake-disk-name' }
         let(:resource_group_name) { 'fake-resource-group-name' }
@@ -207,7 +207,7 @@ describe Bosh::AzureCloud::DiskId do
   describe '#resource_group_name' do
     context 'when disk id is a v1 id' do
       let(:default_resource_group_name) { 'fake-resource-group-name' }
-      let(:azure_config) { { 'resource_group_name' => default_resource_group_name } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => default_resource_group_name) }
       let(:disk_id_string) { "bosh-disk-data-#{SecureRandom.uuid}-None" }
       let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
 
@@ -218,8 +218,7 @@ describe Bosh::AzureCloud::DiskId do
 
     context 'when disk id is a v2 id' do
       context 'when disk id contains resource_group_name' do
-        let(:default_resource_group_name) { 'fake-resource-group-name' }
-        let(:azure_config) { { 'resource_group_name' => default_resource_group_name } }
+        let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
         let(:resource_group_name) { 'fake-resource-group-name' }
         let(:disk_id_string) { "disk_name:bosh-disk-data-fake-uuid;caching:None;resource_group_name:#{resource_group_name}" }
         let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
@@ -231,7 +230,7 @@ describe Bosh::AzureCloud::DiskId do
 
       context 'when disk id does not contain resource_group_name' do
         let(:default_resource_group_name) { 'fake-resource-group-name' }
-        let(:azure_config) { { 'resource_group_name' => default_resource_group_name } }
+        let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => default_resource_group_name) }
         let(:disk_id_string) { 'disk_name:bosh-data-fake-uuid;caching:None;storage_account_name:fake-storage-account-name' }
         let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
 
@@ -244,7 +243,7 @@ describe Bosh::AzureCloud::DiskId do
 
   describe '#disk_name' do
     context 'when disk id is a v1 id' do
-      let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
       let(:disk_id_string) { "bosh-disk-data-#{SecureRandom.uuid}-None" }
       let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
 
@@ -255,7 +254,7 @@ describe Bosh::AzureCloud::DiskId do
 
     context 'when disk id is a v2 id' do
       context 'when disk_name contains ":"' do
-        let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+        let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
         let(:disk_name) { 'bosh-data-fake-uuid--a:b:c' }
         let(:disk_id_string) { "disk_name:#{disk_name};caching:cc;storage_account_name:ss" }
         let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
@@ -266,7 +265,7 @@ describe Bosh::AzureCloud::DiskId do
       end
 
       context 'when disk_name does not contain ":"' do
-        let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+        let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
         let(:disk_name) { 'bosh-disk-data-fake-uuid' }
         let(:disk_id_string) { "disk_name:#{disk_name};caching:cc;resource_group_name:rr" }
         let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
@@ -280,7 +279,7 @@ describe Bosh::AzureCloud::DiskId do
 
   describe '#caching' do
     context 'when disk id is a v1 id' do
-      let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
       let(:caching) { 'None' }
       let(:disk_id_string) { "bosh-disk-data-#{SecureRandom.uuid}-#{caching}" }
       let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
@@ -291,7 +290,7 @@ describe Bosh::AzureCloud::DiskId do
     end
 
     context 'when disk id is a v2 id' do
-      let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
       let(:caching) { 'None' }
       let(:disk_id_string) { "disk_name:bosh-disk-data-uuid;caching:#{caching};resource_group_name:rr" }
       let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
@@ -302,7 +301,7 @@ describe Bosh::AzureCloud::DiskId do
     end
 
     context 'when disk name does not start with bosh-disk-data or bosh-data' do
-      let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
       let(:caching) { 'None' }
       let(:disk_name) { 'dd' }
       let(:disk_id) { Bosh::AzureCloud::DiskId.create(caching, true, disk_name: disk_name, resource_group_name: 'rr') }
@@ -317,7 +316,7 @@ describe Bosh::AzureCloud::DiskId do
 
   describe '#storage_account_name' do
     context 'when disk id is a v1 id' do
-      let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
       let(:caching) { 'None' }
       let(:storage_account_name) { 'fakestorageaccountname' }
       let(:disk_id_string) { "bosh-data-#{storage_account_name}-#{SecureRandom.uuid}-#{caching}" }
@@ -329,7 +328,7 @@ describe Bosh::AzureCloud::DiskId do
     end
 
     context 'when disk id is a v2 id' do
-      let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
       let(:storage_account_name) { 'fakestorageaccountname' }
       let(:disk_id_string) { "disk_name:bosh-data-uuid;caching:cc;storage_account_name:#{storage_account_name}" }
       let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, azure_config) }
@@ -340,7 +339,7 @@ describe Bosh::AzureCloud::DiskId do
     end
 
     context 'when disk name starts with bosh-disk-data (managed)' do
-      let(:azure_config) { { 'resource_group_name' => 'fake-resource-group-name' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('resource_group_name' => 'fake-resource-group-name') }
       let(:caching) { 'None' }
       let(:disk_id) { Bosh::AzureCloud::DiskId.create(caching, true, resource_group_name: 'rr') }
 

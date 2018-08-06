@@ -9,7 +9,7 @@ module Bosh::AzureCloud
       @blob_manager  = blob_manager
       @disk_manager  = disk_manager
       @azure_client = azure_client
-      @use_managed_disks = @azure_config['use_managed_disks']
+      @use_managed_disks = @azure_config.use_managed_disks
       @logger = Bosh::Clouds::Config.logger
 
       @default_storage_account_name = nil
@@ -135,9 +135,9 @@ module Bosh::AzureCloud
 
       # If storage_account_name is not specified in vm_types or vm_extensions, use the default storage account in global configurations
       storage_account_name = default_storage_account_name
-      unless vm_properties['storage_account_name'].nil?
-        if vm_properties['storage_account_name'].include?('*')
-          ret = vm_properties['storage_account_name'].match('^\*{1}[a-z0-9]+\*{1}$')
+      unless vm_properties.storage_account_name.nil?
+        if vm_properties.storage_account_name.include?('*')
+          ret = vm_properties.storage_account_name.match('^\*{1}[a-z0-9]+\*{1}$')
           cloud_error("get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid. It should be '*keyword*' (keyword only contains numbers and lower-case letters) if it is a pattern.") if ret.nil?
 
           # Users could use *xxx* as the pattern
@@ -145,8 +145,8 @@ module Bosh::AzureCloud
           # CPI uses the pattern to filter all storage accounts under the default resource group and
           # then randomly select an available storage account in which the disk numbers under the container 'bosh'
           # is not more than the limitation.
-          pattern = vm_properties['storage_account_name']
-          storage_account_max_disk_number = vm_properties.fetch('storage_account_max_disk_number', 30)
+          pattern = vm_properties.storage_account_name
+          storage_account_max_disk_number = vm_properties.storage_account_max_disk_number
           @logger.debug("get_storage_account_from_vm_properties - Picking one available storage account by pattern '#{pattern}', max disk number '#{storage_account_max_disk_number}'")
 
           # Remove * in the pattern
@@ -172,9 +172,9 @@ module Bosh::AzureCloud
 
           cloud_error("get_storage_account_from_vm_properties - Cannot find an available storage account.\n#{result.inspect}")
         else
-          storage_account_name = vm_properties['storage_account_name']
-          storage_account_type = vm_properties['storage_account_type']
-          storage_account_kind = vm_properties.fetch('storage_account_kind', STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1)
+          storage_account_name = vm_properties.storage_account_name
+          storage_account_type = vm_properties.storage_account_type
+          storage_account_kind = vm_properties.storage_account_kind
           # Create the storage account automatically if the storage account in vm_types or vm_extensions does not exist
           storage_account = get_or_create_storage_account(storage_account_name, {}, storage_account_type, storage_account_kind, location, [DISK_CONTAINER, STEMCELL_CONTAINER], false)
         end
@@ -188,8 +188,8 @@ module Bosh::AzureCloud
     def default_storage_account_name
       return @default_storage_account_name unless @default_storage_account_name.nil?
 
-      if @azure_config.key?('storage_account_name')
-        @default_storage_account_name = @azure_config['storage_account_name']
+      unless @azure_config.storage_account_name.nil?
+        @default_storage_account_name = @azure_config.storage_account_name
         return @default_storage_account_name
       end
 
@@ -200,8 +200,8 @@ module Bosh::AzureCloud
       return @default_storage_account unless @default_storage_account.nil?
 
       storage_account_name = nil
-      if @azure_config.key?('storage_account_name')
-        storage_account_name = @azure_config['storage_account_name']
+      unless @azure_config.storage_account_name.nil?
+        storage_account_name = @azure_config.storage_account_name
         @logger.debug("The default storage account is '#{storage_account_name}'")
         @default_storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
         cloud_error("The default storage account '#{storage_account_name}' is specified in Global Configuration, but it does not exist.") if @default_storage_account.nil?
@@ -211,7 +211,7 @@ module Bosh::AzureCloud
 
       @logger.debug('The default storage account is not specified in global settings.')
       storage_accounts = @azure_client.list_storage_accounts
-      location = @azure_client.get_resource_group(@azure_config['resource_group_name'])[:location]
+      location = @azure_client.get_resource_group(@azure_config.resource_group_name)[:location]
       @logger.debug("Will look for an existing storage account with the tags '#{STEMCELL_STORAGE_ACCOUNT_TAGS}' in the location '#{location}'")
       storage_account = storage_accounts.find do |s|
         s[:location] == location && is_stemcell_storage_account?(s[:tags])

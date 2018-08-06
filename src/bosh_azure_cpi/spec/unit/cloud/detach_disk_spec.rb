@@ -55,10 +55,10 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
 
-      expect(registry).to receive(:read_settings)
+      expect(registry_client).to receive(:read_settings)
         .with(instance_id)
         .and_return(old_settings)
-      expect(registry).to receive(:update_settings)
+      expect(registry_client).to receive(:update_settings)
         .with(instance_id, new_settings)
 
       expect(vm_manager).to receive(:detach_disk).with(instance_id_object, disk_id_object)
