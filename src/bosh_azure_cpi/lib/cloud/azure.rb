@@ -4,6 +4,7 @@ module Bosh
   module AzureCloud; end
 end
 
+require 'concurrent'
 require 'date'
 require 'pp'
 require 'set'
