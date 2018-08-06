@@ -417,7 +417,7 @@ module Bosh::AzureCloud
     def update_tags_of_virtual_machine(resource_group_name, name, tags)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       vm = get_resource_by_id(url)
-      raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name `#{name}' in resource group `#{resource_group_name}'" if vm.nil?
+      raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name '#{name}' in resource group '#{resource_group_name}'" if vm.nil?
       vm = remove_resources_from_vm(vm)
       vm['tags'].merge!(tags)
       http_put(url, vm)
@@ -453,7 +453,7 @@ module Bosh::AzureCloud
     def attach_disk_to_virtual_machine(resource_group_name, vm_name, disk_params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: vm_name)
       vm = get_resource_by_id(url)
-      raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name `#{vm_name}' in resource group `#{resource_group_name}'" if vm.nil?
+      raise AzureNotFoundError, "attach_disk_to_virtual_machine - cannot find the virtual machine by name '#{vm_name}' in resource group '#{resource_group_name}'" if vm.nil?
 
       # Record disk_id in VM's tag, which will be used in cpi.get_disks(instance_id)
       disk_id_tag = {
@@ -481,7 +481,7 @@ module Bosh::AzureCloud
       disk_uri = disk_params[:disk_uri]
       disk_size = disk_params[:disk_size]
 
-      raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine `#{vm_name}' for the new disk `#{disk_name}'" if lun.nil?
+      raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine '#{vm_name}' for the new disk '#{disk_name}'" if lun.nil?
 
       new_disk = {
         'name'         => disk_name,
@@ -497,7 +497,7 @@ module Bosh::AzureCloud
       end
 
       vm['properties']['storageProfile']['dataDisks'].push(new_disk)
-      @logger.info("attach_disk_to_virtual_machine - attach disk `#{disk_name}' to lun `#{lun}' of the virtual machine `#{vm_name}', managed: `#{managed}'")
+      @logger.info("attach_disk_to_virtual_machine - attach disk '#{disk_name}' to lun '#{lun}' of the virtual machine '#{vm_name}', managed: '#{managed}'")
       http_put(url, vm)
 
       lun
@@ -515,7 +515,7 @@ module Bosh::AzureCloud
     def detach_disk_from_virtual_machine(resource_group_name, name, disk_name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       vm = get_resource_by_id(url)
-      raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name `#{name}' in resource group `#{resource_group_name}'" if vm.nil?
+      raise AzureNotFoundError, "detach_disk_from_virtual_machine - cannot find the virtual machine by name '#{name}' in resource group '#{resource_group_name}'" if vm.nil?
 
       disk_id_tag = "#{DISK_ID_TAG_PREFIX}-#{disk_name}"
       vm['tags'].delete(disk_id_tag)
@@ -628,7 +628,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-delete
     #
     def delete_virtual_machine(resource_group_name, name)
-      @logger.debug("delete_virtual_machine - trying to delete `#{name}' from resource group `#{resource_group_name}'")
+      @logger.debug("delete_virtual_machine - trying to delete '#{name}' from resource group '#{resource_group_name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -734,7 +734,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/availabilitysets-delete
     #
     def delete_availability_set(resource_group_name, name)
-      @logger.debug("delete_availability_set - trying to delete `#{name}' from resource group `#{resource_group_name}'")
+      @logger.debug("delete_availability_set - trying to delete '#{name}' from resource group '#{resource_group_name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -919,7 +919,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-create
     #
     def create_user_image(params)
-      @logger.debug("create_user_image - trying to create a user image `#{params[:name]}'")
+      @logger.debug("create_user_image - trying to create a user image '#{params[:name]}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: params[:name])
       user_image = {
         'location'   => params[:location],
@@ -948,7 +948,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/images/images-delete
     #
     def delete_user_image(name)
-      @logger.debug("delete_user_image - trying to delete `#{name}'")
+      @logger.debug("delete_user_image - trying to delete '#{name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: name)
       http_delete(url)
     end
@@ -1018,9 +1018,9 @@ module Bosh::AzureCloud
     def create_managed_snapshot(resource_group_name, params)
       snapshot_name = params[:name]
       disk_name = params[:disk_name]
-      @logger.debug("create_managed_snapshot - trying to create a snapshot `#{snapshot_name}' for the managed disk `#{disk_name}'")
+      @logger.debug("create_managed_snapshot - trying to create a snapshot '#{snapshot_name}' for the managed disk '#{disk_name}'")
       disk = get_managed_disk_by_name(resource_group_name, disk_name)
-      raise AzureNotFoundError, "The disk `#{disk_name}' cannot be found" if disk.nil?
+      raise AzureNotFoundError, "The disk '#{disk_name}' cannot be found" if disk.nil?
       snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
       snapshot = {
         'location'   => disk[:location],
@@ -1082,7 +1082,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/manageddisks/snapshots/snapshots-delete
     #
     def delete_managed_snapshot(resource_group_name, name)
-      @logger.debug("delete_managed_snapshot - trying to delete `#{name}' from resource group `#{resource_group_name}'")
+      @logger.debug("delete_managed_snapshot - trying to delete '#{name}' from resource group '#{resource_group_name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -1638,7 +1638,7 @@ module Bosh::AzureCloud
       }
 
       uri = http_url(url)
-      @logger.info("create_storage_account - trying to put `#{uri}'")
+      @logger.info("create_storage_account - trying to put '#{uri}'")
 
       request = Net::HTTP::Put.new(uri.request_uri)
       request_body = storage_account.to_json
@@ -1653,7 +1653,7 @@ module Bosh::AzureCloud
         if response.code.to_i == HTTP_CODE_OK
           return true
         elsif response.code.to_i != HTTP_CODE_ACCEPTED
-          raise AzureError, "create_storage_account - Cannot create the storage account `#{name}'. http code: #{response.code}. Error message: #{response.body}"
+          raise AzureError, "create_storage_account - Cannot create the storage account '#{name}'. http code: #{response.code}. Error message: #{response.body}"
         end
 
         uri = URI(response['Location'])
@@ -1663,7 +1663,7 @@ module Bosh::AzureCloud
         loop do
           retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
           sleep(retry_after)
-          @logger.debug("create_storage_account - Checking the status of the asynchronous operation using `#{uri}' after `#{retry_after}' seconds.")
+          @logger.debug("create_storage_account - Checking the status of the asynchronous operation using '#{uri}' after '#{retry_after}' seconds.")
           response = http_get_response(uri, request, retry_after)
 
           status_code = response.code.to_i
@@ -1717,7 +1717,7 @@ module Bosh::AzureCloud
         'type' => "#{REST_API_PROVIDER_STORAGE}/#{REST_API_STORAGE_ACCOUNTS}"
       }
       result = http_post(url, storage_account)
-      raise AzureError, "Cannot check the availability of the storage account name `#{name}'" unless result.is_a?(Hash)
+      raise AzureError, "Cannot check the availability of the storage account name '#{name}'" unless result.is_a?(Hash)
       ret = {
         available: result['nameAvailable'],
         reason: result['reason'],
@@ -2211,7 +2211,7 @@ module Bosh::AzureCloud
 
     def check_completion(response, options)
       operation_status_link = response['azure-asyncoperation']
-      @logger.debug("check_completion - checking the status of the asynchronous operation using `#{operation_status_link}'")
+      @logger.debug("check_completion - checking the status of the asynchronous operation using '#{operation_status_link}'")
       if options[:return_code].include?(response.code.to_i)
         if operation_status_link.nil?
           result = true
@@ -2247,7 +2247,7 @@ module Bosh::AzureCloud
 
         raise AzureAsynchronousError.new, 'The body of the asynchronous response is empty' if response.body.nil?
         result = JSON(response.body)
-        raise AzureAsynchronousError.new, "The body of the asynchronous response does not contain `status'. Response: #{response.body}" if result['status'].nil?
+        raise AzureAsynchronousError.new, "The body of the asynchronous response does not contain 'status'. Response: #{response.body}" if result['status'].nil?
 
         status = result['status']
         if status == PROVISIONING_STATE_SUCCEEDED

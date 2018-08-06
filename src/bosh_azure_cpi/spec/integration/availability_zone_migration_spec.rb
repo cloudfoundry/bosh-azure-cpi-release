@@ -90,7 +90,7 @@ describe Bosh::AzureCloud::Cloud do
   before { @disk_id_pool = [] }
   after do
     @disk_id_pool.each do |disk_id|
-      logger.info("Cleanup: Deleting the disk `#{disk_id}'")
+      logger.info("Cleanup: Deleting the disk '#{disk_id}'")
       cpi.delete_disk(disk_id) if disk_id
     end
   end
@@ -105,10 +105,10 @@ describe Bosh::AzureCloud::Cloud do
           @disk_id_pool.push(disk_id)
 
           # Create a zonal VM
-          logger.info("Creating managed zonal VM with stemcell_id=`#{@stemcell_id}'")
+          logger.info("Creating managed zonal VM with stemcell_id='#{@stemcell_id}'")
           instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
 
-          logger.info("Checking managed VM existence instance_id=`#{instance_id}'")
+          logger.info("Checking managed VM existence instance_id='#{instance_id}'")
           expect(cpi.has_vm?(instance_id)).to be(true)
 
           # Migrate the unmanaged regional disk to a managed zonal disk, and attach the zonal disk to the zonal VM. The disk_id won't be changed.
@@ -139,10 +139,10 @@ describe Bosh::AzureCloud::Cloud do
           @disk_id_pool.push(disk_id)
 
           # Create a zonal VM
-          logger.info("Creating managed zonal VM with stemcell_id=`#{@stemcell_id}'")
+          logger.info("Creating managed zonal VM with stemcell_id='#{@stemcell_id}'")
           instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
 
-          logger.info("Checking zonal VM existence instance_id=`#{instance_id}'")
+          logger.info("Checking zonal VM existence instance_id='#{instance_id}'")
           expect(cpi.has_vm?(instance_id)).to be(true)
 
           # Migrate the regional disk to a zonal disk, and attach the zonal disk to the zonal VM. The disk_id won't be changed.

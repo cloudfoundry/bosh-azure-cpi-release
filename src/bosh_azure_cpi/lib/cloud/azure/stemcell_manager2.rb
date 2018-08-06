@@ -20,7 +20,7 @@ module Bosh::AzureCloud
       end
       user_images.each do |user_image|
         user_image_name = user_image[:name]
-        @logger.info("Delete user image `#{user_image_name}'")
+        @logger.info("Delete user image '#{user_image_name}'")
         @azure_client2.delete_user_image(user_image_name)
       end
 
@@ -28,7 +28,7 @@ module Bosh::AzureCloud
       storage_accounts = @azure_client2.list_storage_accounts
       storage_accounts.each do |storage_account|
         storage_account_name = storage_account[:name]
-        @logger.info("Delete stemcell `#{name}' in the storage `#{storage_account_name}'")
+        @logger.info("Delete stemcell '#{name}' in the storage '#{storage_account_name}'")
         @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(storage_account_name, name)
       end
 
@@ -40,7 +40,7 @@ module Bosh::AzureCloud
         entities = @table_manager.query_entities(STEMCELL_TABLE, options)
         entities.each do |entity|
           storage_account_name = entity['RowKey']
-          @logger.info("Delete records `#{entity['RowKey']}' whose PartitionKey is `#{entity['PartitionKey']}'")
+          @logger.info("Delete records '#{entity['RowKey']}' whose PartitionKey is '#{entity['PartitionKey']}'")
           @table_manager.delete_entity(STEMCELL_TABLE, entity['PartitionKey'], entity['RowKey'])
         end
       end
@@ -75,20 +75,20 @@ module Bosh::AzureCloud
 
       default_storage_account = @storage_account_manager.default_storage_account
       default_storage_account_name = default_storage_account[:name]
-      cloud_error("get_user_image: Failed to get user image for the stemcell `#{stemcell_name}' because the stemcell doesn't exist in the default storage account `#{default_storage_account_name}'") unless has_stemcell?(default_storage_account_name, stemcell_name)
+      cloud_error("get_user_image: Failed to get user image for the stemcell '#{stemcell_name}' because the stemcell doesn't exist in the default storage account '#{default_storage_account_name}'") unless has_stemcell?(default_storage_account_name, stemcell_name)
 
       storage_account_name = nil
       if location == default_storage_account[:location]
         storage_account_name = default_storage_account_name
       else
         # The storage account will only be used when preparing a stemcell in the target location for user image, ANY storage account type is ok.
-        # To make it consistent, `Standard_LRS' is used.
+        # To make it consistent, 'Standard_LRS' is used.
         storage_account = @storage_account_manager.get_or_create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1, location, [STEMCELL_CONTAINER], false)
         storage_account_name = storage_account[:name]
 
         flock("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", File::LOCK_EX) do
           unless has_stemcell?(storage_account_name, stemcell_name)
-            @logger.info("get_user_image: Copying the stemcell from the default storage account `#{default_storage_account_name}' to the storage acccount `#{storage_account_name}'")
+            @logger.info("get_user_image: Copying the stemcell from the default storage account '#{default_storage_account_name}' to the storage acccount '#{storage_account_name}'")
             stemcell_source_blob_uri = @blob_manager.get_blob_uri(default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
             @blob_manager.copy_blob(storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd", stemcell_source_blob_uri)
           end
@@ -112,7 +112,7 @@ module Bosh::AzureCloud
         if user_image.nil?
           @azure_client2.create_user_image(user_image_params)
           user_image = @azure_client2.get_user_image_by_name(user_image_name)
-          cloud_error("get_user_image: Can not find a user image with the name `#{user_image_name}'") if user_image.nil?
+          cloud_error("get_user_image: Can not find a user image with the name '#{user_image_name}'") if user_image.nil?
         end
       end
 

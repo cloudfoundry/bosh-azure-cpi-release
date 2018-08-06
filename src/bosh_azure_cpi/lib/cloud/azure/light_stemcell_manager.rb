@@ -24,7 +24,7 @@ module Bosh::AzureCloud
 
     def create_stemcell(stemcell_properties)
       @logger.info("create_stemcell(#{stemcell_properties})")
-      cloud_error("Cannot find the light stemcell (#{stemcell_properties['image']}) in the location `#{@default_location}'") unless platform_image_exists?(@default_location, stemcell_properties)
+      cloud_error("Cannot find the light stemcell (#{stemcell_properties['image']}) in the location '#{@default_location}'") unless platform_image_exists?(@default_location, stemcell_properties)
 
       stemcell_name = "#{LIGHT_STEMCELL_PREFIX}-#{SecureRandom.uuid}"
       metadata = stemcell_properties.dup
@@ -44,7 +44,7 @@ module Bosh::AzureCloud
     def get_stemcell_info(name)
       @logger.info("get_stemcell_info(#{name})")
       metadata = get_metadata(name)
-      cloud_error("The light stemcell `#{name}' does not exist in the storage account `#{@default_storage_account_name}'") if metadata.nil?
+      cloud_error("The light stemcell '#{name}' does not exist in the storage account '#{@default_storage_account_name}'") if metadata.nil?
       StemcellInfo.new('', metadata)
     end
 
@@ -63,7 +63,7 @@ module Bosh::AzureCloud
       @logger.debug("list_platform_image_versions(#{location}, #{stemcell_info.image['publisher']}, #{stemcell_info.image['offer']}, #{stemcell_info.image['sku']})")
       versions = @azure_client2.list_platform_image_versions(location, stemcell_info.image['publisher'], stemcell_info.image['offer'], stemcell_info.image['sku'])
       version = versions.find { |v| v[:name] == stemcell_info.image['version'] }
-      @logger.debug("list_platform_image_versions: The version `#{stemcell_info.image['version']}' of the image is not found") if version.nil?
+      @logger.debug("list_platform_image_versions: The version '#{stemcell_info.image['version']}' of the image is not found") if version.nil?
       !version.nil?
     end
   end

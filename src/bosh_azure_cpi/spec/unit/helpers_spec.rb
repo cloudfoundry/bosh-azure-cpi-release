@@ -368,7 +368,7 @@ describe Bosh::AzureCloud::Helpers do
         it 'should raise an error' do
           expect do
             helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_properties)
-          end.to raise_error(/No support for the AzureStack authentication: `NotSupportedValue'/)
+          end.to raise_error(/No support for the AzureStack authentication: 'NotSupportedValue'/)
         end
       end
     end
@@ -555,7 +555,7 @@ describe Bosh::AzureCloud::Helpers do
       it 'should raise an error' do
         expect do
           helpers_tester.validate_disk_size(disk_size)
-        end.to raise_error "The disk size needs to be an integer. The current value is `fake-size'."
+        end.to raise_error "The disk size needs to be an integer. The current value is 'fake-size'."
       end
     end
 
@@ -587,7 +587,7 @@ describe Bosh::AzureCloud::Helpers do
       it 'should raise an error' do
         expect do
           helpers_tester.validate_disk_size_type(disk_size)
-        end.to raise_error "The disk size needs to be an integer. The current value is `fake-size'."
+        end.to raise_error "The disk size needs to be an integer. The current value is 'fake-size'."
       end
     end
 

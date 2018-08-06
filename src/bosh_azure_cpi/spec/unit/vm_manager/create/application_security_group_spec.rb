@@ -248,7 +248,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(client2).not_to receive(:delete_network_interface)
                 expect do
                   vm_manager.create(instance_id, location, stemcell_info, resource_pool, network_configurator, env)
-                end.to raise_error /Cannot find the application security group `#{asg_name}'/
+                end.to raise_error /Cannot find the application security group '#{asg_name}'/
               end
             end
           end

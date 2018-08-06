@@ -41,7 +41,7 @@ module Bosh::AzureCloud
 
       disk_params[:zone] = zone unless zone.nil?
 
-      @logger.info("Start to create an empty managed disk `#{disk_name}' in resource group `#{resource_group_name}'")
+      @logger.info("Start to create an empty managed disk '#{disk_name}' in resource group '#{resource_group_name}'")
       @azure_client2.create_empty_managed_disk(resource_group_name, disk_params)
     end
 
@@ -62,7 +62,7 @@ module Bosh::AzureCloud
         account_type: storage_account_type,
         zone: zone
       }
-      @logger.info("Start to create a managed disk `#{disk_name}' in resource group `#{resource_group_name}' from the source uri `#{blob_uri}'")
+      @logger.info("Start to create a managed disk '#{disk_name}' in resource group '#{resource_group_name}' from the source uri '#{blob_uri}'")
       @azure_client2.create_managed_disk_from_blob(resource_group_name, disk_params)
     end
 
@@ -76,7 +76,7 @@ module Bosh::AzureCloud
         #             After Managed Disks add "retry-after" in the response header,
         #             the workaround can be removed because the retry in azure_client2 will be triggered.
         unless retried
-          @logger.debug("delete_disk: Received an AzureConflictError: `#{e.inspect}', retrying.")
+          @logger.debug("delete_disk: Received an AzureConflictError: '#{e.inspect}', retrying.")
           retried = true
           retry
         end
@@ -128,7 +128,7 @@ module Bosh::AzureCloud
         ),
         disk_name: disk_name
       }
-      @logger.info("Start to create a snapshot `#{snapshot_name}' from a managed disk `#{disk_name}'")
+      @logger.info("Start to create a snapshot '#{snapshot_name}' from a managed disk '#{disk_name}'")
       @azure_client2.create_managed_snapshot(resource_group_name, snapshot_params)
     end
 
@@ -203,8 +203,8 @@ module Bosh::AzureCloud
       if has_snapshot?(resource_group_name, snapshot_name)
         delete_disk(resource_group_name, disk_name)
       else
-        error_message = "migrate_to_zone - Can'n find snapshot `#{snapshot_name}' in resource group `#{resource_group_name}', abort migration.\n"
-        error_message += "You need to migrate `#{disk_id}' to zone `#{zone}' manually."
+        error_message = "migrate_to_zone - Can'n find snapshot '#{snapshot_name}' in resource group '#{resource_group_name}', abort migration.\n"
+        error_message += "You need to migrate '#{disk_id}' to zone '#{zone}' manually."
         raise Bosh::Clouds::CloudError, error_message
       end
 
@@ -222,25 +222,25 @@ module Bosh::AzureCloud
         @azure_client2.create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
       rescue StandardError => e
         if retry_count < max_retries
-          @logger.info("migrate_to_zone - Got error when creating `#{disk_name}' from snapshot `#{snapshot_name}': \n#{e.inspect}\n#{e.backtrace.join('\n')}. \nRetry #{retry_count}: will retry to create the disk.")
+          @logger.info("migrate_to_zone - Got error when creating '#{disk_name}' from snapshot '#{snapshot_name}': \n#{e.inspect}\n#{e.backtrace.join('\n')}. \nRetry #{retry_count}: will retry to create the disk.")
           retry_count += 1
           retry
         end
 
-        error_message = "migrate_to_zone - Failed to create disk `#{disk_name}' from snapshot `#{snapshot_name}' in resource group `#{resource_group_name}'.\n"
-        error_message += "You need to recover `#{disk_id}' mannually from snapshot `#{snapshot_name}' and put it in zone `#{zone}'. Try:\n"
-        error_message += "    `az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
+        error_message = "migrate_to_zone - Failed to create disk '#{disk_name}' from snapshot '#{snapshot_name}' in resource group '#{resource_group_name}'.\n"
+        error_message += "You need to recover '#{disk_id}' mannually from snapshot '#{snapshot_name}' and put it in zone '#{zone}'. Try:\n"
+        error_message += "    'az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
         error_message += "#{e.inspect}\n#{e.backtrace.join("\n")}"
         raise Bosh::Clouds::CloudError, error_message
       end
 
       if has_data_disk?(disk_id)
         delete_snapshot(snapshot_id)
-        @logger.info("Disk `#{disk_name}' has migrated to zone `#{zone}'")
+        @logger.info("Disk '#{disk_name}' has migrated to zone '#{zone}'")
       else
-        error_message = "migrate_to_zone - Can'n find disk `#{disk_name}' in resource group `#{resource_group_name}' after migration.\n"
-        error_message += "You need to recover `#{disk_id}' manually from snapshot `#{snapshot_name}' and put it in zone `#{zone}'. Try:\n"
-        error_message += "    `az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
+        error_message = "migrate_to_zone - Can'n find disk '#{disk_name}' in resource group '#{resource_group_name}' after migration.\n"
+        error_message += "You need to recover '#{disk_id}' manually from snapshot '#{snapshot_name}' and put it in zone '#{zone}'. Try:\n"
+        error_message += "    'az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
         raise Bosh::Clouds::CloudError, error_message
       end
     end

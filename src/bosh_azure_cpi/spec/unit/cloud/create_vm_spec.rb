@@ -52,7 +52,7 @@ describe Bosh::AzureCloud::Cloud do
             disk_locality,
             environment
           )
-        end.to raise_error(/missing required cloud property `instance_type'./)
+        end.to raise_error(/missing required cloud property 'instance_type'./)
       end
     end
 
@@ -102,7 +102,7 @@ describe Bosh::AzureCloud::Cloud do
             disk_locality,
             environment
           )
-        end.to raise_error(/The location in the global configuration `location-other-than-#{location}' is different from the location of the virtual network `#{location}'/)
+        end.to raise_error(/The location in the global configuration 'location-other-than-#{location}' is different from the location of the virtual network '#{location}'/)
       end
     end
 
@@ -280,7 +280,7 @@ describe Bosh::AzureCloud::Cloud do
               disk_locality,
               environment
             )
-          end.to raise_error("Given stemcell `#{stemcell_id}' does not exist")
+          end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
         end
       end
 
@@ -385,7 +385,7 @@ describe Bosh::AzureCloud::Cloud do
               disk_locality,
               environment
             )
-          end.to raise_error(/Failed to get the user image information for the stemcell `#{stemcell_id}'/)
+          end.to raise_error(/Failed to get the user image information for the stemcell '#{stemcell_id}'/)
         end
       end
 

@@ -158,7 +158,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
         it 'should raise an error' do
           expect do
             stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-          end.to raise_error /Failed to get user image for the stemcell `#{stemcell_name}'/
+          end.to raise_error /Failed to get user image for the stemcell '#{stemcell_name}'/
         end
       end
 
@@ -465,7 +465,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
               expect do
                 stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-              end.to raise_error(/get_user_image: Can not find a user image with the name `#{user_image_name}'/)
+              end.to raise_error(/get_user_image: Can not find a user image with the name '#{user_image_name}'/)
             end
           end
 

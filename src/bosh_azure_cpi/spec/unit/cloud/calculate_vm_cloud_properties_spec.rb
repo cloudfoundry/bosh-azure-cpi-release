@@ -16,7 +16,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'should raise an error' do
         expect do
           cloud.calculate_vm_cloud_properties({})
-        end.to raise_error(/Missing the property `location' in the global configuration/)
+        end.to raise_error(/Missing the property 'location' in the global configuration/)
       end
     end
 
@@ -35,7 +35,7 @@ describe Bosh::AzureCloud::Cloud do
         it 'should raise an error' do
           expect do
             cloud_with_location.calculate_vm_cloud_properties(vm_resources)
-          end.to raise_error(/Missing VM cloud properties: `ram', `ephemeral_disk_size'/)
+          end.to raise_error(/Missing VM cloud properties: 'ram', 'ephemeral_disk_size'/)
         end
       end
 

@@ -252,7 +252,7 @@ describe Bosh::AzureCloud::BlobManager do
       it 'should raise error' do
         expect do
           blob_manager.get_blob_properties(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
-        end.to raise_error("initialize_blob_client: Storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' not found")
+        end.to raise_error("initialize_blob_client: Storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' not found")
       end
     end
 

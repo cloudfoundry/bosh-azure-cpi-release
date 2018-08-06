@@ -28,7 +28,7 @@ module Bosh::AzureCloud
     def initialize(azure_properties, spec)
       unless spec.is_a?(Hash)
         raise ArgumentError, 'Invalid spec, Hash expected, ' \
-                             "`#{spec.class}' provided"
+                             "'#{spec.class}' provided"
       end
 
       @logger = Bosh::Clouds::Config.logger
@@ -49,12 +49,12 @@ module Bosh::AzureCloud
           network = ManualNetwork.new(@azure_properties, name, network_spec)
 
         when 'vip'
-          cloud_error("More than one vip network for `#{name}'") if @vip_network
+          cloud_error("More than one vip network for '#{name}'") if @vip_network
           @vip_network = VipNetwork.new(@azure_properties, name, network_spec)
 
         else
-          cloud_error("Invalid network type `#{network_type}' for Azure, " \
-                      "can only handle `dynamic', `vip', or `manual' network types")
+          cloud_error("Invalid network type '#{network_type}' for Azure, " \
+                      "can only handle 'dynamic', 'vip', or 'manual' network types")
         end
 
         # @networks[0] is always the primary network.

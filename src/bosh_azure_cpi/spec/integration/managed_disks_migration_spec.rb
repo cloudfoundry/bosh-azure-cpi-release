@@ -82,7 +82,7 @@ describe Bosh::AzureCloud::Cloud do
   before { @disk_id_pool = [] }
   after do
     @disk_id_pool.each do |disk_id|
-      logger.info("Cleanup: Deleting the disk `#{disk_id}'")
+      logger.info("Cleanup: Deleting the disk '#{disk_id}'")
       cpi.delete_disk(disk_id) if disk_id
     end
   end
@@ -109,11 +109,11 @@ describe Bosh::AzureCloud::Cloud do
       it 'should exercise the vm lifecycle' do
         begin
           # Create an unmanaged VM
-          logger.info("Creating unmanaged VM with stemcell_id=`#{@stemcell_id}'")
+          logger.info("Creating unmanaged VM with stemcell_id='#{@stemcell_id}'")
           unmanaged_instance_id = cpi_unmanaged.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
-          logger.info("Checking unmanaged VM existence instance_id=`#{unmanaged_instance_id}'")
+          logger.info("Checking unmanaged VM existence instance_id='#{unmanaged_instance_id}'")
           expect(cpi_unmanaged.has_vm?(unmanaged_instance_id)).to be(true)
-          logger.info("Setting VM metadata instance_id=`#{unmanaged_instance_id}'")
+          logger.info("Setting VM metadata instance_id='#{unmanaged_instance_id}'")
           cpi_unmanaged.set_vm_metadata(unmanaged_instance_id, vm_metadata)
           cpi_unmanaged.reboot_vm(unmanaged_instance_id)
 
@@ -147,9 +147,9 @@ describe Bosh::AzureCloud::Cloud do
           cpi.delete_vm(unmanaged_instance_id)
 
           # Create a managed VM
-          logger.info("Creating managed VM with stemcell_id=`#{@stemcell_id}'")
+          logger.info("Creating managed VM with stemcell_id='#{@stemcell_id}'")
           managed_instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
-          logger.info("Checking managed VM existence instance_id=`#{managed_instance_id}'")
+          logger.info("Checking managed VM existence instance_id='#{managed_instance_id}'")
           expect(cpi.has_vm?(managed_instance_id)).to be(true)
 
           # Migrate the unmanaged disk to a managed disk, and attach the managed disk to the managed VM. The disk_id won't be changed.
@@ -199,13 +199,13 @@ describe Bosh::AzureCloud::Cloud do
           vm_count.times do |i|
             unmanaged_vm_lifecycles[i] = Thread.new do
               # Create an unmanaged VM
-              logger.info("Creating VM with stemcell_id=`#{@stemcell_id}'")
+              logger.info("Creating VM with stemcell_id='#{@stemcell_id}'")
               instance_id = cpi_unmanaged.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
               expect(instance_id).to be
               unmanaged_instance_id_pool.push(instance_id)
-              logger.info("Checking VM existence instance_id=`#{instance_id}'")
+              logger.info("Checking VM existence instance_id='#{instance_id}'")
               expect(cpi_unmanaged.has_vm?(instance_id)).to be(true)
-              logger.info("Setting VM metadata instance_id=`#{instance_id}'")
+              logger.info("Setting VM metadata instance_id='#{instance_id}'")
               cpi_unmanaged.set_vm_metadata(instance_id, vm_metadata)
               cpi_unmanaged.reboot_vm(instance_id)
 
@@ -237,9 +237,9 @@ describe Bosh::AzureCloud::Cloud do
               cpi_unmanaged.delete_vm(unmanaged_instance_id) unless unmanaged_instance_id.nil?
 
               # Create a managed VM
-              logger.info("Creating managed VM with stemcell_id=`#{@stemcell_id}'")
+              logger.info("Creating managed VM with stemcell_id='#{@stemcell_id}'")
               managed_instance_id = cpi.create_vm(SecureRandom.uuid, @stemcell_id, resource_pool, network_spec)
-              logger.info("Checking managed VM existence instance_id=`#{managed_instance_id}'")
+              logger.info("Checking managed VM existence instance_id='#{managed_instance_id}'")
               expect(cpi.has_vm?(managed_instance_id)).to be(true)
               managed_instance_id_pool.push(managed_instance_id)
 

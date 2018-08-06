@@ -329,7 +329,7 @@ describe Bosh::AzureCloud::StemcellManager do
       it 'should throw an error' do
         expect do
           stemcell_manager.get_stemcell_info(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_name)
-        end.to raise_error /The stemcell `#{stemcell_name}' does not exist in the storage account `#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}'/
+        end.to raise_error /The stemcell '#{stemcell_name}' does not exist in the storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}'/
       end
     end
 

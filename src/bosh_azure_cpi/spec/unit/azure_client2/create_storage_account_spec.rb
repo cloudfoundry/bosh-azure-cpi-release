@@ -83,7 +83,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         expect do
           azure_client2.create_storage_account(storage_account_name, location, sku, kind, tags)
-        end.to raise_error(/create_storage_account - Cannot create the storage account `#{storage_account_name}'. http code: 404/)
+        end.to raise_error(/create_storage_account - Cannot create the storage account '#{storage_account_name}'. http code: 404/)
       end
     end
 
