@@ -139,12 +139,12 @@ describe 'the azure_cpi executable' do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi('method' => 'ping', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
+        result = run_cpi('method' => 'info', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
         expect(result['error']['message']).to match(%r{http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret\/certificate})
         expect(result['error']['ok_to_retry']).to be(false)
-        expect(result['error']['type']).to eq('Bosh::Clouds::CloudError')
+        expect(result['error']['type']).to eq('Bosh::AzureCloud::AzureError')
         expect(result['log']).to include('backtrace')
       end
     end
@@ -178,12 +178,12 @@ describe 'the azure_cpi executable' do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi('method' => 'ping', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
+        result = run_cpi('method' => 'info', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
         expect(result['error']['message']).to match(%r{http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate})
         expect(result['error']['ok_to_retry']).to be(false)
-        expect(result['error']['type']).to eq('Bosh::Clouds::CloudError')
+        expect(result['error']['type']).to eq('Bosh::AzureCloud::AzureError')
         expect(result['log']).to include('backtrace')
       end
     end
