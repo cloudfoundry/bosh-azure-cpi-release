@@ -6,11 +6,7 @@ describe Bosh::AzureCloud::StemcellManager do
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:table_manager) { instance_double(Bosh::AzureCloud::TableManager) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
-  let(:stemcell_manager) do
-    stemcell_manager = Bosh::AzureCloud::StemcellManager.new(blob_manager, table_manager, storage_account_manager)
-    stemcell_manager.wait_stemcell_copy_interval = 0
-    stemcell_manager
-  end
+  let(:stemcell_manager) { Bosh::AzureCloud::StemcellManager.new(blob_manager, table_manager, storage_account_manager) }
 
   let(:stemcell_name) { 'fake-stemcell-name' }
   let(:storage_account_name) { 'fake-storage-account-name' }
@@ -101,96 +97,43 @@ describe Bosh::AzureCloud::StemcellManager do
         allow(table_manager).to receive(:has_table?)
       end
 
-      context 'when stemcell status is success' do
-        let(:entities) do
-          [
-            {
-              'PartitionKey' => stemcell_name,
-              'RowKey'       => storage_account_name,
-              'Status'       => 'success'
-            }
-          ]
-        end
-
-        before do
-          allow(table_manager).to receive(:query_entities)
-            .and_return(entities)
-        end
-
-        it 'handlers stemcell in different storage account' do
-          expect(blob_manager).not_to receive(:get_blob_properties)
-
-          expect(
-            stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-          ).to be(true)
-        end
-      end
-
-      context 'when stemcell status is success' do
-        let(:entities) do
-          [
-            {
-              'PartitionKey' => stemcell_name,
-              'RowKey'       => storage_account_name,
-              'Status'       => 'success'
-            }
-          ]
-        end
-
-        before do
-          allow(table_manager).to receive(:query_entities)
-            .and_return(entities)
-        end
-
-        it 'should return true' do
-          expect(blob_manager).not_to receive(:get_blob_properties)
-
-          expect(
-            stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-          ).to be(true)
-        end
-      end
-
-      context 'when stemcell status is unknown' do
-        let(:entities) do
-          [
-            {
-              'PartitionKey' => stemcell_name,
-              'RowKey'       => storage_account_name,
-              'Status'       => 'unknown'
-            }
-          ]
-        end
-
-        before do
-          allow(table_manager).to receive(:query_entities)
-            .and_return(entities)
-        end
-
-        it 'should raise an error' do
-          expect(blob_manager).not_to receive(:get_blob_properties)
-
-          expect do
-            stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-          end.to raise_error /The status of the stemcell #{stemcell_name} in the storage account #{storage_account_name} is unknown/
-        end
-      end
-
-      context 'when stemcell status is pending and it timeouts' do
-        let(:stemcell_table) { 'stemcells' }
-        let(:stemcell_container) { 'stemcell' }
-
-        context 'when Timestamp in entities is a String' do
+      context 'when there is an entity record for the stemcell in stemcell_table' do
+        context 'when stemcell status is success' do
           let(:entities) do
             [
               {
                 'PartitionKey' => stemcell_name,
                 'RowKey'       => storage_account_name,
-                'Status'       => 'pending',
-                'Timestamp'    => (Time.now - (20 * 60 - 1)).to_s # The default timeout of copying stemcell is 20 * 60 seconds
+                'Status'       => 'success'
               }
             ]
           end
+
+          before do
+            allow(table_manager).to receive(:query_entities)
+              .and_return(entities)
+          end
+
+          it 'should return true' do
+            expect(blob_manager).not_to receive(:get_blob_properties)
+
+            expect(
+              stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+            ).to be(true)
+          end
+        end
+
+        context 'when stemcell status is unknown' do
+          let(:entities) do
+            [
+              {
+                'PartitionKey' => stemcell_name,
+                'RowKey'       => storage_account_name,
+                'Status'       => 'unknown'
+              }
+            ]
+          end
+
           before do
             allow(table_manager).to receive(:query_entities)
               .and_return(entities)
@@ -198,43 +141,111 @@ describe Bosh::AzureCloud::StemcellManager do
 
           it 'should raise an error' do
             expect(blob_manager).not_to receive(:get_blob_properties)
-            expect(table_manager).to receive(:delete_entity)
-              .with(stemcell_table, stemcell_name, storage_account_name)
-            expect(blob_manager).to receive(:delete_blob)
-              .with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
 
             expect do
               stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-            end.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+            end.to raise_error /The status of the stemcell #{stemcell_name} in the storage account #{storage_account_name} is unknown/
           end
         end
 
-        context 'when Timestamp in entities is a Time object' do
-          let(:entities) do
-            [
-              {
-                'PartitionKey' => stemcell_name,
-                'RowKey'       => storage_account_name,
-                'Status'       => 'pending',
-                'Timestamp'    => Time.now - (20 * 60 - 1) # The default timeout of copying stemcell is 20 * 60 seconds
-              }
-            ]
-          end
-          before do
-            allow(table_manager).to receive(:query_entities)
-              .and_return(entities)
+        context 'when stemcell status is pending' do
+          context 'when another process copies the stemcell successfully' do
+            let(:entities_first_query) do
+              [
+                {
+                  'PartitionKey' => stemcell_name,
+                  'RowKey'       => storage_account_name,
+                  'Status'       => 'pending'
+                }
+              ]
+            end
+            let(:entities_second_query) do
+              [
+                {
+                  'PartitionKey' => stemcell_name,
+                  'RowKey'       => storage_account_name,
+                  'Status'       => 'success'
+                }
+              ]
+            end
+            before do
+              allow(table_manager).to receive(:query_entities)
+                .and_return(entities_first_query, entities_second_query)
+            end
+
+            it 'should return true' do
+              expect(blob_manager).not_to receive(:get_blob_properties)
+
+              expect(
+                stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+              ).to be(true)
+            end
           end
 
-          it 'should raise an error' do
-            expect(blob_manager).not_to receive(:get_blob_properties)
-            expect(table_manager).to receive(:delete_entity)
-              .with(stemcell_table, stemcell_name, storage_account_name)
-            expect(blob_manager).to receive(:delete_blob)
-              .with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
+          context 'when another process timeouts to copy the stemcell' do
+            let(:stemcell_table) { 'stemcells' }
+            let(:stemcell_container) { 'stemcell' }
+            let(:default_timeout) { 20 * 60 }
 
-            expect do
-              stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-            end.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+            context 'when Timestamp in entities is a String' do
+              let(:timestamp) { (Time.now - (default_timeout - 1)).to_s }
+              let(:entities) do
+                [
+                  {
+                    'PartitionKey' => stemcell_name,
+                    'RowKey'       => storage_account_name,
+                    'Status'       => 'pending',
+                    'Timestamp'    => timestamp
+                  }
+                ]
+              end
+
+              it 'should raise an error' do
+                expect(blob_manager).not_to receive(:get_blob_properties)
+                # The first query is in get_blob_properties, the second and third queries are in wait_stemcell_copy
+                # The third query causes a timeout
+                expect(table_manager).to receive(:query_entities)
+                  .and_return(entities).exactly(3).times
+                expect(table_manager).to receive(:delete_entity)
+                  .with(stemcell_table, stemcell_name, storage_account_name)
+                expect(blob_manager).to receive(:delete_blob)
+                  .with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
+
+                expect do
+                  stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+                end.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+              end
+            end
+
+            context 'when Timestamp in entities is a Time object' do
+              let(:timestamp) { Time.now - (default_timeout - 1) }
+              let(:entities) do
+                [
+                  {
+                    'PartitionKey' => stemcell_name,
+                    'RowKey'       => storage_account_name,
+                    'Status'       => 'pending',
+                    'Timestamp'    => timestamp
+                  }
+                ]
+              end
+
+              it 'should raise an error' do
+                expect(blob_manager).not_to receive(:get_blob_properties)
+                # The first query is in get_blob_properties, the second and third queries are in wait_stemcell_copy
+                # The third query causes a timeout
+                expect(table_manager).to receive(:query_entities)
+                  .and_return(entities).exactly(3).times
+                expect(table_manager).to receive(:delete_entity)
+                  .with(stemcell_table, stemcell_name, storage_account_name)
+                expect(blob_manager).to receive(:delete_blob)
+                  .with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd")
+
+                expect do
+                  stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+                end.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+              end
+            end
           end
         end
       end

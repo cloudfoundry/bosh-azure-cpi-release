@@ -5,12 +5,10 @@ module Bosh::AzureCloud
     STEMCELL_STATUS_PENDING       = 'pending'
     STEMCELL_STATUS_SUCCESS       = 'success'
     DEFAULT_COPY_STEMCELL_TIMEOUT = 20 * 60 # seconds
+    WAIT_STEMCELL_COPY_INTERVAL   = 3 # seconds
 
     include Bosh::Exec
     include Helpers
-
-    @wait_stemcell_copy_interval = 3 # seconds
-    attr_writer :wait_stemcell_copy_interval
 
     def initialize(blob_manager, table_manager, storage_account_manager)
       @blob_manager  = blob_manager
@@ -153,7 +151,7 @@ module Bosh::AzureCloud
           @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
           cloud_error("The operation of copying the stemcell #{name} to the storage account #{storage_account_name} timeouts")
         end
-        sleep(@wait_stemcell_copy_interval)
+        sleep(WAIT_STEMCELL_COPY_INTERVAL)
       end
     end
   end
