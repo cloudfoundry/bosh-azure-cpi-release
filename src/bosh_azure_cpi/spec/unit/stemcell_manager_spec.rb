@@ -6,7 +6,11 @@ describe Bosh::AzureCloud::StemcellManager do
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:table_manager) { instance_double(Bosh::AzureCloud::TableManager) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
-  let(:stemcell_manager) { Bosh::AzureCloud::StemcellManager.new(blob_manager, table_manager, storage_account_manager) }
+  let(:stemcell_manager) do
+    stemcell_manager = Bosh::AzureCloud::StemcellManager.new(blob_manager, table_manager, storage_account_manager)
+    stemcell_manager.wait_stemcell_copy_interval = 0
+    stemcell_manager
+  end
 
   let(:stemcell_name) { 'fake-stemcell-name' }
   let(:storage_account_name) { 'fake-storage-account-name' }
