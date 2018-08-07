@@ -88,6 +88,11 @@ export BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION=$(ruby -r yaml -r json -e '
     end
   end' < /tmp/stemcell.MF)
 
+# Accept legal terms
+image_urn="pivotal:bosh-windows-server:${BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_SKU}:${BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION}"
+echo "Accepting the legal terms of image ${image_urn}"
+az vm image accept-terms --urn ${image_urn}
+
 export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
 pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   bundle install
