@@ -9,6 +9,9 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
+    @wait_stemcell_copy_interval = 3 # seconds
+    attr_writer :wait_stemcell_copy_interval
+
     def initialize(blob_manager, table_manager, storage_account_manager)
       @blob_manager  = blob_manager
       @table_manager = table_manager
@@ -150,7 +153,7 @@ module Bosh::AzureCloud
           @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
           cloud_error("The operation of copying the stemcell #{name} to the storage account #{storage_account_name} timeouts")
         end
-        sleep(15)
+        sleep(@wait_stemcell_copy_interval)
       end
     end
   end
