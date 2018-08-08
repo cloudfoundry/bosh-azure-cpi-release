@@ -5,8 +5,8 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    def initialize(blob_manager, table_manager, storage_account_manager, azure_client)
-      super(blob_manager, table_manager, storage_account_manager)
+    def initialize(blob_manager, meta_store, storage_account_manager, azure_client)
+      super(blob_manager, meta_store, storage_account_manager)
       @azure_client = azure_client
     end
 
@@ -33,17 +33,7 @@ module Bosh::AzureCloud
       end
 
       # Delete all records whose PartitionKey is the given stemcell name
-      if @table_manager.has_table?(STEMCELL_TABLE)
-        options = {
-          filter: "PartitionKey eq '#{name}'"
-        }
-        entities = @table_manager.query_entities(STEMCELL_TABLE, options)
-        entities.each do |entity|
-          storage_account_name = entity['RowKey']
-          @logger.info("Delete records '#{entity['RowKey']}' whose PartitionKey is '#{entity['PartitionKey']}'")
-          @table_manager.delete_entity(STEMCELL_TABLE, entity['PartitionKey'], entity['RowKey'])
-        end
-      end
+      @meta_store.delete_stemcell_meta(name) if @meta_store.meta_enabled
     end
 
     def has_stemcell?(storage_account_name, name)

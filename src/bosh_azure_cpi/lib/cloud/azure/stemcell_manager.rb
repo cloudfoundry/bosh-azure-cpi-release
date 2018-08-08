@@ -10,9 +10,9 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    def initialize(blob_manager, table_manager, storage_account_manager)
-      @blob_manager  = blob_manager
-      @table_manager = table_manager
+    def initialize(blob_manager, meta_store, storage_account_manager)
+      @blob_manager = blob_manager
+      @meta_store = meta_store
       @storage_account_manager = storage_account_manager
       @logger = Bosh::Clouds::Config.logger
 
@@ -21,17 +21,13 @@ module Bosh::AzureCloud
 
     def delete_stemcell(name)
       @logger.info("delete_stemcell(#{name})")
-      if @table_manager.has_table?(STEMCELL_TABLE)
-        options = {
-          filter: "PartitionKey eq '#{name}'"
-        }
-        entities = @table_manager.query_entities(STEMCELL_TABLE, options)
-        entities.each do |entity|
-          storage_account_name = entity['RowKey']
-          @logger.info("Delete stemcell #{name} in the storage #{storage_account_name}")
-          blob_properties = @blob_manager.get_blob_properties(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
-          @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") unless blob_properties.nil?
-          @table_manager.delete_entity(STEMCELL_TABLE, entity['PartitionKey'], entity['RowKey'])
+      if @meta_store.meta_enabled
+        stemcell_metas = @meta_store.find_stemcell_meta(name)
+        stemcell_metas.each do |stemcell_meta|
+          @logger.info("Delete stemcell #{name} in the storage #{stemcell_meta.storage_account_name}")
+          blob_properties = @blob_manager.get_blob_properties(stemcell_meta.storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
+          @blob_manager.delete_blob(stemcell_meta.storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") unless blob_properties.nil?
+          @meta_store.delete_stemcell_meta(stemcell_meta.name, stemcell_meta.storage_account_name)
         end
       end
 
@@ -84,28 +80,19 @@ module Bosh::AzureCloud
     end
 
     def handle_stemcell_in_different_storage_account(storage_account_name, name)
-      options = {
-        filter: "PartitionKey eq '#{name}' and RowKey eq '#{storage_account_name}'"
-      }
-
-      entities = @table_manager.query_entities(STEMCELL_TABLE, options)
-      if !entities.empty?
-        entity = entities[0]
-        if entity['Status'] == STEMCELL_STATUS_SUCCESS
+      stemcell_meta = @meta_store.find_first_stemcell_meta(name, storage_account_name)
+      if !stemcell_meta.nil?
+        if stemcell_meta.status == STEMCELL_STATUS_SUCCESS
           return true
-        elsif entity['Status'] != STEMCELL_STATUS_PENDING
-          cloud_error("The status of the stemcell #{name} in the storage account #{storage_account_name} is unknown: #{entity['Status']}")
+        elsif stemcell_meta.status != STEMCELL_STATUS_PENDING
+          cloud_error("The status of the stemcell #{name} in the storage account #{storage_account_name} is unknown: #{stemcell_meta.status}")
         end
 
         return wait_stemcell_copy(storage_account_name, name)
       else
         begin
-          entity = {
-            PartitionKey: name,
-            RowKey: storage_account_name,
-            Status: STEMCELL_STATUS_PENDING
-          }
-          ret = @table_manager.insert_entity(STEMCELL_TABLE, entity)
+          stemcell_meta = Bosh::AzureCloud::StemcellMeta.new(name, storage_account_name, STEMCELL_STATUS_PENDING)
+          ret = @meta_store.insert_stemcell_meta(stemcell_meta)
           return wait_stemcell_copy(storage_account_name, name) unless ret
 
           # Create containers if they are missing.
@@ -117,14 +104,13 @@ module Bosh::AzureCloud
           source_blob_uri = get_stemcell_uri(@default_storage_account_name, name)
           @blob_manager.copy_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd", source_blob_uri)
 
-          entities = @table_manager.query_entities(STEMCELL_TABLE, options)
-          cloud_error("Cannot find the stemcell record #{name}:#{storage_account_name} in the table #{STEMCELL_TABLE} in the default storage account #{@default_storage_account_name}") if entities.empty?
-          entity = entities[0]
-          entity['Status'] = STEMCELL_STATUS_SUCCESS
-          @table_manager.update_entity(STEMCELL_TABLE, entity)
+          stemcell_meta = @meta_store.find_first_stemcell_meta(name, storage_account_name)
+          cloud_error("Cannot find the stemcell record #{name}:#{storage_account_name} in the table #{STEMCELL_TABLE} in the default storage account #{@default_storage_account_name}") if stemcell_meta.nil?
+          stemcell_meta.status = STEMCELL_STATUS_SUCCESS
+          @meta_store.update_stemcell_meta(stemcell_meta)
           true
         rescue StandardError => e
-          ignore_exception { @table_manager.delete_entity(STEMCELL_TABLE, name, storage_account_name) }
+          ignore_exception { @meta_store.delete_stemcell_meta(name, storage_account_name) }
           ignore_exception { @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") }
           raise e
         end
@@ -134,20 +120,17 @@ module Bosh::AzureCloud
     def wait_stemcell_copy(storage_account_name, name, timeout = DEFAULT_COPY_STEMCELL_TIMEOUT)
       @logger.info('Another process is copying the same stemcell')
       loop do
-        options = {
-          filter: "PartitionKey eq '#{name}' and RowKey eq '#{storage_account_name}'"
-        }
-        entities = @table_manager.query_entities(STEMCELL_TABLE, options)
-        cloud_error("Cannot find the stemcell #{name} in the table #{STEMCELL_TABLE} in the default storage account #{@default_storage_account_name}") if entities.empty?
+        stemcell_meta = @meta_store.find_first_stemcell_meta(name, storage_account_name)
+        cloud_error("Cannot find the stemcell #{name} in the table #{STEMCELL_TABLE} in the default storage account #{@default_storage_account_name}") if stemcell_meta.nil?
 
-        return true if entities[0]['Status'] == STEMCELL_STATUS_SUCCESS
+        return true if stemcell_meta.status == STEMCELL_STATUS_SUCCESS
 
-        start_time = entities[0]['Timestamp']
+        start_time = stemcell_meta.timestamp
         start_time = Time.parse(start_time) if start_time.is_a?(String)
         current_time = Time.now
         if (current_time - start_time) > timeout
           @logger.info("The timestamp of the record is #{start_time}, current time is #{current_time}")
-          @table_manager.delete_entity(STEMCELL_TABLE, name, storage_account_name)
+          @meta_store.delete_stemcell_meta(name, storage_account_name)
           @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
           cloud_error("The operation of copying the stemcell #{name} to the storage account #{storage_account_name} timeouts")
         end
