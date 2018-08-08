@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
-    allow(azure_client2).to receive(:sleep)
+    allow(azure_client).to receive(:sleep)
   end
 
   describe '#create_public_ip' do
@@ -81,7 +81,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.create_public_ip(resource_group, public_ip_params)
+            azure_client.create_public_ip(resource_group, public_ip_params)
           end.not_to raise_error
         end
       end
@@ -129,7 +129,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.create_public_ip(resource_group, public_ip_params)
+            azure_client.create_public_ip(resource_group, public_ip_params)
           end.not_to raise_error
         end
       end
@@ -179,7 +179,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.create_public_ip(resource_group, public_ip_params)
+            azure_client.create_public_ip(resource_group, public_ip_params)
           end.not_to raise_error
         end
       end

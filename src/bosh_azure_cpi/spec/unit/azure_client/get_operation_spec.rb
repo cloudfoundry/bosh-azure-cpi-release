@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -368,7 +368,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:storage_account_name) { 'fake-name' }
 
   before do
-    allow(azure_client2).to receive(:sleep)
+    allow(azure_client).to receive(:sleep)
     stub_request(:post, token_uri).to_return(
       status: 200,
       body: {
@@ -426,7 +426,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.list_available_virtual_machine_sizes(location)
+          azure_client.list_available_virtual_machine_sizes(location)
         ).to eq([])
       end
 
@@ -437,7 +437,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.list_available_virtual_machine_sizes(location)
+          azure_client.list_available_virtual_machine_sizes(location)
         ).to eq(fake_vm_size_list)
       end
     end
@@ -452,7 +452,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_public_ip_by_name(resource_group_name, public_ip_name)
+          azure_client.get_public_ip_by_name(resource_group_name, public_ip_name)
         ).to be_nil
       end
 
@@ -463,7 +463,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_public_ip_by_name(resource_group_name, public_ip_name)
+          azure_client.get_public_ip_by_name(resource_group_name, public_ip_name)
         ).to eq(fake_public_ip)
       end
     end
@@ -487,7 +487,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.list_public_ips(resource_group_name)
+          azure_client.list_public_ips(resource_group_name)
         ).to eq([])
       end
 
@@ -498,7 +498,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.list_public_ips(resource_group_name)
+          azure_client.list_public_ips(resource_group_name)
         ).to eq(fake_public_ip_list)
       end
     end
@@ -513,7 +513,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_load_balancer_by_name(load_balancer_name)
+          azure_client.get_load_balancer_by_name(load_balancer_name)
         ).to be_nil
       end
 
@@ -529,7 +529,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_load_balancer_by_name(load_balancer_name)
+          azure_client.get_load_balancer_by_name(load_balancer_name)
         ).to eq(fake_load_balancer)
       end
     end
@@ -544,7 +544,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_application_gateway_by_name(application_gateway_name)
+          azure_client.get_application_gateway_by_name(application_gateway_name)
         ).to be_nil
       end
 
@@ -560,7 +560,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_application_gateway_by_name(application_gateway_name)
+          azure_client.get_application_gateway_by_name(application_gateway_name)
         ).to eq(fake_application_gateway)
       end
     end
@@ -575,7 +575,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+          azure_client.get_network_interface_by_name(resource_group_name, nic_name)
         ).to be_nil
       end
     end
@@ -599,7 +599,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -662,7 +662,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -726,7 +726,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -790,7 +790,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -841,7 +841,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -892,7 +892,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -950,7 +950,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -1008,7 +1008,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -1024,7 +1024,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_virtual_network_by_name(resource_group_name, vnet_name)
+          azure_client.get_virtual_network_by_name(resource_group_name, vnet_name)
         ).to be_nil
       end
 
@@ -1035,7 +1035,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_virtual_network_by_name(resource_group_name, vnet_name)
+          azure_client.get_virtual_network_by_name(resource_group_name, vnet_name)
         ).to eq(fake_vnet)
       end
     end
@@ -1050,7 +1050,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
+          azure_client.get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
         ).to be_nil
       end
 
@@ -1061,7 +1061,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
+          azure_client.get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
         ).to eq(fake_network_subnet)
       end
     end
@@ -1086,7 +1086,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_storage_account_by_name(storage_account_name)
+            azure_client.get_storage_account_by_name(storage_account_name)
           ).to be_nil
         end
       end
@@ -1147,7 +1147,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               headers: {}
             )
             expect(
-              azure_client2.get_storage_account_by_name(storage_account_name)
+              azure_client.get_storage_account_by_name(storage_account_name)
             ).to eq(fake_storage_account)
           end
         end
@@ -1205,7 +1205,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               headers: {}
             )
             expect(
-              azure_client2.get_storage_account_by_name(storage_account_name)
+              azure_client.get_storage_account_by_name(storage_account_name)
             ).to eq(fake_storage_account)
           end
         end
@@ -1233,7 +1233,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.list_storage_accounts
+            azure_client.list_storage_accounts
           ).to eq([])
         end
       end
@@ -1329,7 +1329,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.list_storage_accounts
+            azure_client.list_storage_accounts
           ).to eq(fake_storage_accounts)
         end
       end
@@ -1350,7 +1350,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+          azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
         ).to be_nil
       end
     end
@@ -1447,7 +1447,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1555,7 +1555,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1667,7 +1667,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1760,7 +1760,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               headers: {}
             )
             expect(
-              azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+              azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
             ).to eq(fake_vm)
           end
         end
@@ -1854,7 +1854,7 @@ describe Bosh::AzureCloud::AzureClient2 do
               headers: {}
             )
             expect(
-              azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+              azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
             ).to eq(fake_vm)
           end
         end
@@ -1939,7 +1939,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1955,7 +1955,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_network_security_group_by_name(resource_group_name, nsg_name)
+          azure_client.get_network_security_group_by_name(resource_group_name, nsg_name)
         ).to be_nil
       end
 
@@ -1966,7 +1966,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_network_security_group_by_name(resource_group_name, nsg_name)
+          azure_client.get_network_security_group_by_name(resource_group_name, nsg_name)
         ).to eq(fake_nsg)
       end
     end
@@ -1981,7 +1981,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_application_security_group_by_name(resource_group_name, asg_name)
+          azure_client.get_application_security_group_by_name(resource_group_name, asg_name)
         ).to be_nil
       end
 
@@ -1992,7 +1992,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_application_security_group_by_name(resource_group_name, asg_name)
+          azure_client.get_application_security_group_by_name(resource_group_name, asg_name)
         ).to eq(fake_asg)
       end
     end
@@ -2027,7 +2027,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect(
-          azure_client2.get_storage_account_keys_by_name(storage_account_name)
+          azure_client.get_storage_account_keys_by_name(storage_account_name)
         ).to eq([])
       end
     end
@@ -2036,8 +2036,8 @@ describe Bosh::AzureCloud::AzureClient2 do
       let(:logger_strio) { StringIO.new }
 
       context 'and debug_mode is set to false' do
-        let(:azure_client2) do
-          Bosh::AzureCloud::AzureClient2.new(
+        let(:azure_client) do
+          Bosh::AzureCloud::AzureClient.new(
             mock_cloud_options['properties']['azure'],
             Logger.new(logger_strio)
           )
@@ -2051,7 +2051,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect(
-            azure_client2.get_storage_account_keys_by_name(storage_account_name)
+            azure_client.get_storage_account_keys_by_name(storage_account_name)
           ).to eq(fake_keys)
 
           logs = logger_strio.string
@@ -2061,8 +2061,8 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
 
       context 'and debug_mode is set to true' do
-        let(:azure_client2) do
-          Bosh::AzureCloud::AzureClient2.new(
+        let(:azure_client) do
+          Bosh::AzureCloud::AzureClient.new(
             mock_cloud_options['properties']['azure'].merge('debug_mode' => true),
             Logger.new(logger_strio)
           )
@@ -2076,7 +2076,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect(
-            azure_client2.get_storage_account_keys_by_name(storage_account_name)
+            azure_client.get_storage_account_keys_by_name(storage_account_name)
           ).to eq(fake_keys)
 
           logs = logger_strio.string

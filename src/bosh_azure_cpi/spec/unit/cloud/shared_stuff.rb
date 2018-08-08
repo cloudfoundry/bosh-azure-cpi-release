@@ -11,7 +11,7 @@ shared_context 'shared stuff' do
   end
   let(:managed_cloud) { mock_cloud(mock_cloud_properties_merge('azure' => { 'use_managed_disks' => true })) }
 
-  let(:client2) { instance_double('Bosh::AzureCloud::AzureClient2') }
+  let(:client2) { instance_double('Bosh::AzureCloud::AzureClient') }
   let(:blob_manager) { instance_double('Bosh::AzureCloud::BlobManager') }
   let(:disk_manager) { instance_double('Bosh::AzureCloud::DiskManager') }
   let(:storage_account_manager) { instance_double('Bosh::AzureCloud::StorageAccountManager') }
@@ -25,7 +25,7 @@ shared_context 'shared stuff' do
   let(:telemetry_manager) { MockTelemetryManager.new }
 
   before do
-    allow(Bosh::AzureCloud::AzureClient2).to receive(:new)
+    allow(Bosh::AzureCloud::AzureClient).to receive(:new)
       .and_return(client2)
     allow(Bosh::AzureCloud::BlobManager).to receive(:new)
       .and_return(blob_manager)

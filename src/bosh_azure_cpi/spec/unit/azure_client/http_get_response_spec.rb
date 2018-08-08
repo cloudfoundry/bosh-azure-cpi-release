@@ -5,15 +5,15 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
 
   describe '#http_get_response' do
     let(:uri) { double('uri') }
     let(:request) { double('request') }
     let(:retry_after) { 5 }
-    let(:azure_client2) do
-      Bosh::AzureCloud::AzureClient2.new(
+    let(:azure_client) do
+      Bosh::AzureCloud::AzureClient.new(
         mock_azure_config,
         logger
       )
@@ -21,15 +21,15 @@ describe Bosh::AzureCloud::AzureClient2 do
     let(:response) { double('response') }
 
     before do
-      allow(azure_client2).to receive(:merge_http_common_headers).and_return(request)
+      allow(azure_client).to receive(:merge_http_common_headers).and_return(request)
       allow(request).to receive(:method).and_return('GET')
       allow(request).to receive(:[]=)
       allow(request).to receive(:[]).and_return('fake-value')
-      allow(azure_client2).to receive(:http).with(uri)
-      allow(azure_client2).to receive(:http_get_response_with_network_retry).and_return(response)
+      allow(azure_client).to receive(:http).with(uri)
+      allow(azure_client).to receive(:http_get_response_with_network_retry).and_return(response)
       allow(response).to receive(:body).and_return('fake-response-body')
-      allow(azure_client2).to receive(:get_http_common_headers).and_return('fake-value')
-      allow(azure_client2).to receive(:filter_credential_in_logs).and_return(true)
+      allow(azure_client).to receive(:get_http_common_headers).and_return('fake-value')
+      allow(azure_client).to receive(:filter_credential_in_logs).and_return(true)
     end
 
     context 'when the response status code is 200' do
@@ -38,9 +38,9 @@ describe Bosh::AzureCloud::AzureClient2 do
       end
 
       it 'should return the response' do
-        expect(azure_client2).to receive(:get_token).with(false).and_return('first-token').once
+        expect(azure_client).to receive(:get_token).with(false).and_return('first-token').once
         expect(
-          azure_client2.send(:http_get_response, uri, request, retry_after)
+          azure_client.send(:http_get_response, uri, request, retry_after)
         ).to be(response)
       end
     end
@@ -52,10 +52,10 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
 
         it 'should retry for 1 time and get response finally' do
-          expect(azure_client2).to receive(:get_token).with(false).and_return('first-token').once
-          expect(azure_client2).to receive(:get_token).with(true).and_return('second-token').once
+          expect(azure_client).to receive(:get_token).with(false).and_return('first-token').once
+          expect(azure_client).to receive(:get_token).with(true).and_return('second-token').once
           expect(
-            azure_client2.send(:http_get_response, uri, request, retry_after)
+            azure_client.send(:http_get_response, uri, request, retry_after)
           ).to be(response)
         end
       end
@@ -66,10 +66,10 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
 
         it 'should raise error' do
-          expect(azure_client2).to receive(:get_token).with(false).and_return('first-token').once
-          expect(azure_client2).to receive(:get_token).with(true).and_return('second-token').once
+          expect(azure_client).to receive(:get_token).with(false).and_return('first-token').once
+          expect(azure_client).to receive(:get_token).with(true).and_return('second-token').once
           expect do
-            azure_client2.send(:http_get_response, uri, request, retry_after)
+            azure_client.send(:http_get_response, uri, request, retry_after)
           end.to raise_error(/http_get_response - Azure authentication failed: Token is invalid/)
         end
       end
@@ -88,10 +88,10 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
 
         it 'should retry for 2 times and get response finally' do
-          expect(azure_client2).to receive(:get_token).with(false).and_return('first-token').exactly(3).times
-          expect(azure_client2).to receive(:sleep).with(retry_after).twice
+          expect(azure_client).to receive(:get_token).with(false).and_return('first-token').exactly(3).times
+          expect(azure_client).to receive(:sleep).with(retry_after).twice
           expect(
-            azure_client2.send(:http_get_response, uri, request, retry_after)
+            azure_client.send(:http_get_response, uri, request, retry_after)
           ).to be(response)
         end
       end
@@ -102,10 +102,10 @@ describe Bosh::AzureCloud::AzureClient2 do
         end
 
         it 'should raise error' do
-          expect(azure_client2).to receive(:get_token).with(false).and_return('first-token').exactly(AZURE_MAX_RETRY_COUNT).times
-          expect(azure_client2).to receive(:sleep).with(retry_after).exactly(AZURE_MAX_RETRY_COUNT).times
+          expect(azure_client).to receive(:get_token).with(false).and_return('first-token').exactly(AZURE_MAX_RETRY_COUNT).times
+          expect(azure_client).to receive(:sleep).with(retry_after).exactly(AZURE_MAX_RETRY_COUNT).times
           expect do
-            azure_client2.send(:http_get_response, uri, request, retry_after)
+            azure_client.send(:http_get_response, uri, request, retry_after)
           end.to raise_error(/http_get_response - Failed to get http response after #{AZURE_MAX_RETRY_COUNT} times/)
         end
       end

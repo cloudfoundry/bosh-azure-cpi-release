@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -31,7 +31,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
-    allow(azure_client2).to receive(:sleep)
+    allow(azure_client).to receive(:sleep)
   end
 
   describe '#attach_disk_to_virtual_machine' do
@@ -130,7 +130,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect(
-          azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
+          azure_client.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
         ).to eq(lun)
       end
     end
@@ -230,7 +230,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect(
-            azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
+            azure_client.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
           ).to eq(2)
         end
       end
@@ -294,7 +294,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect(
-            azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
+            azure_client.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
           ).to eq(2)
         end
       end
@@ -316,7 +316,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
+            azure_client.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
           end.to raise_error /attach_disk_to_virtual_machine - cannot find the virtual machine by name/
         end
       end
@@ -359,7 +359,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
+            azure_client.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
           end.to raise_error /attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine/
         end
       end

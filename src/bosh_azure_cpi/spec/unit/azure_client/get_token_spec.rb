@@ -5,7 +5,7 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
   let(:subscription_id) { mock_azure_config['subscription_id'] }
   let(:tenant_id) { mock_azure_config['tenant_id'] }
@@ -28,8 +28,8 @@ describe Bosh::AzureCloud::AzureClient2 do
     end
 
     context 'when the client_secret is provided' do
-      let(:azure_client2) do
-        Bosh::AzureCloud::AzureClient2.new(
+      let(:azure_client) do
+        Bosh::AzureCloud::AzureClient.new(
           mock_azure_config,
           logger
         )
@@ -59,7 +59,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         ).not_to be_nil
       end
     end
@@ -70,8 +70,8 @@ describe Bosh::AzureCloud::AzureClient2 do
         properties.delete('client_secret')
         properties
       end
-      let(:azure_client2) do
-        Bosh::AzureCloud::AzureClient2.new(
+      let(:azure_client) do
+        Bosh::AzureCloud::AzureClient.new(
           azure_config_without_client_secret,
           logger
         )
@@ -140,7 +140,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         ).not_to be_nil
       end
     end

@@ -5,9 +5,9 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    def initialize(blob_manager, table_manager, storage_account_manager, azure_client2)
+    def initialize(blob_manager, table_manager, storage_account_manager, azure_client)
       super(blob_manager, table_manager, storage_account_manager)
-      @azure_client2 = azure_client2
+      @azure_client = azure_client
     end
 
     def delete_stemcell(name)
@@ -15,17 +15,17 @@ module Bosh::AzureCloud
 
       # Both the old format and new format of user image are deleted
       stemcell_uuid = name.sub("#{STEMCELL_PREFIX}-", '')
-      user_images = @azure_client2.list_user_images.select do |user_image|
+      user_images = @azure_client.list_user_images.select do |user_image|
         user_image[:name].start_with?(stemcell_uuid, name)
       end
       user_images.each do |user_image|
         user_image_name = user_image[:name]
         @logger.info("Delete user image '#{user_image_name}'")
-        @azure_client2.delete_user_image(user_image_name)
+        @azure_client.delete_user_image(user_image_name)
       end
 
       # Delete all stemcells with the given stemcell name in all storage accounts
-      storage_accounts = @azure_client2.list_storage_accounts
+      storage_accounts = @azure_client.list_storage_accounts
       storage_accounts.each do |storage_account|
         storage_account_name = storage_account[:name]
         @logger.info("Delete stemcell '#{name}' in the storage '#{storage_account_name}'")
@@ -70,7 +70,7 @@ module Bosh::AzureCloud
       user_image_name = user_image_name_deprecated.sub("#{STEMCELL_PREFIX}-", '')
                                                   .sub(STORAGE_ACCOUNT_TYPE_STANDARD_LRS, 'S')
                                                   .sub(STORAGE_ACCOUNT_TYPE_PREMIUM_LRS, 'P')
-      user_image = @azure_client2.get_user_image_by_name(user_image_name)
+      user_image = @azure_client.get_user_image_by_name(user_image_name)
       return user_image unless user_image.nil?
 
       default_storage_account = @storage_account_manager.default_storage_account
@@ -106,12 +106,12 @@ module Bosh::AzureCloud
       }
 
       flock("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX) do
-        @azure_client2.delete_user_image(user_image_name_deprecated) # CPI will cleanup the user image with the old format name
+        @azure_client.delete_user_image(user_image_name_deprecated) # CPI will cleanup the user image with the old format name
 
-        user_image = @azure_client2.get_user_image_by_name(user_image_name)
+        user_image = @azure_client.get_user_image_by_name(user_image_name)
         if user_image.nil?
-          @azure_client2.create_user_image(user_image_params)
-          user_image = @azure_client2.get_user_image_by_name(user_image_name)
+          @azure_client.create_user_image(user_image_params)
+          user_image = @azure_client.get_user_image_by_name(user_image_name)
           cloud_error("get_user_image: Can not find a user image with the name '#{user_image_name}'") if user_image.nil?
         end
       end

@@ -5,13 +5,13 @@ require 'spec_helper'
 describe Bosh::AzureCloud::TableManager do
   let(:azure_config) { mock_azure_config }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
-  let(:azure_client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
-  let(:table_manager) { Bosh::AzureCloud::TableManager.new(azure_config, storage_account_manager, azure_client2) }
+  let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
+  let(:table_manager) { Bosh::AzureCloud::TableManager.new(azure_config, storage_account_manager, azure_client) }
 
   let(:table_name) { 'fake-table-name' }
   let(:keys) { ['fake-key-1', 'fake-key-2'] }
 
-  let(:azure_client) { instance_double(Azure::Storage::Client) }
+  let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
   let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
   let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
   let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
@@ -39,16 +39,16 @@ describe Bosh::AzureCloud::TableManager do
     allow(storage_account_manager).to receive(:default_storage_account)
       .and_return(storage_account)
     allow(Azure::Storage::Client).to receive(:create)
+      .and_return(azure_storage_client)
+    allow(Bosh::AzureCloud::AzureClient).to receive(:new)
       .and_return(azure_client)
-    allow(Bosh::AzureCloud::AzureClient2).to receive(:new)
-      .and_return(azure_client2)
-    allow(azure_client2).to receive(:get_storage_account_keys_by_name)
+    allow(azure_client).to receive(:get_storage_account_keys_by_name)
       .and_return(keys)
-    allow(azure_client2).to receive(:get_storage_account_by_name)
+    allow(azure_client).to receive(:get_storage_account_by_name)
       .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
       .and_return(storage_account)
 
-    allow(azure_client).to receive(:table_client)
+    allow(azure_storage_client).to receive(:table_client)
       .and_return(table_service)
     allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
       .and_return(exponential_retry)

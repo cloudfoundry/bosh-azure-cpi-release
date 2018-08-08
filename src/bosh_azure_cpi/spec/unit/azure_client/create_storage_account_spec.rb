@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -60,7 +60,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect(
-          azure_client2.create_storage_account(storage_account_name, location, sku, kind, tags)
+          azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
         ).to be(true)
       end
     end
@@ -82,7 +82,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.create_storage_account(storage_account_name, location, sku, kind, tags)
+          azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
         end.to raise_error(/create_storage_account - Cannot create the storage account '#{storage_account_name}'. http code: 404/)
       end
     end
@@ -114,9 +114,9 @@ describe Bosh::AzureCloud::AzureClient2 do
               headers: {}
             )
 
-            expect(azure_client2).to receive(:sleep).with(default_retry_after)
+            expect(azure_client).to receive(:sleep).with(default_retry_after)
             expect(
-              azure_client2.create_storage_account(storage_account_name, location, sku, kind, tags)
+              azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
             ).to be(true)
           end
         end
@@ -145,9 +145,9 @@ describe Bosh::AzureCloud::AzureClient2 do
                 headers: {}
               )
 
-              expect(azure_client2).to receive(:sleep).with(default_retry_after)
+              expect(azure_client).to receive(:sleep).with(default_retry_after)
               expect do
-                azure_client2.create_storage_account(storage_account_name, location, sku, kind, tags)
+                azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
               end.to raise_error(/Error message: {"status":"Failed"}/)
             end
           end
@@ -182,10 +182,10 @@ describe Bosh::AzureCloud::AzureClient2 do
                 headers: {}
               )
 
-              expect(azure_client2).to receive(:sleep).with(default_retry_after)
-              expect(azure_client2).to receive(:sleep).with(1)
+              expect(azure_client).to receive(:sleep).with(default_retry_after)
+              expect(azure_client).to receive(:sleep).with(1)
               expect(
-                azure_client2.create_storage_account(storage_account_name, location, sku, kind, tags)
+                azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
               ).to be(true)
             end
           end
@@ -215,9 +215,9 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
 
-          expect(azure_client2).to receive(:sleep).with(default_retry_after)
+          expect(azure_client).to receive(:sleep).with(default_retry_after)
           expect do
-            azure_client2.create_storage_account(storage_account_name, location, sku, kind, tags)
+            azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
           end.to raise_error(/create_storage_account - http code: 404. Error message: fake-response-body/)
         end
       end

@@ -7,11 +7,11 @@ module Bosh::AzureCloud
     MAX_CHUNK_SIZE = 2 * 1024 * 1024 # 2MB
     TIMEOUT_FOR_BLOB_OPERATIONS = 120 # Timeout in seconds for Blob Service Operations. https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations
 
-    def initialize(azure_config, azure_client2)
+    def initialize(azure_config, azure_client)
       @parallel_upload_thread_num = 16
       @parallel_upload_thread_num = azure_config['parallel_upload_thread_num'].to_i unless azure_config['parallel_upload_thread_num'].nil?
       @azure_config = azure_config
-      @azure_client2 = azure_client2
+      @azure_client = azure_client
       @empty_chunk_content = Array.new(MAX_CHUNK_SIZE, 0).pack('c*')
       @logger = Bosh::Clouds::Config.logger
       @blob_client_mutex = Mutex.new
@@ -406,9 +406,9 @@ module Bosh::AzureCloud
     def initialize_blob_client(storage_account_name, disable_debug_mode = false)
       @blob_client_mutex.synchronize do
         unless @storage_accounts.key?(storage_account_name)
-          storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+          storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
           cloud_error("initialize_blob_client: Storage account '#{storage_account_name}' not found") if storage_account.nil?
-          keys = @azure_client2.get_storage_account_keys_by_name(storage_account_name)
+          keys = @azure_client.get_storage_account_keys_by_name(storage_account_name)
           storage_account[:key] = keys[0]
           @storage_accounts[storage_account_name] = storage_account
         end
