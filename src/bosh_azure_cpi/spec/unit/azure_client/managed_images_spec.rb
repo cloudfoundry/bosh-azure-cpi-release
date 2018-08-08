@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -28,7 +28,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
-    allow(azure_client2).to receive(:sleep)
+    allow(azure_client).to receive(:sleep)
   end
 
   describe '#create_user_image' do
@@ -88,7 +88,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       )
 
       expect do
-        azure_client2.create_user_image(image_params)
+        azure_client.create_user_image(image_params)
       end.not_to raise_error
     end
   end
@@ -137,7 +137,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       )
 
       expect(
-        azure_client2.get_user_image_by_name(image_name)
+        azure_client.get_user_image_by_name(image_name)
       ).to eq(image)
     end
   end
@@ -212,7 +212,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       )
 
       expect(
-        azure_client2.list_user_images
+        azure_client.list_user_images
       ).to eq(images)
     end
   end
@@ -237,7 +237,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.delete_user_image(image_name)
+          azure_client.delete_user_image(image_name)
         end.not_to raise_error
       end
     end

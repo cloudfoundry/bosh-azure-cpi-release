@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -31,7 +31,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
-    allow(azure_client2).to receive(:sleep)
+    allow(azure_client).to receive(:sleep)
   end
 
   describe '#detach_disk_from_virtual_machine' do
@@ -111,7 +111,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
+            azure_client.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
           end.not_to raise_error
         end
       end
@@ -178,7 +178,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
+            azure_client.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
           end.not_to raise_error
         end
       end
@@ -213,7 +213,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
+          azure_client.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
         end.to raise_error /detach_disk_from_virtual_machine - cannot find the virtual machine by name/
       end
     end
@@ -248,7 +248,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         disk_name = 'another-disk-name'
         expect do
-          azure_client2.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
+          azure_client.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
         end.to raise_error /The disk #{disk_name} is not attached to the virtual machine #{vm_name}/
       end
     end
@@ -313,7 +313,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
+          azure_client.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
         end.not_to raise_error
       end
     end

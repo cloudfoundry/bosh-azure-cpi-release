@@ -5,15 +5,15 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
 
   describe '#http_get_response_with_network_retry' do
     let(:http_handler) { double('http') }
     let(:request) { double('request') }
     let(:response) { double('response') }
-    let(:azure_client2) do
-      Bosh::AzureCloud::AzureClient2.new(
+    let(:azure_client) do
+      Bosh::AzureCloud::AzureClient.new(
         mock_azure_config,
         logger
       )
@@ -31,9 +31,9 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it "should retry for #{AZURE_MAX_RETRY_COUNT} times and fail finally" do
-            expect(azure_client2).to receive(:sleep).with(5).exactly(AZURE_MAX_RETRY_COUNT).times
+            expect(azure_client).to receive(:sleep).with(5).exactly(AZURE_MAX_RETRY_COUNT).times
             expect do
-              azure_client2.send(:http_get_response_with_network_retry, http_handler, request)
+              azure_client.send(:http_get_response_with_network_retry, http_handler, request)
             end.to raise_error(error)
           end
         end
@@ -49,9 +49,9 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it 'should retry for 1 time and get response finally' do
-            expect(azure_client2).to receive(:sleep).with(5).once
+            expect(azure_client).to receive(:sleep).with(5).once
             expect(
-              azure_client2.send(:http_get_response_with_network_retry, http_handler, request)
+              azure_client.send(:http_get_response_with_network_retry, http_handler, request)
             ).to be(response)
           end
         end
@@ -70,9 +70,9 @@ describe Bosh::AzureCloud::AzureClient2 do
           end
 
           it 'should raise error without retry' do
-            expect(azure_client2).not_to receive(:sleep)
+            expect(azure_client).not_to receive(:sleep)
             expect do
-              azure_client2.send(:http_get_response_with_network_retry, http_handler, request)
+              azure_client.send(:http_get_response_with_network_retry, http_handler, request)
             end.to raise_error(error)
           end
         end

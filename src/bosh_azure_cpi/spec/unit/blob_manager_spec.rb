@@ -4,14 +4,14 @@ require 'spec_helper'
 
 describe Bosh::AzureCloud::BlobManager do
   let(:azure_config) { mock_azure_config }
-  let(:azure_client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
-  let(:blob_manager) { Bosh::AzureCloud::BlobManager.new(azure_config, azure_client2) }
+  let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
+  let(:blob_manager) { Bosh::AzureCloud::BlobManager.new(azure_config, azure_client) }
 
   let(:container_name) { 'fake-container-name' }
   let(:blob_name) { 'fake-blob-name' }
   let(:keys) { ['fake-key-1', 'fake-key-2'] }
 
-  let(:azure_client) { instance_double(Azure::Storage::Client) }
+  let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
   let(:blob_service) { instance_double(Azure::Storage::Blob::BlobService) }
   let(:customized_retry) { instance_double(Bosh::AzureCloud::CustomizedRetryPolicyFilter) }
   let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
@@ -36,16 +36,16 @@ describe Bosh::AzureCloud::BlobManager do
 
   before do
     allow(Azure::Storage::Client).to receive(:create)
+      .and_return(azure_storage_client)
+    allow(Bosh::AzureCloud::AzureClient).to receive(:new)
       .and_return(azure_client)
-    allow(Bosh::AzureCloud::AzureClient2).to receive(:new)
-      .and_return(azure_client2)
-    allow(azure_client2).to receive(:get_storage_account_keys_by_name)
+    allow(azure_client).to receive(:get_storage_account_keys_by_name)
       .and_return(keys)
-    allow(azure_client2).to receive(:get_storage_account_by_name)
+    allow(azure_client).to receive(:get_storage_account_by_name)
       .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
       .and_return(storage_account)
-    allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
-    allow(azure_client).to receive(:blob_client)
+    allow(azure_storage_client).to receive(:storage_blob_host).and_return(blob_host)
+    allow(azure_storage_client).to receive(:blob_client)
       .and_return(blob_service)
     allow(Bosh::AzureCloud::CustomizedRetryPolicyFilter).to receive(:new)
       .and_return(customized_retry)
@@ -244,7 +244,7 @@ describe Bosh::AzureCloud::BlobManager do
   describe '#get_blob_properties' do
     context 'when storage account does not exist' do
       before do
-        allow(azure_client2).to receive(:get_storage_account_by_name)
+        allow(azure_client).to receive(:get_storage_account_by_name)
           .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
           .and_return(nil)
       end
@@ -457,7 +457,7 @@ describe Bosh::AzureCloud::BlobManager do
     end
     let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
     before do
-      allow(azure_client2).to receive(:get_storage_account_by_name)
+      allow(azure_client).to receive(:get_storage_account_by_name)
         .with(another_storage_account_name)
         .and_return(another_storage_account)
       allow(blob_service).to receive(:get_blob_properties).and_return(blob)
@@ -679,7 +679,7 @@ describe Bosh::AzureCloud::BlobManager do
     end
 
     before do
-      allow(azure_client2).to receive(:get_storage_account_by_name)
+      allow(azure_client).to receive(:get_storage_account_by_name)
         .with(another_storage_account_name)
         .and_return(another_storage_account)
     end

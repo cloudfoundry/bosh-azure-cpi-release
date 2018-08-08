@@ -5,8 +5,8 @@ require 'spec_helper'
 describe Bosh::AzureCloud::LightStemcellManager do
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
-  let(:azure_client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
-  let(:light_stemcell_manager) { Bosh::AzureCloud::LightStemcellManager.new(blob_manager, storage_account_manager, azure_client2) }
+  let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
+  let(:light_stemcell_manager) { Bosh::AzureCloud::LightStemcellManager.new(blob_manager, storage_account_manager, azure_client) }
 
   let(:stemcell_container) { 'stemcell' }
   let(:prefix) { 'bosh-light-stemcell' }
@@ -117,7 +117,7 @@ describe Bosh::AzureCloud::LightStemcellManager do
     context 'when the platform image exists' do
       before do
         allow(SecureRandom).to receive(:uuid).and_return(uuid)
-        allow(azure_client2).to receive(:list_platform_image_versions)
+        allow(azure_client).to receive(:list_platform_image_versions)
           .and_return(versions)
       end
 
@@ -146,12 +146,12 @@ describe Bosh::AzureCloud::LightStemcellManager do
       end
 
       before do
-        allow(azure_client2).to receive(:list_platform_image_versions)
+        allow(azure_client).to receive(:list_platform_image_versions)
           .and_return(versions)
       end
 
       it 'should raise an error' do
-        expect(azure_client2).to receive(:list_platform_image_versions)
+        expect(azure_client).to receive(:list_platform_image_versions)
         expect(blob_manager).not_to receive(:create_empty_page_blob)
 
         expect do
@@ -186,13 +186,13 @@ describe Bosh::AzureCloud::LightStemcellManager do
 
       context 'but the platform image does not exist' do
         before do
-          allow(azure_client2).to receive(:list_platform_image_versions)
+          allow(azure_client).to receive(:list_platform_image_versions)
             .and_return([])
         end
 
         it 'should return false' do
           expect(blob_manager).to receive(:get_blob_metadata)
-          expect(azure_client2).to receive(:list_platform_image_versions)
+          expect(azure_client).to receive(:list_platform_image_versions)
 
           expect(
             light_stemcell_manager.has_stemcell?(location, stemcell_name)
@@ -202,13 +202,13 @@ describe Bosh::AzureCloud::LightStemcellManager do
 
       context 'and the platform image exists' do
         before do
-          allow(azure_client2).to receive(:list_platform_image_versions)
+          allow(azure_client).to receive(:list_platform_image_versions)
             .and_return(versions)
         end
 
         it 'should return true' do
           expect(blob_manager).to receive(:get_blob_metadata)
-          expect(azure_client2).to receive(:list_platform_image_versions)
+          expect(azure_client).to receive(:list_platform_image_versions)
 
           expect(
             light_stemcell_manager.has_stemcell?(location, stemcell_name)

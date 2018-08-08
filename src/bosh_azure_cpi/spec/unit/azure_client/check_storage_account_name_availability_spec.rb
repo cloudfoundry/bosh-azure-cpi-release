@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -53,7 +53,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect(
-          azure_client2.check_storage_account_name_availability(storage_account_name)
+          azure_client.check_storage_account_name_availability(storage_account_name)
         ).to eq(
           available: false,
           reason: 'AccountNameInvalid',
@@ -79,7 +79,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.check_storage_account_name_availability(storage_account_name)
+          azure_client.check_storage_account_name_availability(storage_account_name)
         end.to raise_error(/Cannot check the availability of the storage account name '#{storage_account_name}'/)
       end
     end

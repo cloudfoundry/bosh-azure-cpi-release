@@ -463,7 +463,7 @@ describe Bosh::AzureCloud::Helpers do
   end
 
   describe '#initialize_azure_storage_client' do
-    let(:azure_client) { instance_double(Azure::Storage::Client) }
+    let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
     let(:storage_account_name) { 'fake-storage-account-name' }
     let(:storage_account_key) { 'fake-storage-account-key' }
     let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
@@ -492,10 +492,10 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should create the storage client with the correct options' do
         expect(Azure::Storage::Client).to receive(:create).with(options)
-                                                          .and_return(azure_client)
+                                                          .and_return(azure_storage_client)
         expect(
           helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
-        ).to eq(azure_client)
+        ).to eq(azure_storage_client)
       end
     end
 
@@ -521,10 +521,10 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should create the storage client with the correct options' do
         expect(Azure::Storage::Client).to receive(:create).with(options)
-                                                          .and_return(azure_client)
+                                                          .and_return(azure_storage_client)
         expect(
           helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
-        ).to eq(azure_client)
+        ).to eq(azure_storage_client)
       end
     end
   end

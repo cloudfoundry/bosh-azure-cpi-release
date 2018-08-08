@@ -283,9 +283,9 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       it 'should add the VM to the backend pool of application gateway' do
-        ag_url = cpi.azure_client2.rest_api_url(
-          Bosh::AzureCloud::AzureClient2::REST_API_PROVIDER_NETWORK,
-          Bosh::AzureCloud::AzureClient2::REST_API_APPLICATION_GATEWAYS,
+        ag_url = cpi.azure_client.rest_api_url(
+          Bosh::AzureCloud::AzureClient::REST_API_PROVIDER_NETWORK,
+          Bosh::AzureCloud::AzureClient::REST_API_APPLICATION_GATEWAYS,
           name: @application_gateway_name
         )
 
@@ -301,14 +301,14 @@ describe Bosh::AzureCloud::Cloud do
                 vm_properties,
                 network_specs[i]
               )
-              ag = cpi.azure_client2.get_resource_by_id(ag_url)
+              ag = cpi.azure_client.get_resource_by_id(ag_url)
               expect(ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations']).to include(
                 'id' => ip_config_id
               )
             ensure
               cpi.delete_vm(new_instance_id) if new_instance_id
             end
-            ag = cpi.azure_client2.get_resource_by_id(ag_url)
+            ag = cpi.azure_client.get_resource_by_id(ag_url)
             unless ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations'].nil?
               expect(ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations']).not_to include(
                 'id' => ip_config_id
@@ -386,7 +386,7 @@ describe Bosh::AzureCloud::Cloud do
         expect(instance_id).to be
 
         instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
-        network_interface = cpi_without_default_nsg.azure_client2.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
+        network_interface = cpi_without_default_nsg.azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         nsg = network_interface[:network_security_group]
         expect(nsg).to be_nil
       ensure
@@ -660,7 +660,7 @@ describe Bosh::AzureCloud::Cloud do
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
         instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
-        network_interface = cpi.azure_client2.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
+        network_interface = cpi.azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         asgs = network_interface[:application_security_groups]
         asg_names = []
         asgs.each do |asg|
@@ -695,15 +695,15 @@ describe Bosh::AzureCloud::Cloud do
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
         instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
-        vm = cpi.azure_client2.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name)
-        dynamic_public_ip = cpi.azure_client2.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
+        vm = cpi.azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name)
+        dynamic_public_ip = cpi.azure_client.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
         expect(vm[:zone]).to eq(availability_zone)
         expect(dynamic_public_ip[:zone]).to eq(availability_zone)
 
         disk_id = cpi.create_disk(2048, {}, instance_id)
         expect(disk_id).not_to be_nil
         disk_id_obj = Bosh::AzureCloud::DiskId.parse(disk_id, azure_config)
-        disk = cpi.azure_client2.get_managed_disk_by_name(@default_resource_group_name, disk_id_obj.disk_name)
+        disk = cpi.azure_client.get_managed_disk_by_name(@default_resource_group_name, disk_id_obj.disk_name)
         expect(disk[:zone]).to eq(availability_zone)
         @disk_id_pool.push(disk_id)
 

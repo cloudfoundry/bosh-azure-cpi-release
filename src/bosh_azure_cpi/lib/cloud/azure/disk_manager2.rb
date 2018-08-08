@@ -7,8 +7,8 @@ module Bosh::AzureCloud
 
     attr_accessor :vm_properties
 
-    def initialize(azure_client2)
-      @azure_client2 = azure_client2
+    def initialize(azure_client)
+      @azure_client = azure_client
       @logger = Bosh::Clouds::Config.logger
     end
 
@@ -42,7 +42,7 @@ module Bosh::AzureCloud
       disk_params[:zone] = zone unless zone.nil?
 
       @logger.info("Start to create an empty managed disk '#{disk_name}' in resource group '#{resource_group_name}'")
-      @azure_client2.create_empty_managed_disk(resource_group_name, disk_params)
+      @azure_client.create_empty_managed_disk(resource_group_name, disk_params)
     end
 
     def create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, zone = nil)
@@ -63,18 +63,18 @@ module Bosh::AzureCloud
         zone: zone
       }
       @logger.info("Start to create a managed disk '#{disk_name}' in resource group '#{resource_group_name}' from the source uri '#{blob_uri}'")
-      @azure_client2.create_managed_disk_from_blob(resource_group_name, disk_params)
+      @azure_client.create_managed_disk_from_blob(resource_group_name, disk_params)
     end
 
     def delete_disk(resource_group_name, disk_name)
       @logger.info("delete_disk(#{resource_group_name}, #{disk_name})")
       retried = false
       begin
-        @azure_client2.delete_managed_disk(resource_group_name, disk_name) if has_disk?(resource_group_name, disk_name)
+        @azure_client.delete_managed_disk(resource_group_name, disk_name) if has_disk?(resource_group_name, disk_name)
       rescue Bosh::AzureCloud::AzureConflictError => e
         # Workaround: Do one retry for AzureConflictError, and give up if it still fails.
         #             After Managed Disks add "retry-after" in the response header,
-        #             the workaround can be removed because the retry in azure_client2 will be triggered.
+        #             the workaround can be removed because the retry in azure_client will be triggered.
         unless retried
           @logger.debug("delete_disk: Received an AzureConflictError: '#{e.inspect}', retrying.")
           retried = true
@@ -107,7 +107,7 @@ module Bosh::AzureCloud
 
     def get_disk(resource_group_name, disk_name)
       @logger.info("get_disk(#{resource_group_name}, #{disk_name})")
-      disk = @azure_client2.get_managed_disk_by_name(resource_group_name, disk_name)
+      disk = @azure_client.get_managed_disk_by_name(resource_group_name, disk_name)
     end
 
     def get_data_disk(disk_id)
@@ -129,19 +129,19 @@ module Bosh::AzureCloud
         disk_name: disk_name
       }
       @logger.info("Start to create a snapshot '#{snapshot_name}' from a managed disk '#{disk_name}'")
-      @azure_client2.create_managed_snapshot(resource_group_name, snapshot_params)
+      @azure_client.create_managed_snapshot(resource_group_name, snapshot_params)
     end
 
     def delete_snapshot(snapshot_id)
       @logger.info("delete_snapshot(#{snapshot_id})")
       resource_group_name = snapshot_id.resource_group_name()
       snapshot_name = snapshot_id.disk_name
-      @azure_client2.delete_managed_snapshot(resource_group_name, snapshot_name)
+      @azure_client.delete_managed_snapshot(resource_group_name, snapshot_name)
     end
 
     def has_snapshot?(resource_group_name, snapshot_name)
       @logger.info("has_snapshot?(#{resource_group_name}, #{snapshot_name})")
-      snapshot = @azure_client2.get_managed_snapshot_by_name(resource_group_name, snapshot_name)
+      snapshot = @azure_client.get_managed_snapshot_by_name(resource_group_name, snapshot_name)
       !snapshot.nil?
     end
 
@@ -219,7 +219,7 @@ module Bosh::AzureCloud
       max_retries = 2
       retry_count = 0
       begin
-        @azure_client2.create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
+        @azure_client.create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
       rescue StandardError => e
         if retry_count < max_retries
           @logger.info("migrate_to_zone - Got error when creating '#{disk_name}' from snapshot '#{snapshot_name}': \n#{e.inspect}\n#{e.backtrace.join('\n')}. \nRetry #{retry_count}: will retry to create the disk.")

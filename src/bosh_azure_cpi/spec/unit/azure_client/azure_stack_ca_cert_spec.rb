@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
   let(:azure_stack_domain) { 'fake-azure-stack-domain' }
   let(:http) { instance_double(Net::HTTP) }
@@ -12,8 +12,8 @@ describe Bosh::AzureCloud::AzureClient2 do
   end
 
   describe '#azure_stack_ca_cert' do
-    let(:azure_client2) do
-      Bosh::AzureCloud::AzureClient2.new(
+    let(:azure_client) do
+      Bosh::AzureCloud::AzureClient.new(
         mock_cloud_options['properties']['azure'].merge!(
           'environment' => 'AzureStack',
           'azure_stack' => {
@@ -35,7 +35,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(http).to receive(:use_ssl=).with(true)
         expect(http).not_to receive(:ca_file=).with(ca_file_path)
         expect(http).to receive(:open_timeout=).with(60)
-        azure_client2.send(:http, uri)
+        azure_client.send(:http, uri)
       end
     end
 
@@ -46,7 +46,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(http).to receive(:use_ssl=).with(true)
         expect(http).to receive(:ca_file=).with(ca_file_path)
         expect(http).to receive(:open_timeout=).with(60)
-        azure_client2.send(:http, uri)
+        azure_client.send(:http, uri)
       end
     end
   end

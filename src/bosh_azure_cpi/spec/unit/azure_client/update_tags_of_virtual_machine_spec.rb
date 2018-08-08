@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:azure_config) { mock_azure_config }
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) { Bosh::AzureCloud::AzureClient2.new(azure_config, logger) }
+  let(:azure_client) { Bosh::AzureCloud::AzureClient.new(azure_config, logger) }
 
   let(:subscription_id) { mock_azure_config['subscription_id'] }
   let(:tenant_id) { mock_azure_config['tenant_id'] }
@@ -28,7 +28,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
-    allow(azure_client2).to receive(:sleep)
+    allow(azure_client).to receive(:sleep)
   end
 
   describe '#update_tags_of_virtual_machine' do
@@ -102,7 +102,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+            azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
           end.not_to raise_error
         end
       end
@@ -161,7 +161,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             )
 
             expect do
-              azure_client2.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+              azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
             end.not_to raise_error
           end
         end
@@ -216,7 +216,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             )
 
             expect do
-              azure_client2.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+              azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
             end.not_to raise_error
           end
         end
@@ -252,7 +252,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+          azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
         end.to raise_error /update_tags_of_virtual_machine - cannot find the virtual machine by name/
       end
     end

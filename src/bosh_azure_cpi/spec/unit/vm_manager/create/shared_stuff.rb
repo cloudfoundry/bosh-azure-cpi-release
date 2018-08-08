@@ -12,7 +12,7 @@ shared_context 'shared stuff for vm manager' do
   let(:registry_endpoint) { mock_registry.endpoint }
   let(:disk_manager) { instance_double(Bosh::AzureCloud::DiskManager) }
   let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
-  let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
+  let(:client2) { instance_double(Bosh::AzureCloud::AzureClient) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
 
   # VM manager for unmanaged disks
@@ -68,7 +68,7 @@ shared_context 'shared stuff for vm manager' do
       .and_return(false)
   end
 
-  # AzureClient2
+  # AzureClient
   let(:subnet) { double('subnet') }
   let(:default_security_group) do
     {
@@ -87,7 +87,7 @@ shared_context 'shared stuff for vm manager' do
     }
   end
   before do
-    allow(Bosh::AzureCloud::AzureClient2).to receive(:new)
+    allow(Bosh::AzureCloud::AzureClient).to receive(:new)
       .and_return(client2)
     allow(client2).to receive(:get_network_subnet_by_name)
       .with(MOCK_RESOURCE_GROUP_NAME, 'fake-virtual-network-name', 'fake-subnet-name')

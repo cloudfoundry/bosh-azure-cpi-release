@@ -43,7 +43,7 @@ require 'bosh/cpi/registry_client'
 require 'cloud'
 require 'cloud/azure/helpers'
 require 'cloud/azure/cloud'
-require 'cloud/azure/azure_client2'
+require 'cloud/azure/azure_client'
 
 require 'cloud/azure/network'
 require 'cloud/azure/manual_network'

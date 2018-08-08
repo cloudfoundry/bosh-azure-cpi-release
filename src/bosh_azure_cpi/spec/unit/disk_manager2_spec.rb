@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::DiskManager2 do
-  let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
+  let(:client2) { instance_double(Bosh::AzureCloud::AzureClient) }
   let(:disk_manager2) { Bosh::AzureCloud::DiskManager2.new(client2) }
   let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
   let(:snapshot_id) { instance_double(Bosh::AzureCloud::DiskId) }

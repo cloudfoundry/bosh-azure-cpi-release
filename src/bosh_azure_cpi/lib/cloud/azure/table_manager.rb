@@ -4,14 +4,14 @@ module Bosh::AzureCloud
   class TableManager
     include Helpers
 
-    def initialize(azure_config, storage_account_manager, azure_client2)
+    def initialize(azure_config, storage_account_manager, azure_client)
       @azure_config = azure_config
       @storage_account_manager = storage_account_manager
-      @azure_client2 = azure_client2
+      @azure_client = azure_client
       @logger = Bosh::Clouds::Config.logger
 
       storage_account = @storage_account_manager.default_storage_account
-      storage_account[:key] = @azure_client2.get_storage_account_keys_by_name(storage_account[:name])[0]
+      storage_account[:key] = @azure_client.get_storage_account_keys_by_name(storage_account[:name])[0]
       azure_storage_client = initialize_azure_storage_client(storage_account, @azure_config)
       @table_service_client = azure_storage_client.table_client
       @table_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
