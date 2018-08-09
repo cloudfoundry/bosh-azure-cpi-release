@@ -21,7 +21,7 @@ module Bosh::AzureCloud
     def delete_data_disk(disk_id)
       @logger.info("delete_data_disk(#{disk_id})")
       storage_account_name = disk_id.storage_account_name()
-      disk_name = disk_id.disk_name()
+      disk_name = disk_id.disk_name
       delete_disk(storage_account_name, disk_name)
     end
 
@@ -62,7 +62,7 @@ module Bosh::AzureCloud
     def create_disk(disk_id, size)
       @logger.info("create_disk(#{disk_id}, #{size}")
       storage_account_name = disk_id.storage_account_name()
-      disk_name = disk_id.disk_name()
+      disk_name = disk_id.disk_name
       @logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
       @blob_manager.create_empty_vhd_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", size)
     end
@@ -76,14 +76,14 @@ module Bosh::AzureCloud
     def has_data_disk?(disk_id)
       @logger.info("has_data_disk?(#{disk_id})")
       storage_account_name = disk_id.storage_account_name()
-      disk_name = disk_id.disk_name()
+      disk_name = disk_id.disk_name
       has_disk?(storage_account_name, disk_name)
     end
 
     def is_migrated?(disk_id)
       @logger.info("is_migrated?(#{disk_id})")
       storage_account_name = disk_id.storage_account_name()
-      disk_name = disk_id.disk_name()
+      disk_name = disk_id.disk_name
       return false unless has_disk?(storage_account_name, disk_name)
       metadata = @blob_manager.get_blob_metadata(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
       (METADATA_FOR_MIGRATED_BLOB_DISK.to_a - metadata.to_a).empty?
@@ -97,14 +97,14 @@ module Bosh::AzureCloud
     def get_data_disk_uri(disk_id)
       @logger.info("get_data_disk_uri(#{disk_id})")
       storage_account_name = disk_id.storage_account_name()
-      disk_name = disk_id.disk_name()
+      disk_name = disk_id.disk_name
       get_disk_uri(storage_account_name, disk_name)
     end
 
     def get_disk_size_in_gb(disk_id)
       @logger.info("get_disk_size_in_gb(#{disk_id})")
       storage_account_name = disk_id.storage_account_name()
-      disk_name = disk_id.disk_name()
+      disk_name = disk_id.disk_name
       @blob_manager.get_blob_size_in_bytes(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd") / 1024 / 1024 / 1024
     end
 

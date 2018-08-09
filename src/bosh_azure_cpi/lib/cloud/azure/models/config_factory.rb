@@ -18,7 +18,7 @@ module Bosh::AzureCloud
       # TODO: implement this.
       azure_config_hash = options['azure']
       error_msg = 'azure_stack should be there if environment is AzureStack.'
-      cloud_error(error_msg) if !azure_config_hash.nil? && azure_config_hash['environment'] == ENVIRONMENT_AZURESTACK && azure_config_hash['azure_stack'].nil?
+      raise Bosh::Clouds::CloudError, error_msg if !azure_config_hash.nil? && azure_config_hash['environment'] == ENVIRONMENT_AZURESTACK && azure_config_hash['azure_stack'].nil?
     end
 
     def self.validate_credentials_source(options)

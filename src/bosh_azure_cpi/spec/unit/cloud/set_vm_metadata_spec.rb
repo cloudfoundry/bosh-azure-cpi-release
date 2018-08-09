@@ -12,7 +12,7 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
-        .with(instance_id, azure_config)
+        .with(instance_id, azure_config.resource_group_name)
         .and_return(instance_id_object)
       allow(telemetry_manager).to receive(:monitor)
         .with('set_vm_metadata', id: instance_id).and_call_original
