@@ -18,7 +18,7 @@ describe Bosh::AzureCloud::Cloud do
     context 'when use_managed_disks is true' do
       before do
         allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-          .with(disk_id, azure_config_managed)
+          .with(disk_id, azure_config_managed.resource_group_name)
           .and_return(disk_id_object)
       end
 
@@ -79,7 +79,7 @@ describe Bosh::AzureCloud::Cloud do
     context 'when use_managed_disks is false' do
       before do
         allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-          .with(disk_id, azure_config)
+          .with(disk_id, azure_config.resource_group_name)
           .and_return(disk_id_object)
       end
 
