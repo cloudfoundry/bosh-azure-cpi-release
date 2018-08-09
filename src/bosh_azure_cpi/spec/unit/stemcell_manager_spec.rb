@@ -5,8 +5,9 @@ require 'spec_helper'
 describe Bosh::AzureCloud::StemcellManager do
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:table_manager) { instance_double(Bosh::AzureCloud::TableManager) }
+  let(:meta_store) { Bosh::AzureCloud::MetaStore.new(table_manager) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
-  let(:stemcell_manager) { Bosh::AzureCloud::StemcellManager.new(blob_manager, table_manager, storage_account_manager) }
+  let(:stemcell_manager) { Bosh::AzureCloud::StemcellManager.new(blob_manager, meta_store, storage_account_manager) }
 
   let(:stemcell_name) { 'fake-stemcell-name' }
   let(:storage_account_name) { 'fake-storage-account-name' }
@@ -260,9 +261,9 @@ describe Bosh::AzureCloud::StemcellManager do
         end
         let(:entity_update) do
           {
-            'PartitionKey' => stemcell_name,
-            'RowKey'       => storage_account_name,
-            'Status'       => 'success'
+            PartitionKey: stemcell_name,
+            RowKey: storage_account_name,
+            Status: 'success'
           }
         end
 

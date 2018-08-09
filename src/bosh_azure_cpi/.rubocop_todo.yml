@@ -143,7 +143,7 @@ Naming/PredicateName:
     - 'lib/cloud/azure/stemcell_manager.rb'
     - 'lib/cloud/azure/stemcell_manager2.rb'
     - 'lib/cloud/azure/storage_account_manager.rb'
-    - 'lib/cloud/azure/table_manager.rb'
+    - 'lib/cloud/azure/meta_store/table_manager.rb'
     - 'lib/cloud/azure/telemetry/telemetry_event_handler.rb'
 
 # Offense count: 2

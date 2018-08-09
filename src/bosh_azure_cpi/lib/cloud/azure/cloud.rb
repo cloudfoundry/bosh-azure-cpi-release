@@ -5,7 +5,7 @@ module Bosh::AzureCloud
     attr_reader   :registry
     attr_reader   :options
     # Below defines are for test purpose
-    attr_reader   :azure_client, :blob_manager, :table_manager, :storage_account_manager, :vm_manager, :instance_type_mapper
+    attr_reader   :azure_client, :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper
     attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
 
     include Helpers
@@ -682,10 +682,13 @@ module Bosh::AzureCloud
       @blob_manager            = Bosh::AzureCloud::BlobManager.new(azure_config, @azure_client)
       @disk_manager            = Bosh::AzureCloud::DiskManager.new(azure_config, @blob_manager)
       @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(azure_config, @blob_manager, @disk_manager, @azure_client)
-      @table_manager           = Bosh::AzureCloud::TableManager.new(azure_config, @storage_account_manager, @azure_client)
-      @stemcell_manager        = Bosh::AzureCloud::StemcellManager.new(@blob_manager, @table_manager, @storage_account_manager)
+
+      table_manager            = Bosh::AzureCloud::TableManager.new(azure_config, @storage_account_manager, @azure_client)
+      @meta_store              = Bosh::AzureCloud::MetaStore.new(table_manager)
+
+      @stemcell_manager        = Bosh::AzureCloud::StemcellManager.new(@blob_manager, @meta_store, @storage_account_manager)
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client)
-      @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @table_manager, @storage_account_manager, @azure_client)
+      @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @meta_store, @storage_account_manager, @azure_client)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client)
       @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_config, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
