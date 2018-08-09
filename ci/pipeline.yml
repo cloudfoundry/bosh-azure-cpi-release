@@ -152,11 +152,12 @@ jobs:
         params:
           <<: *run-integration-params
           AZURE_USE_MANAGED_DISKS: false
-      - do:
-        - <<: *destroy-integration-environment
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: integration-managed-disks
     serial: true
@@ -170,11 +171,12 @@ jobs:
         params:
           <<: *run-integration-params
           AZURE_USE_MANAGED_DISKS: true
-      - do:
-        - <<: *destroy-integration-environment
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: integration-windows-unmanaged-disks
     serial: true
@@ -188,11 +190,12 @@ jobs:
         params:
           <<: *run-integration-windows-params
           AZURE_USE_MANAGED_DISKS: false
-      - do:
-        - <<: *destroy-integration-environment
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: integration-windows-managed-disks
     serial: true
@@ -206,11 +209,12 @@ jobs:
         params:
           <<: *run-integration-windows-params
           AZURE_USE_MANAGED_DISKS: true
-      - do:
-        - <<: *destroy-integration-environment
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: bats-unmanaged-disks
     serial: true
@@ -225,20 +229,25 @@ jobs:
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
       - <<: *create-bats-environment
-      - <<: *prepare-director
-        params:
-          <<: *prepare-director-params
-          OPTIONAL_OPS_FILE: |
-            -o pipelines/shared/assets/ops/remove-hm.yml
-            -o bosh-deployment/external-ip-with-registry-not-recommended.yml
-      - <<: *deploy-director
-      - <<: *run-bats
       - do:
-        - <<: *teardown
-        - <<: *destroy-bats-environment
+        - <<: *prepare-director
+          params:
+            <<: *prepare-director-params
+            OPTIONAL_OPS_FILE: |
+              -o pipelines/shared/assets/ops/remove-hm.yml
+              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+        - do:
+          - <<: *deploy-director
+          - <<: *run-bats
+          ensure:
+            do:
+              - <<: *teardown
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-bats-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: bats-managed-disks
     serial: true
@@ -253,21 +262,26 @@ jobs:
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
       - <<: *create-az-bats-environment
-      - <<: *prepare-director
-        params:
-          <<: *prepare-director-params
-          OPTIONAL_OPS_FILE: |
-            -o pipelines/shared/assets/ops/remove-hm.yml
-            -o bosh-deployment/external-ip-with-registry-not-recommended.yml
-            -o bosh-deployment/azure/use-managed-disks.yml
-      - <<: *deploy-director
-      - <<: *run-az-bats
       - do:
-        - <<: *teardown
-        - <<: *destroy-az-bats-environment
+        - <<: *prepare-director
+          params:
+            <<: *prepare-director-params
+            OPTIONAL_OPS_FILE: |
+              -o pipelines/shared/assets/ops/remove-hm.yml
+              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+              -o bosh-deployment/azure/use-managed-disks.yml
+        - do:
+          - <<: *deploy-director
+          - <<: *run-az-bats
+          ensure:
+            do:
+              - <<: *teardown
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-az-bats-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: promote-candidate-major
     plan:
