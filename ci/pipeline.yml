@@ -355,9 +355,8 @@ resources:
   - name: bosh-cpi-src-in
     type: git
     source:
-      uri: git@github.com:cloudfoundry-incubator/bosh-azure-cpi-release.git
+      uri: https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release.git
       branch: master
-      private_key: {{github_deployment_key__bosh-azure-cpi-release}}
       ignore_paths:
         - .final_builds/**/*.yml
         - releases/**/*.yml
