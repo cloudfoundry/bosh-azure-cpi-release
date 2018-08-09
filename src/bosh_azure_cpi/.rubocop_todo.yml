@@ -9,9 +9,9 @@
 # Offense count: 19
 Lint/AmbiguousBlockAssociation:
   Exclude:
-    - 'spec/unit/azure_client2/create_virtual_machine_spec.rb'
-    - 'spec/unit/azure_client2/delete_virtual_machine_spec.rb'
-    - 'spec/unit/azure_client2/restart_virtual_machine_spec.rb'
+    - 'spec/unit/azure_client/create_virtual_machine_spec.rb'
+    - 'spec/unit/azure_client/delete_virtual_machine_spec.rb'
+    - 'spec/unit/azure_client/restart_virtual_machine_spec.rb'
     - 'spec/unit/cloud/configure_networks_spec.rb'
     - 'spec/unit/cloud/set_disk_metadata_spec.rb'
     - 'spec/unit/vm_manager/create/vm_is_not_created_spec.rb'
@@ -44,13 +44,13 @@ Lint/ParenthesesAsGroupedExpression:
 # Offense count: 6
 Lint/ShadowingOuterLocalVariable:
   Exclude:
-    - 'lib/cloud/azure/azure_client2.rb'
+    - 'lib/cloud/azure/azure_client.rb'
     - 'lib/cloud/azure/helpers.rb'
 
 # Offense count: 12
 Lint/UriEscapeUnescape:
   Exclude:
-    - 'lib/cloud/azure/azure_client2.rb'
+    - 'lib/cloud/azure/azure_client.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
 
 # Offense count: 1
@@ -62,7 +62,7 @@ Lint/UselessAccessModifier:
 # Offense count: 21
 Lint/UselessAssignment:
   Exclude:
-    - 'lib/cloud/azure/azure_client2.rb'
+    - 'lib/cloud/azure/azure_client.rb'
     - 'lib/cloud/azure/cloud.rb'
     - 'lib/cloud/azure/disk_manager2.rb'
     - 'lib/cloud/azure/helpers.rb'
@@ -151,7 +151,7 @@ Naming/PredicateName:
 # AllowedNames: io, id, to, by, on, in, at
 Naming/UncommunicativeMethodParamName:
   Exclude:
-    - 'lib/cloud/azure/azure_client2.rb'
+    - 'lib/cloud/azure/azure_client.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
 
 # Offense count: 20
@@ -182,7 +182,7 @@ Style/FormatStringToken:
 # Configuration parameters: MinBodyLength.
 Style/GuardClause:
   Exclude:
-    - 'lib/cloud/azure/azure_client2.rb'
+    - 'lib/cloud/azure/azure_client.rb'
     - 'lib/cloud/azure/blob_manager.rb'
     - 'lib/cloud/azure/cloud.rb'
     - 'lib/cloud/azure/disk_id.rb'
@@ -204,7 +204,7 @@ Style/MixinUsage:
 # Offense count: 2
 Style/NestedTernaryOperator:
   Exclude:
-    - 'lib/cloud/azure/azure_client2.rb'
+    - 'lib/cloud/azure/azure_client.rb'
     - 'lib/cloud/azure/vm_manager.rb'
 
 # Offense count: 13

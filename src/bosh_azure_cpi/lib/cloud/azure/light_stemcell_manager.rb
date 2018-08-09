@@ -5,10 +5,10 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    def initialize(blob_manager, storage_account_manager, azure_client2)
+    def initialize(blob_manager, storage_account_manager, azure_client)
       @blob_manager = blob_manager
       @storage_account_manager = storage_account_manager
-      @azure_client2 = azure_client2
+      @azure_client = azure_client
       @logger = Bosh::Clouds::Config.logger
 
       default_storage_account = @storage_account_manager.default_storage_account
@@ -61,7 +61,7 @@ module Bosh::AzureCloud
     def platform_image_exists?(location, stemcell_properties)
       stemcell_info = StemcellInfo.new('', stemcell_properties)
       @logger.debug("list_platform_image_versions(#{location}, #{stemcell_info.image['publisher']}, #{stemcell_info.image['offer']}, #{stemcell_info.image['sku']})")
-      versions = @azure_client2.list_platform_image_versions(location, stemcell_info.image['publisher'], stemcell_info.image['offer'], stemcell_info.image['sku'])
+      versions = @azure_client.list_platform_image_versions(location, stemcell_info.image['publisher'], stemcell_info.image['offer'], stemcell_info.image['sku'])
       version = versions.find { |v| v[:name] == stemcell_info.image['version'] }
       @logger.debug("list_platform_image_versions: The version '#{stemcell_info.image['version']}' of the image is not found") if version.nil?
       !version.nil?

@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -35,7 +35,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       name = 'c'
       others = 'd'
       resource_group_name = 'e'
-      expect(azure_client2.rest_api_url(
+      expect(azure_client.rest_api_url(
                resource_provider,
                resource_type,
                resource_group_name: resource_group_name,
@@ -49,7 +49,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       resource_type = 'b'
       name = 'c'
       others = 'd'
-      expect(azure_client2.rest_api_url(
+      expect(azure_client.rest_api_url(
                resource_provider,
                resource_type,
                name: name,
@@ -62,7 +62,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       resource_type = 'b'
       others = 'd'
       resource_group_name = 'e'
-      expect(azure_client2.rest_api_url(
+      expect(azure_client.rest_api_url(
                resource_provider,
                resource_type,
                resource_group_name: resource_group_name,
@@ -75,7 +75,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       resource_type = 'b'
       name = 'c'
       resource_group_name = 'e'
-      expect(azure_client2.rest_api_url(
+      expect(azure_client.rest_api_url(
                resource_provider,
                resource_type,
                resource_group_name: resource_group_name,
@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::AzureClient2 do
     it 'returns the right url if resource_group_name, name and others are all not provided' do
       resource_provider = 'a'
       resource_type = 'b'
-      expect(azure_client2.rest_api_url(
+      expect(azure_client.rest_api_url(
                resource_provider,
                resource_type
              )).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group}/providers/a/b")
@@ -98,7 +98,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       it 'should raise an error' do
         id = ''
         expect do
-          azure_client2.parse_name_from_id(id)
+          azure_client.parse_name_from_id(id)
         end.to raise_error /\"#{id}\" is not a valid URL./
       end
     end
@@ -107,7 +107,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       id = '/subscriptions/a/resourceGroups/b/providers/c/d'
       it 'should raise an error' do
         expect do
-          azure_client2.parse_name_from_id(id)
+          azure_client.parse_name_from_id(id)
         end.to raise_error /\"#{id}\" is not a valid URL./
       end
     end
@@ -121,7 +121,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         result[:provider_name]       = 'c'
         result[:resource_type]       = 'd'
         result[:resource_name]       = 'e'
-        expect(azure_client2.parse_name_from_id(id)).to eq(result)
+        expect(azure_client.parse_name_from_id(id)).to eq(result)
       end
     end
 
@@ -134,7 +134,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         result[:provider_name]       = 'c'
         result[:resource_type]       = 'd'
         result[:resource_name]       = 'e'
-        expect(azure_client2.parse_name_from_id(id)).to eq(result)
+        expect(azure_client.parse_name_from_id(id)).to eq(result)
       end
     end
   end
@@ -166,7 +166,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+            azure_client.get_resource_by_id(url, 'api-version' => api_version)
           ).to be_nil
         end
 
@@ -185,7 +185,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+            azure_client.get_resource_by_id(url, 'api-version' => api_version)
           ).not_to be_nil
         end
       end
@@ -200,7 +200,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         end.to raise_error /get_token - http code: 404/
       end
 
@@ -212,7 +212,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         end.to raise_error %r{get_token - http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate.}
       end
 
@@ -224,7 +224,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         end.to raise_error %r{get_token - http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret\/certificate.}
       end
 
@@ -244,7 +244,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         end.to raise_error /Azure authentication failed: Token is invalid./
       end
     end
@@ -271,7 +271,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         it 'should return the resource' do
           expect(
-            azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+            azure_client.get_resource_by_id(url, 'api-version' => api_version)
           ).not_to be_nil
         end
       end
@@ -297,7 +297,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         it 'should raise an error' do
           expect do
-            azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+            azure_client.get_resource_by_id(url, 'api-version' => api_version)
           end.to raise_error %r{get_token - http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate.}
         end
       end
@@ -320,7 +320,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect(
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         ).to be_nil
       end
 
@@ -340,7 +340,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect(
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         ).to be_nil
       end
 
@@ -360,7 +360,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.get_resource_by_id(url, 'api-version' => api_version)
+          azure_client.get_resource_by_id(url, 'api-version' => api_version)
         end.to raise_error /http_get - http code: 400. Error message: {"foo":"bar"}/
       end
     end
@@ -408,7 +408,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_resource_group(resource_group)
+            azure_client.get_resource_group(resource_group)
           ).to be_nil
         end
 
@@ -427,7 +427,7 @@ describe Bosh::AzureCloud::AzureClient2 do
             headers: {}
           )
           expect(
-            azure_client2.get_resource_group(resource_group)
+            azure_client.get_resource_group(resource_group)
           ).to eq(fake_resource_group)
         end
       end
@@ -450,9 +450,9 @@ describe Bosh::AzureCloud::AzureClient2 do
               headers: {}
             )
 
-          expect(azure_client2).to receive(:sleep).once
+          expect(azure_client).to receive(:sleep).once
           expect(
-            azure_client2.get_resource_group(resource_group)
+            azure_client.get_resource_group(resource_group)
           ).to eq(fake_resource_group)
         end
       end

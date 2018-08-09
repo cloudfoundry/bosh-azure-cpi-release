@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -48,7 +48,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           }
         )
         expect(
-          azure_client2.list_network_interfaces_by_keyword(resource_group, instance_id)
+          azure_client.list_network_interfaces_by_keyword(resource_group, instance_id)
         ).to eq([])
       end
     end
@@ -197,7 +197,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect(
-          azure_client2.list_network_interfaces_by_keyword(resource_group, instance_id)
+          azure_client.list_network_interfaces_by_keyword(resource_group, instance_id)
         ).to eq([network_interface_0, network_interface_1])
       end
     end

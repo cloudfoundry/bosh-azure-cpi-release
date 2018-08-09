@@ -6,7 +6,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:table_manager) { instance_double(Bosh::AzureCloud::TableManager) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
-  let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
+  let(:client2) { instance_double(Bosh::AzureCloud::AzureClient) }
   let(:stemcell_manager2) { Bosh::AzureCloud::StemcellManager2.new(blob_manager, table_manager, storage_account_manager, client2) }
 
   before do

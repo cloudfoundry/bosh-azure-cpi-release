@@ -4,12 +4,12 @@ module Bosh::AzureCloud
   class VMManager
     include Helpers
 
-    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client2, storage_account_manager)
+    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager)
       @azure_config = azure_config
       @registry_endpoint = registry_endpoint
       @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
-      @azure_client2 = azure_client2
+      @azure_client = azure_client
       @storage_account_manager = storage_account_manager
       @use_managed_disks = @azure_config['use_managed_disks']
       @logger = Bosh::Clouds::Config.logger
@@ -153,7 +153,7 @@ module Bosh::AzureCloud
           # Delete NICs
           if network_interfaces
             network_interfaces.each do |network_interface|
-              @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
+              @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
             end
           else
             # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
@@ -162,8 +162,8 @@ module Bosh::AzureCloud
           end
 
           # Delete the dynamic public IP
-          dynamic_public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
-          @azure_client2.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+          dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
+          @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
         rescue StandardError => error
           error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
           error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
@@ -178,7 +178,7 @@ module Bosh::AzureCloud
     end
 
     def find(instance_id)
-      @azure_client2.get_virtual_machine_by_name(instance_id.resource_group_name, instance_id.vm_name)
+      @azure_client.get_virtual_machine_by_name(instance_id.resource_group_name, instance_id.vm_name)
     end
 
     def delete(instance_id)
@@ -186,16 +186,16 @@ module Bosh::AzureCloud
 
       resource_group_name = instance_id.resource_group_name()
       vm_name = instance_id.vm_name()
-      vm = @azure_client2.get_virtual_machine_by_name(resource_group_name, vm_name)
+      vm = @azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
 
       if vm
         # Delete the VM
         if vm[:availability_set].nil?
-          @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+          @azure_client.delete_virtual_machine(resource_group_name, vm_name)
         else
           availability_set_name = vm[:availability_set][:name]
           flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH) do
-            @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+            @azure_client.delete_virtual_machine(resource_group_name, vm_name)
           end
         end
 
@@ -204,26 +204,26 @@ module Bosh::AzureCloud
 
         # Delete NICs
         vm[:network_interfaces].each do |network_interface|
-          @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
+          @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
         end
       else
         # If the VM is deleted but the availability sets are not deleted due to some reason, BOSH will retry and VM will be nil.
         # CPI needs to get the availability set name from the primary NIC's tags, and delete it.
         # If CPI deleted the primary NIC successfully but failed deleting the second NIC, then NICs[0] is not the primary NIC when retrying.
         # It still works since no avset name in the tags of the second NIC.
-        network_interfaces = @azure_client2.list_network_interfaces_by_keyword(resource_group_name, vm_name)
+        network_interfaces = @azure_client.list_network_interfaces_by_keyword(resource_group_name, vm_name)
         unless network_interfaces.empty?
           network_interfaces.each do |network_interface|
             availability_set_name = network_interface[:tags]['availability_set']
             delete_empty_availability_set(resource_group_name, availability_set_name) unless availability_set_name.nil?
-            @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
+            @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
           end
         end
       end
 
       # Delete the dynamic public IP
-      dynamic_public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
-      @azure_client2.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+      dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
+      @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
 
       # Delete OS & ephemeral disks
       if instance_id.use_managed_disks?
@@ -247,7 +247,7 @@ module Bosh::AzureCloud
 
     def reboot(instance_id)
       @logger.info("reboot(#{instance_id})")
-      @azure_client2.restart_virtual_machine(
+      @azure_client.restart_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name
       )
@@ -255,7 +255,7 @@ module Bosh::AzureCloud
 
     def set_metadata(instance_id, metadata)
       @logger.info("set_metadata(#{instance_id}, #{metadata})")
-      @azure_client2.update_tags_of_virtual_machine(
+      @azure_client.update_tags_of_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name,
         metadata.merge(AZURE_TAGS)
@@ -276,7 +276,7 @@ module Bosh::AzureCloud
                         disk_name: disk_name,
                         caching: disk_id.caching,
                         disk_bosh_id: disk_id.to_s,
-                        disk_id: @azure_client2.get_managed_disk_by_name(disk_id.resource_group_name, disk_name)[:id],
+                        disk_id: @azure_client.get_managed_disk_by_name(disk_id.resource_group_name, disk_name)[:id],
                         managed: true
                       }
                     else
@@ -289,7 +289,7 @@ module Bosh::AzureCloud
                         managed: false
                       }
                     end
-      lun = @azure_client2.attach_disk_to_virtual_machine(
+      lun = @azure_client.attach_disk_to_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name,
         disk_params
@@ -299,7 +299,7 @@ module Bosh::AzureCloud
 
     def detach_disk(instance_id, disk_id)
       @logger.info("detach_disk(#{instance_id}, #{disk_id})")
-      @azure_client2.detach_disk_from_virtual_machine(
+      @azure_client.detach_disk_from_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name,
         disk_id.disk_name
@@ -324,7 +324,7 @@ module Bosh::AzureCloud
     end
 
     def get_network_subnet(network)
-      subnet = @azure_client2.get_network_subnet_by_name(network.resource_group_name, network.virtual_network_name, network.subnet_name)
+      subnet = @azure_client.get_network_subnet_by_name(network.resource_group_name, network.virtual_network_name, network.subnet_name)
       cloud_error("Cannot find the subnet '#{network.virtual_network_name}/#{network.subnet_name}' in the resource group '#{network.resource_group_name}'") if subnet.nil?
       subnet
     end
@@ -338,12 +338,12 @@ module Bosh::AzureCloud
       cloud_error('Cannot specify an empty string to the network security group') if network_security_group_name.empty?
       # The resource group which the NSG belongs to can be specified in networks and global configuration (ordered by priority)
       resource_group_name = network.resource_group_name
-      network_security_group = @azure_client2.get_network_security_group_by_name(resource_group_name, network_security_group_name)
+      network_security_group = @azure_client.get_network_security_group_by_name(resource_group_name, network_security_group_name)
       # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
       default_resource_group_name = @azure_config['resource_group_name']
       if network_security_group.nil? && resource_group_name != default_resource_group_name
         @logger.info("Cannot find the network security group '#{network_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
-        network_security_group = @azure_client2.get_network_security_group_by_name(default_resource_group_name, network_security_group_name)
+        network_security_group = @azure_client.get_network_security_group_by_name(default_resource_group_name, network_security_group_name)
       end
       cloud_error("Cannot find the network security group '#{network_security_group_name}'") if network_security_group.nil?
       network_security_group
@@ -356,12 +356,12 @@ module Bosh::AzureCloud
       application_security_group_names.each do |application_security_group_name|
         # The resource group which the ASG belongs to can be specified in networks and global configuration (ordered by priority)
         resource_group_name = network.resource_group_name
-        application_security_group = @azure_client2.get_application_security_group_by_name(resource_group_name, application_security_group_name)
+        application_security_group = @azure_client.get_application_security_group_by_name(resource_group_name, application_security_group_name)
         # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
         default_resource_group_name = @azure_config['resource_group_name']
         if application_security_group.nil? && resource_group_name != default_resource_group_name
           @logger.info("Cannot find the application security group '#{application_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
-          application_security_group = @azure_client2.get_application_security_group_by_name(default_resource_group_name, application_security_group_name)
+          application_security_group = @azure_client.get_application_security_group_by_name(default_resource_group_name, application_security_group_name)
         end
         cloud_error("Cannot find the application security group '#{application_security_group_name}'") if application_security_group.nil?
         application_security_groups.push(application_security_group)
@@ -387,7 +387,7 @@ module Bosh::AzureCloud
       public_ip = nil
       unless vip_network.nil?
         resource_group_name = vip_network.resource_group_name
-        public_ip = @azure_client2.list_public_ips(resource_group_name).find { |ip| ip[:ip_address] == vip_network.public_ip }
+        public_ip = @azure_client.list_public_ips(resource_group_name).find { |ip| ip[:ip_address] == vip_network.public_ip }
         cloud_error("Cannot find the public IP address '#{vip_network.public_ip}' in the resource group '#{resource_group_name}'") if public_ip.nil?
       end
       public_ip
@@ -397,7 +397,7 @@ module Bosh::AzureCloud
       load_balancer = nil
       unless vm_properties['load_balancer'].nil?
         load_balancer_name = vm_properties['load_balancer']
-        load_balancer = @azure_client2.get_load_balancer_by_name(load_balancer_name)
+        load_balancer = @azure_client.get_load_balancer_by_name(load_balancer_name)
         cloud_error("Cannot find the load balancer '#{load_balancer_name}'") if load_balancer.nil?
       end
       load_balancer
@@ -407,7 +407,7 @@ module Bosh::AzureCloud
       application_gateway = nil
       unless vm_properties['application_gateway'].nil?
         application_gateway_name = vm_properties['application_gateway']
-        application_gateway = @azure_client2.get_application_gateway_by_name(application_gateway_name)
+        application_gateway = @azure_client.get_application_gateway_by_name(application_gateway_name)
         cloud_error("Cannot find the application gateway '#{application_gateway_name}'") if application_gateway.nil?
       end
       application_gateway
@@ -427,8 +427,8 @@ module Bosh::AzureCloud
           idle_timeout_in_minutes: idle_timeout_in_minutes
         }
         public_ip_params[:zone] = vm_properties['availability_zone'].to_s unless vm_properties['availability_zone'].nil?
-        @azure_client2.create_public_ip(resource_group_name, public_ip_params)
-        public_ip = @azure_client2.get_public_ip_by_name(resource_group_name, vm_name)
+        @azure_client.create_public_ip(resource_group_name, public_ip_params)
+        public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
       end
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
@@ -459,16 +459,16 @@ module Bosh::AzureCloud
           nic_params[:load_balancer] = nil
           nic_params[:application_gateway] = nil
         end
-        @azure_client2.create_network_interface(resource_group_name, nic_params)
-        network_interfaces.push(@azure_client2.get_network_interface_by_name(resource_group_name, nic_name))
+        @azure_client.create_network_interface(resource_group_name, nic_params)
+        network_interfaces.push(@azure_client.get_network_interface_by_name(resource_group_name, nic_name))
       end
       network_interfaces
     end
 
     def delete_possible_network_interfaces(resource_group_name, vm_name)
-      network_interfaces = @azure_client2.list_network_interfaces_by_keyword(resource_group_name, vm_name)
+      network_interfaces = @azure_client.list_network_interfaces_by_keyword(resource_group_name, vm_name)
       network_interfaces.each do |network_interface|
-        @azure_client2.delete_network_interface(resource_group_name, network_interface[:name])
+        @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
       end
     end
 
@@ -517,11 +517,11 @@ module Bosh::AzureCloud
       availability_set_name = availability_set_params[:name]
       availability_set = nil
       flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX) do
-        availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
+        availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
         if availability_set.nil?
           @logger.info("create_availability_set - the availability set '#{availability_set_name}' doesn't exist. Will create a new one.")
-          @azure_client2.create_availability_set(resource_group_name, availability_set_params)
-          availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
+          @azure_client.create_availability_set(resource_group_name, availability_set_params)
+          availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
         # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
         elsif !availability_set[:location].casecmp(availability_set_params[:location]).zero?
           cloud_error("create_availability_set - the availability set '#{availability_set_name}' already exists, but in a different location '#{availability_set[:location].downcase}' instead of '#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
@@ -534,8 +534,8 @@ module Bosh::AzureCloud
             platform_fault_domain_count: availability_set[:platform_fault_domain_count],
             managed: true
           )
-          @azure_client2.create_availability_set(resource_group_name, availability_set_params)
-          availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
+          @azure_client.create_availability_set(resource_group_name, availability_set_params)
+          availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
         else
           @logger.info("create_availability_set - the availability set '#{availability_set_name}' exists. No need to update.")
         end
@@ -546,8 +546,8 @@ module Bosh::AzureCloud
 
     def delete_empty_availability_set(resource_group_name, availability_set_name)
       flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB) do
-        availability_set = @azure_client2.get_availability_set_by_name(resource_group_name, availability_set_name)
-        @azure_client2.delete_availability_set(resource_group_name, availability_set_name) if availability_set && availability_set[:virtual_machines].empty?
+        availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
+        @azure_client.delete_availability_set(resource_group_name, availability_set_name) if availability_set && availability_set[:virtual_machines].empty?
       end
     end
 
@@ -563,10 +563,10 @@ module Bosh::AzureCloud
         if !availability_set_name.nil?
           availability_set = get_or_create_availability_set(resource_group_name, availability_set_params)
           flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH) do
-            @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
+            @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
           end
         else
-          @azure_client2.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
+          @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
         end
       rescue StandardError => e
         retry_create = false
@@ -587,13 +587,13 @@ module Bosh::AzureCloud
 
             if availability_set
               flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_SH) do
-                @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+                @azure_client.delete_virtual_machine(resource_group_name, vm_name)
               end
 
               # Delete the empty availability set
               delete_empty_availability_set(resource_group_name, availability_set[:name])
             else
-              @azure_client2.delete_virtual_machine(resource_group_name, vm_name)
+              @azure_client.delete_virtual_machine(resource_group_name, vm_name)
             end
 
             if @use_managed_disks
@@ -635,10 +635,10 @@ module Bosh::AzureCloud
     end
 
     def check_resource_group(resource_group_name, location)
-      resource_group = @azure_client2.get_resource_group(resource_group_name)
+      resource_group = @azure_client.get_resource_group(resource_group_name)
       return true unless resource_group.nil?
       # If resource group does not exist, create it
-      @azure_client2.create_resource_group(resource_group_name, location)
+      @azure_client.create_resource_group(resource_group_name, location)
     end
   end
 end

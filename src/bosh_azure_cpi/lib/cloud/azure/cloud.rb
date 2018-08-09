@@ -5,7 +5,7 @@ module Bosh::AzureCloud
     attr_reader   :registry
     attr_reader   :options
     # Below defines are for test purpose
-    attr_reader   :azure_client2, :blob_manager, :table_manager, :storage_account_manager, :vm_manager, :instance_type_mapper
+    attr_reader   :azure_client, :blob_manager, :table_manager, :storage_account_manager, :vm_manager, :instance_type_mapper
     attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
 
     include Helpers
@@ -159,7 +159,7 @@ module Bosh::AzureCloud
           # And NIC must be in the same location with VNET, so CPI will use VNET's location as default location for the resources related to the VM.
           network_configurator = NetworkConfigurator.new(azure_config, networks)
           network = network_configurator.networks[0]
-          vnet = @azure_client2.get_virtual_network_by_name(network.resource_group_name, network.virtual_network_name)
+          vnet = @azure_client.get_virtual_network_by_name(network.resource_group_name, network.virtual_network_name)
           cloud_error("Cannot find the virtual network '#{network.virtual_network_name}' under resource group '#{network.resource_group_name}'") if vnet.nil?
           location = vnet[:location]
           location_in_global_configuration = azure_config['location']
@@ -333,7 +333,7 @@ module Bosh::AzureCloud
           raise "Missing VM cloud properties: #{missing_keys.join(', ')}"
         end
 
-        available_vm_sizes = @azure_client2.list_available_virtual_machine_sizes(location)
+        available_vm_sizes = @azure_client.list_available_virtual_machine_sizes(location)
         instance_type = @instance_type_mapper.map(vm_resources, available_vm_sizes)
         {
           'instance_type' => instance_type,
@@ -388,7 +388,7 @@ module Bosh::AzureCloud
             if instance_id.nil?
               # If instance_id is nil, the managed disk will be created in the resource group location.
               resource_group_name = azure_config['resource_group_name']
-              resource_group = @azure_client2.get_resource_group(resource_group_name)
+              resource_group = @azure_client.get_resource_group(resource_group_name)
               location = resource_group[:location]
               default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
               zone = nil
@@ -397,7 +397,7 @@ module Bosh::AzureCloud
               cloud_error('Cannot create a managed disk for a VM with unmanaged disks') unless instance_id.use_managed_disks?
               resource_group_name = instance_id.resource_group_name()
               # If the instance is a managed VM, the managed disk will be created in the location of the VM.
-              vm = @azure_client2.get_virtual_machine_by_name(resource_group_name, instance_id.vm_name)
+              vm = @azure_client.get_virtual_machine_by_name(resource_group_name, instance_id.vm_name)
               location = vm[:location]
               instance_type = vm[:vm_size]
               zone = vm[:zone]
@@ -488,7 +488,7 @@ module Bosh::AzureCloud
                   begin
                     storage_account_name = disk_id.storage_account_name()
                     blob_uri = @disk_manager.get_data_disk_uri(disk_id)
-                    storage_account = @azure_client2.get_storage_account_by_name(storage_account_name)
+                    storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
                     location = storage_account[:location]
                     # Can not use the type of the default storage account because only Standard_LRS and Premium_LRS are supported for managed disk.
                     account_type = storage_account[:account_type] == STORAGE_ACCOUNT_TYPE_PREMIUM_LRS ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
@@ -678,16 +678,16 @@ module Bosh::AzureCloud
     end
 
     def init_azure
-      @azure_client2           = Bosh::AzureCloud::AzureClient2.new(azure_config, @logger)
-      @blob_manager            = Bosh::AzureCloud::BlobManager.new(azure_config, @azure_client2)
+      @azure_client            = Bosh::AzureCloud::AzureClient.new(azure_config, @logger)
+      @blob_manager            = Bosh::AzureCloud::BlobManager.new(azure_config, @azure_client)
       @disk_manager            = Bosh::AzureCloud::DiskManager.new(azure_config, @blob_manager)
-      @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(azure_config, @blob_manager, @disk_manager, @azure_client2)
-      @table_manager           = Bosh::AzureCloud::TableManager.new(azure_config, @storage_account_manager, @azure_client2)
+      @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(azure_config, @blob_manager, @disk_manager, @azure_client)
+      @table_manager           = Bosh::AzureCloud::TableManager.new(azure_config, @storage_account_manager, @azure_client)
       @stemcell_manager        = Bosh::AzureCloud::StemcellManager.new(@blob_manager, @table_manager, @storage_account_manager)
-      @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client2)
-      @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @table_manager, @storage_account_manager, @azure_client2)
-      @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client2)
-      @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_config, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client2, @storage_account_manager)
+      @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client)
+      @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @table_manager, @storage_account_manager, @azure_client)
+      @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client)
+      @vm_manager              = Bosh::AzureCloud::VMManager.new(azure_config, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager

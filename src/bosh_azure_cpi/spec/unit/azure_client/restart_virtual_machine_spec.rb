@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
-    allow(azure_client2).to receive(:sleep)
+    allow(azure_client).to receive(:sleep)
   end
 
   describe '#restart_virtual_machine' do
@@ -59,7 +59,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.restart_virtual_machine(resource_group, vm_name)
+          azure_client.restart_virtual_machine(resource_group, vm_name)
         end.not_to raise_error
       end
 
@@ -91,7 +91,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.restart_virtual_machine(resource_group, vm_name)
+          azure_client.restart_virtual_machine(resource_group, vm_name)
         end.not_to raise_error
       end
     end
@@ -113,7 +113,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.restart_virtual_machine(resource_group, vm_name)
+          azure_client.restart_virtual_machine(resource_group, vm_name)
         end.to raise_error Bosh::AzureCloud::AzureNotFoundError
       end
     end
@@ -142,7 +142,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.restart_virtual_machine(resource_group, vm_name)
+          azure_client.restart_virtual_machine(resource_group, vm_name)
         end.to raise_error /check_completion - http code: 404/
       end
 
@@ -169,7 +169,7 @@ describe Bosh::AzureCloud::AzureClient2 do
         )
 
         expect do
-          azure_client2.restart_virtual_machine(resource_group, vm_name)
+          azure_client.restart_virtual_machine(resource_group, vm_name)
         end.to raise_error { |error| expect(error.status).to eq('Cancelled') }
       end
     end
@@ -205,7 +205,7 @@ describe Bosh::AzureCloud::AzureClient2 do
 
         it 'should not raise an error' do
           expect do
-            azure_client2.restart_virtual_machine(resource_group, vm_name)
+            azure_client.restart_virtual_machine(resource_group, vm_name)
           end.not_to raise_error
         end
       end
@@ -227,7 +227,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.restart_virtual_machine(resource_group, vm_name)
+            azure_client.restart_virtual_machine(resource_group, vm_name)
           end.to raise_error /Azure authentication failed: Token is invalid./
         end
       end

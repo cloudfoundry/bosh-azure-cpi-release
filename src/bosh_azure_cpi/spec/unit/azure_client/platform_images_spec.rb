@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -78,7 +78,7 @@ describe Bosh::AzureCloud::AzureClient2 do
       )
 
       expect(
-        azure_client2.list_platform_image_versions(location, publisher, offer, sku)
+        azure_client.list_platform_image_versions(location, publisher, offer, sku)
       ).to eq(images)
     end
   end

@@ -5,10 +5,10 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client2) do
-    Bosh::AzureCloud::AzureClient2.new(
+  let(:azure_client) do
+    Bosh::AzureCloud::AzureClient.new(
       mock_cloud_options['properties']['azure'],
       logger
     )
@@ -50,7 +50,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.create_resource_group(resource_group_name, location)
+            azure_client.create_resource_group(resource_group_name, location)
           end.not_to raise_error
         end
       end
@@ -73,7 +73,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.create_resource_group(resource_group_name, location)
+            azure_client.create_resource_group(resource_group_name, location)
           end.not_to raise_error
         end
       end

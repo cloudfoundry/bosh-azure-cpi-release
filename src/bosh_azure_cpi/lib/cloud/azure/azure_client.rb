@@ -22,7 +22,7 @@ module Bosh::AzureCloud
     end
   end
 
-  class AzureClient2
+  class AzureClient
     include Helpers
 
     HTTP_CODE_OK                  = 200

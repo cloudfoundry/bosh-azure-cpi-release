@@ -5,7 +5,7 @@ require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
-describe Bosh::AzureCloud::AzureClient2 do
+describe Bosh::AzureCloud::AzureClient do
   let(:subscription_id) { mock_azure_config['subscription_id'] }
   let(:tenant_id) { mock_azure_config['tenant_id'] }
   let(:api_version) { AZURE_API_VERSION }
@@ -22,7 +22,7 @@ describe Bosh::AzureCloud::AzureClient2 do
   let(:expires_on) { (Time.now + 1800).to_i.to_s }
 
   before do
-    allow(azure_client2).to receive(:sleep)
+    allow(azure_client).to receive(:sleep)
   end
 
   describe '#create_virtual_machine' do # Use function create_virtual_machine to validate user agent
@@ -65,8 +65,8 @@ describe Bosh::AzureCloud::AzureClient2 do
     context 'parse http headers' do
       context 'when isv_tracking_guid is not provided' do
         let(:logger) { Bosh::Clouds::Config.logger }
-        let(:azure_client2) do
-          Bosh::AzureCloud::AzureClient2.new(
+        let(:azure_client) do
+          Bosh::AzureCloud::AzureClient.new(
             mock_cloud_options['properties']['azure'],
             logger
           )
@@ -103,7 +103,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
           end.not_to raise_error
         end
       end
@@ -111,8 +111,8 @@ describe Bosh::AzureCloud::AzureClient2 do
       context 'when isv_tracking_guid is provided' do
         let(:logger) { Bosh::Clouds::Config.logger }
         let(:isv_tracking_guid) { 'fake-isv-tracking-guid' }
-        let(:azure_client2) do
-          Bosh::AzureCloud::AzureClient2.new(
+        let(:azure_client) do
+          Bosh::AzureCloud::AzureClient.new(
             mock_azure_config_merge('isv_tracking_guid' => isv_tracking_guid),
             logger
           )
@@ -148,7 +148,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           )
 
           expect do
-            azure_client2.create_virtual_machine(resource_group, vm_params, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
           end.not_to raise_error
         end
       end
