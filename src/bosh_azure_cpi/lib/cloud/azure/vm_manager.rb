@@ -21,8 +21,8 @@ module Bosh::AzureCloud
     def create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
       @logger.info("create(#{instance_id}, #{location}, #{stemcell_id}, #{vm_props}, ..., ...)")
-      resource_group_name = instance_id.resource_group_name()
-      vm_name = instance_id.vm_name()
+      resource_group_name = instance_id.resource_group_name
+      vm_name = instance_id.vm_name
 
       # When both availability_zone and availability_set are specified, raise an error
       cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_props.availability_zone.nil? && !vm_props.availability_set.nil?
@@ -99,7 +99,7 @@ module Bosh::AzureCloud
         os_disk = @disk_manager2.os_disk(vm_name, stemcell_info)
         ephemeral_disk = @disk_manager2.ephemeral_disk(vm_name)
       else
-        storage_account_name = instance_id.storage_account_name()
+        storage_account_name = instance_id.storage_account_name
         os_disk = @disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
         ephemeral_disk = @disk_manager.ephemeral_disk(storage_account_name, vm_name)
       end
@@ -165,7 +165,7 @@ module Bosh::AzureCloud
             error_message += "\t Managed Ephemeral Disk: #{ephemeral_disk_name}\n"
           end
         else
-          storage_account_name = instance_id.storage_account_name()
+          storage_account_name = instance_id.storage_account_name
           os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
           error_message += "\t OS disk blob: #{os_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name} in default resource group\n"
 
@@ -212,8 +212,8 @@ module Bosh::AzureCloud
     def delete(instance_id)
       @logger.info("delete(#{instance_id})")
 
-      resource_group_name = instance_id.resource_group_name()
-      vm_name = instance_id.vm_name()
+      resource_group_name = instance_id.resource_group_name
+      vm_name = instance_id.vm_name
       vm = @azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
 
       # Delete the VM
@@ -280,7 +280,7 @@ module Bosh::AzureCloud
           end
         )
       else
-        storage_account_name = instance_id.storage_account_name()
+        storage_account_name = instance_id.storage_account_name
 
         tasks.push(
           Concurrent::Future.execute do
@@ -335,7 +335,7 @@ module Bosh::AzureCloud
     # @return [String] lun
     def attach_disk(instance_id, disk_id)
       @logger.info("attach_disk(#{instance_id}, #{disk_id})")
-      disk_name = disk_id.disk_name()
+      disk_name = disk_id.disk_name
       disk_params = if instance_id.use_managed_disks?
                       {
                         disk_name: disk_name,
@@ -700,8 +700,8 @@ module Bosh::AzureCloud
     end
 
     def create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
-      resource_group_name = instance_id.resource_group_name()
-      vm_name = instance_id.vm_name()
+      resource_group_name = instance_id.resource_group_name
+      vm_name = instance_id.vm_name
       max_retries = 2
       retry_create_count = 0
       begin
@@ -746,7 +746,7 @@ module Bosh::AzureCloud
               os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
               @disk_manager2.delete_disk(resource_group_name, os_disk_name)
             else
-              storage_account_name = instance_id.storage_account_name()
+              storage_account_name = instance_id.storage_account_name
               os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
               @disk_manager.delete_disk(storage_account_name, os_disk_name)
 
