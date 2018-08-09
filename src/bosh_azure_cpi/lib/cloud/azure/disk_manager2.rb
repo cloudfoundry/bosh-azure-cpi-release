@@ -25,8 +25,8 @@ module Bosh::AzureCloud
     # @return [void]
     def create_disk(disk_id, location, size, storage_account_type, zone = nil)
       @logger.info("create_disk(#{disk_id}, #{location}, #{size}, #{storage_account_type}, #{zone})")
-      resource_group_name = disk_id.resource_group_name()
-      disk_name = disk_id.disk_name()
+      resource_group_name = disk_id.resource_group_name
+      disk_name = disk_id.disk_name
       caching = disk_id.caching()
       tags = AZURE_TAGS.merge(
         'caching' => caching
@@ -47,8 +47,8 @@ module Bosh::AzureCloud
 
     def create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, zone = nil)
       @logger.info("create_disk_from_blob(#{disk_id}, #{blob_uri}, #{location}, #{storage_account_type}, #{zone})")
-      resource_group_name = disk_id.resource_group_name()
-      disk_name = disk_id.disk_name()
+      resource_group_name = disk_id.resource_group_name
+      disk_name = disk_id.disk_name
       caching = disk_id.caching()
       tags = AZURE_TAGS.merge(
         'caching' => caching,
@@ -87,8 +87,8 @@ module Bosh::AzureCloud
 
     def delete_data_disk(disk_id)
       @logger.info("delete_data_disk(#{disk_id})")
-      resource_group_name = disk_id.resource_group_name()
-      disk_name = disk_id.disk_name()
+      resource_group_name = disk_id.resource_group_name
+      disk_name = disk_id.disk_name
       delete_disk(resource_group_name, disk_name)
     end
 
@@ -100,8 +100,8 @@ module Bosh::AzureCloud
 
     def has_data_disk?(disk_id)
       @logger.info("has_data_disk?(#{disk_id})")
-      resource_group_name = disk_id.resource_group_name()
-      disk_name = disk_id.disk_name()
+      resource_group_name = disk_id.resource_group_name
+      disk_name = disk_id.disk_name
       has_disk?(resource_group_name, disk_name)
     end
 
@@ -112,8 +112,8 @@ module Bosh::AzureCloud
 
     def get_data_disk(disk_id)
       @logger.info("get_data_disk(#{disk_id})")
-      resource_group_name = disk_id.resource_group_name()
-      disk_name = disk_id.disk_name()
+      resource_group_name = disk_id.resource_group_name
+      disk_name = disk_id.disk_name
       get_disk(resource_group_name, disk_name)
     end
 
@@ -192,8 +192,8 @@ module Bosh::AzureCloud
 
     def migrate_to_zone(disk_id, disk, zone)
       @logger.info("migrate_to_zone(#{disk_id}, #{disk}, #{zone})")
-      resource_group_name = disk_id.resource_group_name()
-      disk_name = disk_id.disk_name()
+      resource_group_name = disk_id.resource_group_name
+      disk_name = disk_id.disk_name
 
       snapshot_id = DiskId.create(disk_id.caching, true, resource_group_name: resource_group_name)
       snapshot_name = snapshot_id.disk_name
