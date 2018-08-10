@@ -220,7 +220,7 @@ module Bosh::AzureCloud
       with_thread_name("delete_vm(#{instance_id})") do
         @telemetry_manager.monitor('delete_vm', id: instance_id) do
           @logger.info("Deleting instance '#{instance_id}'")
-          @vm_manager.delete(InstanceId.parse(instance_id, azure_config))
+          @vm_manager.delete(InstanceId.parse(instance_id, azure_config.resource_group_name))
         end
       end
     end
@@ -233,7 +233,7 @@ module Bosh::AzureCloud
     def has_vm?(instance_id)
       with_thread_name("has_vm?(#{instance_id})") do
         @telemetry_manager.monitor('has_vm?', id: instance_id) do
-          vm = @vm_manager.find(InstanceId.parse(instance_id, azure_config))
+          vm = @vm_manager.find(InstanceId.parse(instance_id, azure_config.resource_group_name))
           !vm.nil? && vm[:provisioning_state] != 'Deleting'
         end
       end
@@ -247,7 +247,7 @@ module Bosh::AzureCloud
     def has_disk?(disk_id)
       with_thread_name("has_disk?(#{disk_id})") do
         @telemetry_manager.monitor('has_disk?', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, azure_config)
+          disk_id = DiskId.parse(disk_id, azure_config.resource_group_name)
           if disk_id.disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
             return @disk_manager2.has_data_disk?(disk_id)
           else
@@ -278,7 +278,7 @@ module Bosh::AzureCloud
     def reboot_vm(instance_id, options = nil)
       with_thread_name("reboot_vm(#{instance_id}, #{options})") do
         @telemetry_manager.monitor('reboot_vm', id: instance_id) do
-          @vm_manager.reboot(InstanceId.parse(instance_id, azure_config))
+          @vm_manager.reboot(InstanceId.parse(instance_id, azure_config.resource_group_name))
         end
       end
     end
@@ -294,7 +294,7 @@ module Bosh::AzureCloud
     def set_vm_metadata(instance_id, metadata)
       @telemetry_manager.monitor('set_vm_metadata', id: instance_id) do
         @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
-        @vm_manager.set_metadata(InstanceId.parse(instance_id, azure_config), encode_metadata(metadata))
+        @vm_manager.set_metadata(InstanceId.parse(instance_id, azure_config.resource_group_name), encode_metadata(metadata))
       end
     end
 
@@ -377,7 +377,7 @@ module Bosh::AzureCloud
               default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
               zone = nil
             else
-              instance_id = InstanceId.parse(instance_id, azure_config)
+              instance_id = InstanceId.parse(instance_id, azure_config.resource_group_name)
               cloud_error('Cannot create a managed disk for a VM with unmanaged disks') unless instance_id.use_managed_disks?
               resource_group_name = instance_id.resource_group_name()
               # If the instance is a managed VM, the managed disk will be created in the location of the VM.
@@ -397,7 +397,7 @@ module Bosh::AzureCloud
             caching = cloud_properties.fetch('caching', 'None')
             validate_disk_caching(caching)
             unless instance_id.nil?
-              instance_id = InstanceId.parse(instance_id, azure_config)
+              instance_id = InstanceId.parse(instance_id, azure_config.resource_group_name)
               @logger.info("Create disk for vm '#{instance_id.vm_name}'")
               storage_account_name = instance_id.storage_account_name()
             end
@@ -418,7 +418,7 @@ module Bosh::AzureCloud
     def delete_disk(disk_id)
       with_thread_name("delete_disk(#{disk_id})") do
         @telemetry_manager.monitor('delete_disk', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, azure_config)
+          disk_id = DiskId.parse(disk_id, azure_config.resource_group_name)
           if @use_managed_disks
             # A managed disk may be created from an old blob disk, so its name still starts with 'bosh-data' instead of 'bosh-disk-data'
             # CPI checks whether the managed disk with the name exists. If not, delete the old blob disk.
@@ -441,9 +441,9 @@ module Bosh::AzureCloud
     def attach_disk(instance_id, disk_id)
       with_thread_name("attach_disk(#{instance_id},#{disk_id})") do
         @telemetry_manager.monitor('attach_disk', id: instance_id) do
-          instance_id = InstanceId.parse(instance_id, azure_config)
-          disk_id = DiskId.parse(disk_id, azure_config)
-          vm_name = instance_id.vm_name()
+          instance_id = InstanceId.parse(instance_id, azure_config.resource_group_name)
+          disk_id = DiskId.parse(disk_id, azure_config.resource_group_name)
+          vm_name = instance_id.vm_name
           disk_name = disk_id.disk_name()
 
           vm = @vm_manager.find(instance_id)
@@ -539,8 +539,8 @@ module Bosh::AzureCloud
           end
 
           @vm_manager.detach_disk(
-            InstanceId.parse(instance_id, azure_config),
-            DiskId.parse(disk_id, azure_config)
+            InstanceId.parse(instance_id, azure_config.resource_group_name),
+            DiskId.parse(disk_id, azure_config.resource_group_name)
           )
 
           @logger.info("Detached '#{disk_id}' from '#{instance_id}'")
@@ -556,7 +556,7 @@ module Bosh::AzureCloud
       with_thread_name("get_disks(#{instance_id})") do
         @telemetry_manager.monitor('get_disks', id: instance_id) do
           disks = []
-          vm = @vm_manager.find(InstanceId.parse(instance_id, azure_config))
+          vm = @vm_manager.find(InstanceId.parse(instance_id, azure_config.resource_group_name))
           raise Bosh::Clouds::VMNotFound, "VM '#{instance_id}' cannot be found" if vm.nil?
           vm[:data_disks].each do |disk|
             disks << disk[:disk_bosh_id] unless is_ephemeral_disk?(disk[:name])
@@ -573,7 +573,7 @@ module Bosh::AzureCloud
     def snapshot_disk(disk_id, metadata = {})
       with_thread_name("snapshot_disk(#{disk_id},#{metadata})") do
         @telemetry_manager.monitor('snapshot_disk', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, azure_config)
+          disk_id = DiskId.parse(disk_id, azure_config.resource_group_name)
           resource_group_name = disk_id.resource_group_name()
           disk_name = disk_id.disk_name()
           caching = disk_id.caching()
