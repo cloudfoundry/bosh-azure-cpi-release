@@ -31,6 +31,7 @@ do
   exists=$(az group exists --name ${resource_group_name})
   if [ "$exists" = "true" ]
   then
+    echo "Deleting ${resource_group_name}"
     az group delete --name ${resource_group_name} --yes
   fi
 done

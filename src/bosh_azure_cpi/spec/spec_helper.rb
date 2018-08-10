@@ -11,7 +11,6 @@ require 'cloud/azure'
 require 'fileutils'
 require 'json'
 require 'net/http'
-require 'open3'
 require 'stringio'
 
 MOCK_AZURE_SUBSCRIPTION_ID        = 'aa643f05-5b67-4d58-b433-54c2e9131a59'
@@ -158,11 +157,6 @@ def run_in_new_process
   fork do
     yield
   end
-end
-
-def run_command(command)
-  output, status = Open3.capture2e(command)
-  raise "'#{command}' failed with exit status=#{status.exitstatus} [#{output}]" if status.exitstatus != 0
 end
 
 class MockTelemetryManager
