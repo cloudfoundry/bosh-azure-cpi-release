@@ -13,7 +13,7 @@ require 'cloud/azure'
 
 cpi_config = YAML.load_file(ARGV.shift)
 
-cloud_config = OpenStruct.new(logger: Bosh::Cpi::Logger.new(STDERR))
+cloud_config = OpenStruct.new(logger: Bosh::AzureCloud::CPILogger.get_logger(STDERR))
 
 Bosh::Clouds::Config.configure(cloud_config)
 

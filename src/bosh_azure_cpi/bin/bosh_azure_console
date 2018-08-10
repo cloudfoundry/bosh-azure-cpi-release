@@ -34,7 +34,7 @@ module ConsoleHelpers
   end
 end
 
-cloud_config = OpenStruct.new(logger: Logger.new(STDOUT))
+cloud_config = OpenStruct.new(logger: Bosh::AzureCloud::CPILogger.get_logger(STDOUT))
 
 Bosh::Clouds::Config.configure(cloud_config)
 
