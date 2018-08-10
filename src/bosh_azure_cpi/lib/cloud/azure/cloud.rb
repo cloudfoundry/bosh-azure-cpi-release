@@ -22,7 +22,7 @@ module Bosh::AzureCloud
       @config = Bosh::AzureCloud::ConfigFactory.build(options_dup)
 
       request_id = options_dup['azure']['request_id']
-      @logger.set_request_id(request_id) if request_id
+      Bosh::AzureCloud::CPILogger.set_request_id(request_id) if request_id
 
       @use_managed_disks = azure_config.use_managed_disks
 

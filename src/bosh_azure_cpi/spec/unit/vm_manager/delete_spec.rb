@@ -198,11 +198,11 @@ describe Bosh::AzureCloud::VMManager do
               expect(vm_manager).to receive(:flock).with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB).and_call_original # exclusive unblock lock to delete avset
               expect(azure_client).to receive(:delete_virtual_machine).with(resource_group_name, vm_name)
               expect(azure_client).to receive(:delete_availability_set).and_raise(StandardError)
-              expect(azure_client).not_to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-1')
-              expect(azure_client).not_to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-2')
-              expect(azure_client).not_to receive(:delete_public_ip).with(resource_group_name, vm_name)
-              expect(disk_manager2).not_to receive(:delete_disk).with(resource_group_name, os_disk_name)
-              expect(disk_manager2).not_to receive(:delete_disk).with(resource_group_name, ephemeral_disk_name)
+              expect(azure_client).to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-1')
+              expect(azure_client).to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-2')
+              expect(azure_client).to receive(:delete_public_ip).with(resource_group_name, vm_name)
+              expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, os_disk_name)
+              expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, ephemeral_disk_name)
 
               expect do
                 vm_manager.delete(instance_id)
