@@ -1,24 +1,15 @@
 # frozen_string_literal: true
 
+require 'integration/spec_helper'
 require 'English'
-require 'spec_helper'
 require 'json'
 require 'tempfile'
 require 'yaml'
 
-describe 'the azure_cpi executable' do
+describe 'the azure_cpi executable', azure_cpi_executable: true do
   before(:all) do
-    @subscription_id        = ENV['BOSH_AZURE_SUBSCRIPTION_ID']             || raise('Missing BOSH_AZURE_SUBSCRIPTION_ID')
-    @resource_group_name    = ENV['BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME'] || raise('Missing BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME')
-    @tenant_id              = ENV['BOSH_AZURE_TENANT_ID']                   || raise('Missing BOSH_AZURE_TENANT_ID')
-    @client_id              = ENV['BOSH_AZURE_CLIENT_ID']                   || raise('Missing BOSH_AZURE_CLIENT_ID')
-    @client_secret          = ENV['BOSH_AZURE_CLIENT_SECRET']               || raise('Missing BOSH_AZURE_CLIENT_SECRET')
-    @certificate            = ENV['BOSH_AZURE_CERTIFICATE']                 || raise('Missing BOSH_AZURE_CERTIFICATE')
-    @ssh_public_key         = ENV['BOSH_AZURE_SSH_PUBLIC_KEY']              || raise('Missing BOSH_AZURE_SSH_PUBLIC_KEY')
-    @default_security_group = ENV['BOSH_AZURE_DEFAULT_SECURITY_GROUP']      || raise('Missing BOSH_AZURE_DEFAULT_SECURITY_GROUP')
+    @certificate = ENV.fetch('BOSH_AZURE_CERTIFICATE')
   end
-
-  let(:azure_environment) { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
 
   before(:each) do
     config_file.write(cloud_properties.to_yaml)
@@ -34,9 +25,9 @@ describe 'the azure_cpi executable' do
           'cloud' => {
             'properties' => {
               'azure' => {
-                'environment' => azure_environment,
+                'environment' => @azure_environment,
                 'subscription_id' => @subscription_id,
-                'resource_group_name' => @resource_group_name,
+                'resource_group_name' => @default_resource_group_name,
                 'tenant_id' => @tenant_id,
                 'client_id' => @client_id,
                 'client_secret' => @client_secret,
@@ -70,9 +61,9 @@ describe 'the azure_cpi executable' do
           'cloud' => {
             'properties' => {
               'azure' => {
-                'environment' => azure_environment,
+                'environment' => @azure_environment,
                 'subscription_id' => @subscription_id,
-                'resource_group_name' => @resource_group_name,
+                'resource_group_name' => @default_resource_group_name,
                 'tenant_id' => @tenant_id,
                 'client_id' => @client_id,
                 'ssh_user' => 'vcap',
@@ -116,9 +107,9 @@ describe 'the azure_cpi executable' do
           'cloud' => {
             'properties' => {
               'azure' => {
-                'environment' => azure_environment,
+                'environment' => @azure_environment,
                 'subscription_id' => @subscription_id,
-                'resource_group_name' => @resource_group_name,
+                'resource_group_name' => @default_resource_group_name,
                 'tenant_id' => @tenant_id,
                 'client_id' => 'fake-client-id',
                 'client_secret' => @client_secret,
@@ -155,9 +146,9 @@ describe 'the azure_cpi executable' do
           'cloud' => {
             'properties' => {
               'azure' => {
-                'environment' => azure_environment,
+                'environment' => @azure_environment,
                 'subscription_id' => @subscription_id,
-                'resource_group_name' => @resource_group_name,
+                'resource_group_name' => @default_resource_group_name,
                 'tenant_id' => @tenant_id,
                 'client_id' => @client_id,
                 'client_secret' => 'fake-client-secret',
@@ -224,9 +215,9 @@ describe 'the azure_cpi executable' do
     let(:context) do
       {
         'director_uuid' => 'abc123',
-        'environment' => azure_environment,
+        'environment' => @azure_environment,
         'subscription_id' => @subscription_id,
-        'resource_group_name' => @resource_group_name,
+        'resource_group_name' => @default_resource_group_name,
         'tenant_id' => @tenant_id,
         'client_id' => @client_id,
         'client_secret' => @client_secret,
