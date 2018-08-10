@@ -72,6 +72,17 @@ shared:
       BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
 
+  - &run-az-bats
+    task: run-az-bats
+    file: bosh-cpi-src/ci/tasks/run-az-bats.yml
+    params: &run-az-bats-params
+      INFRASTRUCTURE:                     azure
+      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-trusty-go_agent
+      BAT_INFRASTRUCTURE:                 azure
+      BAT_NETWORKING:                     manual
+      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
+      AZURE_BATS_ZONE:                    {{azure_bats_zone}}
+
   - &teardown
     task: teardown
     file: pipelines/shared/tasks/teardown.yml
@@ -92,6 +103,12 @@ shared:
     get_params:
       action: destroy
 
+  - &upload-stemcell
+    task: upload-stemcell
+    file: bosh-cpi-src/ci/tasks/upload-stemcell.yml
+    params: &upload-stemcell-params
+      <<: *azure-environment-params
+
   - &run-integration
     task: run-integration
     file: bosh-cpi-src/ci/tasks/run-integration.yml
@@ -110,17 +127,6 @@ shared:
     file: bosh-cpi-src/ci/tasks/ensure-cleanup.yml
     params:
       <<: *azure-environment-params
-
-  - &run-az-bats
-    task: run-az-bats
-    file: bosh-cpi-src/ci/tasks/run-az-bats.yml
-    params: &run-az-bats-params
-      INFRASTRUCTURE:                     azure
-      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-trusty-go_agent
-      BAT_INFRASTRUCTURE:                 azure
-      BAT_NETWORKING:                     manual
-      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
-      AZURE_BATS_ZONE:                    {{azure_bats_zone}}
 
 jobs:
   - name: build-candidate
@@ -146,10 +152,12 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
       - <<: *create-integration-environment
-      - <<: *run-integration
-        params:
-          <<: *run-integration-params
-          AZURE_USE_MANAGED_DISKS: false
+      - do:
+        - <<: *upload-stemcell
+        - <<: *run-integration
+          params:
+            <<: *run-integration-params
+            AZURE_USE_MANAGED_DISKS: false
         ensure:
           do:
             - <<: *destroy-integration-environment
@@ -165,10 +173,12 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
       - <<: *create-integration-environment
-      - <<: *run-integration
-        params:
-          <<: *run-integration-params
-          AZURE_USE_MANAGED_DISKS: true
+      - do:
+        - <<: *upload-stemcell
+        - <<: *run-integration
+          params:
+            <<: *run-integration-params
+            AZURE_USE_MANAGED_DISKS: true
         ensure:
           do:
             - <<: *destroy-integration-environment
@@ -184,10 +194,15 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
       - <<: *create-integration-environment
-      - <<: *run-integration-windows
-        params:
-          <<: *run-integration-windows-params
-          AZURE_USE_MANAGED_DISKS: false
+      - do:
+        - <<: *upload-stemcell
+          params:
+            <<: *azure-environment-params
+            IS_HEAVY_STEMCELL: false
+        - <<: *run-integration-windows
+          params:
+            <<: *run-integration-windows-params
+            AZURE_USE_MANAGED_DISKS: false
         ensure:
           do:
             - <<: *destroy-integration-environment
@@ -203,10 +218,15 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
       - <<: *create-integration-environment
-      - <<: *run-integration-windows
-        params:
-          <<: *run-integration-windows-params
-          AZURE_USE_MANAGED_DISKS: true
+      - do:
+        - <<: *upload-stemcell
+          params:
+            <<: *azure-environment-params
+            IS_HEAVY_STEMCELL: false
+        - <<: *run-integration-windows
+          params:
+            <<: *run-integration-windows-params
+            AZURE_USE_MANAGED_DISKS: true
         ensure:
           do:
             - <<: *destroy-integration-environment
