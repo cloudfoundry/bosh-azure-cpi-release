@@ -120,6 +120,7 @@ Naming/AccessorMethodName:
   Exclude:
     - 'lib/cloud/azure/blob_manager.rb'
     - 'lib/cloud/azure/helpers.rb'
+    - 'lib/cloud/azure/logger.rb'
     - 'lib/cloud/azure/telemetry/telemetry_event_handler.rb'
     - 'lib/cloud/azure/telemetry/wire_client.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'

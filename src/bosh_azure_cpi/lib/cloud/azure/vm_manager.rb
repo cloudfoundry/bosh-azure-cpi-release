@@ -33,7 +33,18 @@ module Bosh::AzureCloud
 
       check_resource_group(resource_group_name, location)
 
-      stemcell_info = get_stemcell_info(stemcell_id, vm_props, location)
+      # tasks to prepare resources for VM
+      #   * prepare stemcell
+      #   * prepare network interfaces, including public IP, NICs, LB, AG, etc
+      #   * prepare availability set
+      #   * prepare storage account for diagnostics
+      tasks = []
+
+      tasks.push(
+        task_get_stemcell_info = Concurrent::Future.execute do
+          get_stemcell_info(stemcell_id, vm_props, location)
+        end
+      )
 
       # When availability_zone is specified, VM won't be in any availability set;
       # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
@@ -42,11 +53,30 @@ module Bosh::AzureCloud
       primary_nic_tags = AZURE_TAGS.dup
       # Store the availability set name in the tags of the NIC
       primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
-      network_interfaces = create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
+      tasks.push(
+        task_create_network_interfaces = Concurrent::Future.execute do
+          create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
+        end
+      )
 
-      availability_set = get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
+      tasks.push(
+        task_get_or_create_availability_set = Concurrent::Future.execute do
+          availability_set = get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
+        end
+      )
 
-      diagnostics_storage_account = get_diagnostics_storage_account(location)
+      tasks.push(
+        task_get_diagnostics_storage_account = Concurrent::Future.execute do
+          diagnostics_storage_account = get_diagnostics_storage_account(location)
+        end
+      )
+
+      tasks.map(&:wait)
+
+      stemcell_info = task_get_stemcell_info.value!
+      network_interfaces = task_create_network_interfaces.value!
+      availability_set = task_get_or_create_availability_set.value!
+      diagnostics_storage_account = task_get_diagnostics_storage_account.value!
 
       # create vm params
       vm_params = {
@@ -194,6 +224,12 @@ module Bosh::AzureCloud
         end
       end
 
+      # After VM is deleted, tasks that can be run in parallel are:
+      #   * deleting empty availability set
+      #   * deleting network interfaces, then deleting dynamic public IP which is bound to them.
+      #   * deleting disks (os disk, ephemeral disk)
+      tasks = []
+
       # Delete availability set
       availability_set_name = nil
       if vm
@@ -206,32 +242,67 @@ module Bosh::AzureCloud
           availability_set_name = network_interface[:tags]['availability_set'] unless network_interface[:tags]['availability_set'].nil?
         end
       end
-      delete_empty_availability_set(resource_group_name, availability_set_name) unless availability_set_name.nil?
+      unless availability_set_name.nil?
+        tasks.push(
+          Concurrent::Future.execute do
+            delete_empty_availability_set(resource_group_name, availability_set_name)
+          end
+        )
+      end
 
       # Delete network interfaces and dynamic public IP
-      delete_possible_network_interfaces(resource_group_name, vm_name)
-      dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
-      @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+      tasks.push(
+        Concurrent::Future.execute do
+          delete_possible_network_interfaces(resource_group_name, vm_name)
+          # Delete the dynamic public IP
+          dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
+          @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+        end
+      )
 
       # Delete OS & ephemeral disks
       if instance_id.use_managed_disks?
-        os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
-        @disk_manager2.delete_disk(resource_group_name, os_disk_name)
+        tasks.push(
+          Concurrent::Future.execute do
+            os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
+            @disk_manager2.delete_disk(resource_group_name, os_disk_name)
+          end
+        )
 
-        ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
-        @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
+        tasks.push(
+          Concurrent::Future.execute do
+            ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
+            @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
+          end
+        )
       else
         storage_account_name = instance_id.storage_account_name()
 
-        os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
-        @disk_manager.delete_disk(storage_account_name, os_disk_name)
+        tasks.push(
+          Concurrent::Future.execute do
+            os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
+            @disk_manager.delete_disk(storage_account_name, os_disk_name)
+          end
+        )
 
-        ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(vm_name)
-        @disk_manager.delete_disk(storage_account_name, ephemeral_disk_name)
+        tasks.push(
+          Concurrent::Future.execute do
+            ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(vm_name)
+            @disk_manager.delete_disk(storage_account_name, ephemeral_disk_name)
+          end
+        )
 
         # Cleanup invalid VM status file
-        @disk_manager.delete_vm_status_files(storage_account_name, vm_name)
+        tasks.push(
+          Concurrent::Future.execute do
+            @disk_manager.delete_vm_status_files(storage_account_name, vm_name)
+          end
+        )
       end
+
+      # when exception happens in thread, .wait will not raise the error, but .wait! will.
+      tasks.map(&:wait)
+      tasks.map(&:wait!)
     end
 
     def reboot(instance_id)
@@ -460,9 +531,37 @@ module Bosh::AzureCloud
 
     def create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
       network_interfaces = []
-      public_ip = get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
-      load_balancer = get_load_balancer(vm_props)
-      application_gateway = get_application_gateway(vm_props)
+
+      # Tasks to prepare before creating NICs:
+      #   * preapre public ip
+      #   * prepare load balancer
+      #   * prepare application gateway
+      tasks_preparing = []
+
+      tasks_preparing.push(
+        task_get_or_create_public_ip = Concurrent::Future.execute do
+          get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
+        end
+      )
+      tasks_preparing.push(
+        task_get_load_balancer = Concurrent::Future.execute do
+          get_load_balancer(vm_props)
+        end
+      )
+      tasks_preparing.push(
+        task_get_application_gateway = Concurrent::Future.execute do
+          get_application_gateway(vm_props)
+        end
+      )
+
+      tasks_preparing.map(&:wait)
+
+      public_ip = task_get_or_create_public_ip.value!
+      load_balancer = task_get_load_balancer.value!
+      application_gateway = task_get_application_gateway.value!
+
+      # tasks to create NICs, NICs will be created in different threads
+      tasks_creating = []
 
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
@@ -493,17 +592,29 @@ module Bosh::AzureCloud
           nic_params[:load_balancer] = nil
           nic_params[:application_gateway] = nil
         end
-        @azure_client.create_network_interface(resource_group_name, nic_params)
-        network_interfaces.push(@azure_client.get_network_interface_by_name(resource_group_name, nic_name))
+        tasks_creating.push(
+          Concurrent::Future.execute do
+            @azure_client.create_network_interface(resource_group_name, nic_params)
+            @azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+          end
+        )
       end
-      network_interfaces
+      tasks_creating.map(&:wait)
+      network_interfaces = tasks_creating.map(&:value!)
     end
 
     def delete_possible_network_interfaces(resource_group_name, vm_name)
       network_interfaces = @azure_client.list_network_interfaces_by_keyword(resource_group_name, vm_name)
+      tasks = []
       network_interfaces.each do |network_interface|
-        @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
+        tasks.push(
+          Concurrent::Future.execute do
+            @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
+          end
+        )
       end
+      tasks.map(&:wait)
+      tasks.map(&:wait!)
     end
 
     def get_availability_set_name(vm_props, env)

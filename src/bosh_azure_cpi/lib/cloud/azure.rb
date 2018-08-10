@@ -3,7 +3,8 @@
 module Bosh
   module AzureCloud; end
 end
-
+require 'logging'
+require 'concurrent'
 require 'date'
 require 'pp'
 require 'set'
@@ -41,6 +42,7 @@ require 'bosh/cpi'
 require 'bosh/cpi/registry_client'
 
 require 'cloud'
+require 'cloud/azure/logger'
 require 'cloud/azure/helpers'
 require 'cloud/azure/models/config'
 require 'cloud/azure/models/config_factory'
