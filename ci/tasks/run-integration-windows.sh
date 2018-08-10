@@ -33,65 +33,9 @@ export BOSH_AZURE_APPLICATION_SECURITY_GROUP=$(echo ${metadata} | jq -e --raw-ou
 export BOSH_AZURE_APPLICATION_GATEWAY_NAME=$(echo ${metadata} | jq -e --raw-output ".application_gateway_name")
 export BOSH_AZURE_SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
 
-az cloud set --name ${AZURE_ENVIRONMENT}
-az login --service-principal -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID}
-az account set -s ${AZURE_SUBSCRIPTION_ID}
-
+source stemcell-state/stemcell.env
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}
-
-export BOSH_AZURE_STEMCELL_ID="bosh-light-stemcell-00000000-0000-0000-0000-0AZURECPICI0"
-account_name=${BOSH_AZURE_STORAGE_ACCOUNT_NAME}
-account_key=$(az storage account keys list --account-name ${account_name} --resource-group ${BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME} | jq '.[0].value' -r)
-
-# Use the light stemcell cloud properties to generate metadata in space-separated key=value pairs
-tar -xf $(realpath stemcell/*.tgz) -C /tmp/
-stemcell_metadata=$(ruby -r yaml -r json -e '
-  data = YAML::load(STDIN.read)
-  stemcell_properties = data["cloud_properties"]
-  stemcell_properties["hypervisor"]="hyperv"
-  metadata=""
-  stemcell_properties.each do |key, value|
-    if key == "image"
-      metadata += "#{key}=#{JSON.dump(value)} "
-    else
-      metadata += "#{key}=#{value} "
-    end
-  end
-  puts metadata' < /tmp/stemcell.MF)
-dd if=/dev/zero of=/tmp/root.vhd bs=1K count=1
-az storage blob upload --file /tmp/root.vhd --container-name stemcell --name ${BOSH_AZURE_STEMCELL_ID}.vhd --type page --metadata ${stemcell_metadata} --account-name ${account_name} --account-key ${account_key}
-export BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_SKU=$(ruby -r yaml -r json -e '
-  data = YAML::load(STDIN.read)
-  stemcell_properties = data["cloud_properties"]
-  stemcell_properties.each do |key, value|
-    if key == "image"
-      value.each do |k, v|
-        if k == "sku"
-          puts v
-          break
-        end
-      end
-    end
-  end' < /tmp/stemcell.MF)
-export BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION=$(ruby -r yaml -r json -e '
-  data = YAML::load(STDIN.read)
-  stemcell_properties = data["cloud_properties"]
-  stemcell_properties.each do |key, value|
-    if key == "image"
-      value.each do |k, v|
-        if k == "version"
-          puts v
-          break
-        end
-      end
-    end
-  end' < /tmp/stemcell.MF)
-
-# Accept legal terms
-image_urn="pivotal:bosh-windows-server:${BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_SKU}:${BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION}"
-echo "Accepting the legal terms of image ${image_urn}"
-az vm image accept-terms --urn ${image_urn}
 
 export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
 pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
