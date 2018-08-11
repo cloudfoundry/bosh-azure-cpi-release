@@ -2042,7 +2042,7 @@ module Bosh::AzureCloud
 
     # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service
     def get_token(force_refresh = false)
-      if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.now) <= 0 || force_refresh
+      if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.new) <= 0 || force_refresh
         @logger.info('get_token - trying to get/refresh Azure authentication token')
         endpoint, api_version = get_azure_authentication_endpoint_and_api_version(@azure_config)
         uri = URI(endpoint)

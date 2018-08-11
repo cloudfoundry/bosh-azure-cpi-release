@@ -38,7 +38,7 @@ module Bosh::AzureCloud
         }
         message_value.merge!(extras)
 
-        start_at = Time.now
+        start_at = Time.new
         begin
           yield
         rescue StandardError => e
@@ -50,7 +50,7 @@ module Bosh::AzureCloud
           message_value['msg'] = msg
           raise e
         ensure
-          end_at = Time.now
+          end_at = Time.new
           event_param_duration.value = (end_at - start_at) * 1000.0 # miliseconds
           event_param_message.value = message_value
 

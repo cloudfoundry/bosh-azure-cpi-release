@@ -19,7 +19,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:vm_name) { 'fake-vm-name' }
   let(:valid_access_token) { 'valid-access-token' }
 
-  let(:expires_on) { (Time.now + 1800).to_i.to_s }
+  let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   before do
     allow(azure_client).to receive(:sleep)

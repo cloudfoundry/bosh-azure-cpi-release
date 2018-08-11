@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   let(:valid_access_token) { 'valid-access-token' }
 
-  let(:expires_on) { (Time.now + 1800).to_i.to_s }
+  let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   describe '#create_resource_group' do
     let(:resource_group_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}?api-version=#{group_api_version}" }

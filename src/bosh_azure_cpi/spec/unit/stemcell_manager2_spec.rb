@@ -41,7 +41,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
           'PartitionKey' => stemcell_name,
           'RowKey'       => 'fake-storage-account-name',
           'Status'       => 'success',
-          'Timestamp'    => Time.now
+          'Timestamp'    => Time.new
         }
       ]
     end

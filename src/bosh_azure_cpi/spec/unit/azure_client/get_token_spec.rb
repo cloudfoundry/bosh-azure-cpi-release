@@ -15,7 +15,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:api_version) { AZURE_API_VERSION }
   let(:token_uri) { "#{authentication_endpoint}?api-version=#{api_version}" }
   let(:valid_access_token) { 'valid-access-token' }
-  let(:expires_on) { (Time.now + 1800).to_i.to_s }
+  let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   describe '#get_token' do
     let(:url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/foo/bar/foo" }
@@ -81,7 +81,7 @@ describe Bosh::AzureCloud::AzureClient do
       let(:cert) { instance_double(OpenSSL::X509::Certificate) }
       let(:thumbprint) { '12f0d2b95eb4d0ad81892c9d9fcc45a89c324cbd' }
       let(:x5t) { 'EvDSuV600K2BiSydn8xFqJwyTL0=' } # x5t is the Base64 UrlEncoding of thumbprint
-      let(:now) { Time.now }
+      let(:now) { Time.new }
       let(:jti) { 'b55b54ac-7494-449b-94b2-d7bff0285837' }
       let(:header) do
         {

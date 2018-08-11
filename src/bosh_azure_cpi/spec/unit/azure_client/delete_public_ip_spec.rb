@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:public_ip_name) { 'fake-public-ip-name' }
   let(:valid_access_token) { 'valid-access-token' }
 
-  let(:expires_on) { (Time.now + 1800).to_i.to_s }
+  let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   describe '#delete_public_ip' do
     let(:public_ip_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}?api-version=#{api_version_network}" }
