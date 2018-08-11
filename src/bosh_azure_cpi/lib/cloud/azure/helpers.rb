@@ -261,10 +261,10 @@ module Bosh::AzureCloud
       }
       payload = {
         "aud": authentication_endpoint,
-        "exp": (Time.now + 3600).strftime('%s'),
+        "exp": (Time.new + 3600).strftime('%s'),
         "iss": client_id,
         "jti": SecureRandom.uuid,
-        "nbf": (Time.now - 90).strftime('%s'),
+        "nbf": (Time.new - 90).strftime('%s'),
         "sub": client_id
       }
       rsa_private = OpenSSL::PKey::RSA.new(certificate_data)
@@ -595,7 +595,7 @@ module Bosh::AzureCloud
     # use timestamp and process id to generate a unique string for computer name of Windows
     #
     def generate_windows_computer_name
-      prefix = Time.now.to_f
+      prefix = Time.new.to_f
       prefix = prefix.to_s.delete('.')
       prefix = prefix.to_i.to_s(32) # example timestamp 1482829740.3734238 -> 'd5e883lv66u'
       suffix = Process.pid.to_s(32) # default max pid 65536, .to_s(32) -> '2000'

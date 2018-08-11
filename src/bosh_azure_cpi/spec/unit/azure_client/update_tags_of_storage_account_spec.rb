@@ -18,7 +18,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:token_api_version) { AZURE_API_VERSION }
   let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{token_api_version}" }
   let(:valid_access_token) { 'valid-access-token' }
-  let(:expires_on) { (Time.now + 1800).to_i.to_s }
+  let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   let(:storage_api_version) { AZURE_RESOURCE_PROVIDER_STORAGE }
   let(:storage_account_name) { 'fake-storage-account-name' }

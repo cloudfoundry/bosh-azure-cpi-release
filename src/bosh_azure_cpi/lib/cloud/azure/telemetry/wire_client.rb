@@ -112,7 +112,7 @@ module Bosh::AzureCloud
               begin
                 ret = line.match('.*expire (\d*) (.*);')
                 expire_date = ret[2]
-                expired = false if Time.parse(expire_date) > Time.now
+                expired = false if Time.parse(expire_date) > Time.new
               rescue StandardError => e
                 @logger.warn("[Telemetry] Failed to get expired data for leases of endpoint. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
               end

@@ -142,9 +142,9 @@ def mock_cloud(options = nil)
 end
 
 def time_measure
-  start = Time.now
+  start = Time.new
   yield
-  Time.now - start
+  Time.new - start
 end
 
 def run_in_new_process
