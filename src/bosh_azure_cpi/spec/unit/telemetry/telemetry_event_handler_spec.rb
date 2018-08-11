@@ -20,7 +20,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
       end
 
       context 'when the last post happened less than 1 minutes ago' do
-        let(:now) { Time.now.round }
+        let(:now) { Time.new.round }
         let(:last_post_timestamp) { now - 59 }
 
         before do
@@ -40,7 +40,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
       end
 
       context 'when the last post happened more than 1 minutes ago' do
-        let(:now) { Time.now.round }
+        let(:now) { Time.new.round }
         let(:last_post_timestamp) { now - 61 }
         before do
           allow(Time).to receive(:now).and_return(now)
@@ -196,7 +196,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
     let(:event_handler) { Bosh::AzureCloud::TelemetryEventHandler.new(logger) }
     let(:timestamp_file) { Bosh::AzureCloud::Helpers::CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP }
 
-    let(:time) { Time.now.round }
+    let(:time) { Time.new.round }
 
     context 'when file exists' do
       before do
@@ -230,7 +230,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
     let(:event_handler) { Bosh::AzureCloud::TelemetryEventHandler.new(logger) }
     let(:timestamp_file) { Bosh::AzureCloud::Helpers::CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP }
 
-    let(:time) { Time.now.round }
+    let(:time) { Time.new.round }
 
     after do
       File.delete(timestamp_file)

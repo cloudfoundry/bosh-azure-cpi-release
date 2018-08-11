@@ -25,7 +25,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
   let(:valid_access_token) { 'valid-access-token' }
-  let(:expires_on) { (Time.now + 1800).to_i.to_s }
+  let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   # Public IP
   let(:public_ip_name) { 'fake-name' }

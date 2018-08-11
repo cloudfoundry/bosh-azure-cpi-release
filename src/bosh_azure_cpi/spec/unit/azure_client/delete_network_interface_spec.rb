@@ -25,7 +25,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   let(:valid_access_token) { 'valid-access-token' }
 
-  let(:expires_on) { (Time.now + 1800).to_i.to_s }
+  let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   let(:nic_name) { 'fake-nic-name' }
 

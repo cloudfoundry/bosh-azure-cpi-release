@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
 
   let(:valid_access_token) { 'valid-access-token' }
-  let(:expires_on) { (Time.now + 1800).to_i.to_s }
+  let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   describe '#list_network_interfaces_by_keyword' do
     let(:network_interfaces_url) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces?api-version=#{api_version_network}" }

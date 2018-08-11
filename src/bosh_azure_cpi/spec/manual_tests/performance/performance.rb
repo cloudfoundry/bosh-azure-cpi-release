@@ -48,17 +48,17 @@ times = config['azure']['perform_times']
 while i < times
   json_str = "{\"private\":{\"cloud_properties\":{\"subnet_name\":\"#{config['azure']['subnet_name']}\",\"virtual_network_name\":\"#{config['azure']['vnet_name']}\"},\"default\":[\"dns\",\"gateway\"],\"dns\":[\"168.63.129.16\",\"8.8.8.8\"],\"gateway\":\"10.0.0.1\",\"ip\":\"10.0.0.42\",\"netmask\":\"255.255.255.0\",\"type\":\"manual\"}}"
   networks = JSON(json_str)
-  t1 = Time.now
+  t1 = Time.new
   puts 'testing create_vm...'
   instance_id = cpi.create_vm(agent_id, stemcell_id_to_use, vm_properties, networks)
-  create_cost = (Time.now - t1)
+  create_cost = (Time.new - t1)
   puts "perf result, create_vm costs #{create_cost}"
   total_create_cost += create_cost
 
-  t1 = Time.now
+  t1 = Time.new
   puts 'testing delete_vm...'
   cpi.delete_vm(instance_id)
-  delete_cost = (Time.now - t1)
+  delete_cost = (Time.new - t1)
   puts "perf result, delete_vm costs #{delete_cost}"
   total_delete_cost += delete_cost
   i += 1

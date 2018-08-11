@@ -510,6 +510,7 @@ describe Bosh::AzureCloud::BlobManager do
           }
         end
         before do
+          allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
           allow(blob).to receive(:properties)
             .and_return(first_blob_properties, second_blob_properties, third_blob_properties, fourth_blob_properties)
@@ -555,6 +556,7 @@ describe Bosh::AzureCloud::BlobManager do
           }
         end
         before do
+          allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
           allow(blob).to receive(:properties)
             .and_return(first_blob_properties, second_blob_properties)
@@ -579,6 +581,7 @@ describe Bosh::AzureCloud::BlobManager do
           }
         end
         before do
+          allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
           allow(blob).to receive(:properties).and_return(blob_properties)
         end
