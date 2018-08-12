@@ -4,9 +4,10 @@ module Bosh::AzureCloud
   class VMManager
     include Helpers
 
-    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager)
+    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager = nil)
       @azure_config = azure_config
       @registry_endpoint = registry_endpoint
+      @config_disk_manager = config_disk_manager
       @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
       @azure_client = azure_client
@@ -95,21 +96,9 @@ module Bosh::AzureCloud
       }
 
       vm_params[:zone] = zone.to_s unless zone.nil?
-
-      @disk_manager.vm_props = vm_props
-      @disk_manager2.vm_props = vm_props
-      if @use_managed_disks
-        os_disk = @disk_manager2.os_disk(vm_name, stemcell_info)
-        ephemeral_disk = @disk_manager2.ephemeral_disk(vm_name)
-      else
-        storage_account_name = instance_id.storage_account_name
-        os_disk = @disk_manager.os_disk(storage_account_name, vm_name, stemcell_info)
-        ephemeral_disk = @disk_manager.ephemeral_disk(storage_account_name, vm_name)
-      end
-      vm_params[:os_disk] = os_disk
-      vm_params[:ephemeral_disk] = ephemeral_disk
-
+      vm_params[:os_disk], vm_params[:ephemeral_disk] = _build_disks(instance_id, stemcell_info, vm_props)
       vm_params[:os_type] = stemcell_info.os_type
+
       if stemcell_info.is_light_stemcell?
         vm_params[:image_reference] = stemcell_info.image_reference
       elsif @use_managed_disks
@@ -121,7 +110,18 @@ module Bosh::AzureCloud
       when 'linux'
         vm_params[:ssh_username]  = @azure_config.ssh_user
         vm_params[:ssh_cert_data] = @azure_config.ssh_public_key
-        vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns)
+        if @azure_config.use_config_disk
+          meta_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_meta_data_obj(
+            instance_id.to_s,
+            @azure_config.ssh_public_key
+          )
+          user_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
+          config_disk = @config_disk_manager.prepare_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data_obj)
+          vm_params[:config_disk] = config_disk
+        else
+          user_data = Bosh::AzureCloud::BoshAgentUtil.get_encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
+          vm_params[:custom_data] = user_data
+        end
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
         # Users do not use this credential to logon to Windows VMs
@@ -143,7 +143,7 @@ module Bosh::AzureCloud
         vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".split('').shuffle.join
         computer_name = generate_windows_computer_name
         vm_params[:computer_name] = computer_name
-        vm_params[:custom_data]   = get_user_data(instance_id.to_s, network_configurator.default_dns, computer_name)
+        vm_params[:custom_data]   = Bosh::AzureCloud::BoshAgentUtil.get_encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, computer_name)
       end
 
       vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host] unless diagnostics_storage_account.nil?
@@ -195,6 +195,8 @@ module Bosh::AzureCloud
           # Delete the dynamic public IP
           dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
           @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+
+          # TODO: delete the config disk.
         rescue StandardError => error
           error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
           error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
@@ -404,7 +406,7 @@ module Bosh::AzureCloud
           end
         end
       else
-        storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
+        storage_account = get_storage_account_from_vm_properties(vm_props, location)
 
         if is_light_stemcell_id?(stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
@@ -421,21 +423,6 @@ module Bosh::AzureCloud
 
     def _get_diagnostics_storage_account(location)
       @azure_config.enable_vm_boot_diagnostics && (@azure_config.environment != ENVIRONMENT_AZURESTACK) ? @storage_account_manager.get_or_create_diagnostics_storage_account(location) : nil
-    end
-
-    # Example -
-    # For Linux:     {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"server":{"name":"<instance-id>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
-    # For Windows:   {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"instance-id":"<instance-id>","server":{"name":"<randomgeneratedname>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
-    def get_user_data(instance_id, dns, computer_name = nil)
-      user_data = { registry: { endpoint: @registry_endpoint } }
-      if computer_name
-        user_data[:'instance-id'] = instance_id
-        user_data[:server] = { name: computer_name }
-      else
-        user_data[:server] = { name: instance_id }
-      end
-      user_data[:dns] = { nameserver: dns } if dns
-      Base64.strict_encode64(JSON.dump(user_data))
     end
 
     def _get_tags(vm_props)

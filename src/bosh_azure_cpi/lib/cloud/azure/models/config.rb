@@ -24,6 +24,7 @@ module Bosh::AzureCloud
     attr_reader :pip_idle_timeout_in_minutes
     attr_reader :parallel_upload_thread_num
     attr_reader :ssh_user, :ssh_public_key
+    attr_reader :use_config_disk
 
     attr_writer :storage_account_name
 
@@ -63,6 +64,8 @@ module Bosh::AzureCloud
 
       @ssh_user = azure_config_hash['ssh_user']
       @ssh_public_key = azure_config_hash['ssh_public_key']
+
+      @use_config_disk = azure_config_hash.fetch('use_config_disk', false)
     end
   end
 

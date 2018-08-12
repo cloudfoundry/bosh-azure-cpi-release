@@ -128,7 +128,7 @@ describe Bosh::AzureCloud::Cloud do
         }
       end
       before do
-        allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
+        allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
           .with(vm_props, location)
           .and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?)
@@ -215,7 +215,7 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       before do
-        allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
+        allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
           .with(vm_props, location)
           .and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?)
