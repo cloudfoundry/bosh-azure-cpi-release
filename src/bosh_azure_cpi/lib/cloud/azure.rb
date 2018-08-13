@@ -3,30 +3,33 @@
 module Bosh
   module AzureCloud; end
 end
-require 'logging'
+
+require 'base64'
 require 'concurrent'
 require 'date'
-require 'pp'
-require 'set'
-require 'tmpdir'
-require 'securerandom'
-require 'json'
-require 'digest/md5'
-require 'base64'
-require 'yaml'
-require 'time'
-require 'socket'
-require 'vhd'
-require 'open3'
 require 'etc'
 require 'fcntl'
-require 'jwt'
 require 'fileutils'
+require 'logging'
+require 'json'
+require 'jwt'
+require 'open3'
+require 'pp'
+require 'set'
+require 'securerandom'
+require 'socket'
+require 'time'
+require 'tmpdir'
+require 'vhd'
+require 'yaml'
+
 # Use resolv-replace.rb to replace the libc resolver
 # Reference:
 #  https://makandracards.com/ninjaconcept/30815-fixing-socketerror-getaddrinfo-name-or-service-not-known-with-ruby-s-resolv-replace-rb
 #  http://www.subelsky.com/2014/05/fixing-socketerror-getaddrinfo-name-or.html
 require 'resolv-replace.rb'
+
+require 'digest/md5'
 require 'net/http'
 
 # Load Azure Libs before cloud/azure/* in case they are used by the latter
@@ -42,8 +45,8 @@ require 'bosh/cpi'
 require 'bosh/cpi/registry_client'
 
 require 'cloud'
-require 'cloud/azure/logger'
 require 'cloud/azure/helpers'
+require 'cloud/azure/logger'
 require 'cloud/azure/models/config'
 require 'cloud/azure/models/config_factory'
 require 'cloud/azure/models/props_factory'

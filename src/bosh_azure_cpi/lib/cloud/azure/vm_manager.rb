@@ -71,6 +71,10 @@ module Bosh::AzureCloud
         end
       )
 
+      # Calling .wait before .value! to make sure that all tasks are completed.
+      # The purpose of calling .wait before .value! is to make sure that all processes are completed
+      #    before raising an error. It is important when creating a VM, because on Azure you can't
+      #    delete a resource that is on-provisioning.
       tasks.map(&:wait)
 
       stemcell_info = task_get_stemcell_info.value!
@@ -301,6 +305,7 @@ module Bosh::AzureCloud
       end
 
       # when exception happens in thread, .wait will not raise the error, but .wait! will.
+      # Calling .wait before .wait! to make sure that all tasks are completed.
       tasks.map(&:wait)
       tasks.map(&:wait!)
     end
@@ -554,6 +559,7 @@ module Bosh::AzureCloud
         end
       )
 
+      # Calling .wait before .value! to make sure that all tasks are completed.
       tasks_preparing.map(&:wait)
 
       public_ip = task_get_or_create_public_ip.value!
@@ -599,6 +605,7 @@ module Bosh::AzureCloud
           end
         )
       end
+      # Calling .wait before .value! to make sure that all tasks are completed.
       tasks_creating.map(&:wait)
       network_interfaces = tasks_creating.map(&:value!)
     end
@@ -613,6 +620,7 @@ module Bosh::AzureCloud
           end
         )
       end
+      # Calling .wait before .wait! to make sure that all tasks are completed.
       tasks.map(&:wait)
       tasks.map(&:wait!)
     end
