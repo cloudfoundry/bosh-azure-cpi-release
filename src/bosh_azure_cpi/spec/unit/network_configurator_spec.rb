@@ -39,7 +39,7 @@ describe Bosh::AzureCloud::NetworkConfigurator do
   context "when spec isn't a hash" do
     it 'should raise an error' do
       expect do
-        Bosh::AzureCloud::NetworkConfigurator.new('foo')
+        Bosh::AzureCloud::NetworkConfigurator.new(azure_config, 'cool')
       end.to raise_error ArgumentError
     end
   end

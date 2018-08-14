@@ -10,8 +10,8 @@ describe Bosh::AzureCloud::VMManager do
     context 'when VM is created' do
       before do
         allow(azure_client).to receive(:create_virtual_machine)
-        allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
-        allow(vm_manager2).to receive(:get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager2).to receive(:_get_stemcell_info).and_return(stemcell_info)
       end
 
       # Availability Set
@@ -432,7 +432,7 @@ describe Bosh::AzureCloud::VMManager do
               end
 
               before do
-                allow(vm_manager_azure_stack).to receive(:get_stemcell_info).and_return(stemcell_info)
+                allow(vm_manager_azure_stack).to receive(:_get_stemcell_info).and_return(stemcell_info)
               end
 
               # Only unmanaged availability set is supported on AzureStack
@@ -556,6 +556,16 @@ describe Bosh::AzureCloud::VMManager do
                 managed: false
               }
             end
+            let(:existing_avset_managed) do
+              {
+                name: vm_props.availability_set,
+                location: location,
+                tags: { 'user-agent' => 'bosh' },
+                platform_update_domain_count: 5,
+                platform_fault_domain_count: 3,
+                managed: true
+              }
+            end
             let(:avset_params) do
               {
                 name: existing_avset[:name],
@@ -567,25 +577,44 @@ describe Bosh::AzureCloud::VMManager do
               }
             end
 
-            before do
-              allow(azure_client).to receive(:get_availability_set_by_name)
-                .with(resource_group_name, vm_props.availability_set)
-                .and_return(existing_avset)
+            context 'existing avset is unmanaged' do
+              before do
+                allow(azure_client).to receive(:get_availability_set_by_name)
+                  .with(resource_group_name, vm_props.availability_set)
+                  .and_return(existing_avset)
+              end
+
+              it 'should update the managed property of the availability set' do
+                expect(vm_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                  .and_call_original
+                expect(vm_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                  .and_call_original
+
+                expect(azure_client).to receive(:create_availability_set).with(resource_group_name, avset_params)
+                expect(azure_client).to receive(:create_network_interface).twice
+
+                vm_params = vm_manager2.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+                expect(vm_params[:name]).to eq(vm_name)
+              end
             end
 
-            it 'should update the managed property of the availability set' do
-              expect(vm_manager2).to receive(:flock)
-                .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
-                .and_call_original
-              expect(vm_manager2).to receive(:flock)
-                .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
-                .and_call_original
+            context 'when using managed avset in unmanaged vm' do
+              before do
+                allow(azure_client).to receive(:get_availability_set_by_name)
+                  .with(resource_group_name, vm_props.availability_set)
+                  .and_return(existing_avset_managed)
+              end
 
-              expect(azure_client).to receive(:create_availability_set).with(resource_group_name, avset_params)
-              expect(azure_client).to receive(:create_network_interface).twice
+              it 'should raise error' do
+                expect(azure_client).to receive(:delete_network_interface).twice
+                expect(azure_client).to receive(:create_network_interface).twice
 
-              vm_params = vm_manager2.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
-              expect(vm_params[:name]).to eq(vm_name)
+                expect do
+                  vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+                end.to raise_error /create_availability_set - the availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./
+              end
             end
           end
         end

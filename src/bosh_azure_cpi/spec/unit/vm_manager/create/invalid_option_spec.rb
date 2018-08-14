@@ -8,7 +8,7 @@ describe Bosh::AzureCloud::VMManager do
 
   describe '#create' do
     before do
-      allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
+      allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
     end
 
     context 'when both availability_zone and availability_set are specified' do

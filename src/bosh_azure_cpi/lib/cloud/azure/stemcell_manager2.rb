@@ -44,14 +44,14 @@ module Bosh::AzureCloud
 
     def get_user_image_info(stemcell_name, storage_account_type, location)
       @logger.info("get_user_image_info(#{stemcell_name}, #{storage_account_type}, #{location})")
-      user_image = get_user_image(stemcell_name, storage_account_type, location)
+      user_image = _get_user_image(stemcell_name, storage_account_type, location)
       StemcellInfo.new(user_image[:id], user_image[:tags])
     end
 
     private
 
-    def get_user_image(stemcell_name, storage_account_type, location)
-      @logger.info("get_user_image(#{stemcell_name}, #{storage_account_type}, #{location})")
+    def _get_user_image(stemcell_name, storage_account_type, location)
+      @logger.info("_get_user_image(#{stemcell_name}, #{storage_account_type}, #{location})")
 
       # The old user image name's length exceeds 80 in some location, which would cause the creation failure.
       # Old format: bosh-stemcell-<UUID>-Standard_LRS-<LOCATION>, bosh-stemcell-<UUID>-Premium_LRS-<LOCATION>

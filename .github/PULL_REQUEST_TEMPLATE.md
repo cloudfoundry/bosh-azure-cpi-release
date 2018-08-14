@@ -11,8 +11,7 @@ If you are confident that you're covered under a Corporate CLA, please make sure
 --------------------MESSAGE FROM ADMIN, DELETE BEFORE SUBMITTING----------------------
 
 - [ ] Please check this box and fill the data as below once you have run the unit tests.
-      Code coverage before your change: 
-      Code coverage with your change:   
+      Code coverage should keeps at 100%. 
 
   ```
   pushd src/bosh_azure_cpi

@@ -13,7 +13,7 @@ describe Bosh::AzureCloud::VMManager do
     context 'when VM is created' do
       before do
         allow(azure_client).to receive(:create_virtual_machine)
-        allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
       end
 
       # Boot diagnostics
@@ -147,7 +147,7 @@ describe Bosh::AzureCloud::VMManager do
           .with(location)
           .and_return(diagnostics_storage_account)
         expect(
-          vm_manager.send(:get_diagnostics_storage_account, location)
+          vm_manager.send(:_get_diagnostics_storage_account, location)
         ).to be(diagnostics_storage_account)
       end
     end
@@ -164,7 +164,7 @@ describe Bosh::AzureCloud::VMManager do
       it 'should not get the diagnostics account' do
         expect(storage_account_manager).not_to receive(:get_or_create_diagnostics_storage_account)
         expect(
-          vm_manager.send(:get_diagnostics_storage_account, location)
+          vm_manager.send(:_get_diagnostics_storage_account, location)
         ).to be(nil)
       end
     end
@@ -182,7 +182,7 @@ describe Bosh::AzureCloud::VMManager do
       it 'should not get the diagnostics account' do
         expect(storage_account_manager).not_to receive(:get_or_create_diagnostics_storage_account)
         expect(
-          vm_manager.send(:get_diagnostics_storage_account, location)
+          vm_manager.send(:_get_diagnostics_storage_account, location)
         ).to be(nil)
       end
     end

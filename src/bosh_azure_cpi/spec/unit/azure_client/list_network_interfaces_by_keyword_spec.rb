@@ -83,6 +83,11 @@ describe Bosh::AzureCloud::AzureClient do
                         {
                           'id' => 'l'
                         }
+                      ],
+                      'applicationSecurityGroups' => [
+                        {
+                          'id' => 'asg-id-1'
+                        }
                       ]
                     }
                   }
@@ -163,7 +168,8 @@ describe Bosh::AzureCloud::AzureClient do
           network_security_group: { id: 'i' },
           public_ip: { id: 'j' },
           load_balancer: { id: 'k' },
-          application_gateway: { id: 'l' }
+          application_gateway: { id: 'l' },
+          application_security_groups: [{ id: 'asg-id-1' }]
         }
       end
       let(:network_interface_1) do
@@ -179,7 +185,6 @@ describe Bosh::AzureCloud::AzureClient do
           private_ip_allocation_method: 'f1'
         }
       end
-
       it 'should return network interfaces' do
         stub_request(:post, token_uri).to_return(
           status: 200,

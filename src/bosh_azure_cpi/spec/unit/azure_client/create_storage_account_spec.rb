@@ -153,40 +153,81 @@ describe Bosh::AzureCloud::AzureClient do
           end
 
           context 'when there is Retry-After in the response header' do
-            it 'should create the storage account after retry' do
-              stub_request(:post, token_uri).to_return(
-                status: 200,
-                body: {
-                  'access_token' => valid_access_token,
-                  'expires_on' => expires_on
-                }.to_json,
-                headers: {}
-              )
-              stub_request(:put, storage_account_uri).with(body: request_body).to_return(
-                status: 202,
-                body: '',
-                headers: {
-                  'Location' => operation_status_link
-                }
-              )
-              stub_request(:get, operation_status_link).to_return(
-                {
+            context 'retry succeed' do
+              it 'should create the storage account after retry' do
+                stub_request(:post, token_uri).to_return(
                   status: 200,
-                  body: '{"status":"Failed"}',
+                  body: {
+                    'access_token' => valid_access_token,
+                    'expires_on' => expires_on
+                  }.to_json,
+                  headers: {}
+                )
+                stub_request(:put, storage_account_uri).with(body: request_body).to_return(
+                  status: 202,
+                  body: '',
                   headers: {
-                    'Retry-After' => '1'
+                    'Location' => operation_status_link
                   }
-                },
-                status: 200,
-                body: '{"status":"Succeeded"}',
-                headers: {}
-              )
+                )
+                stub_request(:get, operation_status_link).to_return(
+                  {
+                    status: 200,
+                    body: '{"status":"Failed"}',
+                    headers: {
+                      'Retry-After' => '1'
+                    }
+                  },
+                  status: 200,
+                  body: '{"status":"Succeeded"}',
+                  headers: {}
+                )
 
-              expect(azure_client).to receive(:sleep).with(default_retry_after)
-              expect(azure_client).to receive(:sleep).with(1)
-              expect(
-                azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
-              ).to be(true)
+                expect(azure_client).to receive(:sleep).with(default_retry_after).exactly(2).times
+                expect(azure_client).to receive(:sleep).with(1).exactly(1).times
+                expect(
+                  azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+                ).to be(true)
+              end
+            end
+
+            context 'retry failed' do
+              it 'should get one exception' do
+                stub_request(:post, token_uri).to_return(
+                  status: 200,
+                  body: {
+                    'access_token' => valid_access_token,
+                    'expires_on' => expires_on
+                  }.to_json,
+                  headers: {}
+                )
+                stub_request(:put, storage_account_uri).with(body: request_body).to_return(
+                  status: 202,
+                  body: '',
+                  headers: {
+                    'Location' => operation_status_link
+                  }
+                )
+                eleven_failed = []
+                11.times do
+                  eleven_failed.push(
+                    status: 200,
+                    body: '{"status":"Failed"}',
+                    headers: {
+                      'Retry-After' => '1'
+                    }
+                  )
+                end
+                stub_request(:get, operation_status_link).to_return(
+                  eleven_failed
+                )
+
+                expect(azure_client).to receive(:sleep).with(default_retry_after).exactly(11).times
+                expect(azure_client).to receive(:sleep).with(1).exactly(11).times
+                expect do
+                  azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+                end.to raise_error(Bosh::AzureCloud::AzureAsynInternalError, /create_storage_account - http code: 200/)
+              end
             end
           end
         end

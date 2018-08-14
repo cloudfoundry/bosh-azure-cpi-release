@@ -68,7 +68,7 @@ describe Bosh::AzureCloud::TelemetryManager do
             .with('msg' => 'Successed',
                   'subscription_id' => mock_azure_config.subscription_id,
                   'fake-key' => 'fake-value')
-          expect(telemetry_manager).to receive(:report_event)
+          expect(telemetry_manager).to receive(:_report_event)
 
           expect(
             telemetry_manager.monitor(operation, id: id, extras: extras) do
@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::TelemetryManager do
             .with('msg' => 'Successed',
                   'subscription_id' => mock_azure_config.subscription_id,
                   'fake-key' => 'fake-value')
-          expect(telemetry_manager).not_to receive(:report_event)
+          expect(telemetry_manager).not_to receive(:_report_event)
 
           expect(
             telemetry_manager.monitor(operation, id: id, extras: extras) do
@@ -110,7 +110,7 @@ describe Bosh::AzureCloud::TelemetryManager do
             .with(false)
           expect(event_param_message).to receive(:value=)
             .with(hash_including('msg' => error_message))
-          expect(telemetry_manager).to receive(:report_event)
+          expect(telemetry_manager).to receive(:_report_event)
 
           expect do
             telemetry_manager.monitor(operation, id: id, extras: extras) do
@@ -130,7 +130,7 @@ describe Bosh::AzureCloud::TelemetryManager do
             .with(false)
           expect(event_param_message).to receive(:value=)
             .with(hash_including('msg' => /#{error_message}/))
-          expect(telemetry_manager).to receive(:report_event)
+          expect(telemetry_manager).to receive(:_report_event)
 
           expect do
             telemetry_manager.monitor(operation, id: id, extras: extras) do
@@ -151,7 +151,7 @@ describe Bosh::AzureCloud::TelemetryManager do
             .with(false)
           expect(event_param_message).to receive(:value=)
             .with(hash_including('msg' => /#{error_message}/))
-          expect(telemetry_manager).to receive(:report_event)
+          expect(telemetry_manager).to receive(:_report_event)
 
           expect do
             telemetry_manager.monitor(operation, id: id, extras: extras) do
@@ -167,7 +167,7 @@ describe Bosh::AzureCloud::TelemetryManager do
       let(:result) { 'fake-result' }
 
       it 'should return the result and does not report the event' do
-        expect(telemetry_manager).not_to receive(:report_event)
+        expect(telemetry_manager).not_to receive(:_report_event)
 
         expect(
           telemetry_manager.monitor(operation, id: id, extras: extras) do
@@ -181,7 +181,7 @@ describe Bosh::AzureCloud::TelemetryManager do
       let(:result) { 'fake-result' }
 
       it 'should return the result and does not report the event' do
-        expect(telemetry_manager).not_to receive(:report_event)
+        expect(telemetry_manager).not_to receive(:_report_event)
 
         expect(
           telemetry_manager.monitor(operation, id: id, extras: extras) do
@@ -192,7 +192,7 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
   end
 
-  describe '#report_event' do
+  describe '#_report_event' do
     let(:logger) { instance_double(Bosh::Cpi::Logger) }
     let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_config) }
     let(:telemetry_event) { instance_double(Bosh::AzureCloud::TelemetryEvent) }
@@ -210,26 +210,24 @@ describe Bosh::AzureCloud::TelemetryManager do
         allow(Open3).to receive(:capture3).and_return(['fake-stdout', 'fake-stderr', 0])
         allow(telemetry_event).to receive(:to_json).and_return('fake-event')
         allow(logger).to receive(:warn)
+
+        allow(Process).to receive(:setsid)
+        allow(STDIN).to receive(:reopen)
+        allow(STDOUT).to receive(:reopen)
+        allow(STDERR).to receive(:reopen)
       end
 
       it 'should collect and sent events' do
         expect(File).to receive(:open).and_call_original do |file|
           expect(file).to receive(:write)
         end
-
-        expect(telemetry_manager).to receive(:fork).and_call_original do |_block1|
-          expect(Process).to receive(:setsid)
-          expect(STDIN).to receive(:reopen)
-          expect(STDOUT).to receive(:reopen)
-          expect(STDERR).to receive(:reopen)
-
-          expect(telemetry_manager).to receive(:fork).and_call_original do |_block2|
-            expect(event_handler).to receive(:collect_and_send_events)
-          end
-        end
+        expect(event_handler).to receive(:collect_and_send_events)
+        expect(telemetry_manager).to receive(:fork) do |&block1|
+          block1.call
+        end.exactly(2).times
 
         expect do
-          telemetry_manager.send(:report_event, telemetry_event)
+          telemetry_manager.send(:_report_event, telemetry_event)
         end.not_to raise_error
       end
     end
@@ -250,7 +248,7 @@ describe Bosh::AzureCloud::TelemetryManager do
         expect(Bosh::AzureCloud::TelemetryEventHandler).not_to receive(:new)
 
         expect do
-          telemetry_manager.send(:report_event, telemetry_event)
+          telemetry_manager.send(:_report_event, telemetry_event)
         end.not_to raise_error
       end
     end
@@ -265,7 +263,7 @@ describe Bosh::AzureCloud::TelemetryManager do
         expect(Bosh::AzureCloud::TelemetryEventHandler).not_to receive(:new)
 
         expect do
-          telemetry_manager.send(:report_event, telemetry_event)
+          telemetry_manager.send(:_report_event, telemetry_event)
         end.not_to raise_error
       end
     end

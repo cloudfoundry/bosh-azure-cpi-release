@@ -13,8 +13,8 @@ describe Bosh::AzureCloud::VMManager do
     context 'when VM is created' do
       before do
         allow(azure_client).to receive(:create_virtual_machine)
-        allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
-        allow(vm_manager2).to receive(:get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager2).to receive(:_get_stemcell_info).and_return(stemcell_info)
       end
 
       # Resource group
@@ -579,7 +579,7 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           before do
-            allow(vm_manager_for_pip).to receive(:get_stemcell_info).and_return(stemcell_info)
+            allow(vm_manager_for_pip).to receive(:_get_stemcell_info).and_return(stemcell_info)
           end
 
           it 'creates a public IP and assigns it to the primary NIC' do

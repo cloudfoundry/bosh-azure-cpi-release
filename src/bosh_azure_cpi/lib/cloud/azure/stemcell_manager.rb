@@ -40,7 +40,7 @@ module Bosh::AzureCloud
       stemcell_name = nil
       Dir.mktmpdir('sc-') do |tmp_dir|
         @logger.info("Unpacking image: #{image_path}")
-        run_command("tar -zxf #{image_path} -C #{tmp_dir}")
+        _run_command("tar -zxf #{image_path} -C #{tmp_dir}")
         @logger.info('Start to upload VHD')
         stemcell_name = "#{STEMCELL_PREFIX}-#{SecureRandom.uuid}"
         @logger.info("Upload the stemcell #{stemcell_name} to the storage account #{@default_storage_account_name}")
@@ -55,7 +55,7 @@ module Bosh::AzureCloud
         blob_properties = @blob_manager.get_blob_properties(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
         !blob_properties.nil?
       else
-        handle_stemcell_in_different_storage_account(storage_account_name, name)
+        _handle_stemcell_in_different_storage_account(storage_account_name, name)
       end
     end
 
@@ -74,12 +74,12 @@ module Bosh::AzureCloud
 
     private
 
-    def run_command(command)
+    def _run_command(command)
       output, status = Open3.capture2e(command)
       cloud_error("'#{command}' failed with exit status=#{status.exitstatus} [#{output}]") if status.exitstatus != 0
     end
 
-    def handle_stemcell_in_different_storage_account(storage_account_name, name)
+    def _handle_stemcell_in_different_storage_account(storage_account_name, name)
       stemcell_meta = @meta_store.find_first_stemcell_meta(name, storage_account_name)
       if !stemcell_meta.nil?
         if stemcell_meta.status == STEMCELL_STATUS_SUCCESS
@@ -87,12 +87,12 @@ module Bosh::AzureCloud
         elsif stemcell_meta.status != STEMCELL_STATUS_PENDING
           cloud_error("The status of the stemcell #{name} in the storage account #{storage_account_name} is unknown: #{stemcell_meta.status}")
         end
-        return wait_stemcell_copy(storage_account_name, name)
+        return _wait_stemcell_copy(storage_account_name, name)
       else
         begin
           stemcell_meta = Bosh::AzureCloud::StemcellMeta.new(name, storage_account_name, STEMCELL_STATUS_PENDING)
-          ret = @meta_store.insert_stemcell_meta(stemcell_meta)
-          return wait_stemcell_copy(storage_account_name, name) unless ret
+          insert_success = @meta_store.insert_stemcell_meta(stemcell_meta)
+          return _wait_stemcell_copy(storage_account_name, name) unless insert_success
 
           # Create containers if they are missing.
           # Background: When users create a storage account without containers in it, and use that storage account for a resource pool,
@@ -116,7 +116,7 @@ module Bosh::AzureCloud
       end
     end
 
-    def wait_stemcell_copy(storage_account_name, name, timeout = DEFAULT_COPY_STEMCELL_TIMEOUT)
+    def _wait_stemcell_copy(storage_account_name, name, timeout = DEFAULT_COPY_STEMCELL_TIMEOUT)
       @logger.info('Another process is copying the same stemcell')
       loop do
         stemcell_meta = @meta_store.find_first_stemcell_meta(name, storage_account_name)
