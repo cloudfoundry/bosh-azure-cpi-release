@@ -284,6 +284,18 @@ describe Bosh::AzureCloud::DiskId do
   end
 
   describe '#storage_account_name' do
+    context 'when invalid plain id' do
+      let(:caching) { 'None' }
+      let(:storage_account_name) { 'fake-storage-account-name' }
+      let(:disk_id_string) { "wrongbosh-data-#{storage_account_name}-#{SecureRandom.uuid}-#{caching}" }
+      it 'should raise error' do
+        expect do
+          disk_id = Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name')
+          disk_id.storage_account_name
+        end.to raise_error /Invalid data disk name/
+      end
+    end
+
     context 'when disk id is a v1 id' do
       let(:caching) { 'None' }
       let(:storage_account_name) { 'fakestorageaccountname' }

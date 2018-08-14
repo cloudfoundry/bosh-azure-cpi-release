@@ -64,7 +64,7 @@ module Bosh::AzureCloud
             event.add_param(event_param_operation_success)
             event.add_param(event_param_message)
             event.add_param(event_param_duration)
-            report_event(event)
+            _report_event(event)
           end
         end
       else
@@ -74,7 +74,7 @@ module Bosh::AzureCloud
 
     private
 
-    def report_event(event)
+    def _report_event(event)
       filename = "/tmp/cpi-event-#{SecureRandom.uuid}.tld"
       File.open(filename, 'w') do |file|
         file.write(event.to_json)

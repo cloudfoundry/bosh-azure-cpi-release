@@ -4,7 +4,7 @@ module Bosh::AzureCloud
   class BlobManager
     include Helpers
 
-    MAX_CHUNK_SIZE = 2 * 1024 * 1024 # 2MB
+    MAX_CHUNK_SIZE = 2 * 1024 * 1024  # 2MB
     TIMEOUT_FOR_BLOB_OPERATIONS = 120 # Timeout in seconds for Blob Service Operations. https://docs.microsoft.com/en-us/rest/api/storageservices/fileservices/setting-timeouts-for-blob-service-operations
 
     def initialize(azure_config, azure_client)
@@ -19,7 +19,7 @@ module Bosh::AzureCloud
 
     def delete_blob(storage_account_name, container_name, blob_name)
       @logger.info("delete_blob(#{storage_account_name}, #{container_name}, #{blob_name})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         options = {
           delete_snapshots: :include
         }
@@ -31,21 +31,21 @@ module Bosh::AzureCloud
 
     def get_blob_uri(storage_account_name, container_name, blob_name)
       @logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         "#{@azure_storage_client.storage_blob_host}/#{container_name}/#{blob_name}"
       end
     end
 
     def get_blob_size_in_bytes(storage_account_name, container_name, blob_name)
       @logger.info("get_blob_size_in_bytes(#{storage_account_name}, #{container_name}, #{blob_name})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         @blob_service_client.get_blob_properties(container_name, blob_name).properties[:content_length]
       end
     end
 
     def delete_blob_snapshot(storage_account_name, container_name, blob_name, snapshot_time)
       @logger.info("delete_blob_snapshot(#{storage_account_name}, #{container_name}, #{blob_name}, #{snapshot_time})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         options = {
           snapshot: snapshot_time
         }
@@ -58,9 +58,9 @@ module Bosh::AzureCloud
     def create_page_blob(storage_account_name, container_name, file_path, blob_name, metadata)
       @logger.info("create_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name}, #{metadata})")
       # Disable debug_mode because we never want to print the content of VHD in the logs
-      initialize_blob_client(storage_account_name, true) do
+      _initialize_blob_client(storage_account_name, true) do
         begin
-          upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num, metadata)
+          _upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num, metadata)
         rescue StandardError => e
           cloud_error("Failed to upload page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
@@ -69,7 +69,7 @@ module Bosh::AzureCloud
 
     def create_empty_page_blob(storage_account_name, container_name, blob_name, blob_size_in_kb, metadata)
       @logger.info("create_empty_page_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{blob_size_in_kb}, #{metadata})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         begin
           options = {
             timeout: TIMEOUT_FOR_BLOB_OPERATIONS,
@@ -96,7 +96,7 @@ module Bosh::AzureCloud
     def create_empty_vhd_blob(storage_account_name, container_name, blob_name, blob_size_in_gb)
       @logger.info("create_empty_vhd_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{blob_size_in_gb})")
       blob_created = false
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         begin
           @logger.info('create_empty_vhd_blob: Start to generate vhd footer')
           opts = {
@@ -137,7 +137,7 @@ module Bosh::AzureCloud
 
     def get_blob_properties(storage_account_name, container_name, blob_name)
       @logger.info("get_blob_properties(#{storage_account_name}, #{container_name}, #{blob_name})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options
           @logger.info("get_blob_properties: Calling get_blob_properties(#{container_name}, #{blob_name}, #{options})")
@@ -152,7 +152,7 @@ module Bosh::AzureCloud
 
     def get_blob_metadata(storage_account_name, container_name, blob_name)
       @logger.info("get_blob_metadata(#{storage_account_name}, #{container_name}, #{blob_name})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options
           @logger.info("get_blob_metadata: Calling get_blob_metadata(#{container_name}, #{blob_name}, #{options})")
@@ -168,7 +168,7 @@ module Bosh::AzureCloud
     # metadata names must adhere to the naming rules for C# identifiers (http://msdn.microsoft.com/library/aa664670%28VS.71%29.aspx)
     def set_blob_metadata(storage_account_name, container_name, blob_name, metadata)
       @logger.info("set_blob_metadata(#{storage_account_name}, #{container_name}, #{blob_name}, #{metadata})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options
           @logger.info("set_blob_metadata: Calling set_blob_metadata(#{container_name}, #{blob_name}, #{metadata}, #{options})")
@@ -182,7 +182,7 @@ module Bosh::AzureCloud
     def list_blobs(storage_account_name, container_name, prefix = nil)
       @logger.info("list_blobs(#{storage_account_name}, #{container_name})")
       blobs = []
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         options = {}
         options[:prefix] = prefix unless prefix.nil?
         loop do
@@ -202,7 +202,7 @@ module Bosh::AzureCloud
 
     def snapshot_blob(storage_account_name, container_name, blob_name, metadata)
       @logger.info("snapshot_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{metadata})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         options = {
           metadata: metadata
         }
@@ -216,7 +216,7 @@ module Bosh::AzureCloud
 
     def copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
       @logger.info("copy_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{source_blob_uri})")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         begin
           start_time = Time.new
           options = merge_storage_common_options
@@ -263,22 +263,6 @@ module Bosh::AzureCloud
       end
     end
 
-    def has_container?(storage_account_name, container_name)
-      @logger.info("has_container?(#{storage_account_name}, #{container_name})")
-      initialize_blob_client(storage_account_name) do
-        begin
-          options = merge_storage_common_options
-          @logger.info("has_container?: Calling get_container_properties(#{container_name}, #{options})")
-          container = @blob_service_client.get_container_properties(container_name, options)
-          @logger.debug("has_container?: properties is #{container.properties.inspect}")
-          true
-        rescue StandardError => e
-          cloud_error("has_container?: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?('(404)')
-          false
-        end
-      end
-    end
-
     # Prepare containers in the storage account
     # @param [string]  storage_account_name       - storage account name
     # @param [Array]   containers                 - container names to be created
@@ -289,43 +273,85 @@ module Bosh::AzureCloud
       @logger.info("prepare_containers(#{storage_account_name}, #{containers}, #{is_default_storage_account})")
       containers.each do |container|
         @logger.debug("Creating the container '#{container}' in the storage account '#{storage_account_name}'")
-        create_container(storage_account_name, container)
+        _create_container(storage_account_name, container)
       end
-      set_stemcell_container_acl_to_public(storage_account_name) if is_default_storage_account
+      _set_stemcell_container_acl_to_public(storage_account_name) if is_default_storage_account
     end
 
     private
 
-    def create_container(storage_account_name, container_name, options = {})
-      @logger.info("create_container(#{storage_account_name}, #{container_name}, #{options})")
-      initialize_blob_client(storage_account_name) do
+    def _create_container(storage_account_name, container_name, options = {})
+      @logger.info("_create_container(#{storage_account_name}, #{container_name}, #{options})")
+      _initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options(options)
-          @logger.info("create_container: Calling create_container(#{container_name}, #{options})")
+          @logger.info("_create_container: Calling _create_container(#{container_name}, #{options})")
           @blob_service_client.create_container(container_name, options)
           true
         rescue StandardError => e
           # Still return true if the container is created by others.
           return true if e.message.include?('ContainerAlreadyExists')
-          cloud_error("create_container: Failed to create container: #{e.inspect}\n#{e.backtrace.join("\n")}")
+          cloud_error("_create_container: Failed to create container: #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
     end
 
-    def set_stemcell_container_acl_to_public(storage_account_name)
-      @logger.info("set_stemcell_container_acl_to_public(#{storage_account_name})")
+    private
+
+    def _set_stemcell_container_acl_to_public(storage_account_name)
+      @logger.info("_set_stemcell_container_acl_to_public(#{storage_account_name})")
       @logger.debug("Set the public access level to '#{PUBLIC_ACCESS_LEVEL_BLOB}' for the container '#{STEMCELL_CONTAINER}' in the storage account '#{storage_account_name}'")
-      initialize_blob_client(storage_account_name) do
+      _initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options
           @blob_service_client.set_container_acl(STEMCELL_CONTAINER, PUBLIC_ACCESS_LEVEL_BLOB, options)
         rescue StandardError => e
-          cloud_error("set_stemcell_container_acl_to_public: Failed to set the public access level to '#{PUBLIC_ACCESS_LEVEL_BLOB}': #{e.inspect}\n#{e.backtrace.join("\n")}")
+          cloud_error("_set_stemcell_container_acl_to_public: Failed to set the public access level to '#{PUBLIC_ACCESS_LEVEL_BLOB}': #{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
     end
 
-    def compute_chunks(file_size, max_chunk_size)
+    def _upload_page_blob(container_name, blob_name, file_path, thread_num, metadata)
+      @logger.info("_upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num}, #{metadata})")
+      start_time = Time.new
+      file_size = File.lstat(file_path).size
+      options = {
+        timeout: TIMEOUT_FOR_BLOB_OPERATIONS,
+        metadata: encode_metadata(metadata)
+      }
+      options = merge_storage_common_options(options)
+      @logger.debug("_upload_page_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{file_size}, #{options})")
+      @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
+      begin
+        _upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
+      rescue StandardError => e
+        options = merge_storage_common_options
+        @logger.debug("_upload_page_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
+        @blob_service_client.delete_blob(container_name, blob_name, options)
+        raise e
+      end
+      duration = Time.new - start_time
+      @logger.info("Duration: #{duration.inspect}")
+    end
+
+    def _initialize_blob_client(storage_account_name, disable_debug_mode = false)
+      @blob_client_mutex.synchronize do
+        unless @storage_accounts.key?(storage_account_name)
+          storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
+          cloud_error("_initialize_blob_client: Storage account '#{storage_account_name}' not found") if storage_account.nil?
+          keys = @azure_client.get_storage_account_keys_by_name(storage_account_name)
+          storage_account[:key] = keys[0]
+          @storage_accounts[storage_account_name] = storage_account
+        end
+        @azure_storage_client = initialize_azure_storage_client(@storage_accounts[storage_account_name], @azure_config)
+        @blob_service_client = @azure_storage_client.blob_client
+        @blob_service_client.with_filter(CustomizedRetryPolicyFilter.new)
+        @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_config) && !disable_debug_mode
+        yield
+      end
+    end
+
+    def _compute_chunks(file_size, max_chunk_size)
       chunks = ChunkList.new
       offset = 0
       while offset < file_size
@@ -336,8 +362,8 @@ module Bosh::AzureCloud
       chunks
     end
 
-    def upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
-      chunks = compute_chunks(file_size, MAX_CHUNK_SIZE)
+    def _upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
+      chunks = _compute_chunks(file_size, MAX_CHUNK_SIZE)
       options = {
         timeout: TIMEOUT_FOR_BLOB_OPERATIONS
       }
@@ -348,19 +374,18 @@ module Bosh::AzureCloud
             while chunk = chunks.shift
               content = chunk.read(file)
               if content == @empty_chunk_content
-                @logger.debug("upload_page_blob_in_threads: Thread #{id}: Skip empty chunk: #{chunk}")
+                @logger.debug("_upload_page_blob_in_threads: Thread #{id}: Skip empty chunk: #{chunk}")
                 next
               end
 
               retry_count = 0
-
               begin
                 options = merge_storage_common_options(options)
                 # Do not log content because it is too large.
-                @logger.debug("upload_page_blob_in_threads: Thread #{id}, retry: #{retry_count}, chunk id: #{chunk.id}: Calling put_blob_pages(#{container_name}, #{blob_name}, #{chunk.start_range}, #{chunk.end_range}, [CONTENT], #{options})")
+                @logger.debug("_upload_page_blob_in_threads: Thread #{id}, retry: #{retry_count}, chunk id: #{chunk.id}: Calling put_blob_pages(#{container_name}, #{blob_name}, #{chunk.start_range}, #{chunk.end_range}, [CONTENT], #{options})")
                 @blob_service_client.put_blob_pages(container_name, blob_name, chunk.start_range, chunk.end_range, content, options)
               rescue StandardError => e
-                @logger.warn("upload_page_blob_in_threads: Thread #{id}: Failed to put_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+                @logger.warn("_upload_page_blob_in_threads: Thread #{id}: Failed to put_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
                 retry_count += 1
                 if retry_count > AZURE_MAX_RETRY_COUNT
                   # keep other threads from uploading other parts
@@ -374,49 +399,10 @@ module Bosh::AzureCloud
           end
         end
         thread.abort_on_exception = true
+        thread.report_on_exception = false
         threads << thread
       end
       threads.each(&:join)
-    end
-
-    def upload_page_blob(container_name, blob_name, file_path, thread_num, metadata)
-      @logger.info("upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num}, #{metadata})")
-      start_time = Time.new
-      file_size = File.lstat(file_path).size
-      options = {
-        timeout: TIMEOUT_FOR_BLOB_OPERATIONS,
-        metadata: encode_metadata(metadata)
-      }
-      options = merge_storage_common_options(options)
-      @logger.debug("upload_page_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{file_size}, #{options})")
-      @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
-      begin
-        upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
-      rescue StandardError => e
-        options = merge_storage_common_options
-        @logger.debug("upload_page_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
-        @blob_service_client.delete_blob(container_name, blob_name, options)
-        raise e
-      end
-      duration = Time.new - start_time
-      @logger.info("Duration: #{duration.inspect}")
-    end
-
-    def initialize_blob_client(storage_account_name, disable_debug_mode = false)
-      @blob_client_mutex.synchronize do
-        unless @storage_accounts.key?(storage_account_name)
-          storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
-          cloud_error("initialize_blob_client: Storage account '#{storage_account_name}' not found") if storage_account.nil?
-          keys = @azure_client.get_storage_account_keys_by_name(storage_account_name)
-          storage_account[:key] = keys[0]
-          @storage_accounts[storage_account_name] = storage_account
-        end
-        @azure_storage_client = initialize_azure_storage_client(@storage_accounts[storage_account_name], @azure_config)
-        @blob_service_client = @azure_storage_client.blob_client
-        @blob_service_client.with_filter(CustomizedRetryPolicyFilter.new)
-        @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_config) && !disable_debug_mode
-        yield
-      end
     end
   end
 

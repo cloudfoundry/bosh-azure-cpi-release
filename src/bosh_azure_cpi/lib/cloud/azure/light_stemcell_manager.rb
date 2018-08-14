@@ -18,13 +18,13 @@ module Bosh::AzureCloud
 
     def delete_stemcell(name)
       @logger.info("delete_stemcell(#{name})")
-      metadata = get_metadata(name)
+      metadata = _get_metadata(name)
       @blob_manager.delete_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") unless metadata.nil?
     end
 
     def create_stemcell(stemcell_properties)
       @logger.info("create_stemcell(#{stemcell_properties})")
-      cloud_error("Cannot find the light stemcell (#{stemcell_properties['image']}) in the location '#{@default_location}'") unless platform_image_exists?(@default_location, stemcell_properties)
+      cloud_error("Cannot find the light stemcell (#{stemcell_properties['image']}) in the location '#{@default_location}'") unless _platform_image_exists?(@default_location, stemcell_properties)
 
       stemcell_name = "#{LIGHT_STEMCELL_PREFIX}-#{SecureRandom.uuid}"
       metadata = stemcell_properties.dup
@@ -35,22 +35,22 @@ module Bosh::AzureCloud
 
     def has_stemcell?(location, name)
       @logger.info("has_stemcell?(#{location}, #{name})")
-      metadata = get_metadata(name)
+      metadata = _get_metadata(name)
       return false if metadata.nil?
 
-      platform_image_exists?(location, metadata)
+      _platform_image_exists?(location, metadata)
     end
 
     def get_stemcell_info(name)
       @logger.info("get_stemcell_info(#{name})")
-      metadata = get_metadata(name)
+      metadata = _get_metadata(name)
       cloud_error("The light stemcell '#{name}' does not exist in the storage account '#{@default_storage_account_name}'") if metadata.nil?
       StemcellInfo.new('', metadata)
     end
 
     private
 
-    def get_metadata(name)
+    def _get_metadata(name)
       metadata = @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
       return nil if metadata.nil?
 
@@ -58,7 +58,7 @@ module Bosh::AzureCloud
       metadata
     end
 
-    def platform_image_exists?(location, stemcell_properties)
+    def _platform_image_exists?(location, stemcell_properties)
       stemcell_info = StemcellInfo.new('', stemcell_properties)
       @logger.debug("list_platform_image_versions(#{location}, #{stemcell_info.image['publisher']}, #{stemcell_info.image['offer']}, #{stemcell_info.image['sku']})")
       versions = @azure_client.list_platform_image_versions(location, stemcell_info.image['publisher'], stemcell_info.image['offer'], stemcell_info.image['sku'])

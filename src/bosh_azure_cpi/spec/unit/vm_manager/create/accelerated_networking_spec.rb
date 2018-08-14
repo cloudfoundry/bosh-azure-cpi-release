@@ -11,7 +11,7 @@ describe Bosh::AzureCloud::VMManager do
   #   - default_security_group
   describe '#create' do
     before do
-      allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
+      allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
     end
 
     context 'when VM is created' do

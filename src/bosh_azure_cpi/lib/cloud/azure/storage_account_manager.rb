@@ -225,7 +225,7 @@ module Bosh::AzureCloud
       @logger.debug("Can't find a storage account with the tags '#{STEMCELL_STORAGE_ACCOUNT_TAGS}'")
       @logger.debug("Will look for the old storage account (with the table '#{STEMCELL_TABLE}') which stores all uploaded stemcells")
       storage_account = storage_accounts.find do |s|
-        s[:sku_tier].casecmp('standard').zero? && has_stemcell_table?(s[:name])
+        s[:sku_tier].casecmp('standard').zero? && _has_stemcell_table?(s[:name])
       end
 
       unless storage_account.nil?
@@ -257,7 +257,7 @@ module Bosh::AzureCloud
     private
 
     # If the storage account has the table #{STEMCELL_TABLE}, then it stores all uploaded stemcells
-    def has_stemcell_table?(name)
+    def _has_stemcell_table?(name)
       storage_account = @azure_client.get_storage_account_by_name(name)
       storage_account[:key] = @azure_client.get_storage_account_keys_by_name(name)[0]
       azure_storage_client = initialize_azure_storage_client(storage_account, @azure_config)
@@ -266,11 +266,11 @@ module Bosh::AzureCloud
       table_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_config)
       begin
         options = merge_storage_common_options
-        @logger.info("has_stemcell_table?: Calling get_table(#{STEMCELL_TABLE}, #{options})")
+        @logger.info("_has_stemcell_table?: Calling get_table(#{STEMCELL_TABLE}, #{options})")
         table_service_client.get_table(STEMCELL_TABLE, options)
         true
       rescue StandardError => e
-        cloud_error("has_stemcell_table?: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?('(404)')
+        cloud_error("_has_stemcell_table?: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?('(404)')
         false
       end
     end
