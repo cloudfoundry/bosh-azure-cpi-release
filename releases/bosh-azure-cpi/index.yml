@@ -73,6 +73,8 @@ builds:
     version: "21"
   edd1f234-ef0d-4dcd-a9fb-b6c4aaf495bc:
     version: "20"
+  f2cc61e4-eee1-40a5-780f-a9789112e3e6:
+    version: 35.4.0
   fd2e5357-23f2-471b-b034-4464dd68dffc:
     version: "11"
 format-version: "2"
