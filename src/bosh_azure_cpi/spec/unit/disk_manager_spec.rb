@@ -192,36 +192,12 @@ describe Bosh::AzureCloud::DiskManager do
     end
   end
 
-  describe '#has_disk?' do
-    context 'when the disk exists' do
-      before do
-        allow(blob_manager).to receive(:get_blob_properties)
-          .and_return({})
-      end
-
-      it 'should return true' do
-        expect(disk_manager.has_disk?(storage_account_name, disk_name)).to be(true)
-      end
-    end
-
-    context 'when the disk does not exist' do
-      before do
-        allow(blob_manager).to receive(:get_blob_properties)
-          .and_return(nil)
-      end
-
-      it 'should return false' do
-        expect(disk_manager.has_disk?(storage_account_name, disk_name)).to be(false)
-      end
-    end
-  end
-
   describe '#has_data_disk?' do
+    before do
+      allow(blob_manager).to receive(:get_blob_properties)
+        .and_return({})
+    end
     it 'should delete the disk' do
-      expect(disk_manager).to receive(:has_disk?)
-        .with(storage_account_name, disk_name)
-        .and_return(true)
-
       expect(disk_manager.has_data_disk?(disk_id)).to be(true)
     end
   end
@@ -234,6 +210,7 @@ describe Bosh::AzureCloud::DiskManager do
       end
 
       it 'should return false' do
+        expect(disk_manager.has_data_disk?(disk_id)).to be(false)
         expect(disk_manager.is_migrated?(disk_id)).to be(false)
       end
     end

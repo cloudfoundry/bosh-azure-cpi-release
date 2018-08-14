@@ -1658,13 +1658,13 @@ module Bosh::AzureCloud
 
         uri = URI(response['Location'])
         api_version = get_api_version(@azure_config, AZURE_RESOURCE_PROVIDER_STORAGE)
-        request = Net::HTTP::Get.new(uri.request_uri)
-        request.add_field('x-ms-version', api_version)
+        check_status_request = Net::HTTP::Get.new(uri.request_uri)
+        check_status_request.add_field('x-ms-version', api_version)
         loop do
           retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
           sleep(retry_after)
           @logger.debug("create_storage_account - Checking the status of the asynchronous operation using '#{uri}' after '#{retry_after}' seconds.")
-          response = http_get_response(uri, request, retry_after)
+          response = http_get_response(uri, check_status_request, retry_after)
 
           status_code = response.code.to_i
           if status_code == HTTP_CODE_OK
@@ -2226,7 +2226,6 @@ module Bosh::AzureCloud
         raise AzureNotFoundError, error if response.code.to_i == HTTP_CODE_NOTFOUND
         raise AzureError, error
       end
-
       retry_after = options[:retry_after]
       operation_status_link.gsub!(' ', '%20')
       uri = URI(operation_status_link)
@@ -2235,7 +2234,6 @@ module Bosh::AzureCloud
       request = Net::HTTP::Get.new(uri.request_uri)
       uri.query = URI.encode_www_form(params)
       request.add_field('x-ms-version', options[:api_version])
-
       loop do
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         sleep(retry_after)

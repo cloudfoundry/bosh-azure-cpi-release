@@ -313,6 +313,30 @@ describe Bosh::AzureCloud::StemcellManager do
           ).to be(true)
         end
       end
+
+      context 'when write to meta store failed' do
+        let(:entity_create) do
+          {
+            PartitionKey: stemcell_name,
+            RowKey: storage_account_name,
+            Status: 'pending'
+          }
+        end
+
+        before do
+          allow(table_manager).to receive(:query_entities)
+            .and_return([])
+          allow(table_manager).to receive(:insert_entity)
+            .with('stemcells', entity_create)
+            .and_raise('insert into table failed.')
+        end
+
+        it 'should get one exception' do
+          expect do
+            stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+          end.to raise_error /insert into table failed./
+        end
+      end
     end
   end
 

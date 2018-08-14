@@ -146,6 +146,34 @@ describe Bosh::AzureCloud::AzureClient do
         end.to raise_error /check_completion - http code: 404/
       end
 
+      it 'should raise error when internal error happens' do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
+          }.to_json,
+          headers: {}
+        )
+        stub_request(:post, vm_restart_uri).to_return(
+          status: 202,
+          body: '{}',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
+        stub_request(:get, operation_status_link).to_return(
+          status: 200,
+          body: '{"status":"Failed"}',
+          headers: {
+            'Retry-After' => '1'
+          }
+        )
+        expect do
+          azure_client.restart_virtual_machine(resource_group, vm_name)
+        end.to raise_error /check_completion - http code: 200/
+      end
+
       it 'should raise an error if restart operation failed' do
         stub_request(:post, token_uri).to_return(
           status: 200,

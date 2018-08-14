@@ -458,5 +458,40 @@ describe Bosh::AzureCloud::AzureClient do
         end.not_to raise_error
       end
     end
+    context 'when retry reach max number.' do
+      it 'should raise error' do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
+          }.to_json,
+          headers: {}
+        )
+        stub_request(:delete, disk_uri).to_return(
+          status: 202,
+          body: '{}',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
+        eleven_failed = []
+        11.times do
+          eleven_failed.push(
+            status: 200,
+            body: '{"status":"Failed"}',
+            headers: {
+              'Retry-After' => '1'
+            }
+          )
+        end
+        stub_request(:get, operation_status_link).to_return(
+          eleven_failed
+        )
+        expect do
+          azure_client.delete_managed_disk(resource_group, disk_name)
+        end.to raise_error /check_completion - http code: 200/
+      end
+    end
   end
 end

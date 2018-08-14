@@ -87,6 +87,90 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
+    context 'when network/ephemeral_disk specified' do
+      let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+      let(:instance_id_string) { 'fake-instance-id' }
+      let(:vm_params) do
+        {
+          name: 'fake-vm-name',
+          ephemeral_disk: {}
+        }
+      end
+
+      let(:storage_account_name) { MOCK_DEFAULT_STORAGE_ACCOUNT_NAME }
+      let(:storage_account) do
+        {
+          id: 'foo',
+          name: storage_account_name,
+          location: location,
+          provisioning_state: 'bar',
+          account_type: 'foo',
+          storage_blob_host: 'fake-blob-endpoint',
+          storage_table_host: 'fake-table-endpoint'
+        }
+      end
+      let(:resource_group_name) { 'fake-resource-group-name' }
+      let(:vm_properties) do
+        {
+          'instance_type' => 'fake-vm-size',
+          'resource_group_name' => resource_group_name
+        }
+      end
+
+      let(:vm_props) do
+        cloud.props_factory.parse_vm_props(
+          vm_properties
+        )
+      end
+      let(:networks_spec) do
+        {
+          'network_a' => {
+            'dns' => ['172.30.22.153', '172.30.22.154']
+          }
+        }
+      end
+      before do
+        allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
+          .with(vm_props, location)
+          .and_return(storage_account)
+        allow(stemcell_manager).to receive(:has_stemcell?)
+          .with(storage_account_name, stemcell_id)
+          .and_return(true)
+        allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
+          .with(azure_config, networks_spec)
+          .and_return(network_configurator)
+
+        allow(Bosh::AzureCloud::InstanceId).to receive(:create)
+          .with(default_resource_group_name, agent_id, storage_account_name)
+          .and_return(instance_id)
+        allow(instance_id).to receive(:to_s)
+          .and_return(instance_id_string)
+        allow(cloud.props_factory).to receive(:parse_vm_props)
+          .and_return(vm_props)
+      end
+
+      it 'should create the VM in the specified resource group' do
+        expect(Bosh::AzureCloud::InstanceId).to receive(:create)
+          .with(resource_group_name, agent_id, storage_account_name)
+          .and_return(instance_id)
+        expect(vm_manager).to receive(:create)
+          .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
+          .and_return(vm_params)
+        expect(registry_client).to receive(:update_settings)
+
+        expect(
+          cloud.create_vm(
+            agent_id,
+            stemcell_id,
+            vm_properties,
+            networks_spec,
+            disk_locality,
+            environment
+          )
+        ).to eq(instance_id_string)
+      end
+    end
+
     context 'when the location in the global configuration is different from the vnet location' do
       let(:cloud_properties_with_location) { mock_cloud_properties_merge('azure' => { 'location' => "location-other-than-#{location}" }) }
       let(:cloud_with_location) { mock_cloud(cloud_properties_with_location) }

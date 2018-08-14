@@ -167,16 +167,15 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
   end
 
-  describe '#has_disk?' do
+  describe '#has_data_disk?' do
     context 'when the disk exists' do
       before do
         allow(azure_client).to receive(:get_managed_disk_by_name)
           .with(resource_group_name, disk_name)
           .and_return({})
       end
-
       it 'should return true' do
-        expect(disk_manager2.has_disk?(resource_group_name, disk_name)).to be(true)
+        expect(disk_manager2.has_data_disk?(disk_id)).to be(true)
       end
     end
 
@@ -186,44 +185,19 @@ describe Bosh::AzureCloud::DiskManager2 do
           .with(resource_group_name, disk_name)
           .and_return(nil)
       end
-
       it 'should return false' do
-        expect(disk_manager2.has_disk?(resource_group_name, disk_name)).to be(false)
+        expect(disk_manager2.has_data_disk?(disk_id)).to be(false)
       end
     end
   end
 
-  describe '#has_data_disk?' do
-    it 'should check the disk' do
-      expect(disk_manager2).to receive(:has_disk?)
-        .with(resource_group_name, disk_name)
-        .and_return(true)
-
-      expect(disk_manager2.has_data_disk?(disk_id)).to be(true)
-    end
-  end
-
-  describe '#get_disk' do
-    let(:disk) do
-      { name: 'fake-name' }
-    end
-    before do
-      allow(azure_client).to receive(:get_managed_disk_by_name)
-        .with(resource_group_name, disk_name)
-        .and_return(disk)
-    end
-
-    it 'should get the disk' do
-      expect(disk_manager2.get_disk(resource_group_name, disk_name)).to be(disk)
-    end
-  end
-
   describe '#get_data_disk' do
+    let(:mock_disk) { {} }
     it 'should get the disk' do
-      expect(disk_manager2).to receive(:get_disk)
-        .with(resource_group_name, disk_name)
-
       expect do
+        expect(azure_client).to receive(:get_managed_disk_by_name)
+          .with(resource_group_name, disk_name)
+          .and_return(mock_disk)
         disk_manager2.get_data_disk(disk_id)
       end.not_to raise_error
     end

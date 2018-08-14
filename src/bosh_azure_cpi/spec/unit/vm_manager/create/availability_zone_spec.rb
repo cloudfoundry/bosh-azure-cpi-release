@@ -13,7 +13,7 @@ describe Bosh::AzureCloud::VMManager do
     context 'when VM is created' do
       before do
         allow(azure_client).to receive(:create_virtual_machine)
-        allow(vm_manager).to receive(:get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
       end
 
       # Availability Zones

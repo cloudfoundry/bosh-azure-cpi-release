@@ -31,7 +31,7 @@ module Bosh::AzureCloud
         cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
       end
 
-      check_resource_group(resource_group_name, location)
+      _check_resource_group(resource_group_name, location)
 
       # tasks to prepare resources for VM
       #   * prepare stemcell
@@ -42,32 +42,32 @@ module Bosh::AzureCloud
 
       tasks.push(
         task_get_stemcell_info = Concurrent::Future.execute do
-          get_stemcell_info(stemcell_id, vm_props, location)
+          _get_stemcell_info(stemcell_id, vm_props, location)
         end
       )
 
       # When availability_zone is specified, VM won't be in any availability set;
       # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
-      availability_set_name = vm_props.availability_zone.nil? ? get_availability_set_name(vm_props, env) : nil
+      availability_set_name = vm_props.availability_zone.nil? ? _get_availability_set_name(vm_props, env) : nil
 
       primary_nic_tags = AZURE_TAGS.dup
       # Store the availability set name in the tags of the NIC
       primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
       tasks.push(
         task_create_network_interfaces = Concurrent::Future.execute do
-          create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
+          _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
         end
       )
 
       tasks.push(
         task_get_or_create_availability_set = Concurrent::Future.execute do
-          availability_set = get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
+          availability_set = _get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
         end
       )
 
       tasks.push(
         task_get_diagnostics_storage_account = Concurrent::Future.execute do
-          diagnostics_storage_account = get_diagnostics_storage_account(location)
+          diagnostics_storage_account = _get_diagnostics_storage_account(location)
         end
       )
 
@@ -86,7 +86,7 @@ module Bosh::AzureCloud
       vm_params = {
         name: vm_name,
         location: location,
-        tags: get_tags(vm_props),
+        tags: _get_tags(vm_props),
         vm_size: vm_props.instance_type,
         managed: @use_managed_disks
       }
@@ -145,7 +145,7 @@ module Bosh::AzureCloud
 
       vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host] unless diagnostics_storage_account.nil?
 
-      create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
+      _create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
 
       vm_params
     rescue StandardError => e
@@ -186,7 +186,7 @@ module Bosh::AzureCloud
           else
             # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
             # CPI need to cleanup these NICs.
-            delete_possible_network_interfaces(resource_group_name, vm_name)
+            _delete_possible_network_interfaces(resource_group_name, vm_name)
           end
 
           # Delete the dynamic public IP
@@ -249,7 +249,7 @@ module Bosh::AzureCloud
       unless availability_set_name.nil?
         tasks.push(
           Concurrent::Future.execute do
-            delete_empty_availability_set(resource_group_name, availability_set_name)
+            _delete_empty_availability_set(resource_group_name, availability_set_name)
           end
         )
       end
@@ -257,7 +257,7 @@ module Bosh::AzureCloud
       # Delete network interfaces and dynamic public IP
       tasks.push(
         Concurrent::Future.execute do
-          delete_possible_network_interfaces(resource_group_name, vm_name)
+          _delete_possible_network_interfaces(resource_group_name, vm_name)
           # Delete the dynamic public IP
           dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
           @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
@@ -373,7 +373,7 @@ module Bosh::AzureCloud
 
     private
 
-    def get_stemcell_info(stemcell_id, vm_props, location)
+    def _get_stemcell_info(stemcell_id, vm_props, location)
       stemcell_info = nil
       if @use_managed_disks
         storage_account_type = vm_props.storage_account_type
@@ -406,7 +406,7 @@ module Bosh::AzureCloud
       stemcell_info
     end
 
-    def get_diagnostics_storage_account(location)
+    def _get_diagnostics_storage_account(location)
       @azure_config.enable_vm_boot_diagnostics && (@azure_config.environment != ENVIRONMENT_AZURESTACK) ? @storage_account_manager.get_or_create_diagnostics_storage_account(location) : nil
     end
 
@@ -425,13 +425,13 @@ module Bosh::AzureCloud
       Base64.strict_encode64(JSON.dump(user_data))
     end
 
-    def get_network_subnet(network)
+    def _get_network_subnet(network)
       subnet = @azure_client.get_network_subnet_by_name(network.resource_group_name, network.virtual_network_name, network.subnet_name)
       cloud_error("Cannot find the subnet '#{network.virtual_network_name}/#{network.subnet_name}' in the resource group '#{network.resource_group_name}'") if subnet.nil?
       subnet
     end
 
-    def get_network_security_group(vm_props, network)
+    def _get_network_security_group(vm_props, network)
       network_security_group = nil
       # Network security group name can be specified in vm_types or vm_extensions, networks and global configuration (ordered by priority)
       network_security_group_name = vm_props.security_group.nil? ? network.security_group : vm_props.security_group
@@ -451,7 +451,7 @@ module Bosh::AzureCloud
       network_security_group
     end
 
-    def get_application_security_groups(vm_props, network)
+    def _get_application_security_groups(vm_props, network)
       application_security_groups = []
       # Application security group name can be specified in vm_types or vm_extensions and networks (ordered by priority)
       application_security_group_names = vm_props.application_security_groups.nil? ? network.application_security_groups : vm_props.application_security_groups
@@ -471,21 +471,21 @@ module Bosh::AzureCloud
       application_security_groups
     end
 
-    def get_ip_forwarding(vm_props, network)
+    def _get_ip_forwarding(vm_props, network)
       ip_forwarding = false
       # ip_forwarding can be specified in vm_types or vm_extensions and networks (ordered by priority)
       ip_forwarding = vm_props.ip_forwarding.nil? ? network.ip_forwarding : vm_props.ip_forwarding
       ip_forwarding
     end
 
-    def get_accelerated_networking(vm_props, network)
+    def _get_accelerated_networking(vm_props, network)
       accelerated_networking = false
       # accelerated_networking can be specified in vm_types or vm_extensions and networks (ordered by priority)
       accelerated_networking = vm_props.accelerated_networking.nil? ? network.accelerated_networking : vm_props.accelerated_networking
       accelerated_networking
     end
 
-    def get_public_ip(vip_network)
+    def _get_public_ip(vip_network)
       public_ip = nil
       unless vip_network.nil?
         resource_group_name = vip_network.resource_group_name
@@ -495,7 +495,7 @@ module Bosh::AzureCloud
       public_ip
     end
 
-    def get_load_balancer(vm_props)
+    def _get_load_balancer(vm_props)
       load_balancer = nil
       unless vm_props.load_balancer.nil?
         load_balancer_name = vm_props.load_balancer
@@ -505,7 +505,7 @@ module Bosh::AzureCloud
       load_balancer
     end
 
-    def get_application_gateway(vm_props)
+    def _get_application_gateway(vm_props)
       application_gateway = nil
       unless vm_props.application_gateway.nil?
         application_gateway_name = vm_props.application_gateway
@@ -515,8 +515,8 @@ module Bosh::AzureCloud
       application_gateway
     end
 
-    def get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
-      public_ip = get_public_ip(network_configurator.vip_network)
+    def _get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
+      public_ip = _get_public_ip(network_configurator.vip_network)
       if public_ip.nil? && vm_props.assign_dynamic_public_ip == true
         # create dynamic public ip
         idle_timeout_in_minutes = @azure_config.pip_idle_timeout_in_minutes
@@ -534,7 +534,7 @@ module Bosh::AzureCloud
       public_ip
     end
 
-    def create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
+    def _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
       network_interfaces = []
 
       # Tasks to prepare before creating NICs:
@@ -545,17 +545,17 @@ module Bosh::AzureCloud
 
       tasks_preparing.push(
         task_get_or_create_public_ip = Concurrent::Future.execute do
-          get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
+          _get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
         end
       )
       tasks_preparing.push(
         task_get_load_balancer = Concurrent::Future.execute do
-          get_load_balancer(vm_props)
+          _get_load_balancer(vm_props)
         end
       )
       tasks_preparing.push(
         task_get_application_gateway = Concurrent::Future.execute do
-          get_application_gateway(vm_props)
+          _get_application_gateway(vm_props)
         end
       )
 
@@ -571,10 +571,10 @@ module Bosh::AzureCloud
 
       networks = network_configurator.networks
       networks.each_with_index do |network, index|
-        network_security_group = get_network_security_group(vm_props, network)
-        application_security_groups = get_application_security_groups(vm_props, network)
-        ip_forwarding = get_ip_forwarding(vm_props, network)
-        accelerated_networking = get_accelerated_networking(vm_props, network)
+        network_security_group = _get_network_security_group(vm_props, network)
+        application_security_groups = _get_application_security_groups(vm_props, network)
+        ip_forwarding = _get_ip_forwarding(vm_props, network)
+        accelerated_networking = _get_accelerated_networking(vm_props, network)
         nic_name = "#{vm_name}-#{index}"
         nic_params = {
           name: nic_name,
@@ -586,7 +586,7 @@ module Bosh::AzureCloud
           enable_ip_forwarding: ip_forwarding,
           enable_accelerated_networking: accelerated_networking
         }
-        nic_params[:subnet] = get_network_subnet(network)
+        nic_params[:subnet] = _get_network_subnet(network)
         if index.zero?
           nic_params[:public_ip] = public_ip
           nic_params[:tags] = primary_nic_tags
@@ -610,7 +610,7 @@ module Bosh::AzureCloud
       network_interfaces = tasks_creating.map(&:value!)
     end
 
-    def delete_possible_network_interfaces(resource_group_name, vm_name)
+    def _delete_possible_network_interfaces(resource_group_name, vm_name)
       network_interfaces = @azure_client.list_network_interfaces_by_keyword(resource_group_name, vm_name)
       tasks = []
       network_interfaces.each do |network_interface|
@@ -625,7 +625,7 @@ module Bosh::AzureCloud
       tasks.map(&:wait!)
     end
 
-    def get_availability_set_name(vm_props, env)
+    def _get_availability_set_name(vm_props, env)
       availability_set_name = vm_props.availability_set
       if availability_set_name.nil?
         unless env.nil? || env['bosh'].nil? || env['bosh']['group'].nil?
@@ -646,13 +646,13 @@ module Bosh::AzureCloud
       availability_set_name
     end
 
-    def get_tags(vm_props)
+    def _get_tags(vm_props)
       tags = AZURE_TAGS.dup
       custom_tags = vm_props.tags
       tags.merge!(custom_tags)
     end
 
-    def get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
+    def _get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
       return nil if availability_set_name.nil?
 
       availability_set_params = {
@@ -692,14 +692,14 @@ module Bosh::AzureCloud
       availability_set
     end
 
-    def delete_empty_availability_set(resource_group_name, availability_set_name)
+    def _delete_empty_availability_set(resource_group_name, availability_set_name)
       flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX | File::LOCK_NB) do
         availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
         @azure_client.delete_availability_set(resource_group_name, availability_set_name) if availability_set && availability_set[:virtual_machines].empty?
       end
     end
 
-    def create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
+    def _create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
       resource_group_name = instance_id.resource_group_name
       vm_name = instance_id.vm_name
       max_retries = 2
@@ -737,7 +737,7 @@ module Bosh::AzureCloud
               end
 
               # Delete the empty availability set
-              delete_empty_availability_set(resource_group_name, availability_set[:name])
+              _delete_empty_availability_set(resource_group_name, availability_set[:name])
             else
               @azure_client.delete_virtual_machine(resource_group_name, vm_name)
             end
@@ -780,7 +780,7 @@ module Bosh::AzureCloud
       end
     end
 
-    def check_resource_group(resource_group_name, location)
+    def _check_resource_group(resource_group_name, location)
       resource_group = @azure_client.get_resource_group(resource_group_name)
       return true unless resource_group.nil?
       # If resource group does not exist, create it

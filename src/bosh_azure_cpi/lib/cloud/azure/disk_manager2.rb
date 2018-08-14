@@ -70,7 +70,7 @@ module Bosh::AzureCloud
       @logger.info("delete_disk(#{resource_group_name}, #{disk_name})")
       retried = false
       begin
-        @azure_client.delete_managed_disk(resource_group_name, disk_name) if has_disk?(resource_group_name, disk_name)
+        @azure_client.delete_managed_disk(resource_group_name, disk_name) if _has_disk?(resource_group_name, disk_name)
       rescue Bosh::AzureCloud::AzureConflictError => e
         # Workaround: Do one retry for AzureConflictError, and give up if it still fails.
         #             After Managed Disks add "retry-after" in the response header,
@@ -92,29 +92,18 @@ module Bosh::AzureCloud
       delete_disk(resource_group_name, disk_name)
     end
 
-    def has_disk?(resource_group_name, disk_name)
-      @logger.info("has_disk?(#{resource_group_name}, #{disk_name})")
-      disk = get_disk(resource_group_name, disk_name)
-      !disk.nil?
-    end
-
     def has_data_disk?(disk_id)
       @logger.info("has_data_disk?(#{disk_id})")
       resource_group_name = disk_id.resource_group_name
       disk_name = disk_id.disk_name
-      has_disk?(resource_group_name, disk_name)
-    end
-
-    def get_disk(resource_group_name, disk_name)
-      @logger.info("get_disk(#{resource_group_name}, #{disk_name})")
-      disk = @azure_client.get_managed_disk_by_name(resource_group_name, disk_name)
+      _has_disk?(resource_group_name, disk_name)
     end
 
     def get_data_disk(disk_id)
       @logger.info("get_data_disk(#{disk_id})")
       resource_group_name = disk_id.resource_group_name
       disk_name = disk_id.disk_name
-      get_disk(resource_group_name, disk_name)
+      _get_disk(resource_group_name, disk_name)
     end
 
     def snapshot_disk(snapshot_id, disk_name, metadata)
@@ -243,6 +232,19 @@ module Bosh::AzureCloud
         error_message += "    'az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{disk[:account_type]} --zone #{zone} --name #{disk_name} --source #{snapshot_name}'\n"
         raise Bosh::Clouds::CloudError, error_message
       end
+    end
+
+    private
+
+    def _get_disk(resource_group_name, disk_name)
+      @logger.info("_get_disk(#{resource_group_name}, #{disk_name})")
+      disk = @azure_client.get_managed_disk_by_name(resource_group_name, disk_name)
+    end
+
+    def _has_disk?(resource_group_name, disk_name)
+      @logger.info("_has_disk?(#{resource_group_name}, #{disk_name})")
+      disk = _get_disk(resource_group_name, disk_name)
+      !disk.nil?
     end
   end
 end

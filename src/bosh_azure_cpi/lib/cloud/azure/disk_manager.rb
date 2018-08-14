@@ -15,7 +15,7 @@ module Bosh::AzureCloud
 
     def delete_disk(storage_account_name, disk_name)
       @logger.info("delete_disk(#{storage_account_name}, #{disk_name})")
-      @blob_manager.delete_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd") if has_disk?(storage_account_name, disk_name)
+      @blob_manager.delete_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd") if _has_disk?(storage_account_name, disk_name)
     end
 
     def delete_data_disk(disk_id)
@@ -41,14 +41,14 @@ module Bosh::AzureCloud
       @logger.info("snapshot_disk(#{storage_account_name}, #{disk_name}, #{metadata})")
       snapshot_time = @blob_manager.snapshot_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", metadata)
 
-      generate_snapshot_name(disk_name, snapshot_time)
+      _generate_snapshot_name(disk_name, snapshot_time)
     end
 
     def delete_snapshot(snapshot_id)
       @logger.info("delete_snapshot(#{snapshot_id})")
       storage_account_name = snapshot_id.storage_account_name()
       snapshot_name = snapshot_id.disk_name
-      disk_name, snapshot_time = parse_snapshot_name(snapshot_name)
+      disk_name, snapshot_time = _parse_snapshot_name(snapshot_name)
       @blob_manager.delete_blob_snapshot(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", snapshot_time)
     end
 
@@ -67,24 +67,18 @@ module Bosh::AzureCloud
       @blob_manager.create_empty_vhd_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", size)
     end
 
-    def has_disk?(storage_account_name, disk_name)
-      @logger.info("has_disk?(#{storage_account_name}, #{disk_name})")
-      blob_properties = @blob_manager.get_blob_properties(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
-      !blob_properties.nil?
-    end
-
     def has_data_disk?(disk_id)
       @logger.info("has_data_disk?(#{disk_id})")
-      storage_account_name = disk_id.storage_account_name()
+      storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
-      has_disk?(storage_account_name, disk_name)
+      _has_disk?(storage_account_name, disk_name)
     end
 
     def is_migrated?(disk_id)
       @logger.info("is_migrated?(#{disk_id})")
-      storage_account_name = disk_id.storage_account_name()
+      storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
-      return false unless has_disk?(storage_account_name, disk_name)
+      return false unless _has_disk?(storage_account_name, disk_name)
       metadata = @blob_manager.get_blob_metadata(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
       (METADATA_FOR_MIGRATED_BLOB_DISK.to_a - metadata.to_a).empty?
     end
@@ -174,12 +168,18 @@ module Bosh::AzureCloud
 
     private
 
+    def _has_disk?(storage_account_name, disk_name)
+      @logger.info("_has_disk?(#{storage_account_name}, #{disk_name})")
+      blob_properties = @blob_manager.get_blob_properties(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
+      !blob_properties.nil?
+    end
+
     # bosh-data-STORAGEACCOUNTNAME-UUID-CACHING--SNAPSHOTTIME
-    def generate_snapshot_name(disk_name, snapshot_time)
+    def _generate_snapshot_name(disk_name, snapshot_time)
       "#{disk_name}--#{snapshot_time}"
     end
 
-    def parse_snapshot_name(snapshot_name)
+    def _parse_snapshot_name(snapshot_name)
       ret = snapshot_name.match('^(.*)--(.*)$')
       cloud_error("Invalid snapshot id #{snapshot_name}") if ret.nil?
       [ret[1], ret[2]]

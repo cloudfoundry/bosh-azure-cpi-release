@@ -94,13 +94,13 @@ module Bosh::AzureCloud
       caching
     end
 
-    def _parse_storage_account_plain(disk_name)
-      if disk_name.start_with?(DATA_DISK_PREFIX)
-        ret = disk_name.match("^#{DATA_DISK_PREFIX}-([^-]*)-(.*)-([^-]*)$")
-        cloud_error("Invalid unmanaged data disk name #{disk_name}") if ret.nil?
+    def _parse_storage_account_plain(plain_id)
+      if plain_id.start_with?(DATA_DISK_PREFIX)
+        ret = plain_id.match("^#{DATA_DISK_PREFIX}-([^-]*)-(.*)-([^-]*)$")
+        cloud_error("Invalid unmanaged data disk name #{plain_id}") if ret.nil?
         ret[1]
       else
-        cloud_error("Invalid data disk name (plain) #{disk_name}")
+        cloud_error("Invalid data disk name (plain) #{plain_id}")
       end
     end
   end
