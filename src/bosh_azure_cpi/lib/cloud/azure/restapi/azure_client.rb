@@ -28,18 +28,55 @@ module Bosh::AzureCloud
     HTTP_CODE_OK                  = 200
     HTTP_CODE_CREATED             = 201
     HTTP_CODE_ACCEPTED            = 202
-    HTTP_CODE_NOCONTENT           = 204
-    HTTP_CODE_PARTIALCONTENT      = 206
-    HTTP_CODE_BADREQUEST          = 400
+    HTTP_CODE_NO_CONTENT          = 204
+    HTTP_CODE_BAD_REQUEST         = 400
     HTTP_CODE_UNAUTHORIZED        = 401
-    HTTP_CODE_FORBIDDEN           = 403
-    HTTP_CODE_NOTFOUND            = 404
+    HTTP_CODE_NOT_FOUND           = 404
+    HTTP_CODE_REQUEST_TIMEOUT     = 408
     HTTP_CODE_CONFLICT            = 409
-    HTTP_CODE_LENGTHREQUIRED      = 411
-    HTTP_CODE_PRECONDITIONFAILED  = 412
+    HTTP_CODE_TOO_MANY_REQUESTS   = 429
+    HTTP_CODE_INTERNAL_SERVER_ERROR           = 500
+    HTTP_CODE_NOT_IMPLEMENTED                 = 501
+    HTTP_CODE_BAD_GATEWAY                     = 502
+    HTTP_CODE_SERVICE_UNAVAILABLE             = 503
+    HTTP_CODE_GATEWAY_TIMEOUT                 = 504
+    HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED      = 505
+    HTTP_CODE_VARIANT_ALSO_NEGOTIATES         = 506
+    HTTP_CODE_INSUFFICIENT_STORAGE            = 507
+    HTTP_CODE_LOOP_DETECTED                   = 508
+    HTTP_CODE_NOT_EXTENDED                    = 510
+    HTTP_CODE_NETWORK_AUTHENTICATION_REQUIRED = 511
 
     # https://docs.microsoft.com/en-us/azure/architecture/best-practices/retry-service-specific#general-rest-and-retry-guidelines
-    AZURE_GENERAL_RETRY_ERROR_CODES      = [408, 429, 500, 502, 503, 504].freeze
+    AZURE_GENERAL_RETRYABLE_ERROR_CODES = [
+      HTTP_CODE_REQUEST_TIMEOUT,
+      HTTP_CODE_TOO_MANY_REQUESTS,
+      HTTP_CODE_INTERNAL_SERVER_ERROR,
+      HTTP_CODE_BAD_GATEWAY,
+      HTTP_CODE_SERVICE_UNAVAILABLE,
+      HTTP_CODE_GATEWAY_TIMEOUT
+    ].freeze
+    # https://docs.microsoft.com/en-us/azure/architecture/best-practices/retry-service-specific#azure-active-directory
+    AZURE_AD_TOKEN_RETRYABLE_ERROR_CODES = AZURE_GENERAL_RETRYABLE_ERROR_CODES + [
+      HTTP_CODE_NOT_IMPLEMENTED,
+      HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED,
+      HTTP_CODE_VARIANT_ALSO_NEGOTIATES,
+      HTTP_CODE_INSUFFICIENT_STORAGE,
+      HTTP_CODE_LOOP_DETECTED,
+      HTTP_CODE_NOT_EXTENDED,
+      HTTP_CODE_NETWORK_AUTHENTICATION_REQUIRED
+    ].freeze
+    # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token#retry-guidance
+    AZURE_MSI_TOKEN_RETRYABLE_ERROR_CODES = AZURE_GENERAL_RETRYABLE_ERROR_CODES + [
+      HTTP_CODE_NOT_FOUND,
+      HTTP_CODE_NOT_IMPLEMENTED,
+      HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED,
+      HTTP_CODE_VARIANT_ALSO_NEGOTIATES,
+      HTTP_CODE_INSUFFICIENT_STORAGE,
+      HTTP_CODE_LOOP_DETECTED,
+      HTTP_CODE_NOT_EXTENDED,
+      HTTP_CODE_NETWORK_AUTHENTICATION_REQUIRED
+    ].freeze
 
     REST_API_PROVIDER_COMPUTE            = 'Microsoft.Compute'
     REST_API_VIRTUAL_MACHINES            = 'virtualMachines'
@@ -2026,9 +2063,9 @@ module Bosh::AzureCloud
       body
     end
 
-    def http(uri)
+    def http(uri, use_ssl = true)
       http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true
+      http.use_ssl = true && use_ssl
       if @azure_config.environment == ENVIRONMENT_AZURESTACK
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
         http.ca_file = get_ca_cert_path if uri.host.include?(@azure_config.azure_stack.domain)
@@ -2040,56 +2077,105 @@ module Bosh::AzureCloud
       http
     end
 
-    # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service
     def get_token(force_refresh = false)
       if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.new) <= 0 || force_refresh
         @logger.info('get_token - trying to get/refresh Azure authentication token')
-        endpoint, api_version = get_azure_authentication_endpoint_and_api_version(@azure_config)
-        uri = URI(endpoint)
-        params = {
-          'api-version' => api_version
-        }
-        uri.query = URI.encode_www_form(params)
-        @logger.debug("get_token - authentication_endpoint: #{uri}")
-
-        request = Net::HTTP::Post.new(uri.request_uri)
-        request['Content-Type'] = 'application/x-www-form-urlencoded'
-        request = merge_http_common_headers(request)
-        @logger.debug('get_token - request.header:')
-        request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
-
-        client_id = @azure_config.client_id
-        request_body = {
-          'grant_type' => 'client_credentials',
-          'client_id'  => client_id,
-          'resource'   => get_token_resource(@azure_config),
-          'scope'      => 'user_impersonation'
-        }
-        if !@azure_config.client_secret.nil?
-          request_body['client_secret'] = @azure_config.client_secret
-        else
-          request_body['client_assertion_type'] = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
-          request_body['client_assertion']      = get_jwt_assertion(endpoint, client_id)
+        use_msi = @azure_config.enable_managed_service_identity
+        use_ssl = !use_msi
+        request, uri = use_msi ? request_from_managed_service_identity_endpoint : request_from_azure_active_directory_endpoint
+        retryable_error_codes = use_msi ? AZURE_MSI_TOKEN_RETRYABLE_ERROR_CODES : AZURE_AD_TOKEN_RETRYABLE_ERROR_CODES
+        retry_count = 0
+        max_retry_count = 5
+        delay = 0
+        max_delay = 60
+        while retry_count < max_retry_count
+          response = http_get_response_with_network_retry(http(uri, use_ssl), request)
+          message = get_http_common_headers(response)
+          @logger.debug("get_token - #{retry_count}: #{message}")
+          status_code = response.code.to_i
+          break unless retryable_error_codes.include?(status_code)
+          retry_count += 1
+          if retry_count >= max_retry_count
+            cloud_error("get_token - Failed to get token after #{retry_count} retries")
+          else
+            # perform exponential backoff with a cap.
+            # must increment retry_count before calculating delay.
+            # the base value of 2 is the "delta backoff" as specified in the guidance doc.
+            delay += 2**retry_count
+            delay = max_delay if delay > max_delay
+            @logger.debug("get_token - sleep #{delay} seconds before retrying")
+            sleep(delay)
+          end
         end
-        request.body = URI.encode_www_form(request_body)
-        @logger.debug("get_token - request body:\n#{redact_credentials_in_request_body(request_body)}")
 
-        response = http_get_response_with_network_retry(http(uri), request)
-
-        message = get_http_common_headers(response)
-        @logger.debug("get_token - #{message}")
-        if response.code.to_i == HTTP_CODE_OK
+        if status_code == HTTP_CODE_OK
           @token = JSON(response.body)
-        elsif response.code.to_i == HTTP_CODE_UNAUTHORIZED
-          raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Invalid tenant_id, client_id or client_secret/certificate. Error message: #{response.body}"
-        elsif response.code.to_i == HTTP_CODE_BADREQUEST
-          raise AzureError, "get_token - http code: #{response.code}. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret/certificate. Error message: #{response.body}"
+        elsif status_code == HTTP_CODE_UNAUTHORIZED
+          raise AzureError, "get_token - http code: #{status_code}. Azure authentication failed: Invalid tenant_id, client_id or client_secret/certificate. Error message: #{response.body}"
+        elsif status_code == HTTP_CODE_BAD_REQUEST
+          raise AzureError, "get_token - http code: #{status_code}. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret/certificate. Error message: #{response.body}"
         else
-          raise AzureError, "get_token - http code: #{response.code}. Error message: #{response.body}"
+          raise AzureError, "get_token - http code: #{status_code}. Error message: #{response.body}"
         end
       end
-
       @token['access_token']
+    end
+
+    # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service
+    def request_from_azure_active_directory_endpoint
+      @logger.debug('Getting token from Azure Active Directory Endpoint')
+      endpoint, api_version = get_azure_authentication_endpoint_and_api_version(@azure_config)
+      uri = URI(endpoint)
+      params = {
+        'api-version' => api_version
+      }
+      uri.query = URI.encode_www_form(params)
+      @logger.debug("authentication_endpoint: #{uri}")
+
+      request = Net::HTTP::Post.new(uri.request_uri)
+      request['Content-Type'] = 'application/x-www-form-urlencoded'
+      request = merge_http_common_headers(request)
+      @logger.debug('request.header:')
+      request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
+
+      client_id = @azure_config.client_id
+      request_body = {
+        'grant_type' => 'client_credentials',
+        'client_id'  => client_id,
+        'resource'   => get_token_resource(@azure_config),
+        'scope'      => 'user_impersonation'
+      }
+      if !@azure_config.client_secret.nil?
+        request_body['client_secret'] = @azure_config.client_secret
+      else
+        request_body['client_assertion_type'] = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
+        request_body['client_assertion']      = get_jwt_assertion(endpoint, client_id)
+      end
+      request.body = URI.encode_www_form(request_body)
+      @logger.debug("request body:\n#{redact_credentials_in_request_body(request_body)}")
+
+      [request, uri]
+    end
+
+    # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token#get-a-token-using-http
+    def request_from_managed_service_identity_endpoint
+      @logger.debug('Getting token from Azure VM Managed Service Identity')
+      endpoint, api_version = get_msi_endpoint_and_version
+      uri = URI(endpoint)
+      params = {
+        'resource' => get_token_resource(@azure_config),
+        'api-version' => api_version
+      }
+      uri.query = URI.encode_www_form(params)
+      @logger.debug("authentication_endpoint: #{uri}")
+
+      request = Net::HTTP::Get.new(uri.request_uri)
+      request['Metadata'] = true
+      request = merge_http_common_headers(request)
+      @logger.debug('request.header:')
+      request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
+
+      [request, uri]
     end
 
     def http_url(url, params = {})
@@ -2125,7 +2211,7 @@ module Bosh::AzureCloud
 
         status_code = response.code.to_i
         response_body = response.body
-        message = "http_get_response - #{retry_count}: #{status_code}\n"
+        message = "http_get_response - #{status_code}\n"
         message += get_http_common_headers(response)
         message += if filter_credential_in_logs(uri)
                      'response.body cannot be logged because it may contain credentials.'
@@ -2145,23 +2231,19 @@ module Bosh::AzureCloud
           end
         end
 
-        break unless AZURE_GENERAL_RETRY_ERROR_CODES.include?(status_code)
+        break unless AZURE_GENERAL_RETRYABLE_ERROR_CODES.include?(status_code)
 
-        retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
-        message = "http_get_response - Will retry after #{retry_after} seconds due to http code: #{status_code}\n"
-        message += get_http_common_headers(response)
-        message += "Error message: #{response_body}"
-        @logger.debug(message)
-        sleep(retry_after)
-        refresh_token = false
         retry_count += 1
-      end
-
-      if retry_count >= AZURE_MAX_RETRY_COUNT
-        message = "http_get_response - Failed to get http response after #{AZURE_MAX_RETRY_COUNT} times.\n"
-        message += get_http_common_headers(response)
-        message += "Error message: #{response_body}"
-        cloud_error(message)
+        if retry_count >= AZURE_MAX_RETRY_COUNT
+          message += "http_get_response - Failed to get http response after #{AZURE_MAX_RETRY_COUNT} times.\n"
+          cloud_error(message)
+        else
+          retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
+          message += "http_get_response - Will retry after #{retry_after} seconds"
+          @logger.debug(message)
+          sleep(retry_after)
+          refresh_token = false
+        end
       end
 
       response
@@ -2223,7 +2305,7 @@ module Bosh::AzureCloud
         error += get_http_common_headers(response)
         error += "Error message: #{response.body}"
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
-        raise AzureNotFoundError, error if response.code.to_i == HTTP_CODE_NOTFOUND
+        raise AzureNotFoundError, error if response.code.to_i == HTTP_CODE_NOT_FOUND
         raise AzureError, error
       end
       retry_after = options[:retry_after]
@@ -2278,7 +2360,7 @@ module Bosh::AzureCloud
       status_code = response.code.to_i
       if status_code != HTTP_CODE_OK
         error = "http_get - http code: #{response.code}. Error message: #{response.body}"
-        if [HTTP_CODE_NOCONTENT, HTTP_CODE_NOTFOUND].include? status_code
+        if [HTTP_CODE_NO_CONTENT, HTTP_CODE_NOT_FOUND].include? status_code
           raise AzureNotFoundError, error
         else
           raise AzureError, error
@@ -2366,7 +2448,7 @@ module Bosh::AzureCloud
         response = http_get_response(uri, request, retry_after)
         options = {
           operation: 'http_delete',
-          return_code: [HTTP_CODE_OK, HTTP_CODE_NOCONTENT],
+          return_code: [HTTP_CODE_OK, HTTP_CODE_NO_CONTENT],
           success_code: [HTTP_CODE_ACCEPTED],
           api_version: params['api-version'],
           retry_after: retry_after
