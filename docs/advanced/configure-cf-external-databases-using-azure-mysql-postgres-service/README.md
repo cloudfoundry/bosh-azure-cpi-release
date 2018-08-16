@@ -88,3 +88,7 @@ For basic Cloud Foundry deployment steps, please check the section [**Get Starte
     Known issue: In `<external-cc-database-username>`, `@` has to be encoded to `%40` so that the job `cloud_controller_ng` can connect to Azure database. After the [issue](https://github.com/cloudfoundry/capi-release/issues/79) is resolved, `<user@server-name>` can be used.
 
     If the Cloud Foundry deployment succeeds, then the external databases are connected to Cloud Foundry and working. You can run your Cloud Foundry smoke test now.
+
+
+# Miscellaneous
+- If you have a CF deployment using internal MySQL database, and want to change to Azure Database for MySQL, you can refer to [migration guidance for MySQL](./migrate-mysql-databases)
