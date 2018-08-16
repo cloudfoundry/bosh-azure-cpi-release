@@ -29,46 +29,46 @@ Lint/AmbiguousRegexpLiteral:
 # Configuration parameters: AllowSafeAssignment.
 Lint/AssignmentInCondition:
   Exclude:
-    - 'lib/cloud/azure/blob_manager.rb'
+    - 'lib/cloud/azure/storage/blob_manager.rb'
 
 # Offense count: 1
 Lint/HandleExceptions:
   Exclude:
-    - 'lib/cloud/azure/helpers.rb'
+    - 'lib/cloud/azure/utils/helpers.rb'
 
 # Offense count: 1
 Lint/ParenthesesAsGroupedExpression:
   Exclude:
-    - 'lib/cloud/azure/network_configurator.rb'
+    - 'lib/cloud/azure/network/network_configurator.rb'
 
 # Offense count: 6
 Lint/ShadowingOuterLocalVariable:
   Exclude:
-    - 'lib/cloud/azure/azure_client.rb'
-    - 'lib/cloud/azure/helpers.rb'
+    - 'lib/cloud/azure/restapi/azure_client.rb'
+    - 'lib/cloud/azure/utils/helpers.rb'
 
 # Offense count: 12
 Lint/UriEscapeUnescape:
   Exclude:
-    - 'lib/cloud/azure/azure_client.rb'
+    - 'lib/cloud/azure/restapi/azure_client.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
 
 # Offense count: 1
 # Configuration parameters: ContextCreatingMethods, MethodCreatingMethods.
 Lint/UselessAccessModifier:
   Exclude:
-    - 'lib/cloud/azure/blob_manager.rb'
+    - 'lib/cloud/azure/storage/blob_manager.rb'
 
 # Offense count: 21
 Lint/UselessAssignment:
   Exclude:
-    - 'lib/cloud/azure/azure_client.rb'
+    - 'lib/cloud/azure/restapi/azure_client.rb'
     - 'lib/cloud/azure/cloud.rb'
-    - 'lib/cloud/azure/disk_manager2.rb'
-    - 'lib/cloud/azure/helpers.rb'
-    - 'lib/cloud/azure/stemcell_manager2.rb'
+    - 'lib/cloud/azure/disk/disk_manager2.rb'
+    - 'lib/cloud/azure/utils/helpers.rb'
+    - 'lib/cloud/azure/stemcell/stemcell_manager2.rb'
     - 'lib/cloud/azure/telemetry/telemetry_manager.rb'
-    - 'lib/cloud/azure/vm_manager.rb'
+    - 'lib/cloud/azure/vms/vm_manager.rb'
     - 'spec/manual_tests/resource_group_name/helpers.rb'
 
 # Offense count: 79
@@ -109,7 +109,7 @@ Metrics/ModuleLength:
 Metrics/ParameterLists:
   Max: 7
   Exclude:
-    - 'lib/cloud/azure/vm_manager.rb'
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
 # Offense count: 28
 Metrics/PerceivedComplexity:
@@ -118,9 +118,9 @@ Metrics/PerceivedComplexity:
 # Offense count: 7
 Naming/AccessorMethodName:
   Exclude:
-    - 'lib/cloud/azure/blob_manager.rb'
-    - 'lib/cloud/azure/helpers.rb'
-    - 'lib/cloud/azure/logger.rb'
+    - 'lib/cloud/azure/storage/blob_manager.rb'
+    - 'lib/cloud/azure/utils/helpers.rb'
+    - 'lib/cloud/azure/logging/logger.rb'
     - 'lib/cloud/azure/telemetry/telemetry_event_handler.rb'
     - 'lib/cloud/azure/telemetry/wire_client.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
@@ -135,17 +135,17 @@ Naming/AccessorMethodName:
 Naming/PredicateName:
   Exclude:
     - 'spec/**/*'
-    - 'lib/cloud/azure/blob_manager.rb'
+    - 'lib/cloud/azure/storage/blob_manager.rb'
     - 'lib/cloud/azure/cloud.rb'
-    - 'lib/cloud/azure/disk_manager.rb'
-    - 'lib/cloud/azure/disk_manager2.rb'
-    - 'lib/cloud/azure/dynamic_network.rb'
-    - 'lib/cloud/azure/helpers.rb'
-    - 'lib/cloud/azure/light_stemcell_manager.rb'
-    - 'lib/cloud/azure/manual_network.rb'
-    - 'lib/cloud/azure/stemcell_manager.rb'
-    - 'lib/cloud/azure/stemcell_manager2.rb'
-    - 'lib/cloud/azure/storage_account_manager.rb'
+    - 'lib/cloud/azure/disk/disk_manager.rb'
+    - 'lib/cloud/azure/disk/disk_manager2.rb'
+    - 'lib/cloud/azure/network/dynamic_network.rb'
+    - 'lib/cloud/azure/utils/helpers.rb'
+    - 'lib/cloud/azure/stemcell/light_stemcell_manager.rb'
+    - 'lib/cloud/azure/network/manual_network.rb'
+    - 'lib/cloud/azure/stemcell/stemcell_manager.rb'
+    - 'lib/cloud/azure/stemcell/stemcell_manager2.rb'
+    - 'lib/cloud/azure/storage/storage_account_manager.rb'
     - 'lib/cloud/azure/meta_store/table_manager.rb'
     - 'lib/cloud/azure/telemetry/telemetry_event_handler.rb'
 
@@ -154,7 +154,7 @@ Naming/PredicateName:
 # AllowedNames: io, id, to, by, on, in, at
 Naming/UncommunicativeMethodParamName:
   Exclude:
-    - 'lib/cloud/azure/azure_client.rb'
+    - 'lib/cloud/azure/restapi/azure_client.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
 
 # Offense count: 20
@@ -185,18 +185,18 @@ Style/FormatStringToken:
 # Configuration parameters: MinBodyLength.
 Style/GuardClause:
   Exclude:
-    - 'lib/cloud/azure/azure_client.rb'
-    - 'lib/cloud/azure/blob_manager.rb'
+    - 'lib/cloud/azure/restapi/azure_client.rb'
+    - 'lib/cloud/azure/storage/blob_manager.rb'
     - 'lib/cloud/azure/cloud.rb'
-    - 'lib/cloud/azure/helpers.rb'
+    - 'lib/cloud/azure/utils/helpers.rb'
     - 'lib/cloud/azure/models/disk_id.rb'
     - 'lib/cloud/azure/models/instance_id.rb'
-    - 'lib/cloud/azure/network_configurator.rb'
-    - 'lib/cloud/azure/stemcell_manager.rb'
-    - 'lib/cloud/azure/stemcell_manager2.rb'
-    - 'lib/cloud/azure/storage_account_manager.rb'
+    - 'lib/cloud/azure/network/network_configurator.rb'
+    - 'lib/cloud/azure/stemcell/stemcell_manager.rb'
+    - 'lib/cloud/azure/stemcell/stemcell_manager2.rb'
+    - 'lib/cloud/azure/storage/storage_account_manager.rb'
     - 'lib/cloud/azure/telemetry/telemetry_event_handler.rb'
-    - 'lib/cloud/azure/vm_manager.rb'
+    - 'lib/cloud/azure/vms/vm_manager.rb'
     - 'spec/manual_tests/resource_group_name/helpers.rb'
 
 # Offense count: 1
@@ -207,8 +207,8 @@ Style/MixinUsage:
 # Offense count: 2
 Style/NestedTernaryOperator:
   Exclude:
-    - 'lib/cloud/azure/azure_client.rb'
-    - 'lib/cloud/azure/vm_manager.rb'
+    - 'lib/cloud/azure/restapi/azure_client.rb'
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
 # Offense count: 13
 # Cop supports --auto-correct.
@@ -216,7 +216,7 @@ Style/NestedTernaryOperator:
 # SupportedStyles: predicate, comparison
 Style/NumericPredicate:
   Exclude:
-    - 'lib/cloud/azure/helpers.rb'
+    - 'lib/cloud/azure/utils/helpers.rb'
 
 # Offense count: 2824
 # Configuration parameters: AllowHeredoc, AllowURI, URISchemes, IgnoreCopDirectives, IgnoredPatterns.
