@@ -63,6 +63,9 @@ describe 'cpi.json.erb' do
             'tenant_id'                   => 'fake-tenant-id',
             'client_id'                   => 'fake-client-id',
             'client_secret'               => 'fake-client-secret',
+            'managed_service_identity'    => {
+              'enabled' => false
+            },
             'resource_group_name'         => 'fake-resource-group-name',
             'storage_account_name'        => 'fake-storage-account-name',
             'ssh_user'                    => 'vcap',
@@ -118,38 +121,58 @@ describe 'cpi.json.erb' do
       end
     end
 
-    context 'when client_secret is provided' do
+    context 'when managed service identity is used' do
       before do
-        manifest['properties']['azure']['client_secret'] = 'fake-client-secret'
-      end
-
-      it 'is able to render client_secret' do
-        expect(subject['cloud']['properties']['azure']['client_secret']).to eq('fake-client-secret')
-      end
-    end
-
-    context 'when client_secret is not provided' do
-      before do
+        manifest['properties']['azure']['managed_service_identity'] = { 'enabled' => true }
+        manifest['properties']['azure']['tenant_id'] = nil
+        manifest['properties']['azure']['client_id'] = nil
         manifest['properties']['azure']['client_secret'] = nil
       end
 
-      context 'when certificate is not provided' do
-        before do
-          manifest['properties']['azure']['certificate'] = nil
-        end
+      it 'should use MSI and allow tenant_id/client_id/client_secret to be nil' do
+        expect(subject['cloud']['properties']['azure']['managed_service_identity']['enabled']).to be(true)
+        expect(subject['cloud']['properties']['azure']['tenant_id']).to be_nil
+        expect(subject['cloud']['properties']['azure']['client_id']).to be_nil
+        expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+      end
+    end
 
-        it 'raises an error of missing azure.client_secret and azure.certificate' do
-          expect { subject }.to raise_error(/both "client_secret" and "certificate" are not provided/)
+    context 'when managed service identity is not used' do
+      context 'when client_secret is provided' do
+        it 'is able to render client_secret' do
+          expect(subject['cloud']['properties']['azure']['managed_service_identity']['enabled']).to be(false)
+          expect(subject['cloud']['properties']['azure']['tenant_id']).to eq('fake-tenant-id')
+          expect(subject['cloud']['properties']['azure']['client_id']).to eq('fake-client-id')
+          expect(subject['cloud']['properties']['azure']['client_secret']).to eq('fake-client-secret')
         end
       end
 
-      context 'when certificate is provided' do
+      context 'when client_secret is not provided' do
         before do
-          manifest['properties']['azure']['certificate'] = 'fake-certificate-content'
+          manifest['properties']['azure']['client_secret'] = nil
         end
 
-        it 'allows client_secret to be nil' do
-          expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+        context 'when certificate is not provided' do
+          before do
+            manifest['properties']['azure']['certificate'] = nil
+          end
+
+          it 'raises an error of missing azure.client_secret and azure.certificate' do
+            expect { subject }.to raise_error(/both "client_secret" and "certificate" are not provided/)
+          end
+        end
+
+        context 'when certificate is provided' do
+          before do
+            manifest['properties']['azure']['certificate'] = 'fake-certificate-content'
+          end
+
+          it 'allows client_secret to be nil' do
+            expect(subject['cloud']['properties']['azure']['managed_service_identity']['enabled']).to be(false)
+            expect(subject['cloud']['properties']['azure']['tenant_id']).to eq('fake-tenant-id')
+            expect(subject['cloud']['properties']['azure']['client_id']).to eq('fake-client-id')
+            expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+          end
         end
       end
     end

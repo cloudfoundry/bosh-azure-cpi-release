@@ -147,6 +147,8 @@ describe Bosh::AzureCloud::Helpers do
   end
 
   describe '#get_arm_endpoint' do
+    let(:azure_config) { instance_double(Bosh::AzureCloud::AzureConfig) }
+
     context 'when environment is Azure' do
       let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureCloud') }
 
@@ -386,6 +388,12 @@ describe Bosh::AzureCloud::Helpers do
           helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
         ).to eq(['https://login.microsoftonline.de/fake-tenant-id/oauth2/token', azure_german_api_version])
       end
+    end
+  end
+
+  describe '#get_msi_endpoint_and_version' do
+    it 'should return msi endpoint and api version' do
+      expect(helpers_tester.get_msi_endpoint_and_version).to eq(['http://169.254.169.254/metadata/identity/oauth2/token', '2018-02-01'])
     end
   end
 

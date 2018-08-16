@@ -154,6 +154,9 @@ module Bosh::AzureCloud
     AZURESTACK_CA_CERT_RELATIVE_PATH            = 'azure_cpi/config/azure_stack_ca_cert.pem'
     SERVICE_PRINCIPAL_CERTIFICATE_RELATIVE_PATH = 'azure_cpi/config/service_principal_certificate.pem'
 
+    MSI_ENDPOINT = 'http://169.254.169.254/metadata/identity/oauth2/token'
+    MSI_ENDPOINT_API_VERSION = '2018-02-01'
+
     # Availability Zones
     AVAILABILITY_ZONES = %w[1 2 3].freeze
 
@@ -240,6 +243,11 @@ module Bosh::AzureCloud
       end
 
       [url, api_version]
+    end
+
+    # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/tutorial-linux-vm-access-arm
+    def get_msi_endpoint_and_version
+      [MSI_ENDPOINT, MSI_ENDPOINT_API_VERSION]
     end
 
     def get_service_principal_certificate_path

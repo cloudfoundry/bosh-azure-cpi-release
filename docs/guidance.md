@@ -58,6 +58,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Use service principal with certificate](./advanced/use-service-principal-with-certificate/)
   * [Calculate correct VM cloud properties based on `vm_resources`](./advanced/calculate-vm-cloud-properties/)
   * [Use Azure Accelerated Networking](./advanced/accelerated-networking/)
+  * [Use Azure Managed Service Identity](./advanced/managed-service-identity/)
 * Cloud Foundry Scenarios
   * [Configure Cloud Foundry external databases using Azure MySQL/Postgres Service](./advanced/configure-cf-external-databases-using-azure-mysql-postgres-service)
   * [Integrating Application Gateway](./advanced/application-gateway/)
