@@ -2,6 +2,8 @@
 
 module Bosh::AzureCloud
   class VMManager
+    private
+
     def _get_availability_set_name(vm_props, env)
       availability_set_name = vm_props.availability_set
       if availability_set_name.nil?

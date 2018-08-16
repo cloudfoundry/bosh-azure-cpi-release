@@ -2,6 +2,8 @@
 
 module Bosh::AzureCloud
   class VMManager
+    private
+
     def _get_network_subnet(network)
       subnet = @azure_client.get_network_subnet_by_name(network.resource_group_name, network.virtual_network_name, network.subnet_name)
       cloud_error("Cannot find the subnet '#{network.virtual_network_name}/#{network.subnet_name}' in the resource group '#{network.resource_group_name}'") if subnet.nil?
