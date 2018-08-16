@@ -367,6 +367,7 @@ module Bosh::AzureCloud
       options = {
         timeout: TIMEOUT_FOR_BLOB_OPERATIONS
       }
+      standard_errors = Concurrent::Array.new
       threads = []
       thread_num.times do |id|
         thread = Thread.new do
@@ -388,9 +389,10 @@ module Bosh::AzureCloud
                 @logger.warn("_upload_page_blob_in_threads: Thread #{id}: Failed to put_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
                 retry_count += 1
                 if retry_count > AZURE_MAX_RETRY_COUNT
-                  # keep other threads from uploading other parts
+                  # make sure that other threads exit after they finish current job.
                   chunks.clear!
-                  raise e
+                  standard_errors.push(e)
+                  break
                 end
                 sleep(10)
                 retry
@@ -399,10 +401,10 @@ module Bosh::AzureCloud
           end
         end
         thread.abort_on_exception = true
-        thread.report_on_exception = false
         threads << thread
       end
       threads.each(&:join)
+      cloud_error(standard_errors.to_s) unless standard_errors.empty?
     end
   end
 
