@@ -246,7 +246,7 @@ module Bosh::AzureCloud
     end
 
     # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/tutorial-linux-vm-access-arm
-    def get_msi_endpoint
+    def get_msi_endpoint_and_version
       [MSI_ENDPOINT, MSI_ENDPOINT_API_VERSION]
     end
 

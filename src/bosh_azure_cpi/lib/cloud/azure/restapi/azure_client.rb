@@ -2090,19 +2090,23 @@ module Bosh::AzureCloud
         max_delay = 60
         while retry_count < max_retry_count
           response = http_get_response_with_network_retry(http(uri, use_ssl), request)
+          message = get_http_common_headers(response)
+          @logger.debug("get_token - #{retry_count}: #{message}")
           status_code = response.code.to_i
           break unless retryable_error_codes.include?(status_code)
-          # perform exponential backoff, must increment attempt before calculating delay.
           retry_count += 1
-          # the base value of 2 is the "delta backoff" as specified in the guidance doc
-          delay += 2**retry_count
-          delay = max_delay if delay > max_delay
-          @logger.debug("get_token - sleep #{delay} seconds before retrying")
-          sleep(delay)
+          if retry_count >= max_retry_count
+            cloud_error("get_token - Failed to get token after #{retry_count} retries")
+          else
+            # perform exponential backoff with a cap.
+            # must increment retry_count before calculating delay.
+            # the base value of 2 is the "delta backoff" as specified in the guidance doc.
+            delay += 2**retry_count
+            delay = max_delay if delay > max_delay
+            @logger.debug("get_token - sleep #{delay} seconds before retrying")
+            sleep(delay)
+          end
         end
-        message = get_http_common_headers(response)
-        @logger.debug("get_token - #{message}")
-        cloud_error('get_token - Failed to get token') if retry_count >= max_retry_count
 
         if status_code == HTTP_CODE_OK
           @token = JSON(response.body)
@@ -2156,7 +2160,7 @@ module Bosh::AzureCloud
     # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token#get-a-token-using-http
     def request_from_managed_service_identity_endpoint
       @logger.debug('Getting token from Azure VM Managed Service Identity')
-      endpoint, api_version = get_msi_endpoint
+      endpoint, api_version = get_msi_endpoint_and_version
       uri = URI(endpoint)
       params = {
         'resource' => get_token_resource(@azure_config),
@@ -2207,7 +2211,7 @@ module Bosh::AzureCloud
 
         status_code = response.code.to_i
         response_body = response.body
-        message = "http_get_response - #{retry_count}: #{status_code}\n"
+        message = "http_get_response - #{status_code}\n"
         message += get_http_common_headers(response)
         message += if filter_credential_in_logs(uri)
                      'response.body cannot be logged because it may contain credentials.'
@@ -2229,21 +2233,17 @@ module Bosh::AzureCloud
 
         break unless AZURE_GENERAL_RETRYABLE_ERROR_CODES.include?(status_code)
 
-        retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
-        message = "http_get_response - Will retry after #{retry_after} seconds due to http code: #{status_code}\n"
-        message += get_http_common_headers(response)
-        message += "Error message: #{response_body}"
-        @logger.debug(message)
-        sleep(retry_after)
-        refresh_token = false
         retry_count += 1
-      end
-
-      if retry_count >= AZURE_MAX_RETRY_COUNT
-        message = "http_get_response - Failed to get http response after #{AZURE_MAX_RETRY_COUNT} times.\n"
-        message += get_http_common_headers(response)
-        message += "Error message: #{response_body}"
-        cloud_error(message)
+        if retry_count >= AZURE_MAX_RETRY_COUNT
+          message += "http_get_response - Failed to get http response after #{AZURE_MAX_RETRY_COUNT} times.\n"
+          cloud_error(message)
+        else
+          retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
+          message += "http_get_response - Will retry after #{retry_after} seconds"
+          @logger.debug(message)
+          sleep(retry_after)
+          refresh_token = false
+        end
       end
 
       response

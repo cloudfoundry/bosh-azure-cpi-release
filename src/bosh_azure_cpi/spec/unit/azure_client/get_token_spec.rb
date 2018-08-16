@@ -214,7 +214,6 @@ describe Bosh::AzureCloud::AzureClient do
             expect(azure_client).to receive(:sleep).with(6).once
             expect(azure_client).to receive(:sleep).with(14).once
             expect(azure_client).to receive(:sleep).with(30).once
-            expect(azure_client).to receive(:sleep).with(60).once
             expect do
               azure_client.get_resource_by_id(url, 'api-version' => api_version)
             end.to raise_error /get_token - Failed to get token/

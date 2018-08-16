@@ -103,7 +103,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         it 'should raise error' do
           expect(azure_client).to receive(:get_token).with(false).and_return('first-token').exactly(AZURE_MAX_RETRY_COUNT).times
-          expect(azure_client).to receive(:sleep).with(retry_after).exactly(AZURE_MAX_RETRY_COUNT).times
+          expect(azure_client).to receive(:sleep).with(retry_after).exactly(AZURE_MAX_RETRY_COUNT-1).times
           expect do
             azure_client.send(:http_get_response, uri, request, retry_after)
           end.to raise_error(/http_get_response - Failed to get http response after #{AZURE_MAX_RETRY_COUNT} times/)

@@ -391,9 +391,9 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
-  describe '#get_msi_endpoint' do
+  describe '#get_msi_endpoint_and_version' do
     it 'should return msi endpoint and api version' do
-      expect(helpers_tester.get_msi_endpoint).to eq(['http://169.254.169.254/metadata/identity/oauth2/token', '2018-02-01'])
+      expect(helpers_tester.get_msi_endpoint_and_version).to eq(['http://169.254.169.254/metadata/identity/oauth2/token', '2018-02-01'])
     end
   end
 
