@@ -7,19 +7,20 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#delete_snapshot' do
+    let(:snapshot_id) { 'fake-snapshot-id' }
+    let(:snapshot_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
     before do
       allow(telemetry_manager).to receive(:monitor)
         .with('delete_snapshot', id: snapshot_id).and_call_original
+      allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+        .with(snapshot_id, MOCK_RESOURCE_GROUP_NAME)
+        .and_return(snapshot_id_object)
     end
 
     context 'when the snapshot is a managed snapshot' do
-      let(:snapshot_id) { 'fake-snapshot-id' }
-      let(:snapshot_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
       let(:snapshot_name) { 'bosh-disk-data-fake-guid' }
 
       before do
-        allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-          .and_return(snapshot_id_object)
         allow(snapshot_id_object).to receive(:disk_name)
           .and_return(snapshot_name)
       end
@@ -34,13 +35,9 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'when the snapshot is an unmanaged snapshot' do
-      let(:snapshot_id) { 'fake-snapshot-id' }
-      let(:snapshot_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
       let(:snapshot_name) { 'fake-snapshot-name' }
 
       before do
-        allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-          .and_return(snapshot_id_object)
         allow(snapshot_id_object).to receive(:disk_name)
           .and_return(snapshot_name)
       end
