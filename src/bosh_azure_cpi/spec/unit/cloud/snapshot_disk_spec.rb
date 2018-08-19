@@ -17,6 +17,7 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+        .with(disk_id, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
 
       allow(snapshot_id_object).to receive(:to_s)

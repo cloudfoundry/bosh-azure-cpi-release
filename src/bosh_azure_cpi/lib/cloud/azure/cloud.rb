@@ -470,7 +470,7 @@ module Bosh::AzureCloud
                 # migrate only if the disk is an unmanaged disk
                 if disk_id.disk_name.start_with?(DATA_DISK_PREFIX)
                   begin
-                    storage_account_name = disk_id.storage_account_name()
+                    storage_account_name = disk_id.storage_account_name
                     blob_uri = @disk_manager.get_data_disk_uri(disk_id)
                     storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
                     location = storage_account[:location]
@@ -583,7 +583,7 @@ module Bosh::AzureCloud
           else
             disk = @disk_manager2.get_data_disk(disk_id)
             if disk.nil?
-              storage_account_name = disk_id.storage_account_name()
+              storage_account_name = disk_id.storage_account_name
               snapshot_name = @disk_manager.snapshot_disk(storage_account_name, disk_name, encode_metadata(metadata))
               snapshot_id = DiskId.create(caching, false, disk_name: snapshot_name, storage_account_name: storage_account_name)
             else
@@ -604,7 +604,7 @@ module Bosh::AzureCloud
     def delete_snapshot(snapshot_id)
       with_thread_name("delete_snapshot(#{snapshot_id})") do
         @telemetry_manager.monitor('delete_snapshot', id: snapshot_id) do
-          snapshot_id = DiskId.parse(snapshot_id, _azure_config)
+          snapshot_id = DiskId.parse(snapshot_id, _azure_config.resource_group_name)
           snapshot_name = snapshot_id.disk_name
           if snapshot_name.start_with?(MANAGED_DATA_DISK_PREFIX)
             @disk_manager2.delete_snapshot(snapshot_id)

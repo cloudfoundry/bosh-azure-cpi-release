@@ -23,7 +23,7 @@ module Bosh::AzureCloud
     #   disk_id = DiskId.create(caching, false, storage_account_name: 'ss') # Create V2 unmanaged disk id
     #   disk_id = DiskId.create(caching, true, resource_group_name: 'rr')  # Create V2 managed disk id
     #  Parsing id for an existing disk
-    #   disk_id = DiskId.parse(id, azure_config)
+    #   disk_id = DiskId.parse(id, default_resource_group_name)
 
     CACHING_KEY = 'caching'
     DISK_NAME_KEY = 'disk_name'
