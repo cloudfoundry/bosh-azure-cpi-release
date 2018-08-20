@@ -576,7 +576,7 @@ module Bosh::AzureCloud
           disk_id = DiskId.parse(disk_id, _azure_config.resource_group_name)
           resource_group_name = disk_id.resource_group_name
           disk_name = disk_id.disk_name
-          caching = disk_id.caching()
+          caching = disk_id.caching
           if disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
             snapshot_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
             @disk_manager2.snapshot_disk(snapshot_id, disk_name, encode_metadata(metadata))

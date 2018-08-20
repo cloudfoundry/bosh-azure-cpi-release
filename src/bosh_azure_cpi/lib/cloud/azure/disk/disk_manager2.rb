@@ -27,7 +27,7 @@ module Bosh::AzureCloud
       @logger.info("create_disk(#{disk_id}, #{location}, #{size}, #{storage_account_type}, #{zone})")
       resource_group_name = disk_id.resource_group_name
       disk_name = disk_id.disk_name
-      caching = disk_id.caching()
+      caching = disk_id.caching
       tags = AZURE_TAGS.merge(
         'caching' => caching
       )
@@ -49,7 +49,7 @@ module Bosh::AzureCloud
       @logger.info("create_disk_from_blob(#{disk_id}, #{blob_uri}, #{location}, #{storage_account_type}, #{zone})")
       resource_group_name = disk_id.resource_group_name
       disk_name = disk_id.disk_name
-      caching = disk_id.caching()
+      caching = disk_id.caching
       tags = AZURE_TAGS.merge(
         'caching' => caching,
         'original_blob' => blob_uri
