@@ -200,7 +200,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should create an unmanaged disk in the same storage account of the vm' do
           expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, false, storage_account_name: vm_storage_account_name)
+            .with(caching, false, resource_group_name: MOCK_RESOURCE_GROUP_NAME, storage_account_name: vm_storage_account_name)
             .and_return(disk_id_object)
           expect(disk_manager).to receive(:create_disk)
             .with(disk_id_object, disk_size_in_gib)
@@ -216,7 +216,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should create an unmanaged disk in the default storage account of global configuration' do
           expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, false, storage_account_name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
+            .with(caching, false, resource_group_name: MOCK_RESOURCE_GROUP_NAME, storage_account_name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
             .and_return(disk_id_object)
           expect(disk_manager).to receive(:create_disk)
             .with(disk_id_object, disk_size_in_gib)
