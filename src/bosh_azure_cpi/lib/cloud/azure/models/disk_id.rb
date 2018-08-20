@@ -12,18 +12,20 @@ module Bosh::AzureCloud
     #         snapshot disk:  "bosh-disk-data-[AGENTID]-[CACHING]"
     # V2 format:
     #   With unmanaged disks:
-    #         data disk:      "disk_name:bosh-data-[UUID];caching:[CACHING];storage_account_name:[STORAGE-ACCOUNT-NAME]"
-    #         snapshot disk:  "disk_name:bosh-data-[UUID]--[SNAPSHOTTIME];caching:[CACHING];storage_account_name:[STORAGE-ACCOUNT-NAME]"
+    #         data disk:      "caching:[CACHING];disk_name:bosh-data-[UUID];storage_account_name:[STORAGE-ACCOUNT-NAME]"
+    #         snapshot disk:  "caching:[CACHING];disk_name:bosh-data-[UUID]--[SNAPSHOTTIME];storage_account_name:[STORAGE-ACCOUNT-NAME]"
     #   With managed disks:
-    #         data disk:      "disk_name:bosh-disk-data-[UUID];caching:[CACHING];resource_group_name:[RESOURCE-GROUP-NAME]"
-    #         snapshot disk:  "disk_name:bosh-disk-data-[UUID];caching:[CACHING];storage_account_name:[STORAGE-ACCOUNT-NAME]"
+    #         data disk:      "caching:[CACHING];disk_name:bosh-disk-data-[UUID];resource_group_name:[RESOURCE-GROUP-NAME]"
+    #         snapshot disk:  "caching:[CACHING];disk_name:bosh-disk-data-[UUID];resource_group_name:[RESOURCE-GROUP-NAME]"
     #
     # Usage:
     #  Creating id for a new disk
     #   disk_id = DiskId.create(caching, false, storage_account_name: 'ss') # Create V2 unmanaged disk id
-    #   disk_id = DiskId.create(caching, true, resource_group_name: 'rr')  # Create V2 managed disk id
+    #   disk_id = DiskId.create(caching, true,  resource_group_name: 'rr')  # Create V2 managed disk id
     #  Parsing id for an existing disk
     #   disk_id = DiskId.parse(id, default_resource_group_name)
+    #
+    #  TODO: The method `caching` and `storage_account_name` doesn't work for V1 format with unmanaged snapshot disk because of the postfix "--[SNAPSHOTTIME]".
 
     CACHING_KEY = 'caching'
     DISK_NAME_KEY = 'disk_name'
@@ -80,6 +82,15 @@ module Bosh::AzureCloud
           cloud_error("Invalid storage_account_name in disk id (version 2) '#{self}'") if storage_account_name.nil? || storage_account_name.empty?
         end
       end
+    end
+
+    def to_s
+      return @plain_id unless @plain_id.nil?
+      id_hash_clone = @id_hash.clone
+      id_hash_clone.delete(RESOURCE_GROUP_NAME_KEY) if id_hash_clone.key?(STORAGE_ACCOUNT_NAME_KEY)
+      array = []
+      id_hash_clone.each { |key, value| array << "#{key}:#{value}" }
+      array.sort.join(KEY_SEPERATOR)
     end
 
     private_class_method def self._generate_data_disk_name(use_managed_disks)
