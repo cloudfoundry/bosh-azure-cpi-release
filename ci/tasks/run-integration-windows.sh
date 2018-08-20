@@ -33,6 +33,8 @@ export BOSH_AZURE_APPLICATION_SECURITY_GROUP=$(echo ${metadata} | jq -e --raw-ou
 export BOSH_AZURE_APPLICATION_GATEWAY_NAME=$(echo ${metadata} | jq -e --raw-output ".application_gateway_name")
 export BOSH_AZURE_SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
 
+export BOSH_AZURE_STEMCELL_PATH=$(realpath stemcell/*.tgz)
+
 source stemcell-state/stemcell.env
 source /etc/profile.d/chruby.sh
 chruby ${RUBY_VERSION}

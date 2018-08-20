@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
+require 'cloud'
+require 'logger'
 require 'spec_helper'
 require 'securerandom'
 require 'tempfile'
-require 'logger'
-require 'cloud'
+require 'yaml'
 
 describe Bosh::AzureCloud::Cloud do
   before(:all) do
@@ -21,6 +22,7 @@ describe Bosh::AzureCloud::Cloud do
     @secondary_public_ip             = ENV['BOSH_AZURE_SECONDARY_PUBLIC_IP']             || raise('Missing BOSH_AZURE_SECONDARY_PUBLIC_IP')
     @application_gateway_name        = ENV['BOSH_AZURE_APPLICATION_GATEWAY_NAME']        || raise('Missing BOSH_AZURE_APPLICATION_GATEWAY_NAME')
     @application_security_group      = ENV['BOSH_AZURE_APPLICATION_SECURITY_GROUP']      || raise('Missing BOSH_AZURE_APPLICATION_SECURITY_GROUP')
+    @stemcell_path                   = ENV['BOSH_AZURE_STEMCELL_PATH']                   || raise('Missing BOSH_AZURE_STEMCELL_PATH')
   end
 
   let(:azure_environment)          { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
@@ -32,7 +34,6 @@ describe Bosh::AzureCloud::Cloud do
   let(:subnet_name)                { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
   let(:second_subnet_name)         { ENV.fetch('BOSH_AZURE_SECOND_SUBNET_NAME', 'BOSH2') }
   let(:instance_type)              { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
-  let(:image_path)                 { ENV.fetch('BOSH_AZURE_STEMCELL_PATH', '/tmp/image') }
   let(:vm_metadata)                { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
   let(:network_spec)               { {} }
   let(:vm_properties)              { { 'instance_type' => instance_type } }
@@ -108,6 +109,19 @@ describe Bosh::AzureCloud::Cloud do
 
   context '#stemcell' do
     context 'with heavy stemcell', heavy_stemcell: true do
+      let(:extract_path)               { '/tmp/with-heavy-stemcell' }
+      let(:image_path)                 { "#{extract_path}/image" }
+      let(:image_metadata_path)        { "#{extract_path}/stemcell.MF" }
+
+      before do
+        FileUtils.mkdir_p(extract_path)
+        run_command("tar -zxf #{@stemcell_path} -C #{extract_path}")
+      end
+
+      after do
+        FileUtils.remove_dir(extract_path)
+      end
+
       it 'should create/delete the stemcell' do
         heavy_stemcell_id = cpi.create_stemcell(image_path, {})
         expect(heavy_stemcell_id).not_to be_nil
@@ -116,21 +130,22 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'with light stemcell', light_stemcell: true do
-      let(:windows_light_stemcell_sku)     { ENV.fetch('BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_SKU', '2012r2') }
-      let(:windows_light_stemcell_version) { ENV.fetch('BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION', '1200.7.001001') }
-      let(:stemcell_properties) do
-        {
-          'infrastructure' => 'azure',
-          'os_type' => 'windows',
-          'image' => {
-            'offer'     => 'bosh-windows-server',
-            'publisher' => 'pivotal',
-            'sku'       => windows_light_stemcell_sku,
-            'version'   => windows_light_stemcell_version
-          }
-        }
+      let(:extract_path)               { '/tmp/with-light-stemcell' }
+      let(:image_path)                 { "#{extract_path}/image" }
+      let(:image_metadata_path)        { "#{extract_path}/stemcell.MF" }
+
+      before do
+        FileUtils.mkdir_p(extract_path)
+        run_command("tar -zxf #{@stemcell_path} -C #{extract_path}")
       end
+
+      after do
+        FileUtils.remove_dir(extract_path)
+      end
+
       it 'should create/delete the stemcell' do
+        stemcell_properties = YAML.load_file(image_metadata_path)['cloud_properties']
+
         light_stemcell_id = cpi.create_stemcell(image_path, stemcell_properties)
         expect(light_stemcell_id).not_to be_nil
         cpi.delete_stemcell(light_stemcell_id)
