@@ -19,6 +19,7 @@ describe Bosh::AzureCloud::DiskId do
             expect(disk_id.caching).to eq(caching)
             expect(disk_id.storage_account_name).to eq(storage_account_name)
             expect(disk_id.resource_group_name).to eq(default_resource_group_name)
+            expect(disk_id.to_s).to eq(id_str)
           end
         end
 
@@ -27,6 +28,7 @@ describe Bosh::AzureCloud::DiskId do
           it 'should return a correct snapshot id' do
             snapshot_id = Bosh::AzureCloud::DiskId.parse(id_str, default_resource_group_name)
             expect(snapshot_id.disk_name).to eq(id_str)
+            expect(snapshot_id.to_s).to eq(id_str)
           end
         end
       end
@@ -41,6 +43,7 @@ describe Bosh::AzureCloud::DiskId do
           expect do
             disk_id.storage_account_name
           end.to raise_error /This function should only be called for unmanaged disks/
+          expect(disk_id.to_s).to eq(id_str)
         end
       end
     end
@@ -51,35 +54,38 @@ describe Bosh::AzureCloud::DiskId do
         context 'without resource_group_name' do
           context 'when the id is disk id' do
             let(:disk_name) { "bosh-data-#{uuid}" }
-            let(:id_str) { "disk_name:#{disk_name};caching:#{caching};storage_account_name:#{storage_account_name}" }
+            let(:id_str) { "caching:#{caching};disk_name:#{disk_name};storage_account_name:#{storage_account_name}" }
             it 'should return a correct disk id' do
               disk_id = Bosh::AzureCloud::DiskId.parse(id_str, default_resource_group_name)
               expect(disk_id.disk_name).to eq(disk_name)
               expect(disk_id.caching).to eq(caching)
               expect(disk_id.storage_account_name).to eq(storage_account_name)
               expect(disk_id.resource_group_name).to eq(default_resource_group_name)
+              expect(disk_id.to_s).to eq("caching:#{caching};disk_name:#{disk_name};resource_group_name:#{default_resource_group_name};storage_account_name:#{storage_account_name}")
             end
           end
 
           context 'when the id is snapshot id' do
             let(:snapshot_disk_name) { "bosh-data-#{uuid}--snapshottime" }
-            let(:id_str) { "disk_name:#{snapshot_disk_name};caching:#{caching};storage_account_name:#{storage_account_name}" }
+            let(:id_str) { "caching:#{caching};disk_name:#{snapshot_disk_name};storage_account_name:#{storage_account_name}" }
             it 'should return a correct snapshot id' do
               snapshot_id = Bosh::AzureCloud::DiskId.parse(id_str, default_resource_group_name)
               expect(snapshot_id.disk_name).to eq(snapshot_disk_name)
+              expect(snapshot_id.to_s).to eq("caching:#{caching};disk_name:#{snapshot_disk_name};resource_group_name:#{default_resource_group_name};storage_account_name:#{storage_account_name}")
             end
           end
         end
 
         context 'with resource_group_name' do
           let(:disk_name) { "bosh-data-#{uuid}" }
-          let(:id_str) { "disk_name:#{disk_name};caching:#{caching};resource_group_name:#{default_resource_group_name};storage_account_name:#{storage_account_name}" }
+          let(:id_str) { "caching:#{caching};disk_name:#{disk_name};resource_group_name:#{default_resource_group_name};storage_account_name:#{storage_account_name}" }
           it 'should return a correct disk id' do
             disk_id = Bosh::AzureCloud::DiskId.parse(id_str, default_resource_group_name)
             expect(disk_id.disk_name).to eq(disk_name)
             expect(disk_id.caching).to eq(caching)
             expect(disk_id.storage_account_name).to eq(storage_account_name)
             expect(disk_id.resource_group_name).to eq(default_resource_group_name)
+            expect(disk_id.to_s).to eq(id_str)
           end
         end
       end
@@ -87,7 +93,7 @@ describe Bosh::AzureCloud::DiskId do
       context 'with managed disks' do
         let(:disk_name) { "bosh-disk-data-#{uuid}" }
         context 'with resource_group_name is default_resource_group_name' do
-          let(:id_str) { "disk_name:#{disk_name};caching:#{caching};resource_group_name:#{default_resource_group_name}" }
+          let(:id_str) { "caching:#{caching};disk_name:#{disk_name};resource_group_name:#{default_resource_group_name}" }
           it 'should return a correct disk id' do
             disk_id = Bosh::AzureCloud::DiskId.parse(id_str, default_resource_group_name)
             expect(disk_id.disk_name).to eq(disk_name)
@@ -96,12 +102,13 @@ describe Bosh::AzureCloud::DiskId do
             expect do
               disk_id.storage_account_name
             end.to raise_error /This function should only be called for unmanaged disks/
+            expect(disk_id.to_s).to eq(id_str)
           end
         end
 
         context 'with resource_group_name is not default_resource_group_name' do
           let(:rg_name) { 'another-resource-group-name' }
-          let(:id_str) { "disk_name:#{disk_name};caching:#{caching};resource_group_name:#{rg_name}" }
+          let(:id_str) { "caching:#{caching};disk_name:#{disk_name};resource_group_name:#{rg_name}" }
           it 'should return a correct disk id' do
             disk_id = Bosh::AzureCloud::DiskId.parse(id_str, default_resource_group_name)
             expect(disk_id.disk_name).to eq(disk_name)
@@ -110,6 +117,7 @@ describe Bosh::AzureCloud::DiskId do
             expect do
               disk_id.storage_account_name
             end.to raise_error /This function should only be called for unmanaged disks/
+            expect(disk_id.to_s).to eq(id_str)
           end
         end
       end

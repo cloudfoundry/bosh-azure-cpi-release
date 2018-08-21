@@ -12,11 +12,14 @@ module Bosh::AzureCloud
     #         snapshot disk:  "bosh-disk-data-[AGENTID]-[CACHING]"
     # V2 format:
     #   With unmanaged disks:
-    #         data disk:      "disk_name:bosh-data-[UUID];caching:[CACHING];storage_account_name:[STORAGE-ACCOUNT-NAME]"
-    #         snapshot disk:  "disk_name:bosh-data-[UUID]--[SNAPSHOTTIME];caching:[CACHING];storage_account_name:[STORAGE-ACCOUNT-NAME]"
+    #         data disk:      "caching:[CACHING];disk_name:bosh-data-[UUID];storage_account_name:[STORAGE-ACCOUNT-NAME]"
+    #         snapshot disk:  "caching:[CACHING];disk_name:bosh-data-[UUID]--[SNAPSHOTTIME];storage_account_name:[STORAGE-ACCOUNT-NAME]"
+    #      or:
+    #         data disk:      "caching:[CACHING];disk_name:bosh-data-[UUID];resource_group_name:[RESOURCE-GROUP-NAME];storage_account_name:[STORAGE-ACCOUNT-NAME]"
+    #         snapshot disk:  "caching:[CACHING];disk_name:bosh-data-[UUID]--[SNAPSHOTTIME];resource_group_name:[RESOURCE-GROUP-NAME]storage_account_name:[STORAGE-ACCOUNT-NAME]"
     #   With managed disks:
-    #         data disk:      "disk_name:bosh-disk-data-[UUID];caching:[CACHING];resource_group_name:[RESOURCE-GROUP-NAME]"
-    #         snapshot disk:  "disk_name:bosh-disk-data-[UUID];caching:[CACHING];resource_group_name:[RESOURCE-GROUP-NAME]"
+    #         data disk:      "caching:[CACHING];disk_name:bosh-disk-data-[UUID];resource_group_name:[RESOURCE-GROUP-NAME]"
+    #         snapshot disk:  "caching:[CACHING];disk_name:bosh-disk-data-[UUID];resource_group_name:[RESOURCE-GROUP-NAME]"
     #
     # Usage:
     #  Creating id for a new disk
