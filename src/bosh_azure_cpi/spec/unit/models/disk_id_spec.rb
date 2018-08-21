@@ -78,13 +78,14 @@ describe Bosh::AzureCloud::DiskId do
 
         context 'with resource_group_name' do
           let(:disk_name) { "bosh-data-#{uuid}" }
-          let(:id_str) { "caching:#{caching};disk_name:#{disk_name};resource_group_name:#{default_resource_group_name};storage_account_name:#{storage_account_name}" }
+          let(:rg_name) { 'another-resource-group-name' }
+          let(:id_str) { "caching:#{caching};disk_name:#{disk_name};resource_group_name:#{rg_name};storage_account_name:#{storage_account_name}" }
           it 'should return a correct disk id' do
             disk_id = Bosh::AzureCloud::DiskId.parse(id_str, default_resource_group_name)
             expect(disk_id.disk_name).to eq(disk_name)
             expect(disk_id.caching).to eq(caching)
             expect(disk_id.storage_account_name).to eq(storage_account_name)
-            expect(disk_id.resource_group_name).to eq(default_resource_group_name)
+            expect(disk_id.resource_group_name).to eq(rg_name)
             expect(disk_id.to_s).to eq(id_str)
           end
         end
