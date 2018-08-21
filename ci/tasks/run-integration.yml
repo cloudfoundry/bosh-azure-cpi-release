@@ -8,6 +8,7 @@ inputs:
   - name: environment
   - name: bosh-cpi-src
   - name: stemcell-state
+  - name: stemcell
 
 run:
   path: bosh-cpi-src/ci/tasks/run-integration.sh
