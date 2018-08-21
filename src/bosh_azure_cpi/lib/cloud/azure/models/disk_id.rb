@@ -23,10 +23,12 @@ module Bosh::AzureCloud
     #
     # Usage:
     #  Creating id for a new disk
-    #   disk_id = DiskId.create(caching, false, storage_account_name: 'ss') # Create V2 unmanaged disk id
-    #   disk_id = DiskId.create(caching, true, resource_group_name: 'rr')  # Create V2 managed disk id
+    #   disk_id = DiskId.create(caching, false, resource_group_name: 'rr', storage_account_name: 'ss') # Create V2 unmanaged disk id
+    #   disk_id = DiskId.create(caching, true, resource_group_name: 'rr')                              # Create V2 managed disk id
     #  Parsing id for an existing disk
     #   disk_id = DiskId.parse(id, default_resource_group_name)
+    #
+    #  TODO: The method `caching` and `storage_account_name` doesn't work for V1 format with unmanaged snapshot disk because of the postfix "--[SNAPSHOTTIME]".
 
     CACHING_KEY = 'caching'
     DISK_NAME_KEY = 'disk_name'
