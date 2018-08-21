@@ -34,7 +34,6 @@ if [ "${IS_HEAVY_STEMCELL}" == "true" ]; then
   az storage blob upload --file /tmp/root.vhd --container-name stemcell --name ${stemcell_id}.vhd --type page --account-name ${account_name} --account-key ${account_key}
   cat > "${output_dir}/stemcell.env" <<EOF
 export BOSH_AZURE_STEMCELL_ID="${stemcell_id}"
-export BOSH_AZURE_STEMCELL_PATH="${stemcell_path}"
 EOF
 else
   stemcell_id="bosh-light-stemcell-00000000-0000-0000-0000-0AZURECPICI0"
@@ -87,7 +86,5 @@ else
   az vm image accept-terms --urn ${image_urn}
   cat > "${output_dir}/stemcell.env" <<EOF
 export BOSH_AZURE_STEMCELL_ID="${stemcell_id}"
-export BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_SKU=${image_sku}
-export BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION=${image_version}
 EOF
 fi
