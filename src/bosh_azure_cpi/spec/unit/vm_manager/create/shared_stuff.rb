@@ -9,7 +9,13 @@ shared_context 'shared stuff for vm manager' do
       'use_managed_disks' => true
     )
   end
-  let(:props_factory) { Bosh::AzureCloud::PropsFactory.new(Bosh::AzureCloud::ConfigFactory.build(mock_cloud_options)) }
+  let(:props_factory) do
+    Bosh::AzureCloud::PropsFactory.new(
+      Bosh::AzureCloud::ConfigFactory.build(
+        mock_cloud_options['properties']
+      )
+    )
+  end
   let(:registry_endpoint) { mock_registry.endpoint }
   let(:disk_manager) { instance_double(Bosh::AzureCloud::DiskManager) }
   let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
@@ -27,7 +33,9 @@ shared_context 'shared stuff for vm manager' do
   # Parameters of create
   let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
+  let(:agent_id) { 'fake-agent-id' }
   let(:stemcell_id) { 'fake-stemcell-id' }
+  let(:bosh_vm_meta) { Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_id) }
   let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
   let(:vm_properties) do
     {
@@ -45,19 +53,16 @@ shared_context 'shared stuff for vm manager' do
   let(:env) { {} }
 
   # Instance ID
-  let(:resource_group_name) { 'fake-resource-group-name' }
-  let(:vm_name) { 'fake-vm-name' }
+  let(:vm_name) { agent_id }
   let(:storage_account_name) { 'fake-storage-acount-name' }
   let(:instance_id_string) { 'fake-instance-id' }
   before do
-    allow(instance_id).to receive(:resource_group_name)
-      .and_return(resource_group_name)
     allow(instance_id).to receive(:vm_name)
       .and_return(vm_name)
-    allow(instance_id).to receive(:storage_account_name)
-      .and_return(storage_account_name)
     allow(instance_id).to receive(:to_s)
       .and_return(instance_id_string)
+    allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
+      .and_return(name: storage_account_name)
   end
 
   # Stemcell
@@ -110,7 +115,7 @@ shared_context 'shared stuff for vm manager' do
       .with(vm_properties['application_gateway'])
       .and_return(application_gateway)
     allow(azure_client).to receive(:get_public_ip_by_name)
-      .with(resource_group_name, vm_name)
+      .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
       .and_return(nil)
     allow(azure_client).to receive(:get_resource_group)
       .and_return({})

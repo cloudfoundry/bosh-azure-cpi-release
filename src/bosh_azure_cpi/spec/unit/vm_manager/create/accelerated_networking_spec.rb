@@ -37,9 +37,9 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
               expect(azure_client).to receive(:create_network_interface)
-                .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
+                .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -55,9 +55,9 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
               expect(azure_client).to receive(:create_network_interface)
-                .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
+                .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -73,9 +73,9 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
               expect(azure_client).to receive(:create_network_interface)
-                .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
+                .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -97,9 +97,9 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
               expect(azure_client).to receive(:create_network_interface)
-                .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
+                .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -115,9 +115,9 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
               expect(azure_client).to receive(:create_network_interface)
-                .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
+                .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -133,9 +133,9 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
               expect(azure_client).to receive(:create_network_interface)
-                .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
+                .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end

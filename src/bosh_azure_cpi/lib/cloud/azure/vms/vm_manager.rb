@@ -18,10 +18,14 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+    def create(bosh_vm_meta, location, vm_props, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
-      @logger.info("create(#{instance_id}, #{location}, #{stemcell_id}, #{vm_props}, ..., ...)")
-      resource_group_name = instance_id.resource_group_name
+      @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props}, ..., ...)")
+
+      instance_id = _build_instance_id(bosh_vm_meta, location, vm_props)
+
+      # move the instance id creation logic into the create method.
+      resource_group_name = vm_props.resource_group_name
       vm_name = instance_id.vm_name
 
       # When both availability_zone and availability_set are specified, raise an error
@@ -42,7 +46,7 @@ module Bosh::AzureCloud
 
       tasks.push(
         task_get_stemcell_info = Concurrent::Future.execute do
-          _get_stemcell_info(stemcell_id, vm_props, location)
+          _get_stemcell_info(bosh_vm_meta.stemcell_id, vm_props, location)
         end
       )
 
@@ -147,7 +151,7 @@ module Bosh::AzureCloud
 
       _create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
 
-      vm_params
+      [instance_id, vm_params]
     rescue StandardError => e
       error_message = ''
       if @keep_failed_vms
@@ -372,6 +376,16 @@ module Bosh::AzureCloud
     end
 
     private
+
+    def _build_instance_id(bosh_vm_meta, location, vm_props)
+      if @use_managed_disks
+        instance_id = InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id)
+      else
+        storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
+        instance_id = InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id, storage_account[:name])
+      end
+      instance_id
+    end
 
     def _get_stemcell_info(stemcell_id, vm_props, location)
       stemcell_info = nil

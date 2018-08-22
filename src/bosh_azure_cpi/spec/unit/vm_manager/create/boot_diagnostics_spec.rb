@@ -39,7 +39,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(storage_account_manager).to receive(:get_or_create_diagnostics_storage_account)
               .with(location)
               .and_return(storage_account)
-            vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to eq(diag_storage_uri)
           end
         end
@@ -56,7 +56,7 @@ describe Bosh::AzureCloud::VMManager do
           let(:vm_location) { location }
 
           it 'should not enable diagnostics' do
-            vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to be(nil)
           end
         end
@@ -79,21 +79,21 @@ describe Bosh::AzureCloud::VMManager do
           before do
             vm_props.assign_dynamic_public_ip = true
             allow(azure_client).to receive(:get_public_ip_by_name)
-              .with(resource_group_name, vm_name).and_return(dynamic_public_ip)
+              .with(MOCK_RESOURCE_GROUP_NAME, vm_name).and_return(dynamic_public_ip)
           end
 
           it 'creates public IP and virtual machine in the specified zone' do
             expect(azure_client).to receive(:create_public_ip)
-              .with(resource_group_name, hash_including(
-                                           zone: availability_zone
-                                         )).once
+              .with(MOCK_RESOURCE_GROUP_NAME, hash_including(
+                                                zone: availability_zone
+                                              )).once
             expect(azure_client).to receive(:create_virtual_machine)
-              .with(resource_group_name,
+              .with(MOCK_RESOURCE_GROUP_NAME,
                     hash_including(zone: availability_zone),
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -101,12 +101,12 @@ describe Bosh::AzureCloud::VMManager do
         context 'and assign_dynamic_public_ip is not set' do
           it 'creates virtual machine in the specified zone' do
             expect(azure_client).to receive(:create_virtual_machine)
-              .with(resource_group_name,
+              .with(MOCK_RESOURCE_GROUP_NAME,
                     hash_including(zone: availability_zone),
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -118,12 +118,12 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'convert availability_zone to string' do
             expect(azure_client).to receive(:create_virtual_machine)
-              .with(resource_group_name,
+              .with(MOCK_RESOURCE_GROUP_NAME,
                     hash_including(zone: '1'),
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
             expect(vm_params[:zone]).to eq('1')
           end
         end

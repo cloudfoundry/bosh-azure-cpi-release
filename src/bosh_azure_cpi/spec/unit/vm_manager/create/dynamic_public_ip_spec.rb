@@ -27,7 +27,7 @@ describe Bosh::AzureCloud::VMManager do
           allow(network_configurator).to receive(:vip_network)
             .and_return(nil)
           allow(azure_client).to receive(:get_public_ip_by_name)
-            .with(resource_group_name, vm_name).and_return(dynamic_public_ip)
+            .with(MOCK_RESOURCE_GROUP_NAME, vm_name).and_return(dynamic_public_ip)
         end
 
         context 'and pip_idle_timeout_in_minutes is set' do
@@ -54,18 +54,18 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'creates a public IP and assigns it to the primary NIC' do
             expect(azure_client).to receive(:create_public_ip)
-              .with(resource_group_name, public_ip_params)
+              .with(MOCK_RESOURCE_GROUP_NAME, public_ip_params)
             expect(azure_client).to receive(:create_network_interface)
-              .with(resource_group_name, hash_including(
-                                           name: "#{vm_name}-0",
-                                           public_ip: dynamic_public_ip,
-                                           subnet: subnet,
-                                           tags: tags,
-                                           load_balancer: load_balancer,
-                                           application_gateway: application_gateway
-                                         )).once
+              .with(MOCK_RESOURCE_GROUP_NAME, hash_including(
+                                                name: "#{vm_name}-0",
+                                                public_ip: dynamic_public_ip,
+                                                subnet: subnet,
+                                                tags: tags,
+                                                load_balancer: load_balancer,
+                                                application_gateway: application_gateway
+                                              )).once
 
-            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+            _, vm_params = vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -83,17 +83,17 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'creates a public IP and assigns it to the NIC' do
             expect(azure_client).to receive(:create_public_ip)
-              .with(resource_group_name, public_ip_params)
+              .with(MOCK_RESOURCE_GROUP_NAME, public_ip_params)
             expect(azure_client).to receive(:create_network_interface)
-              .with(resource_group_name, hash_including(
-                                           public_ip: dynamic_public_ip,
-                                           subnet: subnet,
-                                           tags: tags,
-                                           load_balancer: load_balancer,
-                                           application_gateway: application_gateway
-                                         ))
+              .with(MOCK_RESOURCE_GROUP_NAME, hash_including(
+                                                public_ip: dynamic_public_ip,
+                                                subnet: subnet,
+                                                tags: tags,
+                                                load_balancer: load_balancer,
+                                                application_gateway: application_gateway
+                                              ))
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -139,12 +139,17 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it 'should succeed' do
+            expect(instance_id).to receive(:resource_group_name)
+              .and_return(MOCK_RESOURCE_GROUP_NAME)
+            expect(Bosh::AzureCloud::InstanceId).to receive(:create)
+              .with(MOCK_RESOURCE_GROUP_NAME, agent_id)
+              .and_return(instance_id)
             expect(azure_client).not_to receive(:delete_virtual_machine)
             expect(azure_client).not_to receive(:delete_network_interface)
             expect(azure_client).to receive(:create_virtual_machine)
-              .with(resource_group_name, vm_params, network_interfaces, nil)
-            result = vm_manager2.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
-            expect(result[:name]).to eq(vm_name)
+              .with(MOCK_RESOURCE_GROUP_NAME, vm_params, network_interfaces, nil)
+            _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            expect(vm_params[:name]).to eq(vm_name)
           end
         end
 
@@ -185,11 +190,16 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it 'should succeed' do
+            expect(instance_id).to receive(:resource_group_name)
+              .and_return(MOCK_RESOURCE_GROUP_NAME)
+            expect(Bosh::AzureCloud::InstanceId).to receive(:create)
+              .with(MOCK_RESOURCE_GROUP_NAME, agent_id)
+              .and_return(instance_id)
             expect(azure_client).to receive(:create_virtual_machine)
-              .with(resource_group_name, vm_params, network_interfaces, nil)
+              .with(MOCK_RESOURCE_GROUP_NAME, vm_params, network_interfaces, nil)
             expect(SecureRandom).to receive(:uuid).exactly(3).times
             expect do
-              vm_manager2.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+              vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -216,7 +226,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+              vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -233,13 +243,13 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).to receive(:create_virtual_machine).twice
             expect(azure_client).to receive(:delete_virtual_machine).once
             expect(disk_manager2).to receive(:generate_os_disk_name).with(vm_name).once
-            expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, os_disk_name).once
+            expect(disk_manager2).to receive(:delete_disk).with(MOCK_RESOURCE_GROUP_NAME, os_disk_name).once
             expect(disk_manager2).to receive(:generate_ephemeral_disk_name).with(vm_name).once
-            expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, ephemeral_disk_name).once
+            expect(disk_manager2).to receive(:delete_disk).with(MOCK_RESOURCE_GROUP_NAME, ephemeral_disk_name).once
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager2.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+              vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
             end.not_to raise_error
           end
         end

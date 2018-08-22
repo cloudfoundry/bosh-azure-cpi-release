@@ -157,11 +157,13 @@ module Bosh::AzureCloud
       # env may contain credentials so we must not log it
       @logger.info("create_vm(#{agent_id}, #{stemcell_id}, #{vm_properties}, #{networks}, #{disk_locality}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
+        bosh_vm_meta = Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_id)
         vm_props = @props_factory.parse_vm_props(vm_properties)
         # TODO: move the validation into the factory's methods
         cloud_error("missing required cloud property 'instance_type'.") if vm_props.instance_type.nil?
+        cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') if !@use_managed_disk && !vm_props.availability_zone.nil?
         extras = { 'instance_type' => vm_props.instance_type.nil? ? 'unknown_instance_type' : vm_props.instance_type }
-        @telemetry_manager.monitor('create_vm', id: agent_id, extras: extras) do
+        @telemetry_manager.monitor('create_vm', id: bosh_vm_meta.agent_id, extras: extras) do
           # These resources should be in the same location for a VM: VM, NIC, disk(storage account or managed disk).
           # And NIC must be in the same location with VNET, so CPI will use VNET's location as default location for the resources related to the VM.
           network_configurator = NetworkConfigurator.new(_azure_config, networks)
@@ -171,20 +173,10 @@ module Bosh::AzureCloud
           location = vnet[:location]
           location_in_global_configuration = _azure_config.location
           cloud_error("The location in the global configuration '#{location_in_global_configuration}' is different from the location of the virtual network '#{location}'") if !location_in_global_configuration.nil? && location_in_global_configuration != location
-          resource_group_name = vm_props.resource_group_name
 
-          if @use_managed_disks
-            instance_id = InstanceId.create(resource_group_name, agent_id)
-          else
-            cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') unless vm_props.availability_zone.nil?
-            storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
-            instance_id = InstanceId.create(resource_group_name, agent_id, storage_account[:name])
-          end
-
-          vm_params = @vm_manager.create(
-            instance_id,
+          instance_id, vm_params = @vm_manager.create(
+            bosh_vm_meta,
             location,
-            stemcell_id,
             vm_props,
             network_configurator,
             env
@@ -194,13 +186,12 @@ module Bosh::AzureCloud
 
           begin
             registry_settings = _initial_agent_settings(
-              agent_id,
+              bosh_vm_meta.agent_id,
               networks,
               env,
               vm_params
             )
             registry.update_settings(instance_id.to_s, registry_settings)
-
             instance_id.to_s
           rescue StandardError => e
             @logger.error(%(Failed to update registry after new vm was created: #{e.inspect}\n#{e.backtrace.join("\n")}))
