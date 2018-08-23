@@ -11,7 +11,7 @@ In this guidance, we will use `mysqldump` and `mysql` command-lines to dump back
 
 1. Figure out databases to be migrated
 
-    Check your CF manifest carefully, find out which databases are used. Write down database name, user, password for  step `Migrate databases`. If you are using Ops Manager, follow this [guid](https://docs.pivotal.io/pivotalcf/2-2/customizing/credentials.html) to get credentials.
+    Check your CF manifest carefully, find out which databases are used. Write down database name, user, password for step `Migrate databases`. If you are using Ops Manager, follow this [guidance](https://docs.pivotal.io/pivotalcf/2-2/customizing/credentials.html) to get credentials.
     
     Here is a list sample of the databases used in CF.
     ```
@@ -36,7 +36,7 @@ In this guidance, we will use `mysqldump` and `mysql` command-lines to dump back
 1. Stop CC VMs
 
     * Turn off bosh resurrector (`bosh -e azure -d cf  update-resurrection off`)
-    * On Azure portal, stop all the CC VM jobs (Cloud Controller, Cloud Controller Worker, and Clock Global). Note that your CF API services will stop being available at this point (running apps should continue to be available though)
+    * On Azure portal, stop all the VMs on which the CC jobs (Cloud Controller, Cloud Controller Worker, and Clock Global) are running. Note that your CF API services will stop being available at this point (running apps should continue to be available though)
     * `bosh cck` the cf deployment to check for any errors with the bosh state. It should ask you if you want to delete references to the missing CC jobs, which you want to do.
 
 1. Migrate databases
