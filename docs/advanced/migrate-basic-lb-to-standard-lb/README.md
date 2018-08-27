@@ -1,26 +1,28 @@
 # Migrate Basic SKU Load Balancer to Standard SKU Load Balancer
 
-[Standard Load Balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview) is a new Load Balancer product for all TCP and UDP applications with an expanded and more granular feature set over Basic Load Balancer.
+[Standard Load Balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview) is a new Load Balancer product for all TCP and UDP applications with an expanded and more granular feature set over Basic Load Balancer. Azure Standard Load Balancer enables you to scale your applications and create high availability from small scale deployments to large and complex multi-zone architectures. While Basic Load Balancer exists within the scope of an availability set, a Standard Load Balancer is fully integrated with the scope of a virtual network. For Cloud Foundry, this is required if you integrate with Azure Availability Zone. In addition, it ensures Bosh can create VMs across Availability Sets successfully for scenarios like VM resizing, and automatic VM type selection.
 
-Note when planning the migration, you need to be aware of following restrictions.
+Besides the benefits coming with Standard LB, we recommend you to migrate to standard load balancer for better CF VM type switching experience, and in prepare for the Azure Availabity Zone. This document guides you through the steps for the migration.
 
-* Matching SKUs must be used for Load Balancer and Public IP resources. You can't have a mixture of Basic SKU resources and Standard SKU resources. It means that, when you migrate your load balancers from `Basic SKU` to `Standard SKU`, you have to use the Standard SKU Public IP and the IP address will **CHANGE**.
+Note when planning the migration, you need to be aware of following requirements.
 
-* You can't attach standalone virtual machines, virtual machines in an availability set resource, or a virtual machine scale set resources to both SKUs simultaneously. You have to remove the Basic SKU load balancers first and then add the Standard SKU load balancers. You can't switch the load balancer in **ONE** step.
+* Matching SKUs must be used for Load Balancer and Public IP resources. You can't have a mixture of Basic SKU resources and Standard SKU resources. It means that, when you migrate your load balancers from `Basic SKU` to `Standard SKU`, you will need a new public IP address, that can match the `Standard SKU`.
 
-The above [limits](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview#migration-between-skus) may cause downtime before the DNS propagations are finished globally. This guidance can help to reduce the downtime.
+* You will need to remove the Basic SKU LB first, and then add Standard SKU LB, as VMs can'be be attached to both SKUs simultaneously.
+
+The above [limits](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview#migration-between-skus) may cause downtime before the DNS propagations are finished globally. In this guidance, we will create additional HAProxy temporally to avoid the system downtime.
 
 ## How to Migrate
 
-This guidance assumes you have created 4 load balancers (`Router`, `TCP Router`, `Diego Brain` and `MySQL Proxy`), although each can be migrated independently. This section briefly describes how to migrate load balancers. For detailed steps, you can follow the sections [Migrate Load Balancers in cf-deployment](#migrate-load-balancers-in-cf-deployment) and [Migrate Load Balancers in Pivotal Application Service](#migrate-load-balancers-in-pivotal-application-service).
+This guidance assumes you have created 4 load balancers (`Router`, `TCP Router`, `Diego Brain` and `MySQL Proxy`), although each can be migrated independently. Summary:
 
 * For the load balancers of `Router`, `TCP Router` and `Diego Brain`:
 
-    * Switching traffic from `router/tcp-router/diego-brain` to `HAProxy`. The `HAProxy` instances also terminates HTTP/HTTPS traffic for applications and forwards the Diego brain port (2222) and TCP router ports (1024-1123 by default). You could make a new load balancer and attach it to `HAProxy` instead of the `router/tcp-router/diego-brain`.
+    * Switching traffic from `router/tcp-router/diego-brain` to `HAProxy`. The `HAProxy` instances also terminates HTTP/HTTPS traffic for applications and forwards the Diego brain port (2222) and TCP router ports (1024-1123 by default). You could create a new load balancer and attach it to `HAProxy` instead of the `router/tcp-router/diego-brain`. This load balancer is a temparary LB, which can be deleted after migration.
 
     * Once DNS is propagated, you can delete the old basic load balancers of `router/tcp-router/diego-brain`.
 
-    * Repeat the process with a 2nd new load balancer to move the traffic back to `router/tcp-router/diego-brain`.
+    * Repeat the process with a 2nd new load balancer to move the traffic back to `router/tcp-router/diego-brain`. This load balancer is Standard SKU load balancer.
 
 * For the load balancer of `MySQL Proxy`:
 
@@ -79,6 +81,8 @@ In the following steps, we assume that there are no HAProxy instances in your de
 
     * `ssh.<your-domain>` is resolved to the public IP address of `HAProxy` load balancer.
 
+1. Verify whether the deployment with the HAProxy instance works. You need to login CF in two places. In the first place, the domain is still resovled to the public IP address of Basic SKU load balancer. In the second place, the domain is resolved to the public IP address of `HAProxy` load balancer. If the deployment works well, continue next steps.
+
 1. Remove the Basic SKU load balancer in `cf-router-network-properties`, `cf-tcp-router-network-properties` and `diego-ssh-proxy-network-properties`. **Deploy!**
 
     ```diff
@@ -109,14 +113,15 @@ In the following steps, we assume that there are no HAProxy instances in your de
     +     load_balancer: <standard-lb-for-diego-brain>
     ```
 
-
 1. Navigate to your DNS provider, and create entries for the following domains. Wait until DNS propagations are finished globally.
 
-    * `*.<your-domain>` is resolved to the new public IP address of Router load balancer (Standard SKU).
+    * `*.<your-domain>` is resolved to the new public IP address of `Router` load balancer (Standard SKU).
 
-    * `tcp.<your-domain>` is resolved to the new public IP address of TCP Router load balancer (Standard SKU).
+    * `tcp.<your-domain>` is resolved to the new public IP address of `TCP Router` load balancer (Standard SKU).
 
-    * `ssh.<your-domain>` is resolved to the new public IP address of Diego Brain load balancer (Standard SKU).
+    * `ssh.<your-domain>` is resolved to the new public IP address of `Diego Brain` load balancer (Standard SKU).
+
+1. Verify whether the new Standard SKU LBs work. You need to login CF in two places. In the first place, the domain is still resovled to the public IP address of `HAProxy` load balancer. In the second place, the domain is resolved to the public IP address of Standard SKU load balancer. If the deployment works well, continue next steps.
 
 1. Remove the HAProxy instances from your deployment. **Deploy!**
 
@@ -172,6 +177,8 @@ In the following steps, we assume that there are no HAProxy instances in your de
 
         * `ssh.<your-domain>` is resolved to the public IP address of `HAProxy` load balancer.
 
+    1. Verify whether the deployment with the HAProxy instance works. You need to login CF in two places. In the first place, the domain is still resovled to the public IP address of Basic SKU load balancer. In the second place, the domain is resolved to the public IP address of `HAProxy` load balancer. If the deployment works well, continue next steps.
+
     1. Remove the Basic SKU load balancer in the **Load Balancers** field of `Router`, `TCP Router` and `Diego Brain`. **Apply changes!**
 
     1. Add the Standard SKU load balancer in the **Load Balancers** field of `Router`, `TCP Router` and `Diego Brain`. **Apply changes!**
@@ -186,7 +193,9 @@ In the following steps, we assume that there are no HAProxy instances in your de
 
         * `ssh.<your-domain>` is resolved to the new public IP address of `Diego Brain` load balancer (Standard SKU).
 
-    1. Remove the HAProxy instances from your deployment. **Apply changes!**
+    1. Verify whether the new Standard SKU LBs work. You need to login CF in two places. In the first place, the domain is still resovled to the public IP address of `HAProxy` load balancer. In the second place, the domain is resolved to the public IP address of Standard SKU load balancer. If the deployment works well, continue next steps.
+
+    1. Change the HAProxy instances number to `0` in `Resource Config`. **Apply changes!**
 
 1. Migrate the load balancer of `MySQL Proxy`.
 
