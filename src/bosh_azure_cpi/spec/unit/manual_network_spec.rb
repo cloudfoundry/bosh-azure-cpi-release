@@ -184,7 +184,7 @@ describe Bosh::AzureCloud::ManualNetwork do
       expect(network.application_security_groups).to eq([])
       expect(network.ip_forwarding).to be false
       expect(network.accelerated_networking).to be false
-      expect(network.resource_group_name).to eq(azure_config['resource_group_name'])
+      expect(network.resource_group_name).to eq(azure_config.resource_group_name)
       expect(network.dns).to be_nil
       expect(network.has_default_dns?).to be false
       expect(network.has_default_dns?).to be false

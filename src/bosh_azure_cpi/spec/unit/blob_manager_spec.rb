@@ -1,17 +1,16 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-
 describe Bosh::AzureCloud::BlobManager do
   let(:azure_config) { mock_azure_config }
-  let(:azure_client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
-  let(:blob_manager) { Bosh::AzureCloud::BlobManager.new(azure_config, azure_client2) }
+  let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
+  let(:blob_manager) { Bosh::AzureCloud::BlobManager.new(azure_config, azure_client) }
 
   let(:container_name) { 'fake-container-name' }
   let(:blob_name) { 'fake-blob-name' }
   let(:keys) { ['fake-key-1', 'fake-key-2'] }
 
-  let(:azure_client) { instance_double(Azure::Storage::Client) }
+  let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
   let(:blob_service) { instance_double(Azure::Storage::Blob::BlobService) }
   let(:customized_retry) { instance_double(Bosh::AzureCloud::CustomizedRetryPolicyFilter) }
   let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
@@ -36,16 +35,16 @@ describe Bosh::AzureCloud::BlobManager do
 
   before do
     allow(Azure::Storage::Client).to receive(:create)
+      .and_return(azure_storage_client)
+    allow(Bosh::AzureCloud::AzureClient).to receive(:new)
       .and_return(azure_client)
-    allow(Bosh::AzureCloud::AzureClient2).to receive(:new)
-      .and_return(azure_client2)
-    allow(azure_client2).to receive(:get_storage_account_keys_by_name)
+    allow(azure_client).to receive(:get_storage_account_keys_by_name)
       .and_return(keys)
-    allow(azure_client2).to receive(:get_storage_account_by_name)
+    allow(azure_client).to receive(:get_storage_account_by_name)
       .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
       .and_return(storage_account)
-    allow(azure_client).to receive(:storage_blob_host).and_return(blob_host)
-    allow(azure_client).to receive(:blob_client)
+    allow(azure_storage_client).to receive(:storage_blob_host).and_return(blob_host)
+    allow(azure_storage_client).to receive(:blob_client)
       .and_return(blob_service)
     allow(Bosh::AzureCloud::CustomizedRetryPolicyFilter).to receive(:new)
       .and_return(customized_retry)
@@ -120,39 +119,77 @@ describe Bosh::AzureCloud::BlobManager do
       }
     end
 
-    before do
-      @file_path = '/tmp/fake_image'
-      File.open(@file_path, 'wb') { |f| f.write('Hello CloudFoundry!') }
-    end
-    after do
-      File.delete(@file_path) if File.exist?(@file_path)
-    end
-
-    context 'when uploading page blob succeeds' do
-      before do
-        allow(blob_service).to receive(:put_blob_pages)
-        allow(blob_service).to receive(:delete_blob)
+    context 'when normal page blob' do
+      before(:context) do
+        @file_path = '/tmp/fake_image'
+        File.open(@file_path, 'wb') { |f| f.write('Hello CloudFoundry!') }
+      end
+      after(:context) do
+        File.delete(@file_path) if File.exist?(@file_path)
       end
 
-      it 'raise no error' do
+      context 'when uploading page blob succeeds' do
+        before do
+          allow(blob_service).to receive(:put_blob_pages)
+          allow(blob_service).to receive(:delete_blob)
+        end
+
+        it 'raise no error' do
+          expect(blob_service).to receive(:create_page_blob)
+            .with(container_name, blob_name, kind_of(Numeric), options)
+
+          expect do
+            blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
+          end.not_to raise_error
+        end
+      end
+
+      context 'when uploading page blob fails' do
+        before do
+          allow(blob_service).to receive(:create_page_blob).and_raise(StandardError)
+        end
+
+        it 'should raise an error' do
+          expect do
+            blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
+          end.to raise_error /Failed to upload page blob/
+        end
+      end
+
+      context 'when retry reached max times' do
+        before do
+          allow(blob_service).to receive(:put_blob_pages).and_raise('put blob pages failed')
+          allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
+        end
+
+        it 'should raise an error' do
+          expect(blob_service).to receive(:create_page_blob)
+            .with(container_name, blob_name, kind_of(Numeric), options)
+          expect(blob_service).to receive(:delete_blob)
+          expect do
+            blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
+          end.to raise_error /put blob pages failed/
+        end
+      end
+    end
+
+    context 'when empty page blob' do
+      before do
+        @empty_file_path = '/tmp/empty_content_image'
+        MAX_CHUNK_SIZE = 2 * 1024 * 1024 # 2MB
+        @empty_chunk_content = Array.new(MAX_CHUNK_SIZE, 0).pack('c*')
+        File.open(@empty_file_path, 'wb') { |f| f.write(@empty_chunk_content) }
+      end
+      after do
+        File.delete(@empty_file_path) if File.exist?(@empty_file_path)
+      end
+      it 'should not call put_blob_pages' do
         expect(blob_service).to receive(:create_page_blob)
           .with(container_name, blob_name, kind_of(Numeric), options)
-
+        expect(blob_service).not_to receive(:put_blob_pages)
         expect do
-          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
+          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @empty_file_path, blob_name, metadata)
         end.not_to raise_error
-      end
-    end
-
-    context 'when uploading page blob fails' do
-      before do
-        allow(blob_service).to receive(:create_page_blob).and_raise(StandardError)
-      end
-
-      it 'should raise an error' do
-        expect do
-          blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
-        end.to raise_error /Failed to upload page blob/
       end
     end
   end
@@ -244,7 +281,7 @@ describe Bosh::AzureCloud::BlobManager do
   describe '#get_blob_properties' do
     context 'when storage account does not exist' do
       before do
-        allow(azure_client2).to receive(:get_storage_account_by_name)
+        allow(azure_client).to receive(:get_storage_account_by_name)
           .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
           .and_return(nil)
       end
@@ -252,7 +289,7 @@ describe Bosh::AzureCloud::BlobManager do
       it 'should raise error' do
         expect do
           blob_manager.get_blob_properties(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
-        end.to raise_error("initialize_blob_client: Storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' not found")
+        end.to raise_error("_initialize_blob_client: Storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' not found")
       end
     end
 
@@ -338,13 +375,27 @@ describe Bosh::AzureCloud::BlobManager do
       }
     end
 
-    it 'should get metadata of the blob' do
-      expect(blob_service).to receive(:set_blob_metadata)
-        .with(container_name, blob_name, encoded_metadata, options)
+    context 'when blob exists' do
+      it 'should set metadata successfully' do
+        expect(blob_service).to receive(:set_blob_metadata)
+          .with(container_name, blob_name, encoded_metadata, options)
 
-      expect do
-        blob_manager.set_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, metadata)
-      end.not_to raise_error
+        expect do
+          blob_manager.set_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, metadata)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when blob not exists' do
+      before do
+        allow(blob_service).to receive(:set_blob_metadata)
+          .and_raise('(404)')
+      end
+      it 'should raise error' do
+        expect do
+          blob_manager.set_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, metadata)
+        end.to raise_error /(404)/
+      end
     end
   end
 
@@ -457,7 +508,7 @@ describe Bosh::AzureCloud::BlobManager do
     end
     let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
     before do
-      allow(azure_client2).to receive(:get_storage_account_by_name)
+      allow(azure_client).to receive(:get_storage_account_by_name)
         .with(another_storage_account_name)
         .and_return(another_storage_account)
       allow(blob_service).to receive(:get_blob_properties).and_return(blob)
@@ -510,6 +561,7 @@ describe Bosh::AzureCloud::BlobManager do
           }
         end
         before do
+          allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
           allow(blob).to receive(:properties)
             .and_return(first_blob_properties, second_blob_properties, third_blob_properties, fourth_blob_properties)
@@ -555,6 +607,7 @@ describe Bosh::AzureCloud::BlobManager do
           }
         end
         before do
+          allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
           allow(blob).to receive(:properties)
             .and_return(first_blob_properties, second_blob_properties)
@@ -579,6 +632,7 @@ describe Bosh::AzureCloud::BlobManager do
           }
         end
         before do
+          allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
           allow(blob).to receive(:properties).and_return(blob_properties)
         end
@@ -619,51 +673,6 @@ describe Bosh::AzureCloud::BlobManager do
     end
   end
 
-  describe '#has_container?' do
-    context 'when the container exists' do
-      let(:container) { instance_double(Azure::Storage::Blob::Container::Container) }
-      let(:container_properties) { 'fake-properties' }
-
-      before do
-        allow(blob_service).to receive(:get_container_properties)
-          .with(container_name, options).and_return(container)
-        allow(container).to receive(:properties).and_return(container_properties)
-      end
-
-      it 'should return true' do
-        expect(
-          blob_manager.has_container?(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)
-        ).to be(true)
-      end
-    end
-
-    context 'when the container does not exist' do
-      before do
-        allow(blob_service).to receive(:get_container_properties)
-          .and_raise('Error code: (404). This is a test!')
-      end
-
-      it 'should return false' do
-        expect(
-          blob_manager.has_container?(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)
-        ).to be(false)
-      end
-    end
-
-    context 'when the server returns an error' do
-      before do
-        allow(blob_service).to receive(:get_container_properties)
-          .and_raise(StandardError)
-      end
-
-      it 'should raise an error' do
-        expect do
-          blob_manager.has_container?(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)
-        end.to raise_error /has_container/
-      end
-    end
-  end
-
   describe '#prepare_containers' do
     let(:another_storage_account_name) { 'another-storage-account-name' }
     let(:containers) { [container_name] }
@@ -679,7 +688,7 @@ describe Bosh::AzureCloud::BlobManager do
     end
 
     before do
-      allow(azure_client2).to receive(:get_storage_account_by_name)
+      allow(azure_client).to receive(:get_storage_account_by_name)
         .with(another_storage_account_name)
         .and_return(another_storage_account)
     end
@@ -707,6 +716,42 @@ describe Bosh::AzureCloud::BlobManager do
         expect do
           blob_manager.prepare_containers(another_storage_account_name, containers, false)
         end.not_to raise_error
+      end
+    end
+
+    context 'when container alreay exists' do
+      it 'should succeed without error' do
+        expect(blob_service).to receive(:create_container)
+          .with(container_name, options)
+          .and_raise('ContainerAlreadyExists')
+        expect do
+          blob_manager.prepare_containers(another_storage_account_name, containers, false)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when create container failed' do
+      it 'should got exception' do
+        expect(blob_service).to receive(:create_container)
+          .with(container_name, options)
+          .and_raise('COontainerAlreadyExists')
+        expect do
+          blob_manager.prepare_containers(another_storage_account_name, containers, false)
+        end.to raise_error /_create_container: Failed to create container/
+      end
+    end
+
+    context 'when set stemcell container to public failed' do
+      it 'should got exception' do
+        expect(blob_service).to receive(:create_container)
+          .with(container_name, options)
+          .and_return(true)
+        expect(blob_service).to receive(:set_container_acl)
+          .with('stemcell', 'blob', options)
+          .and_raise('failed')
+        expect do
+          blob_manager.prepare_containers(another_storage_account_name, containers, true)
+        end.to raise_error /_set_stemcell_container_acl_to_public: Failed to set the public access level to 'blob'/
       end
     end
   end

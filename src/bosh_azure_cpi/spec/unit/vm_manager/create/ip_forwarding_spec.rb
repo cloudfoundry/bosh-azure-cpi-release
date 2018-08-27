@@ -12,7 +12,8 @@ describe Bosh::AzureCloud::VMManager do
   describe '#create' do
     context 'when VM is created' do
       before do
-        allow(client2).to receive(:create_virtual_machine)
+        allow(azure_client).to receive(:create_virtual_machine)
+        allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
       end
 
       # IP Forwarding
@@ -24,54 +25,54 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when ip forwarding is not specified in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1'
-              }
+              )
             end
             it 'should disable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when ip forwarding is disabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => false
-              }
+              )
             end
             it 'should disable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when ip forwarding is enabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => true
-              }
+              )
             end
             it 'should enable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -84,54 +85,54 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when ip forwarding is not specified in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1'
-              }
+              )
             end
             it 'should enable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when ip forwarding is disabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => false
-              }
+              )
             end
             it 'should disable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when ip forwarding is enabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => true
-              }
+              )
             end
             it 'should enable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end

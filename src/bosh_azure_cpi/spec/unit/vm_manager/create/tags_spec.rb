@@ -10,6 +10,10 @@ describe Bosh::AzureCloud::VMManager do
   #   - resource_group_name
   #   - default_security_group
   describe '#create' do
+    before do
+      allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
+    end
+
     context 'when VM is created' do
       # Tags
       context '#tags' do
@@ -20,19 +24,19 @@ describe Bosh::AzureCloud::VMManager do
               'tag-name-2' => 'tag-value-2'
             }
           end
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type' => 'Standard_D1',
               'tags' => custom_tags
-            }
+            )
           end
           it 'should set the tags for the VM' do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).to receive(:create_virtual_machine)
+            expect(azure_client).not_to receive(:delete_virtual_machine)
+            expect(azure_client).not_to receive(:delete_network_interface)
+            expect(azure_client).to receive(:create_virtual_machine)
               .with(resource_group_name, hash_including(tags: custom_tags.merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             end.not_to raise_error
           end
         end

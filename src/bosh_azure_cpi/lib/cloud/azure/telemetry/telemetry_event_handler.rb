@@ -24,7 +24,7 @@ module Bosh::AzureCloud
         while has_event?
           last_post_timestamp = get_last_post_timestamp
           unless last_post_timestamp.nil?
-            duration = Time.now.round - last_post_timestamp
+            duration = Time.new.round - last_post_timestamp
             # will only send events once per minute
             sleep(COOLDOWN - duration) if duration >= 0 && duration < COOLDOWN
           end
@@ -32,7 +32,7 @@ module Bosh::AzureCloud
           # sent_events
           event_list = collect_events
           send_events(event_list)
-          update_last_post_timestamp(Time.now.round)
+          update_last_post_timestamp(Time.new.round)
         end
       end
     end

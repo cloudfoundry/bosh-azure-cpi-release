@@ -75,6 +75,17 @@ shared:
       BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
 
+  - &run-az-bats
+    task: run-az-bats
+    file: bosh-cpi-src/ci/tasks/run-az-bats.yml
+    params: &run-az-bats-params
+      INFRASTRUCTURE:                     azure
+      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-trusty-go_agent
+      BAT_INFRASTRUCTURE:                 azure
+      BAT_NETWORKING:                     manual
+      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
+      AZURE_BATS_ZONE:                    {{azure_bats_zone}}
+
   - &teardown
     task: teardown
     file: pipelines/shared/tasks/teardown.yml
@@ -95,6 +106,12 @@ shared:
     get_params:
       action: destroy
 
+  - &upload-stemcell
+    task: upload-stemcell
+    file: bosh-cpi-src/ci/tasks/upload-stemcell.yml
+    params: &upload-stemcell-params
+      <<: *azure-environment-params
+
   - &run-integration
     task: run-integration
     file: bosh-cpi-src/ci/tasks/run-integration.yml
@@ -113,17 +130,6 @@ shared:
     file: bosh-cpi-src/ci/tasks/ensure-cleanup.yml
     params:
       <<: *azure-environment-params
-
-  - &run-az-bats
-    task: run-az-bats
-    file: bosh-cpi-src/ci/tasks/run-az-bats.yml
-    params: &run-az-bats-params
-      INFRASTRUCTURE:                     azure
-      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-trusty-go_agent
-      BAT_INFRASTRUCTURE:                 azure
-      BAT_NETWORKING:                     manual
-      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
-      AZURE_BATS_ZONE:                    {{azure_bats_zone}}
 
 jobs:
   - name: build-candidate
@@ -148,15 +154,18 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
       - <<: *create-integration-environment
-      - <<: *run-integration
-        params:
-          <<: *run-integration-params
-          AZURE_USE_MANAGED_DISKS: false
       - do:
-        - <<: *destroy-integration-environment
+        - <<: *upload-stemcell
+        - <<: *run-integration
+          params:
+            <<: *run-integration-params
+            AZURE_USE_MANAGED_DISKS: false
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: integration-managed-disks
     serial: true
@@ -166,15 +175,18 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
       - <<: *create-integration-environment
-      - <<: *run-integration
-        params:
-          <<: *run-integration-params
-          AZURE_USE_MANAGED_DISKS: true
       - do:
-        - <<: *destroy-integration-environment
+        - <<: *upload-stemcell
+        - <<: *run-integration
+          params:
+            <<: *run-integration-params
+            AZURE_USE_MANAGED_DISKS: true
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: integration-windows-unmanaged-disks
     serial: true
@@ -184,15 +196,21 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
       - <<: *create-integration-environment
-      - <<: *run-integration-windows
-        params:
-          <<: *run-integration-windows-params
-          AZURE_USE_MANAGED_DISKS: false
       - do:
-        - <<: *destroy-integration-environment
+        - <<: *upload-stemcell
+          params:
+            <<: *azure-environment-params
+            IS_HEAVY_STEMCELL: false
+        - <<: *run-integration-windows
+          params:
+            <<: *run-integration-windows-params
+            AZURE_USE_MANAGED_DISKS: false
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: integration-windows-managed-disks
     serial: true
@@ -202,15 +220,21 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
       - <<: *create-integration-environment
-      - <<: *run-integration-windows
-        params:
-          <<: *run-integration-windows-params
-          AZURE_USE_MANAGED_DISKS: true
       - do:
-        - <<: *destroy-integration-environment
+        - <<: *upload-stemcell
+          params:
+            <<: *azure-environment-params
+            IS_HEAVY_STEMCELL: false
+        - <<: *run-integration-windows
+          params:
+            <<: *run-integration-windows-params
+            AZURE_USE_MANAGED_DISKS: true
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: bats-unmanaged-disks
     serial: true
@@ -225,20 +249,25 @@ jobs:
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
       - <<: *create-bats-environment
-      - <<: *prepare-director
-        params:
-          <<: *prepare-director-params
-          OPTIONAL_OPS_FILE: |
-            -o pipelines/shared/assets/ops/remove-hm.yml
-            -o bosh-deployment/external-ip-with-registry-not-recommended.yml
-      - <<: *deploy-director
-      - <<: *run-bats
       - do:
-        - <<: *teardown
-        - <<: *destroy-bats-environment
+        - <<: *prepare-director
+          params:
+            <<: *prepare-director-params
+            OPTIONAL_OPS_FILE: |
+              -o pipelines/shared/assets/ops/remove-hm.yml
+              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+        - do:
+          - <<: *deploy-director
+          - <<: *run-bats
+          ensure:
+            do:
+              - <<: *teardown
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-bats-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: bats-managed-disks
     serial: true
@@ -253,21 +282,26 @@ jobs:
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
       - <<: *create-az-bats-environment
-      - <<: *prepare-director
-        params:
-          <<: *prepare-director-params
-          OPTIONAL_OPS_FILE: |
-            -o pipelines/shared/assets/ops/remove-hm.yml
-            -o bosh-deployment/external-ip-with-registry-not-recommended.yml
-            -o bosh-deployment/azure/use-managed-disks.yml
-      - <<: *deploy-director
-      - <<: *run-az-bats
       - do:
-        - <<: *teardown
-        - <<: *destroy-az-bats-environment
+        - <<: *prepare-director
+          params:
+            <<: *prepare-director-params
+            OPTIONAL_OPS_FILE: |
+              -o pipelines/shared/assets/ops/remove-hm.yml
+              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+              -o bosh-deployment/azure/use-managed-disks.yml
+        - do:
+          - <<: *deploy-director
+          - <<: *run-az-bats
+          ensure:
+            do:
+              - <<: *teardown
         ensure:
           do:
-            - <<: *ensure-cleanup
+            - <<: *destroy-az-bats-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: promote-candidate-major
     plan:
@@ -341,9 +375,8 @@ resources:
   - name: bosh-cpi-src-in
     type: git
     source:
-      uri: git@github.com:cloudfoundry-incubator/bosh-azure-cpi-release.git
+      uri: https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release.git
       branch: master
-      private_key: {{github_deployment_key__bosh-azure-cpi-release}}
       ignore_paths:
         - .final_builds/**/*.yml
         - releases/**/*.yml

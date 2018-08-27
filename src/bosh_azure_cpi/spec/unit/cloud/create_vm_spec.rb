@@ -12,6 +12,7 @@ describe Bosh::AzureCloud::Cloud do
     let(:stemcell_id) { 'bosh-stemcell-xxx' }
     let(:light_stemcell_id) { 'bosh-light-stemcell-xxx' }
     let(:vm_properties) { { 'instance_type' => 'fake-vm-size' } }
+    let(:vm_props) { cloud.props_factory.parse_vm_props(vm_properties) }
     let(:networks_spec) { {} }
     let(:disk_locality) { double('disk locality') }
     let(:environment) { double('environment') }
@@ -22,7 +23,6 @@ describe Bosh::AzureCloud::Cloud do
     let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
     let(:network) { instance_double(Bosh::AzureCloud::ManualNetwork) }
     let(:network_configurator) { double('network configurator') }
-    let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
 
     before do
       allow(network_configurator).to receive(:networks)
@@ -31,17 +31,24 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(default_resource_group_name)
       allow(network).to receive(:virtual_network_name)
         .and_return(virtual_network_name)
-      allow(client2).to receive(:get_virtual_network_by_name)
+      allow(azure_client).to receive(:get_virtual_network_by_name)
         .with(default_resource_group_name, virtual_network_name)
         .and_return(vnet)
       allow(telemetry_manager).to receive(:monitor)
         .with('create_vm', id: agent_id, extras: { 'instance_type' => 'fake-vm-size' })
         .and_call_original
+      allow(cloud.props_factory).to receive(:parse_vm_props)
+        .and_return(vm_props)
+      allow(managed_cloud.props_factory).to receive(:parse_vm_props)
+        .and_return(vm_props)
     end
 
     context 'when instance_type is not provided' do
       let(:vm_properties) { {} }
-
+      before do
+        allow(cloud.props_factory).to receive(:parse_vm_props)
+          .and_call_original
+      end
       it 'should raise an error' do
         expect do
           cloud.create_vm(
@@ -61,7 +68,7 @@ describe Bosh::AzureCloud::Cloud do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
           .with(azure_config, networks_spec)
           .and_return(network_configurator)
-        allow(client2).to receive(:get_virtual_network_by_name)
+        allow(azure_client).to receive(:get_virtual_network_by_name)
           .with(default_resource_group_name, virtual_network_name)
           .and_return(nil)
       end
@@ -80,14 +87,98 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
+    context 'when network/ephemeral_disk specified' do
+      let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+      let(:instance_id_string) { 'fake-instance-id' }
+      let(:vm_params) do
+        {
+          name: 'fake-vm-name',
+          ephemeral_disk: {}
+        }
+      end
+
+      let(:storage_account_name) { MOCK_DEFAULT_STORAGE_ACCOUNT_NAME }
+      let(:storage_account) do
+        {
+          id: 'foo',
+          name: storage_account_name,
+          location: location,
+          provisioning_state: 'bar',
+          account_type: 'foo',
+          storage_blob_host: 'fake-blob-endpoint',
+          storage_table_host: 'fake-table-endpoint'
+        }
+      end
+      let(:resource_group_name) { 'fake-resource-group-name' }
+      let(:vm_properties) do
+        {
+          'instance_type' => 'fake-vm-size',
+          'resource_group_name' => resource_group_name
+        }
+      end
+
+      let(:vm_props) do
+        cloud.props_factory.parse_vm_props(
+          vm_properties
+        )
+      end
+      let(:networks_spec) do
+        {
+          'network_a' => {
+            'dns' => ['172.30.22.153', '172.30.22.154']
+          }
+        }
+      end
+      before do
+        allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
+          .with(vm_props, location)
+          .and_return(storage_account)
+        allow(stemcell_manager).to receive(:has_stemcell?)
+          .with(storage_account_name, stemcell_id)
+          .and_return(true)
+        allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
+          .with(azure_config, networks_spec)
+          .and_return(network_configurator)
+
+        allow(Bosh::AzureCloud::InstanceId).to receive(:create)
+          .with(default_resource_group_name, agent_id, storage_account_name)
+          .and_return(instance_id)
+        allow(instance_id).to receive(:to_s)
+          .and_return(instance_id_string)
+        allow(cloud.props_factory).to receive(:parse_vm_props)
+          .and_return(vm_props)
+      end
+
+      it 'should create the VM in the specified resource group' do
+        expect(Bosh::AzureCloud::InstanceId).to receive(:create)
+          .with(resource_group_name, agent_id, storage_account_name)
+          .and_return(instance_id)
+        expect(vm_manager).to receive(:create)
+          .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
+          .and_return(vm_params)
+        expect(registry_client).to receive(:update_settings)
+
+        expect(
+          cloud.create_vm(
+            agent_id,
+            stemcell_id,
+            vm_properties,
+            networks_spec,
+            disk_locality,
+            environment
+          )
+        ).to eq(instance_id_string)
+      end
+    end
+
     context 'when the location in the global configuration is different from the vnet location' do
       let(:cloud_properties_with_location) { mock_cloud_properties_merge('azure' => { 'location' => "location-other-than-#{location}" }) }
       let(:cloud_with_location) { mock_cloud(cloud_properties_with_location) }
       before do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-          .with(cloud_properties_with_location['azure'], networks_spec)
+          .with(cloud_with_location.config.azure, networks_spec)
           .and_return(network_configurator)
-        allow(client2).to receive(:get_virtual_network_by_name)
+        allow(azure_client).to receive(:get_virtual_network_by_name)
           .with(default_resource_group_name, virtual_network_name)
           .and_return(vnet)
       end
@@ -130,14 +221,11 @@ describe Bosh::AzureCloud::Cloud do
 
       before do
         allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
-          .with(vm_properties, location)
+          .with(vm_props, location)
           .and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?)
           .with(storage_account_name, stemcell_id)
           .and_return(true)
-        allow(stemcell_manager).to receive(:get_stemcell_info)
-          .with(storage_account_name, stemcell_id)
-          .and_return(stemcell_info)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
           .with(azure_config, networks_spec)
           .and_return(network_configurator)
@@ -150,63 +238,6 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       context 'when everything is OK' do
-        context 'and a heavy stemcell is used' do
-          it 'should create the VM' do
-            expect(vm_manager).to receive(:create)
-              .with(instance_id, location, stemcell_info, vm_properties, network_configurator, environment)
-              .and_return(vm_params)
-            expect(registry).to receive(:update_settings)
-
-            expect(stemcell_manager).to receive(:get_stemcell_info)
-            expect(light_stemcell_manager).not_to receive(:has_stemcell?)
-            expect(light_stemcell_manager).not_to receive(:get_stemcell_info)
-
-            expect(
-              cloud.create_vm(
-                agent_id,
-                stemcell_id,
-                vm_properties,
-                networks_spec,
-                disk_locality,
-                environment
-              )
-            ).to eq(instance_id_string)
-          end
-        end
-
-        context 'and a light stemcell is used' do
-          before do
-            allow(light_stemcell_manager).to receive(:has_stemcell?)
-              .with(location, light_stemcell_id)
-              .and_return(true)
-            allow(light_stemcell_manager).to receive(:get_stemcell_info)
-              .with(light_stemcell_id)
-              .and_return(stemcell_info)
-          end
-
-          it 'should create the VM' do
-            expect(vm_manager).to receive(:create)
-              .with(instance_id, location, stemcell_info, vm_properties, network_configurator, environment)
-              .and_return(vm_params)
-            expect(registry).to receive(:update_settings)
-
-            expect(light_stemcell_manager).to receive(:has_stemcell?)
-            expect(light_stemcell_manager).to receive(:get_stemcell_info)
-            expect(stemcell_manager).not_to receive(:get_stemcell_info)
-
-            expect(
-              cloud.create_vm(
-                agent_id,
-                light_stemcell_id,
-                vm_properties,
-                networks_spec,
-                disk_locality,
-                environment
-              )
-            ).to eq(instance_id_string)
-          end
-        end
-
         context 'when resource group is specified' do
           let(:resource_group_name) { 'fake-resource-group-name' }
           let(:vm_properties) do
@@ -216,18 +247,25 @@ describe Bosh::AzureCloud::Cloud do
             }
           end
 
+          let(:vm_props) do
+            cloud.props_factory.parse_vm_props(
+              vm_properties
+            )
+          end
+
+          before do
+            allow(cloud.props_factory).to receive(:parse_vm_props)
+              .and_return(vm_props)
+          end
+
           it 'should create the VM in the specified resource group' do
             expect(Bosh::AzureCloud::InstanceId).to receive(:create)
               .with(resource_group_name, agent_id, storage_account_name)
               .and_return(instance_id)
             expect(vm_manager).to receive(:create)
-              .with(instance_id, location, stemcell_info, vm_properties, network_configurator, environment)
+              .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
               .and_return(vm_params)
-            expect(registry).to receive(:update_settings)
-
-            expect(stemcell_manager).to receive(:get_stemcell_info)
-            expect(light_stemcell_manager).not_to receive(:has_stemcell?)
-            expect(light_stemcell_manager).not_to receive(:get_stemcell_info)
+            expect(registry_client).to receive(:update_settings)
 
             expect(
               cloud.create_vm(
@@ -260,27 +298,6 @@ describe Bosh::AzureCloud::Cloud do
               environment
             )
           end.to raise_error('Virtual Machines deployed to an Availability Zone must use managed disks')
-        end
-      end
-
-      context 'when stemcell_id is invalid' do
-        before do
-          allow(stemcell_manager).to receive(:has_stemcell?)
-            .with(storage_account_name, stemcell_id)
-            .and_return(false)
-        end
-
-        it 'should raise an error' do
-          expect do
-            cloud.create_vm(
-              agent_id,
-              stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
-              environment
-            )
-          end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
         end
       end
 
@@ -326,7 +343,7 @@ describe Bosh::AzureCloud::Cloud do
       context 'when registry fails to update' do
         before do
           allow(vm_manager).to receive(:create)
-          allow(registry).to receive(:update_settings).and_raise(StandardError)
+          allow(registry_client).to receive(:update_settings).and_raise(StandardError)
         end
 
         it 'deletes the vm' do
@@ -367,85 +384,6 @@ describe Bosh::AzureCloud::Cloud do
           .and_return(instance_id_string)
       end
 
-      context 'when it failed to get the user image info' do
-        before do
-          allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-            .with(azure_config_managed, networks_spec)
-            .and_return(network_configurator)
-          allow(stemcell_manager2).to receive(:get_user_image_info).and_raise(StandardError)
-        end
-
-        it 'should raise an error' do
-          expect do
-            managed_cloud.create_vm(
-              agent_id,
-              stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
-              environment
-            )
-          end.to raise_error(/Failed to get the user image information for the stemcell '#{stemcell_id}'/)
-        end
-      end
-
-      context 'when a heavy stemcell is used' do
-        before do
-          allow(stemcell_manager2).to receive(:get_user_image_info)
-            .and_return(stemcell_info)
-        end
-
-        it 'should create the VM' do
-          expect(vm_manager).to receive(:create)
-            .with(instance_id, location, stemcell_info, vm_properties, network_configurator, environment)
-            .and_return(vm_params)
-          expect(registry).to receive(:update_settings)
-
-          expect(
-            managed_cloud.create_vm(
-              agent_id,
-              stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
-              environment
-            )
-          ).to eq(instance_id_string)
-        end
-      end
-
-      context 'when a light stemcell is used' do
-        before do
-          allow(light_stemcell_manager).to receive(:has_stemcell?)
-            .with(location, light_stemcell_id)
-            .and_return(true)
-          allow(light_stemcell_manager).to receive(:get_stemcell_info)
-            .with(light_stemcell_id)
-            .and_return(stemcell_info)
-        end
-
-        it 'should create the VM' do
-          expect(vm_manager).to receive(:create)
-            .with(instance_id, location, stemcell_info, vm_properties, network_configurator, environment)
-            .and_return(vm_params)
-          expect(registry).to receive(:update_settings)
-
-          expect(light_stemcell_manager).to receive(:has_stemcell?)
-          expect(light_stemcell_manager).to receive(:get_stemcell_info)
-
-          expect(
-            managed_cloud.create_vm(
-              agent_id,
-              light_stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
-              environment
-            )
-          ).to eq(instance_id_string)
-        end
-      end
-
       context 'when resource group is specified' do
         let(:resource_group_name) { 'fake-resource-group-name' }
         let(:vm_properties) do
@@ -454,20 +392,16 @@ describe Bosh::AzureCloud::Cloud do
             'resource_group_name' => resource_group_name
           }
         end
-
-        before do
-          allow(stemcell_manager2).to receive(:get_user_image_info)
-            .and_return(stemcell_info)
-        end
+        let(:vm_props) { managed_cloud.props_factory.parse_vm_props(vm_properties) }
 
         it 'should create the VM in the specified resource group' do
           expect(Bosh::AzureCloud::InstanceId).to receive(:create)
             .with(resource_group_name, agent_id)
             .and_return(instance_id)
           expect(vm_manager).to receive(:create)
-            .with(instance_id, location, stemcell_info, vm_properties, network_configurator, environment)
+            .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
             .and_return(vm_params)
-          expect(registry).to receive(:update_settings)
+          expect(registry_client).to receive(:update_settings)
 
           expect(
             managed_cloud.create_vm(

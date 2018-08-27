@@ -21,7 +21,7 @@ module Bosh::AzureCloud
     # @return - return value of the block
     #
     def monitor(operation, id: '', extras: {})
-      if @azure_config.fetch('enable_telemetry', false) == true && @azure_config['environment'] != ENVIRONMENT_AZURESTACK
+      if @azure_config.enable_telemetry == true && @azure_config.environment != ENVIRONMENT_AZURESTACK
         error_raised = false
 
         event_param_name              = Bosh::AzureCloud::TelemetryEventParam.new('Name', CPI_TELEMETRY_NAME)
@@ -34,11 +34,11 @@ module Bosh::AzureCloud
 
         message_value = {
           'msg' => 'Successed',
-          'subscription_id' => @azure_config['subscription_id']
+          'subscription_id' => @azure_config.subscription_id
         }
         message_value.merge!(extras)
 
-        start_at = Time.now
+        start_at = Time.new
         begin
           yield
         rescue StandardError => e
@@ -50,7 +50,7 @@ module Bosh::AzureCloud
           message_value['msg'] = msg
           raise e
         ensure
-          end_at = Time.now
+          end_at = Time.new
           event_param_duration.value = (end_at - start_at) * 1000.0 # miliseconds
           event_param_message.value = message_value
 
@@ -64,7 +64,7 @@ module Bosh::AzureCloud
             event.add_param(event_param_operation_success)
             event.add_param(event_param_message)
             event.add_param(event_param_duration)
-            report_event(event)
+            _report_event(event)
           end
         end
       else
@@ -74,7 +74,7 @@ module Bosh::AzureCloud
 
     private
 
-    def report_event(event)
+    def _report_event(event)
       filename = "/tmp/cpi-event-#{SecureRandom.uuid}.tld"
       File.open(filename, 'w') do |file|
         file.write(event.to_json)

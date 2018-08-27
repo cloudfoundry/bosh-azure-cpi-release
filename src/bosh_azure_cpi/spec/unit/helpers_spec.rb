@@ -147,8 +147,10 @@ describe Bosh::AzureCloud::Helpers do
   end
 
   describe '#get_arm_endpoint' do
+    let(:azure_config) { instance_double(Bosh::AzureCloud::AzureConfig) }
+
     context 'when environment is Azure' do
-      let(:azure_config) { { 'environment' => 'AzureCloud' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureCloud') }
 
       it 'should return Azure ARM endpoint' do
         expect(
@@ -158,7 +160,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureChinaCloud' do
-      let(:azure_config) { { 'environment' => 'AzureChinaCloud' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureChinaCloud') }
 
       it 'should return AzureChinaCloud ARM endpoint' do
         expect(
@@ -168,7 +170,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureUSGovernment' do
-      let(:azure_config) { { 'environment' => 'AzureUSGovernment' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureUSGovernment') }
 
       it 'should return AzureUSGovernment ARM endpoint' do
         expect(
@@ -179,14 +181,14 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'when environment is AzureStack' do
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureStack',
           'azure_stack' => {
             'domain'          => 'fake-domain',
             'authentication'  => 'fake-authentication',
             'endpoint_prefix' => 'api'
           }
-        }
+        )
       end
 
       it 'should return AzureStack ARM endpoint' do
@@ -197,7 +199,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureGermanCloud' do
-      let(:azure_config) { { 'environment' => 'AzureGermanCloud' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureGermanCloud') }
 
       it 'should return AzureGermanCloud ARM endpoint' do
         expect(
@@ -209,7 +211,7 @@ describe Bosh::AzureCloud::Helpers do
 
   describe '#get_token_resource' do
     context 'when environment is Azure' do
-      let(:azure_config) { { 'environment' => 'AzureCloud' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureCloud') }
 
       it 'should return Azure resource' do
         expect(
@@ -219,7 +221,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureChinaCloud' do
-      let(:azure_config) { { 'environment' => 'AzureChinaCloud' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureChinaCloud') }
 
       it 'should return AzureChinaCloud resource' do
         expect(
@@ -229,7 +231,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureUSGovernment' do
-      let(:azure_config) { { 'environment' => 'AzureUSGovernment' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureUSGovernment') }
 
       it 'should return AzureUSGovernment resource' do
         expect(
@@ -240,12 +242,12 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'when environment is AzureStack' do
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureStack',
           'azure_stack' => {
             'resource' => 'https://azurestack.local-api/'
           }
-        }
+        )
       end
 
       it 'should return AzureStack resource' do
@@ -256,7 +258,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureGermanCloud' do
-      let(:azure_config) { { 'environment' => 'AzureGermanCloud' } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureGermanCloud') }
 
       it 'should return AzureGermanCloud resource' do
         expect(
@@ -269,10 +271,10 @@ describe Bosh::AzureCloud::Helpers do
   describe '#get_azure_authentication_endpoint_and_api_version' do
     context 'when environment is Azure' do
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureCloud',
           'tenant_id'   => 'fake-tenant-id'
-        }
+        )
       end
 
       it 'should return Azure authentication endpoint and api version' do
@@ -284,10 +286,10 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'when environment is AzureChinaCloud' do
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureChinaCloud',
           'tenant_id'   => 'fake-tenant-id'
-        }
+        )
       end
 
       it 'should return AzureChinaCloud authentication endpoint and api version' do
@@ -299,10 +301,10 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'when environment is AzureUSGovernment' do
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureUSGovernment',
           'tenant_id'   => 'fake-tenant-id'
-        }
+        )
       end
 
       it 'should return AzureUSGovernment authentication endpoint and api version' do
@@ -314,19 +316,19 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'when environment is AzureStack' do
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureStack',
           'azure_stack' => {
             'domain'          => 'fake-domain',
             'endpoint_prefix' => 'api'
           },
           'tenant_id' => 'fake-tenant-id'
-        }
+        )
       end
 
       context 'when azure_stack.authentication is AzureAD' do
         before do
-          azure_config['azure_stack']['authentication'] = 'AzureAD'
+          azure_config.azure_stack.authentication = 'AzureAD'
         end
 
         it 'should return Azure authentication endpoint and api version' do
@@ -338,7 +340,7 @@ describe Bosh::AzureCloud::Helpers do
 
       context 'when azure_stack.authentication is AzureChinaClouadAD' do
         before do
-          azure_config['azure_stack']['authentication'] = 'AzureChinaCloudAD'
+          azure_config.azure_stack.authentication = 'AzureChinaCloudAD'
         end
 
         it 'should return Azure China Cloud authentication endpoint and api version' do
@@ -350,7 +352,7 @@ describe Bosh::AzureCloud::Helpers do
 
       context 'when azure_stack.authentication is ADFS' do
         before do
-          azure_config['azure_stack']['authentication'] = 'ADFS'
+          azure_config.azure_stack.authentication = 'ADFS'
         end
 
         it 'should return ADFS authentication endpoint and api version' do
@@ -362,7 +364,7 @@ describe Bosh::AzureCloud::Helpers do
 
       context 'when the value of azure_stack.authentication is not supported' do
         before do
-          azure_config['azure_stack']['authentication'] = 'NotSupportedValue'
+          azure_config.azure_stack.authentication = 'NotSupportedValue'
         end
 
         it 'should raise an error' do
@@ -375,10 +377,10 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'when environment is AzureGermanCloud' do
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureGermanCloud',
           'tenant_id'   => 'fake-tenant-id'
-        }
+        )
       end
 
       it 'should return AzureGermanCloud authentication endpoint and api version' do
@@ -386,6 +388,12 @@ describe Bosh::AzureCloud::Helpers do
           helpers_tester.get_azure_authentication_endpoint_and_api_version(azure_config)
         ).to eq(['https://login.microsoftonline.de/fake-tenant-id/oauth2/token', azure_german_api_version])
       end
+    end
+  end
+
+  describe '#get_msi_endpoint_and_version' do
+    it 'should return msi endpoint and api version' do
+      expect(helpers_tester.get_msi_endpoint_and_version).to eq(['http://169.254.169.254/metadata/identity/oauth2/token', '2018-02-01'])
     end
   end
 
@@ -415,7 +423,7 @@ describe Bosh::AzureCloud::Helpers do
     let(:cert) { instance_double(OpenSSL::X509::Certificate) }
     let(:thumbprint) { '12f0d2b95eb4d0ad81892c9d9fcc45a89c324cbd' }
     let(:x5t) { 'EvDSuV600K2BiSydn8xFqJwyTL0=' } # x5t is the Base64 UrlEncoding of thumbprint
-    let(:now) { Time.now }
+    let(:now) { Time.new }
     let(:jti) { 'b55b54ac-7494-449b-94b2-d7bff0285837' }
     let(:header) do
       {
@@ -463,7 +471,7 @@ describe Bosh::AzureCloud::Helpers do
   end
 
   describe '#initialize_azure_storage_client' do
-    let(:azure_client) { instance_double(Azure::Storage::Client) }
+    let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
     let(:storage_account_name) { 'fake-storage-account-name' }
     let(:storage_account_key) { 'fake-storage-account-key' }
     let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
@@ -477,9 +485,9 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'when the environment is not AzureStack' do
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureCloud'
-        }
+        )
       end
       let(:options) do
         {
@@ -492,22 +500,22 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should create the storage client with the correct options' do
         expect(Azure::Storage::Client).to receive(:create).with(options)
-                                                          .and_return(azure_client)
+                                                          .and_return(azure_storage_client)
         expect(
           helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
-        ).to eq(azure_client)
+        ).to eq(azure_storage_client)
       end
     end
 
     context 'when the environment is AzureStack' do
       let(:azure_stack_domain) { 'fake-azure-stack-domain' }
       let(:azure_config) do
-        {
+        Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureStack',
           'azure_stack' => {
             'domain' => azure_stack_domain
           }
-        }
+        )
       end
       let(:options) do
         {
@@ -521,10 +529,10 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should create the storage client with the correct options' do
         expect(Azure::Storage::Client).to receive(:create).with(options)
-                                                          .and_return(azure_client)
+                                                          .and_return(azure_storage_client)
         expect(
           helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
-        ).to eq(azure_client)
+        ).to eq(azure_storage_client)
       end
     end
   end
@@ -604,7 +612,7 @@ describe Bosh::AzureCloud::Helpers do
 
   describe '#is_debug_mode' do
     context 'debug_mode is not set' do
-      let(:azure_config) { {} }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({}) }
 
       it 'should return false' do
         expect(
@@ -614,7 +622,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'debug_mode is set to false' do
-      let(:azure_config) { { 'debug_mode' => false } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('debug_mode' => false) }
 
       it 'should return false' do
         expect(
@@ -624,7 +632,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'debug_mode is set to true' do
-      let(:azure_config) { { 'debug_mode' => true } }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('debug_mode' => true) }
 
       it 'should return true' do
         expect(

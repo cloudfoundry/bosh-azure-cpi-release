@@ -49,6 +49,8 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
 * CPI Settings
   * [Use availability zones in Cloud Foundry](./advanced/availability-zone/)
   * [Deploy Cloud Foundry using availability sets](./advanced/deploy-cloudfoundry-with-availability-sets/)
+  * [Use Standard SKU Load Balancers](./advanced/standard-load-balancers)
+  * [Migrate Basic SKU Load Balancer to Standard SKU Load Balancer](./advanced/migrate-basic-lb-to-standard-lb/)
   * [Use managed disks in Cloud Foundry](./advanced/managed-disks/)
   * [Deploy Cloud Foundry using multiple storage accounts](./advanced/deploy-cloudfoundry-with-multiple-storage-accounts/)
   * [Configure resource groups](./advanced/configure-resource-groups/)
@@ -58,6 +60,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Use service principal with certificate](./advanced/use-service-principal-with-certificate/)
   * [Calculate correct VM cloud properties based on `vm_resources`](./advanced/calculate-vm-cloud-properties/)
   * [Use Azure Accelerated Networking](./advanced/accelerated-networking/)
+  * [Use Azure Managed Service Identity](./advanced/managed-service-identity/)
 * Cloud Foundry Scenarios
   * [Configure Cloud Foundry external databases using Azure MySQL/Postgres Service](./advanced/configure-cf-external-databases-using-azure-mysql-postgres-service)
   * [Integrating Application Gateway](./advanced/application-gateway/)

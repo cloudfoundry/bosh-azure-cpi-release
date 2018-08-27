@@ -5,8 +5,9 @@ require 'spec_helper'
 describe Bosh::AzureCloud::StemcellManager do
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:table_manager) { instance_double(Bosh::AzureCloud::TableManager) }
+  let(:meta_store) { Bosh::AzureCloud::MetaStore.new(table_manager) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
-  let(:stemcell_manager) { Bosh::AzureCloud::StemcellManager.new(blob_manager, table_manager, storage_account_manager) }
+  let(:stemcell_manager) { Bosh::AzureCloud::StemcellManager.new(blob_manager, meta_store, storage_account_manager) }
 
   let(:stemcell_name) { 'fake-stemcell-name' }
   let(:storage_account_name) { 'fake-storage-account-name' }
@@ -41,7 +42,7 @@ describe Bosh::AzureCloud::StemcellManager do
             'PartitionKey' => stemcell_name,
             'RowKey'       => storage_account_name,
             'Status'       => 'success',
-            'Timestamp'    => Time.now
+            'Timestamp'    => Time.new
           }
         ]
       end
@@ -91,7 +92,7 @@ describe Bosh::AzureCloud::StemcellManager do
     end
 
     context 'when the storage account is not the default one' do
-      let(:storage_account_name) { 'different-storage-account' }
+      let(:storage_account_name) { SecureRandom.uuid }
 
       before do
         allow(table_manager).to receive(:has_table?)
@@ -188,18 +189,22 @@ describe Bosh::AzureCloud::StemcellManager do
             let(:default_timeout) { 20 * 60 }
 
             context 'when Timestamp in entities is a String' do
-              let(:timestamp) { (Time.now - (default_timeout - 1)).to_s }
+              let(:time_now) { Time.new }
+              let(:timestamp_str) { (time_now - (default_timeout - 1)).to_s }
               let(:entities) do
                 [
                   {
                     'PartitionKey' => stemcell_name,
                     'RowKey'       => storage_account_name,
                     'Status'       => 'pending',
-                    'Timestamp'    => timestamp
+                    'Timestamp'    => timestamp_str
                   }
                 ]
               end
-
+              before do
+                allow(Time).to receive(:new).and_return(time_now, (time_now + 1.1))
+                allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
+              end
               it 'should raise an error' do
                 expect(blob_manager).not_to receive(:get_blob_properties)
                 # The first query is in get_blob_properties, the second and third queries are in wait_stemcell_copy
@@ -218,7 +223,8 @@ describe Bosh::AzureCloud::StemcellManager do
             end
 
             context 'when Timestamp in entities is a Time object' do
-              let(:timestamp) { Time.now - (default_timeout - 1) }
+              let(:time_now) { Time.new }
+              let(:timestamp) { time_now - (default_timeout - 1) }
               let(:entities) do
                 [
                   {
@@ -228,6 +234,11 @@ describe Bosh::AzureCloud::StemcellManager do
                     'Timestamp'    => timestamp
                   }
                 ]
+              end
+
+              before do
+                allow(Time).to receive(:new).and_return(time_now, (time_now + 1.1))
+                allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
               end
 
               it 'should raise an error' do
@@ -260,9 +271,9 @@ describe Bosh::AzureCloud::StemcellManager do
         end
         let(:entity_update) do
           {
-            'PartitionKey' => stemcell_name,
-            'RowKey'       => storage_account_name,
-            'Status'       => 'success'
+            PartitionKey: stemcell_name,
+            RowKey: storage_account_name,
+            Status: 'success'
           }
         end
 
@@ -300,6 +311,30 @@ describe Bosh::AzureCloud::StemcellManager do
           expect(
             stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
           ).to be(true)
+        end
+      end
+
+      context 'when write to meta store failed' do
+        let(:entity_create) do
+          {
+            PartitionKey: stemcell_name,
+            RowKey: storage_account_name,
+            Status: 'pending'
+          }
+        end
+
+        before do
+          allow(table_manager).to receive(:query_entities)
+            .and_return([])
+          allow(table_manager).to receive(:insert_entity)
+            .with('stemcells', entity_create)
+            .and_raise('insert into table failed.')
+        end
+
+        it 'should get one exception' do
+          expect do
+            stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
+          end.to raise_error /insert into table failed./
         end
       end
     end

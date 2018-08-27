@@ -1,10 +1,11 @@
 # frozen_string_literal: true
 
+require 'cloud'
+require 'logger'
 require 'spec_helper'
 require 'securerandom'
 require 'tempfile'
-require 'logger'
-require 'cloud'
+require 'yaml'
 
 describe Bosh::AzureCloud::Cloud do
   before(:all) do
@@ -21,6 +22,7 @@ describe Bosh::AzureCloud::Cloud do
     @secondary_public_ip             = ENV['BOSH_AZURE_SECONDARY_PUBLIC_IP']             || raise('Missing BOSH_AZURE_SECONDARY_PUBLIC_IP')
     @application_gateway_name        = ENV['BOSH_AZURE_APPLICATION_GATEWAY_NAME']        || raise('Missing BOSH_AZURE_APPLICATION_GATEWAY_NAME')
     @application_security_group      = ENV['BOSH_AZURE_APPLICATION_SECURITY_GROUP']      || raise('Missing BOSH_AZURE_APPLICATION_SECURITY_GROUP')
+    @stemcell_path                   = ENV['BOSH_AZURE_STEMCELL_PATH']                   || raise('Missing BOSH_AZURE_STEMCELL_PATH')
   end
 
   let(:azure_environment)          { ENV.fetch('BOSH_AZURE_ENVIRONMENT', 'AzureCloud') }
@@ -32,12 +34,11 @@ describe Bosh::AzureCloud::Cloud do
   let(:subnet_name)                { ENV.fetch('BOSH_AZURE_SUBNET_NAME', 'BOSH1') }
   let(:second_subnet_name)         { ENV.fetch('BOSH_AZURE_SECOND_SUBNET_NAME', 'BOSH2') }
   let(:instance_type)              { ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2') }
-  let(:image_path)                 { ENV.fetch('BOSH_AZURE_STEMCELL_PATH', '/tmp/image') }
   let(:vm_metadata)                { { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' } }
   let(:network_spec)               { {} }
   let(:vm_properties)              { { 'instance_type' => instance_type } }
 
-  let(:azure_config) do
+  let(:azure_config_hash) do
     {
       'environment' => azure_environment,
       'subscription_id' => @subscription_id,
@@ -51,9 +52,14 @@ describe Bosh::AzureCloud::Cloud do
       'parallel_upload_thread_num' => 16
     }
   end
+
+  let(:azure_config) do
+    Bosh::AzureCloud::AzureConfig.new(azure_config_hash)
+  end
+
   let(:cloud_options) do
     {
-      'azure' => azure_config,
+      'azure' => azure_config_hash,
       'registry' => {
         'endpoint' => 'fake',
         'user' => 'fake',
@@ -103,6 +109,19 @@ describe Bosh::AzureCloud::Cloud do
 
   context '#stemcell' do
     context 'with heavy stemcell', heavy_stemcell: true do
+      let(:extract_path)               { '/tmp/with-heavy-stemcell' }
+      let(:image_path)                 { "#{extract_path}/image" }
+      let(:image_metadata_path)        { "#{extract_path}/stemcell.MF" }
+
+      before do
+        FileUtils.mkdir_p(extract_path)
+        run_command("tar -zxf #{@stemcell_path} -C #{extract_path}")
+      end
+
+      after do
+        FileUtils.remove_dir(extract_path)
+      end
+
       it 'should create/delete the stemcell' do
         heavy_stemcell_id = cpi.create_stemcell(image_path, {})
         expect(heavy_stemcell_id).not_to be_nil
@@ -111,21 +130,22 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'with light stemcell', light_stemcell: true do
-      let(:windows_light_stemcell_sku)     { ENV.fetch('BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_SKU', '2012r2') }
-      let(:windows_light_stemcell_version) { ENV.fetch('BOSH_AZURE_WINDOWS_LIGHT_STEMCELL_VERSION', '1200.7.001001') }
-      let(:stemcell_properties) do
-        {
-          'infrastructure' => 'azure',
-          'os_type' => 'windows',
-          'image' => {
-            'offer'     => 'bosh-windows-server',
-            'publisher' => 'pivotal',
-            'sku'       => windows_light_stemcell_sku,
-            'version'   => windows_light_stemcell_version
-          }
-        }
+      let(:extract_path)               { '/tmp/with-light-stemcell' }
+      let(:image_path)                 { "#{extract_path}/image" }
+      let(:image_metadata_path)        { "#{extract_path}/stemcell.MF" }
+
+      before do
+        FileUtils.mkdir_p(extract_path)
+        run_command("tar -zxf #{@stemcell_path} -C #{extract_path}")
       end
+
+      after do
+        FileUtils.remove_dir(extract_path)
+      end
+
       it 'should create/delete the stemcell' do
+        stemcell_properties = YAML.load_file(image_metadata_path)['cloud_properties']
+
         light_stemcell_id = cpi.create_stemcell(image_path, stemcell_properties)
         expect(light_stemcell_id).not_to be_nil
         cpi.delete_stemcell(light_stemcell_id)
@@ -283,9 +303,9 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       it 'should add the VM to the backend pool of application gateway' do
-        ag_url = cpi.azure_client2.rest_api_url(
-          Bosh::AzureCloud::AzureClient2::REST_API_PROVIDER_NETWORK,
-          Bosh::AzureCloud::AzureClient2::REST_API_APPLICATION_GATEWAYS,
+        ag_url = cpi.azure_client.rest_api_url(
+          Bosh::AzureCloud::AzureClient::REST_API_PROVIDER_NETWORK,
+          Bosh::AzureCloud::AzureClient::REST_API_APPLICATION_GATEWAYS,
           name: @application_gateway_name
         )
 
@@ -301,14 +321,14 @@ describe Bosh::AzureCloud::Cloud do
                 vm_properties,
                 network_specs[i]
               )
-              ag = cpi.azure_client2.get_resource_by_id(ag_url)
+              ag = cpi.azure_client.get_resource_by_id(ag_url)
               expect(ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations']).to include(
                 'id' => ip_config_id
               )
             ensure
               cpi.delete_vm(new_instance_id) if new_instance_id
             end
-            ag = cpi.azure_client2.get_resource_by_id(ag_url)
+            ag = cpi.azure_client.get_resource_by_id(ag_url)
             unless ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations'].nil?
               expect(ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations']).not_to include(
                 'id' => ip_config_id
@@ -385,8 +405,8 @@ describe Bosh::AzureCloud::Cloud do
         )
         expect(instance_id).to be
 
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
-        network_interface = cpi_without_default_nsg.azure_client2.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
+        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config.resource_group_name)
+        network_interface = cpi_without_default_nsg.azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         nsg = network_interface[:network_security_group]
         expect(nsg).to be_nil
       ensure
@@ -659,8 +679,8 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
-        network_interface = cpi.azure_client2.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
+        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config.resource_group_name)
+        network_interface = cpi.azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         asgs = network_interface[:application_security_groups]
         asg_names = []
         asgs.each do |asg|
@@ -694,16 +714,16 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config)
-        vm = cpi.azure_client2.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name)
-        dynamic_public_ip = cpi.azure_client2.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
+        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config.resource_group_name)
+        vm = cpi.azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name)
+        dynamic_public_ip = cpi.azure_client.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
         expect(vm[:zone]).to eq(availability_zone)
         expect(dynamic_public_ip[:zone]).to eq(availability_zone)
 
         disk_id = cpi.create_disk(2048, {}, instance_id)
         expect(disk_id).not_to be_nil
-        disk_id_obj = Bosh::AzureCloud::DiskId.parse(disk_id, azure_config)
-        disk = cpi.azure_client2.get_managed_disk_by_name(@default_resource_group_name, disk_id_obj.disk_name)
+        disk_id_obj = Bosh::AzureCloud::DiskId.parse(disk_id, azure_config.resource_group_name)
+        disk = cpi.azure_client.get_managed_disk_by_name(@default_resource_group_name, disk_id_obj.disk_name)
         expect(disk[:zone]).to eq(availability_zone)
         @disk_id_pool.push(disk_id)
 

@@ -9,20 +9,25 @@ shared_context 'shared stuff for vm manager' do
       'use_managed_disks' => true
     )
   end
+  let(:props_factory) { Bosh::AzureCloud::PropsFactory.new(Bosh::AzureCloud::ConfigFactory.build(mock_cloud_options)) }
   let(:registry_endpoint) { mock_registry.endpoint }
   let(:disk_manager) { instance_double(Bosh::AzureCloud::DiskManager) }
   let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
-  let(:client2) { instance_double(Bosh::AzureCloud::AzureClient2) }
+  let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
   let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
+  let(:stemcell_manager) { instance_double(Bosh::AzureCloud::StemcellManager) }
+  let(:stemcell_manager2) { instance_double(Bosh::AzureCloud::StemcellManager2) }
+  let(:light_stemcell_manager) { instance_double(Bosh::AzureCloud::LightStemcellManager) }
 
   # VM manager for unmanaged disks
-  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
   # VM manager for managed disks
-  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
   # Parameters of create
   let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
+  let(:stemcell_id) { 'fake-stemcell-id' }
   let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
   let(:vm_properties) do
     {
@@ -32,6 +37,9 @@ shared_context 'shared stuff for vm manager' do
       'load_balancer'         => 'fake-lb-name',
       'application_gateway'   => 'fake-ag-name'
     }
+  end
+  let(:vm_props) do
+    props_factory.parse_vm_props(vm_properties)
   end
   let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
   let(:env) { {} }
@@ -68,7 +76,7 @@ shared_context 'shared stuff for vm manager' do
       .and_return(false)
   end
 
-  # AzureClient2
+  # AzureClient
   let(:subnet) { double('subnet') }
   let(:default_security_group) do
     {
@@ -87,24 +95,24 @@ shared_context 'shared stuff for vm manager' do
     }
   end
   before do
-    allow(Bosh::AzureCloud::AzureClient2).to receive(:new)
-      .and_return(client2)
-    allow(client2).to receive(:get_network_subnet_by_name)
+    allow(Bosh::AzureCloud::AzureClient).to receive(:new)
+      .and_return(azure_client)
+    allow(azure_client).to receive(:get_network_subnet_by_name)
       .with(MOCK_RESOURCE_GROUP_NAME, 'fake-virtual-network-name', 'fake-subnet-name')
       .and_return(subnet)
-    allow(client2).to receive(:get_network_security_group_by_name)
+    allow(azure_client).to receive(:get_network_security_group_by_name)
       .with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP)
       .and_return(default_security_group)
-    allow(client2).to receive(:get_load_balancer_by_name)
+    allow(azure_client).to receive(:get_load_balancer_by_name)
       .with(vm_properties['load_balancer'])
       .and_return(load_balancer)
-    allow(client2).to receive(:get_application_gateway_by_name)
+    allow(azure_client).to receive(:get_application_gateway_by_name)
       .with(vm_properties['application_gateway'])
       .and_return(application_gateway)
-    allow(client2).to receive(:get_public_ip_by_name)
+    allow(azure_client).to receive(:get_public_ip_by_name)
       .with(resource_group_name, vm_name)
       .and_return(nil)
-    allow(client2).to receive(:get_resource_group)
+    allow(azure_client).to receive(:get_resource_group)
       .and_return({})
   end
 
@@ -122,7 +130,7 @@ shared_context 'shared stuff for vm manager' do
 
     allow(vip_network).to receive(:resource_group_name)
       .and_return('fake-resource-group')
-    allow(client2).to receive(:list_public_ips)
+    allow(azure_client).to receive(:list_public_ips)
       .and_return([{
                     ip_address: 'public-ip'
                   }])
@@ -202,7 +210,7 @@ shared_context 'shared stuff for vm manager' do
       .and_return(os_disk_name)
     allow(disk_manager).to receive(:generate_ephemeral_disk_name)
       .and_return(ephemeral_disk_name)
-    allow(disk_manager).to receive(:vm_properties=)
+    allow(disk_manager).to receive(:vm_props=)
     allow(disk_manager).to receive(:os_disk)
       .and_return(os_disk)
     allow(disk_manager).to receive(:ephemeral_disk)
@@ -214,7 +222,7 @@ shared_context 'shared stuff for vm manager' do
       .and_return(os_disk_name)
     allow(disk_manager2).to receive(:generate_ephemeral_disk_name)
       .and_return(ephemeral_disk_name)
-    allow(disk_manager2).to receive(:vm_properties=)
+    allow(disk_manager2).to receive(:vm_props=)
     allow(disk_manager2).to receive(:os_disk)
       .and_return(os_disk_managed)
     allow(disk_manager2).to receive(:ephemeral_disk)
@@ -228,8 +236,8 @@ shared_context 'shared stuff for vm manager' do
     }
   end
   before do
-    allow(client2).to receive(:create_network_interface)
-    allow(client2).to receive(:get_network_interface_by_name)
+    allow(azure_client).to receive(:create_network_interface)
+    allow(azure_client).to receive(:get_network_interface_by_name)
       .and_return(network_interface)
   end
 end

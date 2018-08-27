@@ -10,9 +10,13 @@ describe Bosh::AzureCloud::VMManager do
   #   - resource_group_name
   #   - default_security_group
   describe '#create' do
+    before do
+      allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
+    end
+
     context 'when VM is created' do
       before do
-        allow(client2).to receive(:create_virtual_machine)
+        allow(azure_client).to receive(:create_virtual_machine)
       end
 
       # Network Security Group
@@ -25,17 +29,22 @@ describe Bosh::AzureCloud::VMManager do
           end
           let(:vm_manager_without_default_security_group) do
             Bosh::AzureCloud::VMManager.new(
-              azure_config_without_default_security_group, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager
+              azure_config_without_default_security_group, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
             )
           end
 
+          before do
+            allow(vm_manager_without_default_security_group).to receive(:_get_stemcell_info)
+              .and_return(stemcell_info)
+          end
+
           it 'should not assign network security group to the network interface' do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).to receive(:create_network_interface)
+            expect(azure_client).not_to receive(:delete_virtual_machine)
+            expect(azure_client).not_to receive(:delete_network_interface)
+            expect(azure_client).to receive(:create_network_interface)
               .with(resource_group_name, hash_including(network_security_group: nil), any_args).twice
             expect do
-              vm_manager_without_default_security_group.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager_without_default_security_group.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             end.not_to raise_error
           end
 
@@ -47,30 +56,35 @@ describe Bosh::AzureCloud::VMManager do
             end
             let(:vm_manager_without_default_security_group) do
               Bosh::AzureCloud::VMManager.new(
-                azure_config_without_default_security_group, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager
+                azure_config_without_default_security_group, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
               )
             end
 
+            before do
+              allow(vm_manager_without_default_security_group).to receive(:_get_stemcell_info)
+                .and_return(stemcell_info)
+            end
+
             it 'should raise an error' do
-              expect(client2).not_to receive(:get_network_security_group_by_name)
-              expect(client2).not_to receive(:create_network_interface)
-              expect(client2).to receive(:list_network_interfaces_by_keyword).and_return([])
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:get_network_security_group_by_name)
+              expect(azure_client).not_to receive(:create_network_interface)
+              expect(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
               expect do
-                vm_manager_without_default_security_group.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager_without_default_security_group.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.to raise_error /Cannot specify an empty string to the network security group/
             end
           end
 
           context 'when the network security group is specified in the global configuration' do
             it 'should assign the default network security group to the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(network_security_group: default_security_group), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
 
@@ -85,20 +99,20 @@ describe Bosh::AzureCloud::VMManager do
               before do
                 allow(manual_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
                 allow(dynamic_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
-                allow(client2).to receive(:get_network_security_group_by_name)
+                allow(azure_client).to receive(:get_network_security_group_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_network_spec)
                   .and_return(security_group_in_network_spec)
               end
 
               it 'should assign the network security group specified in network specs to the network interface' do
-                expect(client2).not_to receive(:delete_virtual_machine)
-                expect(client2).not_to receive(:delete_network_interface)
-                expect(client2).to receive(:create_network_interface)
+                expect(azure_client).not_to receive(:delete_virtual_machine)
+                expect(azure_client).not_to receive(:delete_network_interface)
+                expect(azure_client).to receive(:create_network_interface)
                   .with(resource_group_name, hash_including(network_security_group: security_group_in_network_spec), any_args).twice
-                expect(client2).not_to receive(:create_network_interface)
+                expect(azure_client).not_to receive(:create_network_interface)
                   .with(resource_group_name, hash_including(network_security_group: default_security_group), any_args)
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
                 end.not_to raise_error
               end
 
@@ -109,30 +123,30 @@ describe Bosh::AzureCloud::VMManager do
                     name: nsg_name_in_vm_properties
                   }
                 end
-                let(:vm_properties) do
-                  {
+                let(:vm_props) do
+                  props_factory.parse_vm_props(
                     'instance_type'  => 'Standard_D1',
                     'security_group' => nsg_name_in_vm_properties
-                  }
+                  )
                 end
 
                 before do
-                  allow(client2).to receive(:get_network_security_group_by_name)
+                  allow(azure_client).to receive(:get_network_security_group_by_name)
                     .with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_vm_properties)
                     .and_return(security_group_in_vm_properties)
                 end
 
                 it 'should assign the network security group specified in vm_types or vm_extensions to the network interface' do
-                  expect(client2).not_to receive(:delete_virtual_machine)
-                  expect(client2).not_to receive(:delete_network_interface)
-                  expect(client2).to receive(:create_network_interface)
+                  expect(azure_client).not_to receive(:delete_virtual_machine)
+                  expect(azure_client).not_to receive(:delete_network_interface)
+                  expect(azure_client).to receive(:create_network_interface)
                     .with(resource_group_name, hash_including(network_security_group: security_group_in_vm_properties), any_args).twice
-                  expect(client2).not_to receive(:create_network_interface)
+                  expect(azure_client).not_to receive(:create_network_interface)
                     .with(resource_group_name, hash_including(network_security_group: security_group_in_network_spec), any_args)
-                  expect(client2).not_to receive(:create_network_interface)
+                  expect(azure_client).not_to receive(:create_network_interface)
                     .with(resource_group_name, hash_including(network_security_group: default_security_group), any_args)
                   expect do
-                    vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                    vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
                   end.not_to raise_error
                 end
               end
@@ -148,32 +162,32 @@ describe Bosh::AzureCloud::VMManager do
               name: nsg_name
             }
           end
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type'  => 'Standard_D1',
               'security_group' => nsg_name
-            }
+            )
           end
 
           context 'when the resource group name is specified in the global configuration' do
             before do
               allow(manual_network).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
               allow(dynamic_network).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
-              allow(client2).to receive(:get_network_subnet_by_name)
+              allow(azure_client).to receive(:get_network_subnet_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, 'fake-virtual-network-name', 'fake-subnet-name')
                 .and_return(subnet)
             end
 
             it 'should find the network security group in the default resource group' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:get_network_security_group_by_name)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:get_network_security_group_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, nsg_name)
                 .and_return(security_group).twice
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(network_security_group: security_group), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -183,7 +197,7 @@ describe Bosh::AzureCloud::VMManager do
             before do
               allow(manual_network).to receive(:resource_group_name).and_return(rg_name_for_nsg)
               allow(dynamic_network).to receive(:resource_group_name).and_return(rg_name_for_nsg)
-              allow(client2).to receive(:get_network_subnet_by_name)
+              allow(azure_client).to receive(:get_network_subnet_by_name)
                 .with(rg_name_for_nsg, 'fake-virtual-network-name', 'fake-subnet-name')
                 .and_return(subnet)
             end
@@ -194,54 +208,54 @@ describe Bosh::AzureCloud::VMManager do
               end
 
               it 'should assign the security group to the network interface' do
-                expect(client2).not_to receive(:delete_virtual_machine)
-                expect(client2).not_to receive(:delete_network_interface)
-                expect(client2).to receive(:get_network_security_group_by_name)
+                expect(azure_client).not_to receive(:delete_virtual_machine)
+                expect(azure_client).not_to receive(:delete_network_interface)
+                expect(azure_client).to receive(:get_network_security_group_by_name)
                   .with(rg_name_for_nsg, nsg_name)
                   .and_return(security_group).twice
-                expect(client2).not_to receive(:get_network_security_group_by_name)
+                expect(azure_client).not_to receive(:get_network_security_group_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, nsg_name)
-                expect(client2).to receive(:create_network_interface)
+                expect(azure_client).to receive(:create_network_interface)
                   .with(rg_name_for_nsg, hash_including(network_security_group: security_group), any_args).twice
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
                 end.not_to raise_error
               end
             end
 
             context 'when network security group is not found in the specified resource group, but found in the default resource group' do
               it 'should assign the security group to the network interface' do
-                expect(client2).not_to receive(:delete_virtual_machine)
-                expect(client2).not_to receive(:delete_network_interface)
-                expect(client2).to receive(:get_network_security_group_by_name)
+                expect(azure_client).not_to receive(:delete_virtual_machine)
+                expect(azure_client).not_to receive(:delete_network_interface)
+                expect(azure_client).to receive(:get_network_security_group_by_name)
                   .with(rg_name_for_nsg, nsg_name)
                   .and_return(nil).twice
-                expect(client2).to receive(:get_network_security_group_by_name)
+                expect(azure_client).to receive(:get_network_security_group_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, nsg_name)
                   .and_return(security_group).twice
-                expect(client2).to receive(:create_network_interface)
+                expect(azure_client).to receive(:create_network_interface)
                   .with(resource_group_name, hash_including(network_security_group: security_group), any_args).twice
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
                 end.not_to raise_error
               end
             end
 
             context 'when network security group is not found in neither the specified resource group nor the default resource group' do
               it 'should raise an error' do
-                expect(client2).not_to receive(:delete_virtual_machine)
-                expect(client2).not_to receive(:delete_network_interface)
-                expect(client2).to receive(:get_network_security_group_by_name)
+                expect(azure_client).not_to receive(:delete_virtual_machine)
+                expect(azure_client).not_to receive(:delete_network_interface)
+                expect(azure_client).to receive(:get_network_security_group_by_name)
                   .with(rg_name_for_nsg, nsg_name)
                   .and_return(nil)
-                expect(client2).to receive(:get_network_security_group_by_name)
+                expect(azure_client).to receive(:get_network_security_group_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, nsg_name)
                   .and_return(nil)
-                expect(client2).not_to receive(:create_network_interface)
-                expect(client2).to receive(:list_network_interfaces_by_keyword).and_return([])
-                expect(client2).not_to receive(:delete_network_interface)
+                expect(azure_client).not_to receive(:create_network_interface)
+                expect(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
+                expect(azure_client).not_to receive(:delete_network_interface)
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
                 end.to raise_error /Cannot find the network security group '#{nsg_name}'/
               end
             end

@@ -15,10 +15,11 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+        .with(disk_id, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
       allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
+        .with(instance_id, MOCK_RESOURCE_GROUP_NAME)
         .and_return(instance_id_object)
-
       allow(telemetry_manager).to receive(:monitor)
         .with('detach_disk', id: instance_id).and_call_original
     end
@@ -55,10 +56,10 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
 
-      expect(registry).to receive(:read_settings)
+      expect(registry_client).to receive(:read_settings)
         .with(instance_id)
         .and_return(old_settings)
-      expect(registry).to receive(:update_settings)
+      expect(registry_client).to receive(:update_settings)
         .with(instance_id, new_settings)
 
       expect(vm_manager).to receive(:detach_disk).with(instance_id_object, disk_id_object)

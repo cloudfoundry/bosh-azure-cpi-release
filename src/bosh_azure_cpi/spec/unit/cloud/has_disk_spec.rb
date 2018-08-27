@@ -12,6 +12,7 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+        .with(disk_id, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
 
       allow(telemetry_manager).to receive(:monitor)
@@ -80,12 +81,6 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       context 'when use_managed_disks is false' do
-        before do
-          allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-            .with(disk_id, azure_config)
-            .and_return(disk_id_object)
-        end
-
         context 'when the unmanaged disk exists' do
           before do
             allow(disk_manager).to receive(:has_data_disk?).with(disk_id_object).and_return(true)

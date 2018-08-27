@@ -12,23 +12,25 @@ describe Bosh::AzureCloud::VMManager do
   describe '#create' do
     context 'when VM is created' do
       before do
-        allow(client2).to receive(:create_virtual_machine)
+        allow(azure_client).to receive(:create_virtual_machine)
+        allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
+        allow(vm_manager2).to receive(:_get_stemcell_info).and_return(stemcell_info)
       end
 
       # Resource group
       context 'when the resource group does not exist' do
         before do
-          allow(client2).to receive(:get_resource_group)
+          allow(azure_client).to receive(:get_resource_group)
             .with(resource_group_name)
             .and_return(nil)
-          allow(client2).to receive(:create_network_interface)
+          allow(azure_client).to receive(:create_network_interface)
         end
 
         it 'should create the resource group' do
-          expect(client2).to receive(:create_resource_group)
+          expect(azure_client).to receive(:create_resource_group)
             .with(resource_group_name, location)
 
-          vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+          vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
           expect(vm_params[:name]).to eq(vm_name)
         end
       end
@@ -54,27 +56,27 @@ describe Bosh::AzureCloud::VMManager do
           before do
             allow(manual_network).to receive(:application_security_groups).and_return(asg_names_in_network_spec)
             allow(dynamic_network).to receive(:application_security_groups).and_return(asg_names_in_network_spec)
-            allow(client2).to receive(:get_application_security_group_by_name)
+            allow(azure_client).to receive(:get_application_security_group_by_name)
               .with(MOCK_RESOURCE_GROUP_NAME, asg_1_name_in_network_spec)
               .and_return(asg_1_in_network_spec)
-            allow(client2).to receive(:get_application_security_group_by_name)
+            allow(azure_client).to receive(:get_application_security_group_by_name)
               .with(MOCK_RESOURCE_GROUP_NAME, asg_2_name_in_network_spec)
               .and_return(asg_2_in_network_spec)
           end
 
           it 'should assign the application security groups specified in network specs to the network interface' do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).to receive(:get_application_security_group_by_name)
+            expect(azure_client).not_to receive(:delete_virtual_machine)
+            expect(azure_client).not_to receive(:delete_network_interface)
+            expect(azure_client).to receive(:get_application_security_group_by_name)
               .with(MOCK_RESOURCE_GROUP_NAME, asg_1_name_in_network_spec)
               .and_return(asg_1_in_network_spec).twice
-            expect(client2).to receive(:get_application_security_group_by_name)
+            expect(azure_client).to receive(:get_application_security_group_by_name)
               .with(MOCK_RESOURCE_GROUP_NAME, asg_2_name_in_network_spec)
               .and_return(asg_2_in_network_spec).twice
-            expect(client2).to receive(:create_network_interface)
+            expect(azure_client).to receive(:create_network_interface)
               .with(resource_group_name, hash_including(application_security_groups: asgs_in_network_spec), any_args).twice
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             end.not_to raise_error
           end
 
@@ -93,39 +95,39 @@ describe Bosh::AzureCloud::VMManager do
             end
             let(:asg_names_in_vm_properties) { [asg_1_name_in_vm_properties, asg_2_name_in_vm_properties] }
             let(:asgs_in_vm_properties) { [asg_1_in_vm_properties, asg_2_in_vm_properties] }
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'application_security_groups' => asg_names_in_vm_properties
-              }
+              )
             end
 
             before do
               allow(manual_network).to receive(:application_security_groups).and_return(asg_names_in_vm_properties)
               allow(dynamic_network).to receive(:application_security_groups).and_return(asg_names_in_vm_properties)
-              allow(client2).to receive(:get_application_security_group_by_name)
+              allow(azure_client).to receive(:get_application_security_group_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, asg_1_name_in_vm_properties)
                 .and_return(asg_1_in_vm_properties)
-              allow(client2).to receive(:get_application_security_group_by_name)
+              allow(azure_client).to receive(:get_application_security_group_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, asg_2_name_in_vm_properties)
                 .and_return(asg_2_in_vm_properties)
             end
 
             it 'should assign the application security groups specified in vm_types or vm_extensions to the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:get_application_security_group_by_name)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:get_application_security_group_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, asg_1_name_in_vm_properties)
                 .and_return(asg_1_in_vm_properties).twice
-              expect(client2).to receive(:get_application_security_group_by_name)
+              expect(azure_client).to receive(:get_application_security_group_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, asg_2_name_in_vm_properties)
                 .and_return(asg_2_in_vm_properties).twice
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(application_security_groups: asgs_in_vm_properties), any_args).twice
-              expect(client2).not_to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(application_security_groups: asgs_in_network_spec), any_args)
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -147,36 +149,36 @@ describe Bosh::AzureCloud::VMManager do
               name: nsg_name_in_vm_properties
             }
           end
-          let(:vm_properties) do
-            {
+          let(:vm_props) do
+            props_factory.parse_vm_props(
               'instance_type'                 => 'Standard_D1',
               'security_group'                => nsg_name_in_vm_properties,
               'application_security_groups'   => asg_names
-            }
+            )
           end
 
           context 'when the resource group name is not specified in the network spec' do
             before do
               allow(manual_network).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
               allow(dynamic_network).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
-              allow(client2).to receive(:get_network_subnet_by_name)
+              allow(azure_client).to receive(:get_network_subnet_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, 'fake-virtual-network-name', 'fake-subnet-name')
                 .and_return(subnet)
-              allow(client2).to receive(:get_network_security_group_by_name)
+              allow(azure_client).to receive(:get_network_security_group_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_vm_properties)
                 .and_return(security_group_in_vm_properties)
             end
 
             it 'should find the application security group in the default resource group' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:get_application_security_group_by_name)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:get_application_security_group_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, asg_name)
                 .and_return(asg).twice
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(application_security_groups: asgs), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -186,10 +188,10 @@ describe Bosh::AzureCloud::VMManager do
             before do
               allow(manual_network).to receive(:resource_group_name).and_return(rg_name_for_asg)
               allow(dynamic_network).to receive(:resource_group_name).and_return(rg_name_for_asg)
-              allow(client2).to receive(:get_network_subnet_by_name)
+              allow(azure_client).to receive(:get_network_subnet_by_name)
                 .with(rg_name_for_asg, 'fake-virtual-network-name', 'fake-subnet-name')
                 .and_return(subnet)
-              allow(client2).to receive(:get_network_security_group_by_name)
+              allow(azure_client).to receive(:get_network_security_group_by_name)
                 .with(rg_name_for_asg, nsg_name_in_vm_properties)
                 .and_return(security_group_in_vm_properties)
             end
@@ -200,54 +202,54 @@ describe Bosh::AzureCloud::VMManager do
               end
 
               it 'should assign the application security group to the network interface' do
-                expect(client2).not_to receive(:delete_virtual_machine)
-                expect(client2).not_to receive(:delete_network_interface)
-                expect(client2).to receive(:get_application_security_group_by_name)
+                expect(azure_client).not_to receive(:delete_virtual_machine)
+                expect(azure_client).not_to receive(:delete_network_interface)
+                expect(azure_client).to receive(:get_application_security_group_by_name)
                   .with(rg_name_for_asg, asg_name)
                   .and_return(asg).twice
-                expect(client2).not_to receive(:get_application_security_group_by_name)
+                expect(azure_client).not_to receive(:get_application_security_group_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, asg_name)
-                expect(client2).to receive(:create_network_interface)
+                expect(azure_client).to receive(:create_network_interface)
                   .with(rg_name_for_asg, hash_including(application_security_groups: asgs), any_args).twice
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
                 end.not_to raise_error
               end
             end
 
             context 'when application security group is not found in the specified resource group, but found in the default resource group' do
               it 'should assign the application security group to the network interface' do
-                expect(client2).not_to receive(:delete_virtual_machine)
-                expect(client2).not_to receive(:delete_network_interface)
-                expect(client2).to receive(:get_application_security_group_by_name)
+                expect(azure_client).not_to receive(:delete_virtual_machine)
+                expect(azure_client).not_to receive(:delete_network_interface)
+                expect(azure_client).to receive(:get_application_security_group_by_name)
                   .with(rg_name_for_asg, asg_name)
                   .and_return(nil).twice
-                expect(client2).to receive(:get_application_security_group_by_name)
+                expect(azure_client).to receive(:get_application_security_group_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, asg_name)
                   .and_return(asg).twice
-                expect(client2).to receive(:create_network_interface)
+                expect(azure_client).to receive(:create_network_interface)
                   .with(resource_group_name, hash_including(application_security_groups: asgs), any_args).twice
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
                 end.not_to raise_error
               end
             end
 
             context 'when application security group is not found in neither the specified resource group nor the default resource group' do
               it 'should raise an error' do
-                expect(client2).not_to receive(:delete_virtual_machine)
-                expect(client2).not_to receive(:delete_network_interface)
-                expect(client2).to receive(:get_application_security_group_by_name)
+                expect(azure_client).not_to receive(:delete_virtual_machine)
+                expect(azure_client).not_to receive(:delete_network_interface)
+                expect(azure_client).to receive(:get_application_security_group_by_name)
                   .with(rg_name_for_asg, asg_name)
                   .and_return(nil)
-                expect(client2).to receive(:get_application_security_group_by_name)
+                expect(azure_client).to receive(:get_application_security_group_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, asg_name)
                   .and_return(nil)
-                expect(client2).not_to receive(:create_network_interface)
-                expect(client2).to receive(:list_network_interfaces_by_keyword).and_return([])
-                expect(client2).not_to receive(:delete_network_interface)
+                expect(azure_client).not_to receive(:create_network_interface)
+                expect(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
+                expect(azure_client).not_to receive(:delete_network_interface)
                 expect do
-                  vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                  vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
                 end.to raise_error /Cannot find the application security group '#{asg_name}'/
               end
             end
@@ -264,54 +266,54 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when ip forwarding is not specified in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1'
-              }
+              )
             end
             it 'should disable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when ip forwarding is disabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => false
-              }
+              )
             end
             it 'should disable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when ip forwarding is enabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => true
-              }
+              )
             end
             it 'should enable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -324,54 +326,54 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when ip forwarding is not specified in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1'
-              }
+              )
             end
             it 'should enable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when ip forwarding is disabled in vm_vm_types or vm_extensionsproperties' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => false
-              }
+              )
             end
             it 'should disable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when ip forwarding is enabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'ip_forwarding' => true
-              }
+              )
             end
             it 'should enable ip forwarding on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -387,54 +389,54 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when accelerated networking is not specified in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1'
-              }
+              )
             end
             it 'should disable accelerated networking on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when accelerated networking is disabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'accelerated_networking' => false
-              }
+              )
             end
             it 'should disable accelerated networking on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when accelerated networking is enabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'accelerated_networking' => true
-              }
+              )
             end
             it 'should enable accelerated networking on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -447,54 +449,54 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when accelerated networking is not specified in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1'
-              }
+              )
             end
             it 'should enable accelerated networking on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when accelerated networking is disabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'accelerated_networking' => false
-              }
+              )
             end
             it 'should disable accelerated networking on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
 
           context 'when accelerated networking is enabled in vm_types or vm_extensions' do
-            let(:vm_properties) do
-              {
+            let(:vm_props) do
+              props_factory.parse_vm_props(
                 'instance_type' => 'Standard_D1',
                 'accelerated_networking' => true
-              }
+              )
             end
             it 'should enable accelerated networking on the network interface' do
-              expect(client2).not_to receive(:delete_virtual_machine)
-              expect(client2).not_to receive(:delete_network_interface)
-              expect(client2).to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:delete_virtual_machine)
+              expect(azure_client).not_to receive(:delete_network_interface)
+              expect(azure_client).to receive(:create_network_interface)
                 .with(resource_group_name, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+                vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -505,11 +507,11 @@ describe Bosh::AzureCloud::VMManager do
       context '#stemcell' do
         context 'when a heavy stemcell is used' do
           it 'should succeed' do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
+            expect(azure_client).not_to receive(:delete_virtual_machine)
+            expect(azure_client).not_to receive(:delete_network_interface)
 
-            expect(client2).to receive(:create_network_interface).exactly(2).times
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            expect(azure_client).to receive(:create_network_interface).exactly(2).times
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:image_uri]).to eq(stemcell_uri)
             expect(vm_params[:os_type]).to eq(os_type)
@@ -534,11 +536,11 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it 'should succeed' do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
+            expect(azure_client).not_to receive(:delete_virtual_machine)
+            expect(azure_client).not_to receive(:delete_network_interface)
 
-            expect(client2).to receive(:create_network_interface).twice
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            expect(azure_client).to receive(:create_network_interface).twice
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:os_type]).to eq(os_type)
           end
@@ -551,10 +553,10 @@ describe Bosh::AzureCloud::VMManager do
         let(:tags) { { 'user-agent' => 'bosh' } }
 
         before do
-          vm_properties['assign_dynamic_public_ip'] = true
+          vm_props.assign_dynamic_public_ip = true
           allow(network_configurator).to receive(:vip_network)
             .and_return(nil)
-          allow(client2).to receive(:get_public_ip_by_name)
+          allow(azure_client).to receive(:get_public_ip_by_name)
             .with(resource_group_name, vm_name).and_return(dynamic_public_ip)
         end
 
@@ -564,7 +566,7 @@ describe Bosh::AzureCloud::VMManager do
             Bosh::AzureCloud::VMManager.new(
               mock_azure_config_merge(
                 'pip_idle_timeout_in_minutes' => idle_timeout
-              ), registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager
+              ), registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
             )
           end
           let(:public_ip_params) do
@@ -576,10 +578,14 @@ describe Bosh::AzureCloud::VMManager do
             }
           end
 
+          before do
+            allow(vm_manager_for_pip).to receive(:_get_stemcell_info).and_return(stemcell_info)
+          end
+
           it 'creates a public IP and assigns it to the primary NIC' do
-            expect(client2).to receive(:create_public_ip)
+            expect(azure_client).to receive(:create_public_ip)
               .with(resource_group_name, public_ip_params)
-            expect(client2).to receive(:create_network_interface)
+            expect(azure_client).to receive(:create_network_interface)
               .with(resource_group_name, hash_including(
                                            name: "#{vm_name}-0",
                                            public_ip: dynamic_public_ip,
@@ -589,7 +595,7 @@ describe Bosh::AzureCloud::VMManager do
                                            application_gateway: application_gateway
                                          )).once
 
-            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager_for_pip.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -606,9 +612,9 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it 'creates a public IP and assigns it to the NIC' do
-            expect(client2).to receive(:create_public_ip)
+            expect(azure_client).to receive(:create_public_ip)
               .with(resource_group_name, public_ip_params)
-            expect(client2).to receive(:create_network_interface)
+            expect(azure_client).to receive(:create_network_interface)
               .with(resource_group_name, hash_including(
                                            public_ip: dynamic_public_ip,
                                            subnet: subnet,
@@ -617,7 +623,7 @@ describe Bosh::AzureCloud::VMManager do
                                            application_gateway: application_gateway
                                          ))
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -647,8 +653,8 @@ describe Bosh::AzureCloud::VMManager do
               location: location,
               tags: { 'user-agent' => 'bosh' },
               vm_size: 'Standard_D1',
-              ssh_username: azure_config_managed['ssh_user'],
-              ssh_cert_data: azure_config_managed['ssh_public_key'],
+              ssh_username: azure_config_managed.ssh_user,
+              ssh_cert_data: azure_config_managed.ssh_public_key,
               custom_data: Base64.strict_encode64(JSON.dump(user_data)),
               os_disk: os_disk_managed,
               ephemeral_disk: ephemeral_disk_managed,
@@ -663,11 +669,11 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it 'should succeed' do
-            expect(client2).not_to receive(:delete_virtual_machine)
-            expect(client2).not_to receive(:delete_network_interface)
-            expect(client2).to receive(:create_virtual_machine)
+            expect(azure_client).not_to receive(:delete_virtual_machine)
+            expect(azure_client).not_to receive(:delete_network_interface)
+            expect(azure_client).to receive(:create_virtual_machine)
               .with(resource_group_name, vm_params, network_interfaces, nil)
-            result = vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            result = vm_manager2.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             expect(result[:name]).to eq(vm_name)
           end
         end
@@ -709,11 +715,11 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           it 'should succeed' do
-            expect(client2).to receive(:create_virtual_machine)
+            expect(azure_client).to receive(:create_virtual_machine)
               .with(resource_group_name, vm_params, network_interfaces, nil)
             expect(SecureRandom).to receive(:uuid).exactly(3).times
             expect do
-              vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager2.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -723,24 +729,24 @@ describe Bosh::AzureCloud::VMManager do
         context ' and use_managed_disks is false' do
           it 'should succeed' do
             count = 0
-            allow(client2).to receive(:create_virtual_machine) do
+            allow(azure_client).to receive(:create_virtual_machine) do
               count += 1
               raise Bosh::AzureCloud::AzureAsynchronousError, 'Failed' if count == 1
               nil
             end
 
-            expect(client2).to receive(:create_virtual_machine).twice
-            expect(client2).to receive(:delete_virtual_machine).once
+            expect(azure_client).to receive(:create_virtual_machine).twice
+            expect(azure_client).to receive(:delete_virtual_machine).once
             expect(disk_manager).to receive(:generate_os_disk_name).with(vm_name).once
             expect(disk_manager).to receive(:delete_disk).with(storage_account_name, os_disk_name).once
             expect(disk_manager).to receive(:generate_ephemeral_disk_name).with(vm_name).once
             expect(disk_manager).to receive(:delete_disk).with(storage_account_name, ephemeral_disk_name).once
             expect(disk_manager).to receive(:delete_vm_status_files)
               .with(storage_account_name, vm_name).once
-            expect(client2).not_to receive(:delete_network_interface)
+            expect(azure_client).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -748,22 +754,22 @@ describe Bosh::AzureCloud::VMManager do
         context ' and use_managed_disks is true' do
           it 'should succeed' do
             count = 0
-            allow(client2).to receive(:create_virtual_machine) do
+            allow(azure_client).to receive(:create_virtual_machine) do
               count += 1
               raise Bosh::AzureCloud::AzureAsynchronousError, 'Failed' if count == 1
               nil
             end
 
-            expect(client2).to receive(:create_virtual_machine).twice
-            expect(client2).to receive(:delete_virtual_machine).once
+            expect(azure_client).to receive(:create_virtual_machine).twice
+            expect(azure_client).to receive(:delete_virtual_machine).once
             expect(disk_manager2).to receive(:generate_os_disk_name).with(vm_name).once
             expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, os_disk_name).once
             expect(disk_manager2).to receive(:generate_ephemeral_disk_name).with(vm_name).once
             expect(disk_manager2).to receive(:delete_disk).with(resource_group_name, ephemeral_disk_name).once
-            expect(client2).not_to receive(:delete_network_interface)
+            expect(azure_client).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager2.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+              vm_manager2.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -777,7 +783,7 @@ describe Bosh::AzureCloud::VMManager do
               'enable_vm_boot_diagnostics' => true
             )
           end
-          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
           let(:vm_location) { location }
           let(:diag_storage_uri) { 'fake-diag-storage-uri' }
@@ -792,7 +798,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(storage_account_manager).to receive(:get_or_create_diagnostics_storage_account)
               .with(location)
               .and_return(storage_account)
-            vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, vm_props, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to eq(diag_storage_uri)
           end
         end
@@ -804,12 +810,12 @@ describe Bosh::AzureCloud::VMManager do
               'environment' => 'AzureStack'
             )
           end
-          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, client2, storage_account_manager) }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
           let(:vm_location) { location }
 
           it 'should not enable diagnostics' do
-            vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, vm_location, stemcell_info, vm_props, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to be(nil)
           end
         end
@@ -820,7 +826,7 @@ describe Bosh::AzureCloud::VMManager do
         let(:availability_zone) { '1' }
 
         before do
-          vm_properties['availability_zone'] = availability_zone
+          vm_props.availability_zone = availability_zone
 
           allow(network_configurator).to receive(:vip_network)
             .and_return(nil)
@@ -830,53 +836,53 @@ describe Bosh::AzureCloud::VMManager do
           let(:dynamic_public_ip) { 'fake-dynamic-public-ip' }
 
           before do
-            vm_properties['assign_dynamic_public_ip'] = true
-            allow(client2).to receive(:get_public_ip_by_name)
+            vm_props.assign_dynamic_public_ip = true
+            allow(azure_client).to receive(:get_public_ip_by_name)
               .with(resource_group_name, vm_name).and_return(dynamic_public_ip)
           end
 
           it 'creates public IP and virtual machine in the specified zone' do
-            expect(client2).to receive(:create_public_ip)
+            expect(azure_client).to receive(:create_public_ip)
               .with(resource_group_name, hash_including(
                                            zone: availability_zone
                                          )).once
-            expect(client2).to receive(:create_virtual_machine)
+            expect(azure_client).to receive(:create_virtual_machine)
               .with(resource_group_name,
                     hash_including(zone: availability_zone),
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
 
         context 'and assign_dynamic_public_ip is not set' do
           it 'creates virtual machine in the specified zone' do
-            expect(client2).to receive(:create_virtual_machine)
+            expect(azure_client).to receive(:create_virtual_machine)
               .with(resource_group_name,
                     hash_including(zone: availability_zone),
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
 
         context 'and availability_zone is an integer' do
           before do
-            vm_properties['availability_zone'] = 1
+            vm_props.availability_zone = 1
           end
 
           it 'convert availability_zone to string' do
-            expect(client2).to receive(:create_virtual_machine)
+            expect(azure_client).to receive(:create_virtual_machine)
               .with(resource_group_name,
                     hash_including(zone: '1'),
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            vm_params = vm_manager.create(instance_id, location, stemcell_info, vm_properties, network_configurator, env)
+            vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
             expect(vm_params[:zone]).to eq('1')
           end
         end
