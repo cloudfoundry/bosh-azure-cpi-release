@@ -33,7 +33,7 @@ describe Bosh::AzureCloud::VMManager do
     let(:ephemeral_disk_name) { 'fake-ephemeral-disk-name' }
     let(:public_ip) { 'fake-public-ip' }
 
-    let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+    let(:instance_id) { instance_double(Bosh::AzureCloud::VMInstanceId) }
 
     let(:network_interfaces) do
       [

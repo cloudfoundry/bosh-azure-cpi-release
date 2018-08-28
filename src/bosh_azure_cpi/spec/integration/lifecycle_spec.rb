@@ -405,7 +405,7 @@ describe Bosh::AzureCloud::Cloud do
         )
         expect(instance_id).to be
 
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config.resource_group_name)
+        instance_id_obj = Bosh::AzureCloud::InstanceIdParser.parse(instance_id, azure_config.resource_group_name)
         network_interface = cpi_without_default_nsg.azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         nsg = network_interface[:network_security_group]
         expect(nsg).to be_nil
@@ -679,7 +679,7 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config.resource_group_name)
+        instance_id_obj = Bosh::AzureCloud::InstanceIdParser.parse(instance_id, azure_config.resource_group_name)
         network_interface = cpi.azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         asgs = network_interface[:application_security_groups]
         asg_names = []
@@ -714,7 +714,7 @@ describe Bosh::AzureCloud::Cloud do
 
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
-        instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, azure_config.resource_group_name)
+        instance_id_obj = Bosh::AzureCloud::InstanceIdParser.parse(instance_id, azure_config.resource_group_name)
         vm = cpi.azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name)
         dynamic_public_ip = cpi.azure_client.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
         expect(vm[:zone]).to eq(availability_zone)
@@ -722,7 +722,7 @@ describe Bosh::AzureCloud::Cloud do
 
         disk_id = cpi.create_disk(2048, {}, instance_id)
         expect(disk_id).not_to be_nil
-        disk_id_obj = Bosh::AzureCloud::DiskId.parse(disk_id, azure_config.resource_group_name)
+        disk_id_obj = Bosh::AzureCloud::InstanceIdParser.parse(disk_id, azure_config.resource_group_name)
         disk = cpi.azure_client.get_managed_disk_by_name(@default_resource_group_name, disk_id_obj.disk_name)
         expect(disk[:zone]).to eq(availability_zone)
         @disk_id_pool.push(disk_id)

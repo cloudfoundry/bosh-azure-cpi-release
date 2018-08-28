@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vms/shared_stuff.rb'
 
 describe Bosh::AzureCloud::VMManager do
-  include_context 'shared stuff for vm manager'
+  include_context 'shared stuff for vm managers'
 
   # The following variables are defined in shared_stuff.rb. You can override it if needed.
   #   - resource_group_name
@@ -577,11 +577,16 @@ describe Bosh::AzureCloud::VMManager do
               idle_timeout_in_minutes: idle_timeout
             }
           end
-
+          let(:storage_account) do
+            {
+              name: storage_account_name
+            }
+          end
           before do
             allow(vm_manager_for_pip).to receive(:_get_stemcell_info).and_return(stemcell_info)
             allow(vm_manager_for_pip).to receive(:get_storage_account_from_vm_properties)
-              .and_return(name: storage_account_name)
+              .with(vm_props, location)
+              .and_return(storage_account)
           end
 
           it 'creates a public IP and assigns it to the primary NIC' do
@@ -668,7 +673,7 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(stemcell_info).to receive(:os_type).and_return('linux')
-            allow(Bosh::AzureCloud::InstanceId).to receive(:create)
+            allow(Bosh::AzureCloud::VMInstanceId).to receive(:create)
               .with(vm_props.resource_group_name, bosh_vm_meta.agent_id)
               .and_return(instance_id)
             allow(instance_id).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
@@ -718,7 +723,7 @@ describe Bosh::AzureCloud::VMManager do
             expect_any_instance_of(Array).to receive(:shuffle).and_return(['fake-array'])
             allow(stemcell_info).to receive(:os_type).and_return('windows')
             allow(vm_manager2).to receive(:generate_windows_computer_name).and_return(computer_name)
-            allow(Bosh::AzureCloud::InstanceId).to receive(:create)
+            allow(Bosh::AzureCloud::VMInstanceId).to receive(:create)
               .with(vm_props.resource_group_name, bosh_vm_meta.agent_id)
               .and_return(instance_id)
             allow(instance_id).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
@@ -742,6 +747,7 @@ describe Bosh::AzureCloud::VMManager do
             allow(azure_client).to receive(:create_virtual_machine) do
               count += 1
               raise Bosh::AzureCloud::AzureAsynchronousError, 'Failed' if count == 1
+
               nil
             end
 
@@ -767,6 +773,7 @@ describe Bosh::AzureCloud::VMManager do
             allow(azure_client).to receive(:create_virtual_machine) do
               count += 1
               raise Bosh::AzureCloud::AzureAsynchronousError, 'Failed' if count == 1
+
               nil
             end
 

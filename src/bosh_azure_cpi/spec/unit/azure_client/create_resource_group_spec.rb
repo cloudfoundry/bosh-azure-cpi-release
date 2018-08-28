@@ -1,34 +1,16 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'unit/azure_client/shared_stuff.rb'
 require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient do
-  let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client) do
-    Bosh::AzureCloud::AzureClient.new(
-      mock_azure_config,
-      logger
-    )
-  end
-  let(:subscription_id) { mock_azure_config.subscription_id }
-  let(:tenant_id) { mock_azure_config.tenant_id }
-  let(:token_api_version) { AZURE_API_VERSION }
-  let(:group_api_version) { AZURE_RESOURCE_PROVIDER_GROUP }
-  let(:resource_group_name) { 'fake-resource-group-name' }
-  let(:request_id) { 'fake-request-id' }
-  let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
-
-  let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{token_api_version}" }
-
-  let(:valid_access_token) { 'valid-access-token' }
-
-  let(:expires_on) { (Time.new + 1800).to_i.to_s }
+  include_context 'shared stuff for azure client'
 
   describe '#create_resource_group' do
-    let(:resource_group_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}?api-version=#{group_api_version}" }
+    let(:resource_group_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}?api-version=#{group_api_version}" }
 
     let(:location) { 'fake-location' }
 
@@ -55,7 +37,7 @@ describe Bosh::AzureCloud::AzureClient do
           )
 
           expect do
-            azure_client.create_resource_group(resource_group_name, location)
+            azure_client.create_resource_group(resource_group, location)
           end.not_to raise_error
         end
       end
@@ -79,7 +61,7 @@ describe Bosh::AzureCloud::AzureClient do
         )
 
         expect do
-          azure_client.create_resource_group(resource_group_name, location)
+          azure_client.create_resource_group(resource_group, location)
         end.not_to raise_error
       end
     end
@@ -109,7 +91,7 @@ describe Bosh::AzureCloud::AzureClient do
           }
         )
         expect do
-          azure_client.create_resource_group(resource_group_name, location)
+          azure_client.create_resource_group(resource_group, location)
         end.to raise_error /check_completion - http code: 200/
       end
     end

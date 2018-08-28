@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class VMManager
-    include Helpers
-
+  class VMManager < VMManagerBase
     def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager = nil)
+      super(azure_config.use_managed_disks, azure_client, stemcell_manager, stemcell_manager2, light_stemcell_manager)
+
       @azure_config = azure_config
       @registry_endpoint = registry_endpoint
       @config_disk_manager = config_disk_manager
@@ -35,7 +35,7 @@ module Bosh::AzureCloud
         cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
       end
 
-      _check_resource_group(resource_group_name, location)
+      _ensure_resource_group_exists(resource_group_name, location)
 
       # tasks to prepare resources for VM
       #   * prepare stemcell
@@ -116,8 +116,8 @@ module Bosh::AzureCloud
             @azure_config.ssh_public_key
           )
           user_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
-          config_disk = @config_disk_manager.prepare_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data_obj)
-          vm_params[:config_disk] = config_disk
+          _, disk = @config_disk_manager.prepare_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data_obj)
+          vm_params[:config_disk] = disk
         else
           user_data = Bosh::AzureCloud::BoshAgentUtil.get_encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
           vm_params[:custom_data] = user_data
@@ -195,8 +195,6 @@ module Bosh::AzureCloud
           # Delete the dynamic public IP
           dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
           @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
-
-          # TODO: delete the config disk.
         rescue StandardError => error
           error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
           error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
@@ -341,24 +339,7 @@ module Bosh::AzureCloud
     def attach_disk(instance_id, disk_id)
       @logger.info("attach_disk(#{instance_id}, #{disk_id})")
       disk_name = disk_id.disk_name
-      disk_params = if instance_id.use_managed_disks?
-                      {
-                        disk_name: disk_name,
-                        caching: disk_id.caching,
-                        disk_bosh_id: disk_id.to_s,
-                        disk_id: @azure_client.get_managed_disk_by_name(disk_id.resource_group_name, disk_name)[:id],
-                        managed: true
-                      }
-                    else
-                      {
-                        disk_name: disk_name,
-                        caching: disk_id.caching,
-                        disk_bosh_id: disk_id.to_s,
-                        disk_uri: @disk_manager.get_data_disk_uri(disk_id),
-                        disk_size: @disk_manager.get_disk_size_in_gb(disk_id),
-                        managed: false
-                      }
-                    end
+      disk_params = _get_disk_params(disk_id, instance_id.use_managed_disks?)
       lun = @azure_client.attach_disk_to_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name,
@@ -380,43 +361,12 @@ module Bosh::AzureCloud
 
     def _build_instance_id(bosh_vm_meta, location, vm_props)
       if @use_managed_disks
-        instance_id = InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id)
+        instance_id = VMInstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id)
       else
         storage_account = get_storage_account_from_vm_properties(vm_props, location)
-        instance_id = InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id, storage_account[:name])
+        instance_id = VMInstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id, storage_account[:name])
       end
       instance_id
-    end
-
-    def _get_stemcell_info(stemcell_id, vm_props, location)
-      stemcell_info = nil
-      if @use_managed_disks
-        if is_light_stemcell_id?(stemcell_id)
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
-          stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
-        else
-          begin
-            storage_account_type = _get_root_disk_type(vm_props)
-            # Treat user_image_info as stemcell_info
-            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_id, storage_account_type, location)
-          rescue StandardError => e
-            raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell '#{stemcell_id}': #{e.inspect}\n#{e.backtrace.join("\n")}"
-          end
-        end
-      else
-        storage_account = get_storage_account_from_vm_properties(vm_props, location)
-
-        if is_light_stemcell_id?(stemcell_id)
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
-          stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
-        else
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)
-          stemcell_info = @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_id)
-        end
-      end
-
-      @logger.debug("get_stemcell_info - got stemcell '#{stemcell_info.inspect}'")
-      stemcell_info
     end
 
     def _get_diagnostics_storage_account(location)
@@ -508,13 +458,6 @@ module Bosh::AzureCloud
 
         raise e
       end
-    end
-
-    def _check_resource_group(resource_group_name, location)
-      resource_group = @azure_client.get_resource_group(resource_group_name)
-      return true unless resource_group.nil?
-      # If resource group does not exist, create it
-      @azure_client.create_resource_group(resource_group_name, location)
     end
   end
 end

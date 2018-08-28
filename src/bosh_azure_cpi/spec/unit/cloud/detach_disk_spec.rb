@@ -7,17 +7,14 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#detach_disk' do
-    let(:instance_id) { 'fake-instance-id' }
     let(:disk_id) { 'fake-disk-id' }
     let(:host_device_id) { 'fake-host-device-id' }
     let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
-    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
-
     before do
-      allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+      allow(Bosh::AzureCloud::InstanceIdParser).to receive(:parse)
         .with(disk_id, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
-      allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
+      allow(Bosh::AzureCloud::InstanceIdParser).to receive(:parse)
         .with(instance_id, MOCK_RESOURCE_GROUP_NAME)
         .and_return(instance_id_object)
       allow(telemetry_manager).to receive(:monitor)

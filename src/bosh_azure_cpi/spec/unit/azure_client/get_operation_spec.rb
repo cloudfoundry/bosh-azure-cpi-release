@@ -1,36 +1,22 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'unit/azure_client/shared_stuff.rb'
 require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient do
-  let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client) do
-    Bosh::AzureCloud::AzureClient.new(
-      mock_azure_config,
-      logger
-    )
-  end
-  let(:subscription_id) { mock_azure_config.subscription_id }
-  let(:tenant_id) { mock_azure_config.tenant_id }
-  let(:api_version) { AZURE_API_VERSION }
-  let(:api_version_network) { AZURE_RESOURCE_PROVIDER_NETWORK }
+  include_context 'shared stuff for azure client'
+
   let(:default_resource_group_name) { mock_azure_config.resource_group_name }
-  let(:resource_group_name) { 'fake-resource-group-name' }
-  let(:request_id) { 'fake-request-id' }
-
-  let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{api_version}" }
-  let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
-
   let(:valid_access_token) { 'valid-access-token' }
   let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   # Public IP
   let(:public_ip_name) { 'fake-name' }
-  let(:public_ip_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}" }
-  let(:public_ip_uri) { "https://management.azure.com#{public_ip_id}?api-version=#{api_version_network}" }
+  let(:public_ip_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}" }
+  let(:public_ip_uri) { "https://management.azure.com/#{public_ip_id}?api-version=#{api_version_network}" }
   let(:public_ip_response_body) do
     {
       'id' => 'fake-id',
@@ -171,8 +157,8 @@ describe Bosh::AzureCloud::AzureClient do
 
   # Network Interface
   let(:nic_name) { 'fake-name' }
-  let(:nic_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/networkInterfaces/#{nic_name}" }
-  let(:nic_uri) { "https://management.azure.com#{nic_id}?api-version=#{api_version_network}" }
+  let(:nic_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces/#{nic_name}" }
+  let(:nic_uri) { "https://management.azure.com/#{nic_id}?api-version=#{api_version_network}" }
   let(:nic_response_body) do
     {
       'id' => 'fake-id',
@@ -212,7 +198,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   # Virtual Network
   let(:vnet_name) { 'fake-vnet-name' }
-  let(:vnet_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}?api-version=#{api_version_network}" }
+  let(:vnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}?api-version=#{api_version_network}" }
   let(:vnet_response_body) do
     {
       'id' => 'fake-vnet-id',
@@ -255,7 +241,7 @@ describe Bosh::AzureCloud::AzureClient do
   # Subnet
   let(:vnet_name) { 'fake-name' }
   let(:subnet_name) { 'bar' }
-  let(:network_subnet_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}/subnets/#{subnet_name}?api-version=#{api_version_network}" }
+  let(:network_subnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}/subnets/#{subnet_name}?api-version=#{api_version_network}" }
   let(:network_subnet_response_body) do
     {
       'id' => 'fake-id',
@@ -277,8 +263,8 @@ describe Bosh::AzureCloud::AzureClient do
 
   # Network Security Group
   let(:nsg_name) { 'fake-nsg-name' }
-  let(:nsg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/networkSecurityGroups/#{nsg_name}" }
-  let(:nsg_uri) { "https://management.azure.com#{nsg_id}?api-version=#{api_version_network}" }
+  let(:nsg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkSecurityGroups/#{nsg_name}" }
+  let(:nsg_uri) { "https://management.azure.com/#{nsg_id}?api-version=#{api_version_network}" }
   let(:nsg_response_body) do
     {
       'id' => 'fake-id',
@@ -342,8 +328,8 @@ describe Bosh::AzureCloud::AzureClient do
 
   # Application Security Group
   let(:asg_name) { 'fake-asg-name' }
-  let(:asg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/applicationSecurityGroups/#{asg_name}" }
-  let(:asg_uri) { "https://management.azure.com#{asg_id}?api-version=#{api_version_network}" }
+  let(:asg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/applicationSecurityGroups/#{asg_name}" }
+  let(:asg_uri) { "https://management.azure.com/#{asg_id}?api-version=#{api_version_network}" }
   let(:asg_response_body) do
     {
       'id' => 'fake-id',
@@ -452,7 +438,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_public_ip_by_name(resource_group_name, public_ip_name)
+          azure_client.get_public_ip_by_name(resource_group, public_ip_name)
         ).to be_nil
       end
 
@@ -463,14 +449,14 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_public_ip_by_name(resource_group_name, public_ip_name)
+          azure_client.get_public_ip_by_name(resource_group, public_ip_name)
         ).to eq(fake_public_ip)
       end
     end
   end
 
   describe '#list_public_ips' do
-    let(:list_public_ips_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Network/publicIPAddresses?api-version=#{api_version_network}" }
+    let(:list_public_ips_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses?api-version=#{api_version_network}" }
     let(:list_public_ips_response_body) do
       {
         'value' => [public_ip_response_body]
@@ -487,7 +473,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.list_public_ips(resource_group_name)
+          azure_client.list_public_ips(resource_group)
         ).to eq([])
       end
 
@@ -498,7 +484,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.list_public_ips(resource_group_name)
+          azure_client.list_public_ips(resource_group)
         ).to eq(fake_public_ip_list)
       end
     end
@@ -575,7 +561,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+          azure_client.get_network_interface_by_name(resource_group, nic_name)
         ).to be_nil
       end
     end
@@ -599,7 +585,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -662,7 +648,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -726,7 +712,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -790,7 +776,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -841,7 +827,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -892,7 +878,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -950,7 +936,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -1008,7 +994,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+            azure_client.get_network_interface_by_name(resource_group, nic_name)
           ).to eq(fake_nic)
         end
       end
@@ -1024,7 +1010,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_virtual_network_by_name(resource_group_name, vnet_name)
+          azure_client.get_virtual_network_by_name(resource_group, vnet_name)
         ).to be_nil
       end
 
@@ -1035,7 +1021,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_virtual_network_by_name(resource_group_name, vnet_name)
+          azure_client.get_virtual_network_by_name(resource_group, vnet_name)
         ).to eq(fake_vnet)
       end
     end
@@ -1050,7 +1036,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
+          azure_client.get_network_subnet_by_name(resource_group, vnet_name, subnet_name)
         ).to be_nil
       end
 
@@ -1061,7 +1047,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_network_subnet_by_name(resource_group_name, vnet_name, subnet_name)
+          azure_client.get_network_subnet_by_name(resource_group, vnet_name, subnet_name)
         ).to eq(fake_network_subnet)
       end
     end
@@ -1340,7 +1326,7 @@ describe Bosh::AzureCloud::AzureClient do
     let(:api_version) { AZURE_API_VERSION }
     let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
     let(:vm_name) { 'fake-vm-name' }
-    let(:vm_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
+    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
 
     context 'when the response body is null' do
       it 'should return null' do
@@ -1350,7 +1336,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+          azure_client.get_virtual_machine_by_name(resource_group, vm_name)
         ).to be_nil
       end
     end
@@ -1447,7 +1433,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+            azure_client.get_virtual_machine_by_name(resource_group, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1555,7 +1541,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+            azure_client.get_virtual_machine_by_name(resource_group, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1667,7 +1653,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+            azure_client.get_virtual_machine_by_name(resource_group, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1760,7 +1746,7 @@ describe Bosh::AzureCloud::AzureClient do
               headers: {}
             )
             expect(
-              azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+              azure_client.get_virtual_machine_by_name(resource_group, vm_name)
             ).to eq(fake_vm)
           end
         end
@@ -1854,7 +1840,7 @@ describe Bosh::AzureCloud::AzureClient do
               headers: {}
             )
             expect(
-              azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+              azure_client.get_virtual_machine_by_name(resource_group, vm_name)
             ).to eq(fake_vm)
           end
         end
@@ -1939,7 +1925,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
           expect(
-            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+            azure_client.get_virtual_machine_by_name(resource_group, vm_name)
           ).to eq(fake_vm)
         end
       end
@@ -1955,7 +1941,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_network_security_group_by_name(resource_group_name, nsg_name)
+          azure_client.get_network_security_group_by_name(resource_group, nsg_name)
         ).to be_nil
       end
 
@@ -1966,7 +1952,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_network_security_group_by_name(resource_group_name, nsg_name)
+          azure_client.get_network_security_group_by_name(resource_group, nsg_name)
         ).to eq(fake_nsg)
       end
     end
@@ -1981,7 +1967,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_application_security_group_by_name(resource_group_name, asg_name)
+          azure_client.get_application_security_group_by_name(resource_group, asg_name)
         ).to be_nil
       end
 
@@ -1992,7 +1978,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_application_security_group_by_name(resource_group_name, asg_name)
+          azure_client.get_application_security_group_by_name(resource_group, asg_name)
         ).to eq(fake_asg)
       end
     end

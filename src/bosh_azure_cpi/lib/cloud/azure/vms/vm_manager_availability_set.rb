@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class VMManager
+  class VMManager < VMManagerBase
     private
 
     def _get_availability_set_name(vm_props, env)

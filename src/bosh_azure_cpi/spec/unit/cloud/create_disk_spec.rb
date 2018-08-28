@@ -8,20 +8,8 @@ describe Bosh::AzureCloud::Cloud do
 
   describe '#create_disk' do
     let(:cloud_properties) { {} }
-    let(:instance_id) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
-    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
     let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
-    let(:default_resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
-    let(:resource_group_name) { 'fake-resource-group-name' }
-    let(:vm_name) { 'fake-vm-name' }
-
     before do
-      allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
-        .and_return(instance_id_object)
-      allow(instance_id_object).to receive(:resource_group_name)
-        .and_return(resource_group_name)
-      allow(instance_id_object).to receive(:vm_name)
-        .and_return(vm_name)
       allow(telemetry_manager).to receive(:monitor)
         .with('create_disk', id: instance_id, extras: { 'disk_size' => disk_size })
         .and_call_original
@@ -81,6 +69,7 @@ describe Bosh::AzureCloud::Cloud do
 
       context 'when instance_id is nil' do
         let(:instance_id) { nil }
+        let(:instance_id_obj) { instance_double(Bosh::AzureCloud::VMInstanceId) }
         let(:rg_location) { 'fake-resource-group-location' }
         let(:resource_group) do
           {
@@ -112,6 +101,8 @@ describe Bosh::AzureCloud::Cloud do
       context 'when instance_id is not nil' do
         context 'when the instance is an unmanaged vm' do
           before do
+            allow(Bosh::AzureCloud::InstanceIdParser).to receive(:parse)
+              .and_return(instance_id_object)
             allow(instance_id_object).to receive(:use_managed_disks?)
               .and_return(false)
           end
@@ -120,6 +111,33 @@ describe Bosh::AzureCloud::Cloud do
             expect do
               managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
             end.to raise_error /Cannot create a managed disk for a VM with unmanaged disks/
+          end
+        end
+
+        context 'when the instance is vmss vm' do
+          let(:vm_location) { 'fake-vm-location' }
+          let(:vm_zone) { 'fake-zone' }
+          it 'should raise no error' do
+            allow(azure_client).to receive(:get_vmss_by_name)
+              .and_return(
+                location: vm_location,
+                sku: {
+                  name: 'Standard_F1s'
+                },
+                zones: [vm_zone]
+              )
+            allow(telemetry_manager).to receive(:monitor)
+              .with('create_disk', id: instance_id_vmss, extras: { 'disk_size' => disk_size })
+              .and_call_original
+            expect(Bosh::AzureCloud::DiskId).to receive(:create)
+              .with(caching, true, resource_group_name: default_resource_group_name)
+              .and_return(disk_id_object)
+            expect(disk_manager2).to receive(:create_disk)
+              .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone)
+
+            expect do
+              use_vmss_cloud.create_disk(disk_size, cloud_properties, instance_id_vmss)
+            end.not_to raise_error
           end
         end
 
@@ -138,14 +156,14 @@ describe Bosh::AzureCloud::Cloud do
             allow(instance_id_object).to receive(:use_managed_disks?)
               .and_return(true)
             allow(azure_client).to receive(:get_virtual_machine_by_name)
-              .with(resource_group_name, vm_name)
+              .with(default_resource_group_name, vm_name)
               .and_return(vm)
           end
 
           context 'when storage_account_type is not specified' do
             it 'should create a managed disk in the same location with the vm and use the default storage account type' do
               expect(Bosh::AzureCloud::DiskId).to receive(:create)
-                .with(caching, true, resource_group_name: resource_group_name)
+                .with(caching, true, resource_group_name: default_resource_group_name)
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
                 .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone)
@@ -165,7 +183,7 @@ describe Bosh::AzureCloud::Cloud do
             end
             it 'should create a managed disk in the same location with the vm and use the specified storage account type' do
               expect(Bosh::AzureCloud::DiskId).to receive(:create)
-                .with(caching, true, resource_group_name: resource_group_name)
+                .with(caching, true, resource_group_name: default_resource_group_name)
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
                 .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone)
@@ -194,6 +212,8 @@ describe Bosh::AzureCloud::Cloud do
         let(:vm_storage_account_name) { 'vmstorageaccountname' }
 
         before do
+          allow(Bosh::AzureCloud::InstanceIdParser).to receive(:parse)
+            .and_return(instance_id_object)
           allow(instance_id_object).to receive(:storage_account_name)
             .and_return(vm_storage_account_name)
         end

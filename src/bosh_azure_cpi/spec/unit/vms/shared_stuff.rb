@@ -1,12 +1,39 @@
 # frozen_string_literal: true
 
 # The following default configurations are shared. If one case needs a specific configuration, it should overwrite it.
-shared_context 'shared stuff for vm manager' do
+shared_context 'shared stuff for vm managers' do
   # Parameters of VMManager.initialize
   let(:azure_config) { mock_azure_config }
   let(:azure_config_managed) do
     mock_azure_config_merge(
       'use_managed_disks' => true
+    )
+  end
+  let(:azure_config_azure_stack) do
+    mock_azure_config_merge(
+      'environment' => 'AzureStack'
+    )
+  end
+  let(:azure_config_to_keep_failed_vms) do
+    mock_azure_config_merge(
+      'keep_failed_vms' => true
+    )
+  end
+  let(:azure_config_managed_to_keep_failed_vms) do
+    mock_azure_config_merge(
+      'use_managed_disks' => true,
+      'keep_failed_vms'   => true
+    )
+  end
+  let(:azure_config_vmss) do
+    mock_azure_config_merge(
+      'use_managed_disks' => true,
+      'config_disk' => {
+        'enabled' => true
+      },
+      'vmss' => {
+        'enabled' => true
+      }
     )
   end
   let(:props_factory) do
@@ -40,13 +67,35 @@ shared_context 'shared stuff for vm manager' do
   let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
   # VM manager for config disks
   let(:vm_manager_config_disk) { Bosh::AzureCloud::VMManager.new(azure_config_use_config_disk, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager) }
+  # VM manager for azure stack
+  let(:vm_manager_azure_stack) do
+    Bosh::AzureCloud::VMManager.new(
+      azure_config_azure_stack, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
+    )
+  end
+  let(:vm_manager_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+  let(:vm_manager2_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_managed_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+  let(:vmss_manager) { Bosh::AzureCloud::VMSSManager.new(azure_config_vmss, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager) }
+  let(:vmss_manager_to_keep_failed_vms) { Bosh::AzureCloud::VMSSManager.new(azure_config_managed_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager) }
+  let(:vm_manager_adaptive) { Bosh::AzureCloud::VMManagerAdaptive.new(azure_config_vmss, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager) }
+  let(:vm_manager_adaptive_vmss_disabled) { Bosh::AzureCloud::VMManagerAdaptive.new(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager) }
+
+  let(:idle_timeout) { 20 }
+  # VM manager for public ip
+  let(:vm_manager_for_pip) do
+    Bosh::AzureCloud::VMManager.new(
+      mock_azure_config_merge(
+        'pip_idle_timeout_in_minutes' => idle_timeout
+      ), registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
+    )
+  end
   # Parameters of create
-  let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
   let(:agent_id) { 'fake-agent-id' }
   let(:stemcell_id) { 'fake-stemcell-id' }
   let(:bosh_vm_meta) { Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_id) }
   let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
+
   let(:vm_properties) do
     {
       'instance_type'         => 'Standard_D1',
@@ -62,11 +111,32 @@ shared_context 'shared stuff for vm manager' do
 
   let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
   let(:env) { {} }
-
+  let(:empty_env) { {} }
+  let(:env_with_group) do
+    {
+      'bosh' => {
+        'group' => 'instance_group_1'
+      }
+    }
+  end
+  let(:env_with_long_name_group) do
+    {
+      'bosh' => {
+        'group' => 'lonnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnngname'
+      }
+    }
+  end
   # Instance ID
+  let(:resource_group_name) { 'fake-resource-group' }
   let(:vm_name) { agent_id }
+  let(:vmss_name) { 'fake-vmss-name' }
+  let(:vmss_instance_id) { '0' }
   let(:storage_account_name) { 'fake-storage-acount-name' }
   let(:instance_id_string) { 'fake-instance-id' }
+  let(:instance_id) { instance_double(Bosh::AzureCloud::VMInstanceId) }
+  let(:instance_id_vmss) { Bosh::AzureCloud::VMSSInstanceId.create(resource_group_name, agent_id, vmss_name, vmss_instance_id) }
+  let(:meta_data) { {} }
+
   before do
     allow(instance_id).to receive(:vm_name)
       .and_return(vm_name)
@@ -77,6 +147,10 @@ shared_context 'shared stuff for vm manager' do
     allow(vm_manager2).to receive(:get_storage_account_from_vm_properties)
       .and_return(name: storage_account_name)
     allow(vm_manager_config_disk).to receive(:get_storage_account_from_vm_properties)
+      .and_return(name: storage_account_name)
+    allow(vm_manager_azure_stack).to receive(:get_storage_account_from_vm_properties)
+      .and_return(name: storage_account_name)
+    allow(vm_manager_for_pip).to receive(:get_storage_account_from_vm_properties)
       .and_return(name: storage_account_name)
   end
 
@@ -223,6 +297,12 @@ shared_context 'shared stuff for vm manager' do
       disk_caching: 'fake-disk-caching'
     }
   end
+  let(:data_disk_id) { 'bosh-disk-data-0a1171c3-d9a6-4a04-96cb-e422c1f49a7b-None' }
+  let(:data_disk_obj) { Bosh::AzureCloud::InstanceIdParser.parse(data_disk_id, resource_group_name) }
+  let(:config_disk_id) { 'bosh-cfg-disk-0a1171c3-d9a6-4a04-96cb-e422c1f49a7c-None' }
+  let(:config_disk_obj) { Bosh::AzureCloud::InstanceIdParser.parse(config_disk_id, resource_group_name) }
+  let(:config_disk_resource_id) { 'fake_disk_resource_id' }
+  let(:config_disk_resource) { { id: config_disk_resource_id } }
   before do
     allow(disk_manager).to receive(:delete_disk)
       .and_return(nil)

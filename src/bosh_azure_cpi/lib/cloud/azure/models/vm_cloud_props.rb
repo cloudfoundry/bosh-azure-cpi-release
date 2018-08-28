@@ -68,5 +68,9 @@ module Bosh::AzureCloud
       @platform_update_domain_count = vm_properties['platform_update_domain_count'] || default_update_domain_count(global_azure_config)
       @platform_fault_domain_count = vm_properties['platform_fault_domain_count'] || default_fault_domain_count(global_azure_config)
     end
+
+    def to_s
+      @vm_properties.to_s
+    end
   end
 end

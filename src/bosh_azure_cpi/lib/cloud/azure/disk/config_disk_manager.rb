@@ -19,14 +19,8 @@ module Bosh::AzureCloud
     end
 
     # Returns the config disk uri.
-    def prepare_config_disk(resource_group_name, vm_name, location, metadata_obj, user_data_obj)
-      disk = _create_config_disk(resource_group_name, vm_name, location, metadata_obj, user_data_obj)
-      disk
-    end
-
-    private
-
-    def _create_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data_obj)
+    def prepare_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data_obj)
+      @logger.info("prepare_config_disk(#{resource_group_name},#{vm_name},#{location},...,...)")
       mounted_dir = nil
       config_disk_file_path = nil
       disk_name = nil
@@ -88,11 +82,11 @@ module Bosh::AzureCloud
         @logger.info("disk created: #{disk}")
         # TODO: defer one task to clean up the config disk.
         #       we need to acquire the lock for the resources we are operating too.
-        disk
+        [disk_id, disk]
       rescue StandardError => e
         cloud_error("Failed to prepare the config disk, Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
       ensure
-        # clean up.
+        # clean up. do not delete the blob
         ignore_exception do
           unless umounted
             unmount_cmd = "sudo -n umount #{mounted_dir}"

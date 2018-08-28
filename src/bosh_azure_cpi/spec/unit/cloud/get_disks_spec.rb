@@ -7,8 +7,8 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#get_disks' do
-    let(:instance_id) { 'fake-instance-id' }
-    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
+    # let(:instance_id) { 'fake-instance-id' }
+    let(:instance_id_object) { instance_double(Bosh::AzureCloud::VMInstanceId) }
 
     let(:data_disks) do
       [
@@ -36,7 +36,7 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     before do
-      allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
+      allow(Bosh::AzureCloud::InstanceIdParser).to receive(:parse)
         .and_return(instance_id_object)
 
       allow(telemetry_manager).to receive(:monitor)

@@ -13,5 +13,9 @@ module Bosh::AzureCloud
     def resource_group_name
       @id_hash[RESOURCE_GROUP_NAME_KEY]
     end
+
+    def to_s
+      super.to_s
+    end
   end
 end
