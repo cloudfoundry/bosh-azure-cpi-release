@@ -16,6 +16,14 @@ shared_context 'shared stuff for vm manager' do
       )
     )
   end
+  let(:azure_config_use_config_disk) do
+    mock_azure_config_merge(
+      'use_managed_disks' => true,
+      'config_disk' => {
+        'enabled' => true
+      }
+    )
+  end
   let(:registry_endpoint) { mock_registry.endpoint }
   let(:disk_manager) { instance_double(Bosh::AzureCloud::DiskManager) }
   let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
@@ -24,12 +32,14 @@ shared_context 'shared stuff for vm manager' do
   let(:stemcell_manager) { instance_double(Bosh::AzureCloud::StemcellManager) }
   let(:stemcell_manager2) { instance_double(Bosh::AzureCloud::StemcellManager2) }
   let(:light_stemcell_manager) { instance_double(Bosh::AzureCloud::LightStemcellManager) }
-
+  let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
+  let(:config_disk_manager) { Bosh::AzureCloud::ConfigDiskManager.new(blob_manager, disk_manager2, storage_account_manager) }
   # VM manager for unmanaged disks
   let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
   # VM manager for managed disks
   let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
-
+  # VM manager for config disks
+  let(:vm_manager_config_disk) { Bosh::AzureCloud::VMManager.new(azure_config_use_config_disk, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager) }
   # Parameters of create
   let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
@@ -49,6 +59,7 @@ shared_context 'shared stuff for vm manager' do
   let(:vm_props) do
     props_factory.parse_vm_props(vm_properties)
   end
+
   let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
   let(:env) { {} }
 
@@ -61,7 +72,11 @@ shared_context 'shared stuff for vm manager' do
       .and_return(vm_name)
     allow(instance_id).to receive(:to_s)
       .and_return(instance_id_string)
-    allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
+    allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
+      .and_return(name: storage_account_name)
+    allow(vm_manager2).to receive(:get_storage_account_from_vm_properties)
+      .and_return(name: storage_account_name)
+    allow(vm_manager_config_disk).to receive(:get_storage_account_from_vm_properties)
       .and_return(name: storage_account_name)
   end
 
@@ -215,7 +230,6 @@ shared_context 'shared stuff for vm manager' do
       .and_return(os_disk_name)
     allow(disk_manager).to receive(:generate_ephemeral_disk_name)
       .and_return(ephemeral_disk_name)
-    allow(disk_manager).to receive(:vm_props=)
     allow(disk_manager).to receive(:os_disk)
       .and_return(os_disk)
     allow(disk_manager).to receive(:ephemeral_disk)
@@ -227,7 +241,6 @@ shared_context 'shared stuff for vm manager' do
       .and_return(os_disk_name)
     allow(disk_manager2).to receive(:generate_ephemeral_disk_name)
       .and_return(ephemeral_disk_name)
-    allow(disk_manager2).to receive(:vm_props=)
     allow(disk_manager2).to receive(:os_disk)
       .and_return(os_disk_managed)
     allow(disk_manager2).to receive(:ephemeral_disk)

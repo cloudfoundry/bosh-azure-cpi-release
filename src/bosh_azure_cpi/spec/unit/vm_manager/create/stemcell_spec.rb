@@ -140,7 +140,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       before do
-        allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
+        allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
           .with(vm_props, location)
           .and_return(storage_account)
       end

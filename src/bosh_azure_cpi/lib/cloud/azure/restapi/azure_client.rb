@@ -262,34 +262,7 @@ module Bosh::AzureCloud
     def create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set = nil)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: vm_params[:name])
 
-      os_profile = {
-        'customData'         => vm_params[:custom_data],
-        'computerName'       => vm_params[:computer_name].nil? ? vm_params[:name] : vm_params[:computer_name]
-      }
-
-      case vm_params[:os_type]
-      when 'linux'
-        os_profile['adminUsername'] = vm_params[:ssh_username]
-        os_profile['linuxConfiguration'] = {
-          'disablePasswordAuthentication' => 'true',
-          'ssh' => {
-            'publicKeys' => [
-              {
-                'path'    => "/home/#{vm_params[:ssh_username]}/.ssh/authorized_keys",
-                'keyData' => vm_params[:ssh_cert_data]
-              }
-            ]
-          }
-        }
-      when 'windows'
-        os_profile['adminUsername'] = vm_params[:windows_username]
-        os_profile['adminPassword'] = vm_params[:windows_password]
-        os_profile['windowsConfiguration'] = {
-          'enableAutomaticUpdates' => false
-        }
-      else
-        raise ArgumentError, "Unsupported os type: #{vm_params[:os_type]}"
-      end
+      os_profile = _build_os_profile(vm_params)
 
       network_interfaces_params = []
       network_interfaces.each_with_index do |network_interface, index|
@@ -367,7 +340,6 @@ module Bosh::AzureCloud
           'product' => vm_params[:image_reference]['offer']
         }
       end
-
       unless vm_params[:ephemeral_disk].nil?
         vm['properties']['storageProfile']['dataDisks'] = [{
           'name'         => vm_params[:ephemeral_disk][:disk_name],
@@ -381,6 +353,18 @@ module Bosh::AzureCloud
             'uri' => vm_params[:ephemeral_disk][:disk_uri]
           }
         end
+      end
+
+      unless vm_params[:config_disk].nil?
+        # append the config disk into the vm.
+        vm['properties']['storageProfile']['dataDisks'] = [] if vm['properties']['storageProfile']['dataDisks'].nil?
+        vm['properties']['storageProfile']['dataDisks'].push(
+          'lun' => 1,
+          'createOption' => 'Attach',
+          'managedDisk' => {
+            'id' => vm_params[:config_disk][:id].to_s
+          }
+        )
       end
 
       unless availability_set.nil?
