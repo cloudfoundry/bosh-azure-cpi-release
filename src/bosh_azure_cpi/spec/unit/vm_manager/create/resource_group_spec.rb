@@ -23,16 +23,16 @@ describe Bosh::AzureCloud::VMManager do
       context 'when the resource group does not exist' do
         before do
           allow(azure_client).to receive(:get_resource_group)
-            .with(resource_group_name)
+            .with(MOCK_RESOURCE_GROUP_NAME)
             .and_return(nil)
           allow(azure_client).to receive(:create_network_interface)
         end
 
         it 'should create the resource group' do
           expect(azure_client).to receive(:create_resource_group)
-            .with(resource_group_name, location)
+            .with(MOCK_RESOURCE_GROUP_NAME, location)
 
-          vm_params = vm_manager.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+          _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
           expect(vm_params[:name]).to eq(vm_name)
         end
       end
