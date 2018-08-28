@@ -5,8 +5,6 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    attr_accessor :vm_props
-
     def initialize(azure_client)
       @azure_client = azure_client
       @logger = Bosh::Clouds::Config.logger
@@ -144,29 +142,23 @@ module Bosh::AzureCloud
       "#{MANAGED_OS_DISK_PREFIX}-#{vm_name}-#{EPHEMERAL_DISK_POSTFIX}"
     end
 
-    def os_disk(vm_name, stemcell_info)
-      disk_caching = @vm_props.caching
-      validate_disk_caching(disk_caching)
+    def os_disk(vm_name, stemcell_info, size, caching, use_root_disk_as_ephemeral)
+      validate_disk_caching(caching)
 
-      root_disk_size = @vm_props.root_disk.fetch('size', nil)
-      use_root_disk_for_ephemeral_data = @vm_props.ephemeral_disk.fetch('use_root_disk', false)
-      disk_size = get_os_disk_size(root_disk_size, stemcell_info, use_root_disk_for_ephemeral_data)
+      disk_size = get_os_disk_size(size, stemcell_info, use_root_disk_as_ephemeral)
 
       {
         disk_name: generate_os_disk_name(vm_name),
         disk_size: disk_size,
-        disk_caching: disk_caching
+        disk_caching: caching
       }
     end
 
-    def ephemeral_disk(vm_name)
-      ephemeral_disk = @vm_props.ephemeral_disk
-      use_root_disk = ephemeral_disk.fetch('use_root_disk', false)
-      return nil if use_root_disk
+    def ephemeral_disk(vm_name, instance_type, size, use_root_disk_as_ephemeral)
+      return nil if use_root_disk_as_ephemeral
 
-      disk_info = DiskInfo.for(@vm_props.instance_type)
+      disk_info = DiskInfo.for(instance_type)
       disk_size = disk_info.size
-      size = ephemeral_disk.fetch('size', nil)
       unless size.nil?
         validate_disk_size(size)
         disk_size = size / 1024

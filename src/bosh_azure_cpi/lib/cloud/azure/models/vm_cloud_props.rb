@@ -55,9 +55,14 @@ module Bosh::AzureCloud
 
       @application_security_groups = vm_properties['application_security_groups']
       @security_group = vm_properties['security_group']
-      # TODO: make root_disk/ephemeral_disk also one class
-      @root_disk = vm_properties.fetch('root_disk', {})
-      @ephemeral_disk = vm_properties.fetch('ephemeral_disk', {})
+
+      root_disk_hash = vm_properties.fetch('root_disk', {})
+      ephemeral_disk_hash = vm_properties.fetch('ephemeral_disk', {})
+      @root_disk = Bosh::AzureCloud::RootDisk.new(root_disk_hash['size'])
+      @ephemeral_disk = Bosh::AzureCloud::EphemeralDisk.new(
+        ephemeral_disk_hash['use_root_disk'].nil? ? false : ephemeral_disk_hash['use_root_disk'],
+        ephemeral_disk_hash['size']
+      )
 
       @platform_update_domain_count = vm_properties['platform_update_domain_count'] || default_update_domain_count(global_azure_config)
       @platform_fault_domain_count = vm_properties['platform_fault_domain_count'] || default_fault_domain_count(global_azure_config)

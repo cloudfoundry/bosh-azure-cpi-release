@@ -72,31 +72,10 @@ describe Bosh::AzureCloud::AzureClient do
     context 'parse the parameters' do
       context 'common vm_params are provided' do
         context 'when managed is false' do
-          let(:vm_params) do
-            {
-              name: vm_name,
-              location: 'b',
-              tags: { 'foo' => 'bar' },
-              vm_size: 'c',
-              ssh_username: 'd',
-              ssh_cert_data: 'e',
-              custom_data: 'f',
-              image_uri: 'g',
-              os_disk: {
-                disk_name: 'h',
-                disk_uri: 'i',
-                disk_caching: 'j',
-                disk_size: 'k'
-              },
-              ephemeral_disk: {
-                disk_name: 'l',
-                disk_uri: 'm',
-                disk_caching: 'n',
-                disk_size: 'o'
-              },
-              os_type: 'linux',
-              managed: false
-            }
+          let(:vm_params_magaged_false) do
+            vm_params_dupped = vm_params.dup
+            vm_params_dupped[:managed] = false
+            vm_params_dupped
           end
 
           let(:request_body) do
@@ -197,35 +176,20 @@ describe Bosh::AzureCloud::AzureClient do
             )
 
             expect do
-              azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+              azure_client.create_virtual_machine(resource_group, vm_params_magaged_false, network_interfaces)
             end.not_to raise_error
           end
         end
 
         context 'when managed is true' do
           let(:vm_params_managed) do
-            {
-              name: vm_name,
-              location: 'b',
-              tags: { 'foo' => 'bar' },
-              vm_size: 'c',
-              ssh_username: 'd',
-              ssh_cert_data: 'e',
-              custom_data: 'f',
-              image_id: 'g',
-              os_disk: {
-                disk_name: 'h',
-                disk_caching: 'j',
-                disk_size: 'k'
-              },
-              ephemeral_disk: {
-                disk_name: 'l',
-                disk_caching: 'n',
-                disk_size: 'o'
-              },
-              os_type: 'linux',
-              managed: true
-            }
+            vm_params_dupped = vm_params.dup
+            vm_params_dupped.delete(:image_uri)
+            vm_params_dupped[:os_disk].delete(:disk_uri)
+            vm_params_dupped[:ephemeral_disk].delete(:disk_uri)
+            vm_params_dupped[:image_id] = 'g'
+            vm_params_dupped[:managed] = true
+            vm_params_dupped
           end
 
           let(:request_body) do
@@ -326,30 +290,10 @@ describe Bosh::AzureCloud::AzureClient do
       end
 
       context 'when os_disk.disk_size is nil' do
-        let(:vm_params) do
-          {
-            name: vm_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            ssh_username: 'd',
-            ssh_cert_data: 'e',
-            custom_data: 'f',
-            image_uri: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_uri: 'i',
-              disk_caching: 'j'
-            },
-            ephemeral_disk: {
-              disk_name: 'l',
-              disk_uri: 'm',
-              disk_caching: 'n',
-              disk_size: 'o'
-            },
-            os_type: 'linux',
-            managed: false     # true or false doen't matter in this case
-          }
+        let(:vm_params_without_os_disk_size) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped[:os_disk].delete(:disk_size)
+          vm_params_dupped
         end
 
         let(:request_body) do
@@ -449,31 +393,16 @@ describe Bosh::AzureCloud::AzureClient do
           )
 
           expect do
-            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params_without_os_disk_size, network_interfaces)
           end.not_to raise_error
         end
       end
 
       context 'When the ephemeral disk is nil' do
-        let(:vm_params) do
-          {
-            name: vm_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            ssh_username: 'd',
-            ssh_cert_data: 'e',
-            custom_data: 'f',
-            image_uri: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_uri: 'i',
-              disk_caching: 'j',
-              disk_size: 'k'
-            },
-            os_type: 'linux',
-            managed: false     # true or false doen't matter in this case
-          }
+        let(:vm_params_without_ephemeral_disk) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped.delete(:ephemeral_disk)
+          vm_params_dupped
         end
 
         let(:request_body) do
@@ -562,39 +491,12 @@ describe Bosh::AzureCloud::AzureClient do
           )
 
           expect do
-            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params_without_ephemeral_disk, network_interfaces)
           end.not_to raise_error
         end
       end
 
       context 'when availability set is not nil' do
-        let(:vm_params) do
-          {
-            name: vm_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            ssh_username: 'd',
-            ssh_cert_data: 'e',
-            custom_data: 'f',
-            image_uri: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_uri: 'i',
-              disk_caching: 'j',
-              disk_size: 'k'
-            },
-            ephemeral_disk: {
-              disk_name: 'l',
-              disk_uri: 'm',
-              disk_caching: 'n',
-              disk_size: 'o'
-            },
-            os_type: 'linux',
-            managed: false     # true or false doen't matter in this case
-          }
-        end
-
         let(:availability_set) do
           {
             id: 'a'
@@ -716,33 +618,10 @@ describe Bosh::AzureCloud::AzureClient do
             'version'      => 's'
           }
         end
-
-        let(:vm_params) do
-          {
-            name: vm_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            ssh_username: 'd',
-            ssh_cert_data: 'e',
-            custom_data: 'f',
-            image_uri: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_uri: 'i',
-              disk_caching: 'j',
-              disk_size: 'k'
-            },
-            ephemeral_disk: {
-              disk_name: 'l',
-              disk_uri: 'm',
-              disk_caching: 'n',
-              disk_size: 'o'
-            },
-            os_type: 'linux',
-            managed: false, # true or false doen't matter in this case
-            image_reference: image_reference
-          }
+        let(:vm_params_with_image_reference) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped[:image_reference] = image_reference
+          vm_params_dupped
         end
 
         let(:request_body) do
@@ -846,7 +725,7 @@ describe Bosh::AzureCloud::AzureClient do
           )
 
           expect do
-            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params_with_image_reference, network_interfaces)
           end.not_to raise_error
         end
       end
@@ -854,25 +733,15 @@ describe Bosh::AzureCloud::AzureClient do
       context 'when os_type is windows' do
         let(:logger_strio) { StringIO.new }
         let(:windows_password) { 'THISISWINDOWSCREDENTIAL' }
-        let(:vm_params) do
-          {
-            name: vm_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            windows_username: 'd',
-            windows_password: windows_password,
-            custom_data: 'f',
-            image_uri: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_uri: 'i',
-              disk_caching: 'j',
-              disk_size: 'k'
-            },
-            os_type: 'windows',
-            managed: false # true or false doen't matter in this case
-          }
+        let(:vm_params_windows) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped.delete(:ssh_username)
+          vm_params_dupped.delete(:ssh_cert_data)
+          vm_params_dupped[:os_type] = 'windows'
+          vm_params_dupped[:windows_username] = 'd'
+          vm_params_dupped[:windows_password] = windows_password
+          vm_params_dupped.delete(:ephemeral_disk)
+          vm_params_dupped
         end
 
         let(:request_body) do
@@ -962,7 +831,7 @@ describe Bosh::AzureCloud::AzureClient do
             )
 
             expect do
-              azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+              azure_client.create_virtual_machine(resource_group, vm_params_windows, network_interfaces)
             end.not_to raise_error
 
             logs = logger_strio.string
@@ -1003,7 +872,7 @@ describe Bosh::AzureCloud::AzureClient do
             )
 
             expect do
-              azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+              azure_client.create_virtual_machine(resource_group, vm_params_windows, network_interfaces)
             end.not_to raise_error
 
             logs = logger_strio.string
@@ -1016,27 +885,11 @@ describe Bosh::AzureCloud::AzureClient do
 
       context 'When diag_storage_uri is not nil' do
         let(:diag_storage_uri) { 'fake-diag-storage-uri' }
-
-        let(:vm_params) do
-          {
-            name: vm_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            ssh_username: 'd',
-            ssh_cert_data: 'e',
-            custom_data: 'f',
-            image_uri: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_uri: 'i',
-              disk_caching: 'j',
-              disk_size: 'k'
-            },
-            os_type: 'linux',
-            managed: false, # true or false doen't matter in this case
-            diag_storage_uri: diag_storage_uri
-          }
+        let(:vm_params_with_diag_storage_uri) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped.delete(:ephemeral_disk)
+          vm_params_dupped[:diag_storage_uri] = diag_storage_uri
+          vm_params_dupped
         end
 
         let(:request_body) do
@@ -1131,31 +984,20 @@ describe Bosh::AzureCloud::AzureClient do
           )
 
           expect do
-            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params_with_diag_storage_uri, network_interfaces)
           end.not_to raise_error
         end
       end
 
       context 'when zone is not nil' do
-        let(:vm_params_managed) do
-          {
-            name: vm_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            ssh_username: 'd',
-            ssh_cert_data: 'e',
-            custom_data: 'f',
-            image_id: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_caching: 'j',
-              disk_size: 'k'
-            },
-            os_type: 'linux',
-            managed: true,
-            zone: 'm'
-          }
+        let(:vm_params_with_zone) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped.delete(:ephemeral_disk)
+          vm_params_dupped.delete(:image_uri)
+          vm_params_dupped[:image_id] = 'g'
+          vm_params_dupped[:managed] = true
+          vm_params_dupped[:zone] = 'm'
+          vm_params_dupped
         end
 
         let(:request_body) do
@@ -1241,67 +1083,32 @@ describe Bosh::AzureCloud::AzureClient do
           )
 
           expect do
-            azure_client.create_virtual_machine(resource_group, vm_params_managed, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params_with_zone, network_interfaces)
           end.not_to raise_error
         end
       end
 
       context 'when os_type is invalid' do
-        let(:vm_params) do
-          {
-            name: vm_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            windows_username: 'd',
-            windows_password: 'e',
-            custom_data: 'f',
-            image_uri: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_uri: 'i',
-              disk_caching: 'j',
-              disk_size: 'k'
-            },
-            os_type: 'fake-os-type',
-            managed: false # true or false doen't matter in this case
-          }
+        let(:vm_params_invalid_os_type) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped[:os_type] = 'fake-os-type'
+          vm_params_dupped
         end
 
         it 'should reaise error' do
           expect do
-            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params_invalid_os_type, network_interfaces)
           end.to raise_error /Unsupported os type/
         end
       end
 
       context 'when computer_name is set' do
         let(:computer_name) { 'fake-computer-name' }
-        let(:vm_params) do
-          {
-            name: vm_name,
-            computer_name: computer_name,
-            location: 'b',
-            tags: { 'foo' => 'bar' },
-            vm_size: 'c',
-            ssh_username: 'd',
-            ssh_cert_data: 'e',
-            custom_data: 'f',
-            image_uri: 'g',
-            os_disk: {
-              disk_name: 'h',
-              disk_uri: 'i',
-              disk_caching: 'j'
-            },
-            ephemeral_disk: {
-              disk_name: 'l',
-              disk_uri: 'm',
-              disk_caching: 'n',
-              disk_size: 'o'
-            },
-            os_type: 'linux',
-            managed: false # true or false doen't matter in this case
-          }
+        let(:vm_params_with_compute_name) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped[:os_disk].delete(:disk_size)
+          vm_params_dupped[:computer_name] = computer_name
+          vm_params_dupped
         end
 
         let(:request_body) do
@@ -1401,7 +1208,125 @@ describe Bosh::AzureCloud::AzureClient do
           )
 
           expect do
-            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params_with_compute_name, network_interfaces)
+          end.not_to raise_error
+        end
+      end
+
+      context 'when config disk is specified' do
+        let(:config_disk_id) { 'fake_config_disk_id' }
+        let(:vm_params_config_disk) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped[:config_disk] = { id: config_disk_id }
+          vm_params_dupped
+        end
+
+        let(:request_body) do
+          {
+            name: vm_name,
+            location: 'b',
+            type: 'Microsoft.Compute/virtualMachines',
+            tags: {
+              foo: 'bar'
+            },
+            properties: {
+              hardwareProfile: {
+                vmSize: 'c'
+              },
+              osProfile: {
+                customData: 'f',
+                computerName: vm_name,
+                adminUsername: 'd',
+                linuxConfiguration: {
+                  disablePasswordAuthentication: 'true',
+                  ssh: {
+                    publicKeys: [
+                      {
+                        path: '/home/d/.ssh/authorized_keys',
+                        keyData: 'e'
+                      }
+                    ]
+                  }
+                }
+              },
+              networkProfile: {
+                networkInterfaces: [
+                  {
+                    id: 'a',
+                    properties: {
+                      primary: true
+                    }
+                  },
+                  {
+                    id: 'b',
+                    properties: {
+                      primary: false
+                    }
+                  }
+                ]
+              },
+              storageProfile: {
+                osDisk: {
+                  name: 'h',
+                  osType: 'linux',
+                  createOption: 'FromImage',
+                  caching: 'j',
+                  image: {
+                    uri: 'g'
+                  },
+                  vhd: {
+                    uri: 'i'
+                  },
+                  diskSizeGB: 'k'
+                },
+                dataDisks: [
+                  {
+                    name: 'l',
+                    lun: 0,
+                    createOption: 'Empty',
+                    diskSizeGB: 'o',
+                    vhd: {
+                      uri: 'm'
+                    },
+                    caching: 'n'
+                  },
+                  {
+                    lun: 1,
+                    createOption: 'Attach',
+                    managedDisk: {
+                      id: config_disk_id
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        end
+
+        it 'should raise no error' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            status: 200,
+            body: '',
+            headers: {
+              'azure-asyncoperation' => operation_status_link
+            }
+          )
+          stub_request(:get, operation_status_link).to_return(
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
+
+          expect do
+            azure_client.create_virtual_machine(resource_group, vm_params_config_disk, network_interfaces)
           end.not_to raise_error
         end
       end

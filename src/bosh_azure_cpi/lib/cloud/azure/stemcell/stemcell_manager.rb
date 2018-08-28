@@ -40,7 +40,8 @@ module Bosh::AzureCloud
       stemcell_name = nil
       Dir.mktmpdir('sc-') do |tmp_dir|
         @logger.info("Unpacking image: #{image_path}")
-        _run_command("tar -zxf #{image_path} -C #{tmp_dir}")
+        command_runner = CommandRunner.new
+        command_runner.run_command("tar -zxf #{image_path} -C #{tmp_dir}")
         @logger.info('Start to upload VHD')
         stemcell_name = "#{STEMCELL_PREFIX}-#{SecureRandom.uuid}"
         @logger.info("Upload the stemcell #{stemcell_name} to the storage account #{@default_storage_account_name}")
@@ -73,11 +74,6 @@ module Bosh::AzureCloud
     end
 
     private
-
-    def _run_command(command)
-      output, status = Open3.capture2e(command)
-      cloud_error("'#{command}' failed with exit status=#{status.exitstatus} [#{output}]") if status.exitstatus != 0
-    end
 
     def _handle_stemcell_in_different_storage_account(storage_account_name, name)
       stemcell_meta = @meta_store.find_first_stemcell_meta(name, storage_account_name)

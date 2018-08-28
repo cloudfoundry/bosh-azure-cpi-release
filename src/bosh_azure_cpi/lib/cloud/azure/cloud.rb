@@ -644,10 +644,11 @@ module Bosh::AzureCloud
     end
 
     def _init_azure
+      # get the default storage account.
       @azure_client            = Bosh::AzureCloud::AzureClient.new(_azure_config, @logger)
       @blob_manager            = Bosh::AzureCloud::BlobManager.new(_azure_config, @azure_client)
       @disk_manager            = Bosh::AzureCloud::DiskManager.new(_azure_config, @blob_manager)
-      @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(_azure_config, @blob_manager, @disk_manager, @azure_client)
+      @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(_azure_config, @blob_manager, @azure_client)
 
       table_manager            = Bosh::AzureCloud::TableManager.new(_azure_config, @storage_account_manager, @azure_client)
       @meta_store              = Bosh::AzureCloud::MetaStore.new(table_manager)
@@ -656,7 +657,8 @@ module Bosh::AzureCloud
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client)
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @meta_store, @storage_account_manager, @azure_client)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client)
-      @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
+      @config_disk_manager     = Bosh::AzureCloud::ConfigDiskManager.new(@blob_manager, @disk_manager2, @storage_account_manager)
+      @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager, @config_disk_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager

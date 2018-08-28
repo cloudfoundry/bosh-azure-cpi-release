@@ -580,6 +580,8 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(vm_manager_for_pip).to receive(:_get_stemcell_info).and_return(stemcell_info)
+            allow(vm_manager_for_pip).to receive(:get_storage_account_from_vm_properties)
+              .and_return(name: storage_account_name)
           end
 
           it 'creates a public IP and assigns it to the primary NIC' do

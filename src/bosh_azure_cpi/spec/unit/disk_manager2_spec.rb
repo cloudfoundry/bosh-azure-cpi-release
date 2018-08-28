@@ -301,10 +301,8 @@ describe Bosh::AzureCloud::DiskManager2 do
       end
 
       it 'should return the default caching for os disk: ReadWrite' do
-        disk_manager2.vm_props = vm_props
-
         expect(
-          disk_manager2.os_disk(vm_name, stemcell_info)
+          disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
         ).to eq(
           disk_name: disk_name,
           disk_size: nil,
@@ -324,10 +322,8 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         it 'should return the specified caching' do
-          disk_manager2.vm_props = vm_props
-
           expect(
-            disk_manager2.os_disk(vm_name, stemcell_info)
+            disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
           ).to eq(
             disk_name: disk_name,
             disk_size: nil,
@@ -345,10 +341,8 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         it 'should raise an error' do
-          disk_manager2.vm_props = vm_props
-
           expect do
-            disk_manager2.os_disk(vm_name, stemcell_info)
+            disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
           end.to raise_error /Unknown disk caching/
         end
       end
@@ -363,10 +357,8 @@ describe Bosh::AzureCloud::DiskManager2 do
       end
 
       it 'should return disk_size: nil' do
-        disk_manager2.vm_props = vm_props
-
         expect(
-          disk_manager2.os_disk(vm_name, stemcell_info)
+          disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
         ).to eq(
           disk_name: disk_name,
           disk_size: nil,
@@ -386,10 +378,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should return correct values' do
-            disk_manager2.vm_props = vm_props
-
             expect(
-              disk_manager2.os_disk(vm_name, stemcell_info)
+              disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
             ).to eq(
               disk_name: disk_name,
               disk_size: nil,
@@ -419,10 +409,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               end
 
               it 'should return the minimum required disk size' do
-                disk_manager2.vm_props = vm_props
-
                 expect(
-                  disk_manager2.os_disk(vm_name, stemcell_info)
+                  disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
                 ).to eq(
                   disk_name: disk_name,
                   disk_size: minimum_required_disk_size,
@@ -439,10 +427,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               end
 
               it 'should return image_size as the disk size' do
-                disk_manager2.vm_props = vm_props
-
                 expect(
-                  disk_manager2.os_disk(vm_name, stemcell_info)
+                  disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
                 ).to eq(
                   disk_name: disk_name,
                   disk_size: image_size / 1024,
@@ -467,10 +453,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               end
 
               it 'should return the minimum required disk size' do
-                disk_manager2.vm_props = vm_props
-
                 expect(
-                  disk_manager2.os_disk(vm_name, stemcell_info)
+                  disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
                 ).to eq(
                   disk_name: disk_name,
                   disk_size: minimum_required_disk_size,
@@ -487,10 +471,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               end
 
               it 'should return image_size as the disk size' do
-                disk_manager2.vm_props = vm_props
-
                 expect(
-                  disk_manager2.os_disk(vm_name, stemcell_info)
+                  disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
                 ).to eq(
                   disk_name: disk_name,
                   disk_size: image_size / 1024,
@@ -514,10 +496,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should raise an error' do
-            disk_manager2.vm_props = vm_props
-
             expect do
-              disk_manager2.os_disk(vm_name, stemcell_info)
+              disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
             end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is 'invalid-size'."
           end
         end
@@ -538,10 +518,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should use the image_size' do
-            disk_manager2.vm_props = vm_props
-
             expect(
-              disk_manager2.os_disk(vm_name, stemcell_info)
+              disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
             ).to eq(
               disk_name: disk_name,
               disk_size: 4,
@@ -561,10 +539,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should return the correct disk_size' do
-            disk_manager2.vm_props = vm_props
-
             expect(
-              disk_manager2.os_disk(vm_name, stemcell_info)
+              disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
             ).to eq(
               disk_name: disk_name,
               disk_size: 5,
@@ -584,10 +560,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should return the smallest Integer greater than or equal to size/1024 for disk_size' do
-            disk_manager2.vm_props = vm_props
-
             expect(
-              disk_manager2.os_disk(vm_name, stemcell_info)
+              disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
             ).to eq(
               disk_name: disk_name,
               disk_size: 6,
@@ -613,10 +587,8 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         it 'should return correct values' do
-          disk_manager2.vm_props = vm_props
-
           expect(
-            disk_manager2.ephemeral_disk(vm_name)
+            disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
           ).to eq(
             disk_name: disk_name,
             disk_size: default_ephemeral_disk_size,
@@ -633,10 +605,8 @@ describe Bosh::AzureCloud::DiskManager2 do
         end
 
         it 'should return 30 as the default disk size' do
-          disk_manager2.vm_props = vm_props
-
           expect(
-            disk_manager2.ephemeral_disk(vm_name)
+            disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
           ).to eq(
             disk_name: disk_name,
             disk_size: 30,
@@ -659,10 +629,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should return correct values' do
-            disk_manager2.vm_props = vm_props
-
             expect(
-              disk_manager2.ephemeral_disk(vm_name)
+              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
             ).to eq(
               disk_name: disk_name,
               disk_size: default_ephemeral_disk_size,
@@ -682,10 +650,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should return correct values' do
-            disk_manager2.vm_props = vm_props
-
             expect(
-              disk_manager2.ephemeral_disk(vm_name)
+              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
             ).to be_nil
           end
         end
@@ -701,10 +667,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           end
 
           it 'should return correct values' do
-            disk_manager2.vm_props = vm_props
-
             expect(
-              disk_manager2.ephemeral_disk(vm_name)
+              disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
             ).to eq(
               disk_name: disk_name,
               disk_size: default_ephemeral_disk_size,
@@ -725,10 +689,8 @@ describe Bosh::AzureCloud::DiskManager2 do
             end
 
             it 'should return the specified size' do
-              disk_manager2.vm_props = vm_props
-
               expect(
-                disk_manager2.ephemeral_disk(vm_name)
+                disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
               ).to eq(
                 disk_name: disk_name,
                 disk_size: 30,
@@ -748,10 +710,8 @@ describe Bosh::AzureCloud::DiskManager2 do
             end
 
             it 'should raise an error' do
-              disk_manager2.vm_props = vm_props
-
               expect do
-                disk_manager2.ephemeral_disk(vm_name)
+                disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk)
               end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is 'invalid-size'."
             end
           end
