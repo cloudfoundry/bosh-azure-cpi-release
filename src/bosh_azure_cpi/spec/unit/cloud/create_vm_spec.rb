@@ -8,8 +8,6 @@ describe Bosh::AzureCloud::Cloud do
 
   describe '#create_vm' do
     # Parameters
-    let(:agent_id) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
-    let(:stemcell_id) { 'bosh-stemcell-xxx' }
     let(:light_stemcell_id) { 'bosh-light-stemcell-xxx' }
     let(:vm_properties) { { 'instance_type' => 'fake-vm-size' } }
     let(:vm_props) { cloud.props_factory.parse_vm_props(vm_properties) }
@@ -139,23 +137,19 @@ describe Bosh::AzureCloud::Cloud do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
           .with(azure_config, networks_spec)
           .and_return(network_configurator)
-
-        allow(Bosh::AzureCloud::InstanceId).to receive(:create)
-          .with(default_resource_group_name, agent_id, storage_account_name)
-          .and_return(instance_id)
         allow(instance_id).to receive(:to_s)
           .and_return(instance_id_string)
+        allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
+          .with(agent_id, stemcell_id)
+          .and_return(bosh_vm_meta)
         allow(cloud.props_factory).to receive(:parse_vm_props)
           .and_return(vm_props)
       end
 
       it 'should create the VM in the specified resource group' do
-        expect(Bosh::AzureCloud::InstanceId).to receive(:create)
-          .with(resource_group_name, agent_id, storage_account_name)
-          .and_return(instance_id)
         expect(vm_manager).to receive(:create)
-          .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
-          .and_return(vm_params)
+          .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+          .and_return([instance_id, vm_params])
         expect(registry_client).to receive(:update_settings)
 
         expect(
@@ -202,6 +196,7 @@ describe Bosh::AzureCloud::Cloud do
       let(:instance_id_string) { 'fake-instance-id' }
       let(:vm_params) do
         {
+          instance_id: instance_id,
           name: 'fake-vm-name'
         }
       end
@@ -229,12 +224,11 @@ describe Bosh::AzureCloud::Cloud do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
           .with(azure_config, networks_spec)
           .and_return(network_configurator)
-
-        allow(Bosh::AzureCloud::InstanceId).to receive(:create)
-          .with(default_resource_group_name, agent_id, storage_account_name)
-          .and_return(instance_id)
         allow(instance_id).to receive(:to_s)
           .and_return(instance_id_string)
+        allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
+          .with(agent_id, stemcell_id)
+          .and_return(bosh_vm_meta)
       end
 
       context 'when everything is OK' do
@@ -259,12 +253,9 @@ describe Bosh::AzureCloud::Cloud do
           end
 
           it 'should create the VM in the specified resource group' do
-            expect(Bosh::AzureCloud::InstanceId).to receive(:create)
-              .with(resource_group_name, agent_id, storage_account_name)
-              .and_return(instance_id)
             expect(vm_manager).to receive(:create)
-              .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
-              .and_return(vm_params)
+              .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+              .and_return([instance_id, vm_params])
             expect(registry_client).to receive(:update_settings)
 
             expect(
@@ -343,6 +334,7 @@ describe Bosh::AzureCloud::Cloud do
       context 'when registry fails to update' do
         before do
           allow(vm_manager).to receive(:create)
+            .and_return([instance_id, vm_params])
           allow(registry_client).to receive(:update_settings).and_raise(StandardError)
         end
 
@@ -368,6 +360,7 @@ describe Bosh::AzureCloud::Cloud do
       let(:instance_id_string) { 'fake-instance-id' }
       let(:vm_params) do
         {
+          instance_id: instance_id,
           name: 'fake-vm-name'
         }
       end
@@ -377,11 +370,11 @@ describe Bosh::AzureCloud::Cloud do
           .with(azure_config_managed, networks_spec)
           .and_return(network_configurator)
 
-        allow(Bosh::AzureCloud::InstanceId).to receive(:create)
-          .with(default_resource_group_name, agent_id)
-          .and_return(instance_id)
         allow(instance_id).to receive(:to_s)
           .and_return(instance_id_string)
+        allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
+          .with(agent_id, stemcell_id)
+          .and_return(bosh_vm_meta)
       end
 
       context 'when resource group is specified' do
@@ -395,12 +388,9 @@ describe Bosh::AzureCloud::Cloud do
         let(:vm_props) { managed_cloud.props_factory.parse_vm_props(vm_properties) }
 
         it 'should create the VM in the specified resource group' do
-          expect(Bosh::AzureCloud::InstanceId).to receive(:create)
-            .with(resource_group_name, agent_id)
-            .and_return(instance_id)
           expect(vm_manager).to receive(:create)
-            .with(instance_id, location, stemcell_id, vm_props, network_configurator, environment)
-            .and_return(vm_params)
+            .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+            .and_return([instance_id, vm_params])
           expect(registry_client).to receive(:update_settings)
 
           expect(

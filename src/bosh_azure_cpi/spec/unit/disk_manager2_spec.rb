@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::DiskManager2 do
-  let(:props_factory) { Bosh::AzureCloud::PropsFactory.new(Bosh::AzureCloud::ConfigFactory.build(mock_cloud_options)) }
+  let(:props_factory) { Bosh::AzureCloud::PropsFactory.new(Bosh::AzureCloud::ConfigFactory.build(mock_cloud_options['properties'])) }
   let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
   let(:disk_manager2) { Bosh::AzureCloud::DiskManager2.new(azure_client) }
   let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }

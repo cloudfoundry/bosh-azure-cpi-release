@@ -4,7 +4,6 @@ shared_context 'shared stuff' do
   let(:cloud) { mock_cloud }
   let(:registry_client) { mock_registry }
   let(:azure_config) { cloud.config.azure }
-  # let(:props_factory) { Bosh::AzureCloud::PropsFactory.new(cloud.config) }
   let(:managed_cloud) { mock_cloud(mock_cloud_properties_merge('azure' => { 'use_managed_disks' => true })) }
   let(:azure_config_managed) { managed_cloud.config.azure }
   let(:azure_client) { instance_double('Bosh::AzureCloud::AzureClient') }
@@ -19,6 +18,9 @@ shared_context 'shared stuff' do
   let(:vm_manager) { instance_double('Bosh::AzureCloud::VMManager') }
   let(:instance_type_mapper) { instance_double('Bosh::AzureCloud::InstanceTypeMapper') }
   let(:telemetry_manager) { MockTelemetryManager.new }
+  let(:agent_id) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
+  let(:stemcell_id) { 'bosh-stemcell-xxx' }
+  let(:bosh_vm_meta) { Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_id) }
 
   before do
     allow(Bosh::Cpi::RegistryClient).to receive(:new)
