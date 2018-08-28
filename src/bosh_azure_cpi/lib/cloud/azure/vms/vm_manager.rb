@@ -24,7 +24,6 @@ module Bosh::AzureCloud
 
       instance_id = _build_instance_id(bosh_vm_meta, location, vm_props)
 
-      # move the instance id creation logic into the create method.
       resource_group_name = vm_props.resource_group_name
       vm_name = instance_id.vm_name
 
