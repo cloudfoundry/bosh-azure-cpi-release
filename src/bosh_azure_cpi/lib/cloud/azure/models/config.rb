@@ -12,6 +12,13 @@ module Bosh::AzureCloud
     end
   end
 
+  class ConfigDisk
+    attr_reader :enabled
+    def initialize(config_disk_config_hash)
+      @enabled = config_disk_config_hash['enabled']
+    end
+  end
+
   class AzureConfig
     include Helpers
     attr_reader :environment, :subscription_id, :location, :resource_group_name
@@ -24,7 +31,7 @@ module Bosh::AzureCloud
     attr_reader :pip_idle_timeout_in_minutes
     attr_reader :parallel_upload_thread_num
     attr_reader :ssh_user, :ssh_public_key
-    attr_reader :use_config_disk
+    attr_reader :config_disk
 
     attr_writer :storage_account_name
 
@@ -65,7 +72,7 @@ module Bosh::AzureCloud
       @ssh_user = azure_config_hash['ssh_user']
       @ssh_public_key = azure_config_hash['ssh_public_key']
 
-      @use_config_disk = azure_config_hash.fetch('use_config_disk', false)
+      @config_disk = ConfigDisk.new(azure_config_hash.fetch('config_disk', 'enabled' => false))
     end
   end
 

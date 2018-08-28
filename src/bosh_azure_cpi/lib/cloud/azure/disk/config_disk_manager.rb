@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'etc'
-
 module Bosh::AzureCloud
   class ConfigDiskManager
     include Helpers
@@ -52,7 +50,7 @@ module Bosh::AzureCloud
         mount_cmd = "sudo -n mount -o loop #{config_disk_file_path} #{mounted_dir}"
         command_runner.run_command(mount_cmd)
 
-        user = ENV['USER']
+        user = Etc.getpwuid(Process.uid).name
         chmod_cmd = "sudo -n chown #{user} #{mounted_dir}"
         command_runner.run_command(chmod_cmd)
 

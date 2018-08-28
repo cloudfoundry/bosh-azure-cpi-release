@@ -297,6 +297,10 @@ describe Bosh::AzureCloud::VMManager do
             before do
               allow(vm_manager_to_keep_failed_vms).to receive(:_get_stemcell_info).and_return(stemcell_info)
               allow(vm_manager2_to_keep_failed_vms).to receive(:_get_stemcell_info).and_return(stemcell_info)
+              allow(vm_manager_to_keep_failed_vms).to receive(:get_storage_account_from_vm_properties)
+                .and_return(name: storage_account_name)
+              allow(vm_manager2_to_keep_failed_vms).to receive(:get_storage_account_from_vm_properties)
+                .and_return(name: storage_account_name)
             end
 
             context 'and use_managed_disks is false' do

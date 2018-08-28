@@ -10,13 +10,14 @@ describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
 
   describe '#create' do
-    # let(:command_runner) { instance_double(Bosh::AzureCloud::CommandRunner) }
     let(:command_runner) { Bosh::AzureCloud::CommandRunner.new }
     before do
       allow(stemcell_info).to receive(:os_type).and_return('linux')
       allow(vm_manager_config_disk).to receive(:_get_stemcell_info).and_return(stemcell_info)
       allow(storage_account_manager).to receive(:default_storage_account_name)
         .and_return(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
+      allow(Etc).to receive(:getpwuid)
+        .and_return(OpenStruct.new(name: 'vcap'))
     end
     context 'when use config disk' do
       context 'when everything ok' do
@@ -37,7 +38,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(disk_manager2).to receive(:create_disk_from_blob)
           expect(disk_manager2).to receive(:get_data_disk)
           expect do
-            vm_manager_config_disk.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
+            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, network_configurator, env)
           end.not_to raise_error
         end
       end
@@ -54,8 +55,8 @@ describe Bosh::AzureCloud::VMManager do
           expect(disk_manager2).not_to receive(:create_disk_from_blob)
           expect(azure_client).to receive(:delete_network_interface).exactly(2).times
           expect do
-            vm_manager_config_disk.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
-          end.to raise_error Bosh::Clouds::CloudError, /Failed to prepare the config dis/
+            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          end.to raise_error Bosh::Clouds::CloudError, /Failed to prepare the config disk/
         end
       end
 
@@ -76,8 +77,8 @@ describe Bosh::AzureCloud::VMManager do
           expect(disk_manager2).to receive(:create_disk_from_blob).and_raise('create disk failed')
           expect(azure_client).to receive(:delete_network_interface).exactly(2).times
           expect do
-            vm_manager_config_disk.create(instance_id, location, stemcell_id, vm_props, network_configurator, env)
-          end.to raise_error Bosh::Clouds::CloudError, /Failed to prepare the config dis/
+            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          end.to raise_error Bosh::Clouds::CloudError, /Failed to prepare the config disk/
         end
       end
     end

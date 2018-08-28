@@ -110,7 +110,7 @@ module Bosh::AzureCloud
       when 'linux'
         vm_params[:ssh_username]  = @azure_config.ssh_user
         vm_params[:ssh_cert_data] = @azure_config.ssh_public_key
-        if @azure_config.use_config_disk
+        if @azure_config.config_disk.enabled
           meta_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_meta_data_obj(
             instance_id.to_s,
             @azure_config.ssh_public_key
@@ -382,7 +382,7 @@ module Bosh::AzureCloud
       if @use_managed_disks
         instance_id = InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id)
       else
-        storage_account = @storage_account_manager.get_storage_account_from_vm_properties(vm_props, location)
+        storage_account = get_storage_account_from_vm_properties(vm_props, location)
         instance_id = InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id, storage_account[:name])
       end
       instance_id

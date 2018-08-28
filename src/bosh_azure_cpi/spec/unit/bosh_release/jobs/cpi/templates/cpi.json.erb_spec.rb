@@ -78,7 +78,9 @@ describe 'cpi.json.erb' do
             'use_managed_disks'           => false,
             'pip_idle_timeout_in_minutes' => 4,
             'enable_vm_boot_diagnostics'  => false,
-            'use_config_disk'             => false
+            'config_disk'                 => {
+              'enabled' => false
+            }
           },
           'registry' => {
             'address' => 'registry-host.example.com',

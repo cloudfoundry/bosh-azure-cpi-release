@@ -36,6 +36,8 @@ describe Bosh::AzureCloud::VMManager do
           before do
             allow(vm_manager_without_default_security_group).to receive(:_get_stemcell_info)
               .and_return(stemcell_info)
+            allow(vm_manager_without_default_security_group).to receive(:get_storage_account_from_vm_properties)
+              .and_return(name: storage_account_name)
           end
 
           it 'should not assign network security group to the network interface' do

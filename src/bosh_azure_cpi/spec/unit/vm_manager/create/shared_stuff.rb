@@ -19,7 +19,9 @@ shared_context 'shared stuff for vm manager' do
   let(:azure_config_use_config_disk) do
     mock_azure_config_merge(
       'use_managed_disks' => true,
-      'use_config_disk' => true
+      'config_disk' => {
+        'enabled' => true
+      }
     )
   end
   let(:registry_endpoint) { mock_registry.endpoint }
@@ -70,7 +72,11 @@ shared_context 'shared stuff for vm manager' do
       .and_return(vm_name)
     allow(instance_id).to receive(:to_s)
       .and_return(instance_id_string)
-    allow(storage_account_manager).to receive(:get_storage_account_from_vm_properties)
+    allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
+      .and_return(name: storage_account_name)
+    allow(vm_manager2).to receive(:get_storage_account_from_vm_properties)
+      .and_return(name: storage_account_name)
+    allow(vm_manager_config_disk).to receive(:get_storage_account_from_vm_properties)
       .and_return(name: storage_account_name)
   end
 
