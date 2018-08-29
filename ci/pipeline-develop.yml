@@ -306,16 +306,20 @@ resource_types:
     type: docker-image
     source:
       repository: ljfranklin/terraform-resource
+      tag: beta-backend
+  - name: azure-blob
+    type: docker-image
+    source:
+      repository: cfcloudops/azure-blobstore-concourse-resource
 
 resources:
   - name: bosh-cpi-dev-artifacts
-    type: s3
+    type: azure-blob
     source:
+      storage_account_name: {{storage_account_name}}
+      storage_access_key:   {{storage_account_access_key}}
+      container:            {{dev_artifacts_container_name}}
       regexp: bosh-azure-cpi-(\d+\.\d+\.\d+)\.tgz
-      bucket: {{s3_azure_cpi_pipeline_bucket}}
-      region_name: {{s3_region__primary}}
-      access_key_id: {{s3_access_key__primary}}
-      secret_access_key: {{s3_secret_key__primary}}
   - name: bosh-cpi-src-in
     type: git
     source:
@@ -327,18 +331,21 @@ resources:
   - name: version-semver
     type: semver
     source:
-      key:               current-version # dev-release version
-      bucket:            {{s3_azure_cpi_pipeline_bucket}}
-      access_key_id:     {{s3_access_key__primary}}
-      secret_access_key: {{s3_secret_key__primary}}
+      file:        current-version # dev-release version
+      driver:      git
+      uri:         {{version_semver_repo_uri}}
+      branch:      {{version_semver_repo_branch}}
+      private_key: {{version_semver_repo_private_key}}
   - name: environment
     type: terraform_type
     source:
-      storage:
-        access_key_id:     {{s3_access_key__primary}}
-        secret_access_key: {{s3_secret_key__primary}}
-        bucket:            {{terraform_bucket}}
-        bucket_path:       terraform-state
+      backend_type: azurerm
+      backend_config:
+        storage_account_name: {{storage_account_name}}
+        container_name: {{environment_container_name}}
+        key: terraform.tfstate
+        access_key: {{storage_account_access_key}}
+        environment: public
       vars:
         location:              {{azure_location}}
         azure_environment:     {{azure_environment}}
