@@ -161,7 +161,7 @@ module Bosh::AzureCloud
         vm_props = @props_factory.parse_vm_props(vm_properties)
         # TODO: move the validation into the factory's methods
         cloud_error("missing required cloud property 'instance_type'.") if vm_props.instance_type.nil?
-        cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') if !@use_managed_disk && !vm_props.availability_zone.nil?
+        cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') if !@use_managed_disks && !vm_props.availability_zone.nil?
         extras = { 'instance_type' => vm_props.instance_type.nil? ? 'unknown_instance_type' : vm_props.instance_type }
         @telemetry_manager.monitor('create_vm', id: bosh_vm_meta.agent_id, extras: extras) do
           # These resources should be in the same location for a VM: VM, NIC, disk(storage account or managed disk).
