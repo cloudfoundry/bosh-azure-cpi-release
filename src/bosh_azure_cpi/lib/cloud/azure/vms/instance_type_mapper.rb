@@ -50,10 +50,10 @@ module Bosh::AzureCloud
       end
       @logger.debug("The possible VM sizes are '#{possible_vm_sizes}'")
 
-      closest_matched_vm_size = find_closest_matched_vm_size(possible_vm_sizes)
-      @logger.debug("The closest matched VM size is '#{closest_matched_vm_size}'")
+      closest_matched_vm_sizes = find_closest_matched_vm_sizes(possible_vm_sizes)
+      @logger.debug("The closest matched VM sizes are '#{closest_matched_vm_sizes}'")
 
-      closest_matched_vm_size[:name]
+      closest_matched_vm_sizes
     end
 
     private
@@ -65,18 +65,21 @@ module Bosh::AzureCloud
       end
     end
 
-    def find_closest_matched_vm_size(possible_vm_sizes)
+    def find_closest_matched_vm_sizes(possible_vm_sizes)
+      closest_matched_vm_sizes = []
       RECOMMENDED_VM_SIZES.each do |series|
         recommended_vm_sizes = possible_vm_sizes.select do |vm_size|
           series.include?(vm_size[:name])
         end
         unless recommended_vm_sizes.empty?
-          return recommended_vm_sizes.min_by do |vm_size|
+          vm_size = recommended_vm_sizes.min_by do |vm_size|
             [vm_size[:number_of_cores], vm_size[:memory_in_mb]]
           end
+          closest_matched_vm_sizes.push(vm_size[:name])
         end
       end
-      cloud_error('Unable to find the closest matched VM sizes')
+      cloud_error('Unable to find the closest matched VM sizes') if closest_matched_vm_sizes.empty?
+      closest_matched_vm_sizes
     end
   end
 end

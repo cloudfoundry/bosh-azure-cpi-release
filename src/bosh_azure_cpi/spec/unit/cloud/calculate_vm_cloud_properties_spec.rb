@@ -42,7 +42,7 @@ describe Bosh::AzureCloud::Cloud do
       context 'when all the keys are provided' do
         let(:size_in_gb) { 100 }
         let(:available_vm_sizes) { double('vm-sizes') }
-        let(:instance_type) { double('instance-type') }
+        let(:instance_types) { double('instance-types') }
 
         context 'when the ephemeral_disk_size is N * 1024' do
           let(:desired_instance_size) do
@@ -53,12 +53,12 @@ describe Bosh::AzureCloud::Cloud do
             }
           end
           it 'should return the cloud_properties' do
-            expect(azure_client).to receive(:list_available_virtual_machine_sizes).with(location).and_return(available_vm_sizes)
+            expect(azure_client).to receive(:list_available_virtual_machine_sizes_by_location).with(location).and_return(available_vm_sizes)
             expect(instance_type_mapper).to receive(:map)
               .with(desired_instance_size, available_vm_sizes)
-              .and_return(instance_type)
+              .and_return(instance_types)
             expect(cloud_with_location.calculate_vm_cloud_properties(desired_instance_size)).to eq(
-              'instance_type' => instance_type,
+              'instance_types' => instance_types,
               'ephemeral_disk' => {
                 'size' => size_in_gb * 1024
               }
@@ -75,12 +75,12 @@ describe Bosh::AzureCloud::Cloud do
             }
           end
           it 'should return the cloud_properties' do
-            expect(azure_client).to receive(:list_available_virtual_machine_sizes).with(location).and_return(available_vm_sizes)
+            expect(azure_client).to receive(:list_available_virtual_machine_sizes_by_location).with(location).and_return(available_vm_sizes)
             expect(instance_type_mapper).to receive(:map)
               .with(desired_instance_size, available_vm_sizes)
-              .and_return(instance_type)
+              .and_return(instance_types)
             expect(cloud_with_location.calculate_vm_cloud_properties(desired_instance_size)).to eq(
-              'instance_type' => instance_type,
+              'instance_types' => instance_types,
               'ephemeral_disk' => {
                 'size' => (size_in_gb + 1) * 1024
               }

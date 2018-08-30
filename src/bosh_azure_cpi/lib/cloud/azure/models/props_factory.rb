@@ -9,7 +9,6 @@ module Bosh::AzureCloud
     end
 
     def parse_vm_props(vm_properties)
-      # TODO: add some validation logic here or in the VMCloudProps class.
       Bosh::AzureCloud::VMCloudProps.new(vm_properties, @config.azure)
     end
   end

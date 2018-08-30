@@ -24,18 +24,32 @@ module Bosh::AzureCloud
       @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props}, ..., ...)")
 
       instance_id = _build_instance_id(bosh_vm_meta, location, vm_props)
-
       resource_group_name = vm_props.resource_group_name
+      _check_resource_group(resource_group_name, location)
       vm_name = instance_id.vm_name
 
-      # When both availability_zone and availability_set are specified, raise an error
-      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_props.availability_zone.nil? && !vm_props.availability_set.nil?
+      # Determine instance_type, availability_zone and availability_set
       zone = vm_props.availability_zone
-      unless zone.nil?
-        cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
+      if zone.nil?
+        availability_set_name = _get_availability_set_name(vm_props, env)
+        if vm_props.instance_type.nil?
+          backup_instance_types = vm_props.instance_types.dup
+          @logger.debug("The cloud property 'instance_type' is nil. Will select one from '#{backup_instance_types}', which are returned by calculate_vm_cloud_properties.")
+          availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
+          unless availability_set.nil?
+            available_vm_sizes = @azure_client.list_available_virtual_machine_sizes_by_availability_set(resource_group_name, availability_set_name)
+            available_vm_sizes = available_vm_sizes.map { |available_vm_size| available_vm_size[:name] }
+            backup_instance_types = backup_instance_types.select do |back_instance_type|
+              available_vm_sizes.include?(back_instance_type)
+            end
+          end
+          vm_props.instance_type = backup_instance_types[0]
+        end
+      else
+        availability_set_name = nil
+        vm_props.instance_type = vm_props.instance_types[0] if vm_props.instance_type.nil?
       end
-
-      _check_resource_group(resource_group_name, location)
+      @logger.info("The instance type is '#{vm_props.instance_type}'")
 
       # tasks to prepare resources for VM
       #   * prepare stemcell
@@ -50,15 +64,11 @@ module Bosh::AzureCloud
         end
       )
 
-      # When availability_zone is specified, VM won't be in any availability set;
-      # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
-      availability_set_name = vm_props.availability_zone.nil? ? _get_availability_set_name(vm_props, env) : nil
-
-      primary_nic_tags = AZURE_TAGS.dup
-      # Store the availability set name in the tags of the NIC
-      primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
       tasks.push(
         task_create_network_interfaces = Concurrent::Future.execute do
+          primary_nic_tags = AZURE_TAGS.dup
+          # Store the availability set name in the tags of the NIC
+          primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
           _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
         end
       )
@@ -167,6 +177,8 @@ module Bosh::AzureCloud
             ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
             error_message += "\t Managed Ephemeral Disk: #{ephemeral_disk_name}\n"
           end
+
+          # TODO: Output message to delete config disk
         else
           storage_account_name = instance_id.storage_account_name
           os_disk_name = @disk_manager.generate_os_disk_name(vm_name)

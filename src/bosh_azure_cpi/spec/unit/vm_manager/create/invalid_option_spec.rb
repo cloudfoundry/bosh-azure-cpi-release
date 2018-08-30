@@ -11,56 +11,6 @@ describe Bosh::AzureCloud::VMManager do
       allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
     end
 
-    context 'when both availability_zone and availability_set are specified' do
-      let(:vm_props) do
-        props_factory.parse_vm_props(
-          'availability_zone' => '1',
-          'availability_set' => 'b',
-          'instance_type' => 'c'
-        )
-      end
-
-      it 'should raise an error' do
-        expect(azure_client).not_to receive(:delete_virtual_machine)
-        expect(azure_client).not_to receive(:delete_network_interface)
-        expect(azure_client).to receive(:list_network_interfaces_by_keyword).with(MOCK_RESOURCE_GROUP_NAME, vm_name).and_return([])
-        expect(azure_client).to receive(:get_public_ip_by_name)
-          .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
-          .and_return(ip_address: 'public-ip')
-        expect(azure_client).to receive(:delete_public_ip).with(MOCK_RESOURCE_GROUP_NAME, vm_name)
-
-        expect do
-          vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
-        end.to raise_error /Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both/
-      end
-    end
-
-    context 'when an invalid availability_zone is specified' do
-      let(:zone) { 'invalid-zone' } # valid values are '1', '2', '3'
-      let(:vm_props) do
-        props_factory.parse_vm_props(
-          'availability_zone' => zone,
-          'instance_type' => 'c'
-        )
-      end
-
-      it 'should raise an error' do
-        expect(azure_client).not_to receive(:delete_virtual_machine)
-        expect(azure_client).not_to receive(:delete_network_interface)
-        expect(azure_client).to receive(:list_network_interfaces_by_keyword)
-          .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
-          .and_return([])
-        expect(azure_client).to receive(:get_public_ip_by_name)
-          .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
-          .and_return(ip_address: 'public-ip')
-        expect(azure_client).to receive(:delete_public_ip).with(MOCK_RESOURCE_GROUP_NAME, vm_name)
-
-        expect do
-          vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
-        end.to raise_error /'#{zone}' is not a valid zone/
-      end
-    end
-
     context 'when the resource group name is not specified in the network spec' do
       context 'when subnet is not found in the default resource group' do
         before do

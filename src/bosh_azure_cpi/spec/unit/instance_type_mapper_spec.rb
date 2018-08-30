@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
     end
 
     it 'return the instance type' do
-      expect(subject.map(desired_instance_size, available_vm_sizes)).to eq('Standard_F1')
+      expect(subject.map(desired_instance_size, available_vm_sizes)).to eq(['Standard_F1'])
     end
   end
 end

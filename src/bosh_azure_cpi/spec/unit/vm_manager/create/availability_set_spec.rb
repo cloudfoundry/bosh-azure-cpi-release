@@ -49,6 +49,68 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
+        context 'when instance_type is nil and instance_types exist' do
+          let(:env) { nil }
+          let(:availability_set_name) { SecureRandom.uuid.to_s }
+          let(:vm_props) do
+            props_factory.parse_vm_props(
+              'instance_type'                => nil,
+              'instance_types'               => ['Standard_B1s', 'Standard_F1'],
+              'availability_set'             => availability_set_name,
+              'platform_update_domain_count' => 5,
+              'platform_fault_domain_count'  => 3
+            )
+          end
+          let(:avset_params) do
+            {
+              name: vm_props.availability_set,
+              location: location,
+              tags: { 'user-agent' => 'bosh' },
+              platform_update_domain_count: vm_props.platform_update_domain_count,
+              platform_fault_domain_count: vm_props.platform_fault_domain_count,
+              managed: false
+            }
+          end
+          let(:availability_set) do
+            {
+              name: availability_set_name,
+              location: location
+            }
+          end
+          let(:available_vm_sizes) do
+            [
+              {
+                :name => 'Standard_F1',
+                :number_of_cores => '1',
+                :memory_in_mb => 2048
+              }
+            ]
+          end
+
+          before do
+            allow(azure_client).to receive(:get_availability_set_by_name)
+              .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+              .and_return(availability_set)
+            allow(azure_client).to receive(:list_available_virtual_machine_sizes_by_availability_set)
+              .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+              .and_return(available_vm_sizes)
+          end
+
+          it 'should select a VM size which is available in the availability set' do
+            expect(vm_manager).to receive(:flock)
+              .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+              .and_call_original
+            expect(vm_manager).to receive(:flock)
+              .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+              .and_call_original
+            expect(azure_client).to receive(:create_network_interface).twice
+
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            expect(vm_params[:name]).to eq(vm_name)
+            expect(vm_props.instance_type).to eq('Standard_F1')
+          end
+        end
+
         context 'with env is nil and availability_set is specified in vm_types or vm_extensions' do
           let(:env) { nil }
           let(:availability_set_name) { SecureRandom.uuid.to_s }
@@ -499,7 +561,7 @@ describe Bosh::AzureCloud::VMManager do
 
               expect do
                 vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
-              end.to raise_error /create_availability_set - the availability set '#{availability_set_name}' already exists, but in a different location/
+              end.to raise_error /availability set '#{availability_set_name}' already exists, but in a different location/
             end
           end
 
@@ -615,7 +677,7 @@ describe Bosh::AzureCloud::VMManager do
 
                 expect do
                   vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
-                end.to raise_error /create_availability_set - the availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./
+                end.to raise_error /availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./
               end
             end
           end

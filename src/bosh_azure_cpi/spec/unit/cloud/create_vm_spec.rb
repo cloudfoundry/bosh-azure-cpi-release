@@ -44,26 +44,6 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(vm_props)
     end
 
-    context 'when instance_type is not provided' do
-      let(:cloud_properties) { {} }
-      before do
-        allow(cloud.props_factory).to receive(:parse_vm_props)
-          .and_call_original
-      end
-      it 'should raise an error' do
-        expect do
-          cloud.create_vm(
-            agent_id,
-            stemcell_cid,
-            cloud_properties,
-            networks,
-            disk_cids,
-            environment
-          )
-        end.to raise_error(/missing required cloud property 'instance_type'./)
-      end
-    end
-
     context 'when vnet is not found' do
       before do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
@@ -84,7 +64,7 @@ describe Bosh::AzureCloud::Cloud do
             disk_cids,
             environment
           )
-        end.to raise_error(/Cannot find the virtual network/)
+        end.to raise_error(/Cannot find the virtual network '#{virtual_network_name}' under resource group '#{default_resource_group_name}'/)
       end
     end
 
@@ -275,26 +255,6 @@ describe Bosh::AzureCloud::Cloud do
         end
       end
 
-      context 'when availability_zone is specified' do
-        let(:cloud_properties) do
-          { 'availability_zone' => 'fake-az',
-            'instance_type' => 'fake-vm-size' }
-        end
-
-        it 'should raise an error' do
-          expect do
-            cloud.create_vm(
-              agent_id,
-              stemcell_cid,
-              cloud_properties,
-              networks,
-              disk_cids,
-              environment
-            )
-          end.to raise_error('Virtual Machines deployed to an Availability Zone must use managed disks')
-        end
-      end
-
       context 'when network configurator fails' do
         before do
           allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
@@ -378,6 +338,33 @@ describe Bosh::AzureCloud::Cloud do
         allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
           .with(agent_id, stemcell_cid)
           .and_return(bosh_vm_meta)
+      end
+
+      context 'when cloud_properties do not have instance_type, but have instance_types' do
+        let(:instance_types) { ['fake-vm-size-1', 'fake-vm-size-2'] }
+        let(:cloud_properties) { { 'instance_types' => instance_types } }
+        let(:vm_props) { managed_cloud.props_factory.parse_vm_props(cloud_properties) }
+
+        it 'should send instance_types as the telemetry data' do
+          expect(telemetry_manager).to receive(:monitor)
+            .with('create_vm', id: agent_id, extras: { 'instance_types' => instance_types })
+            .and_call_original
+          expect(vm_manager).to receive(:create)
+            .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+            .and_return([instance_id, vm_params])
+          expect(registry_client).to receive(:update_settings)
+
+          expect(
+            managed_cloud.create_vm(
+              agent_id,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
+              environment
+            )
+          ).to eq(instance_id_string)
+        end
       end
 
       context 'when resource group is specified' do
