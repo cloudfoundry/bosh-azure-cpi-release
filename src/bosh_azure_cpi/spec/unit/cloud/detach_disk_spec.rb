@@ -31,13 +31,11 @@ describe Bosh::AzureCloud::Cloud do
           'persistent' => {
             'fake-disk-id' =>  {
               'lun' => '1',
-              'host_device_id' => host_device_id,
-              'path' => '/dev/sdd'
+              'host_device_id' => host_device_id
             },
             'v-deadbeef' =>  {
               'lun'      => '2',
-              'host_device_id' => host_device_id,
-              'path' => '/dev/sde'
+              'host_device_id' => host_device_id
             }
           }
         }
@@ -49,8 +47,7 @@ describe Bosh::AzureCloud::Cloud do
           'persistent' => {
             'v-deadbeef' => {
               'lun' => '2',
-              'host_device_id' => host_device_id,
-              'path' => '/dev/sde'
+              'host_device_id' => host_device_id
             }
           }
         }
