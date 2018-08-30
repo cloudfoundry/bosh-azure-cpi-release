@@ -23,10 +23,11 @@ describe Bosh::AzureCloud::VMManager do
               'instance_type' => 'Standard_D1'
             )
           end
+
           it 'should not enable managed identity' do
             expect(azure_client).not_to receive(:delete_virtual_machine)
             expect(azure_client).not_to receive(:delete_network_interface)
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params.keys).not_to include('identity')
           end
         end
@@ -41,10 +42,11 @@ describe Bosh::AzureCloud::VMManager do
               }
             )
           end
+
           it 'should not enable managed identity' do
             expect(azure_client).not_to receive(:delete_virtual_machine)
             expect(azure_client).not_to receive(:delete_network_interface)
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:identity][:type]).to eq('UserAssigned')
             expect(vm_params[:identity][:identity_name]).to eq('fake-identity-name')
           end

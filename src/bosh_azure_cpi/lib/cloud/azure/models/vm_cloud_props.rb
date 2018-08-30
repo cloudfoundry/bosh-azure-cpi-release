@@ -1,21 +1,25 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
+  # https://bosh.io/docs/azure-cpi/#resource-pools
   class VMCloudProps
     include Helpers
-    attr_reader :resource_group_name, :instance_type
-    attr_reader :storage_account_type, :storage_account_kind, :storage_account_max_disk_number, :storage_account_name
+    attr_accessor :instance_type
+    attr_reader :instance_types
+    attr_reader :root_disk, :ephemeral_disk, :caching
     attr_reader :availability_zone
     attr_reader :availability_set
-    attr_reader :tags
-    attr_reader :caching
-    attr_reader :root_disk, :ephemeral_disk
-    attr_reader :ip_forwarding, :accelerated_networking, :assign_dynamic_public_ip, :application_gateway
     attr_reader :load_balancer
-    attr_reader :application_security_groups
-    attr_reader :security_group
+    attr_reader :application_gateway
     attr_reader :managed_identity
+    attr_reader :security_group
+    attr_reader :application_security_groups
+    attr_reader :assign_dynamic_public_ip, :ip_forwarding, :accelerated_networking
+    attr_reader :storage_account_name, :storage_account_type, :storage_account_kind, :storage_account_max_disk_number
+    attr_reader :resource_group_name
+    attr_reader :tags
 
+    # Below defines are for test purpose
     attr_writer :availability_zone
     attr_writer :availability_set
     attr_writer :assign_dynamic_public_ip
@@ -29,26 +33,8 @@ module Bosh::AzureCloud
       @vm_properties = vm_properties.dup
 
       @instance_type = vm_properties['instance_type']
-      @resource_group_name = vm_properties.fetch('resource_group_name', global_azure_config.resource_group_name)
-      @storage_account_type = vm_properties['storage_account_type']
-      @availability_zone = vm_properties['availability_zone']
-      @availability_set = _parse_availability_set_config(vm_properties, global_azure_config)
-      @storage_account_name = vm_properties['storage_account_name']
-      @storage_account_max_disk_number = vm_properties.fetch('storage_account_max_disk_number', 30)
-      @storage_account_kind = vm_properties.fetch('storage_account_kind', STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1)
-      @tags = vm_properties.fetch('tags', {})
-      @caching = vm_properties.fetch('caching', 'ReadWrite')
-
-      @ip_forwarding = vm_properties['ip_forwarding']
-      @accelerated_networking = vm_properties['accelerated_networking']
-      @assign_dynamic_public_ip = vm_properties['assign_dynamic_public_ip']
-
-      @load_balancer = _parse_load_balancer_config(vm_properties, global_azure_config)
-
-      @application_gateway = vm_properties['application_gateway']
-
-      @application_security_groups = vm_properties['application_security_groups']
-      @security_group = Bosh::AzureCloud::SecurityGroup.parse_security_group(vm_properties['security_group'])
+      @instance_types = vm_properties['instance_types']
+      cloud_error("You need to specify one of 'vm_type/instance_type' or 'vm_resources'.") if @instance_type.nil? && (@instance_types.nil? || @instance_types.empty?)
 
       root_disk_hash = vm_properties.fetch('root_disk', {})
       @root_disk = Bosh::AzureCloud::RootDisk.new(root_disk_hash['size'], root_disk_hash['type'])
@@ -60,9 +46,37 @@ module Bosh::AzureCloud
         ephemeral_disk_hash['type']
       )
 
+      @caching = vm_properties.fetch('caching', 'ReadWrite')
+
+      @availability_zone = vm_properties['availability_zone']
+      unless @availability_zone.nil?
+        cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') unless global_azure_config.use_managed_disks
+        cloud_error("'#{@availability_zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(@availability_zone.to_s)
+      end
+      @availability_set = _parse_availability_set_config(vm_properties, global_azure_config)
+      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !@availability_zone.nil? && !@availability_set.name.nil?
+
+      @load_balancer = _parse_load_balancer_config(vm_properties, global_azure_config)
+      @application_gateway = vm_properties['application_gateway']
+
       @managed_identity = global_azure_config.default_managed_identity
       managed_identity_hash = vm_properties.fetch('managed_identity', nil)
       @managed_identity = Bosh::AzureCloud::ManagedIdentity.new(managed_identity_hash) unless managed_identity_hash.nil?
+
+      @security_group = Bosh::AzureCloud::SecurityGroup.parse_security_group(vm_properties['security_group'])
+      @application_security_groups = vm_properties['application_security_groups']
+
+      @assign_dynamic_public_ip = vm_properties['assign_dynamic_public_ip']
+      @ip_forwarding = vm_properties['ip_forwarding']
+      @accelerated_networking = vm_properties['accelerated_networking']
+
+      @storage_account_name = vm_properties['storage_account_name']
+      @storage_account_kind = vm_properties.fetch('storage_account_kind', STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1)
+      @storage_account_type = vm_properties['storage_account_type']
+      @storage_account_max_disk_number = vm_properties.fetch('storage_account_max_disk_number', 30)
+
+      @resource_group_name = vm_properties.fetch('resource_group_name', global_azure_config.resource_group_name)
+      @tags = vm_properties.fetch('tags', {})
     end
 
     private

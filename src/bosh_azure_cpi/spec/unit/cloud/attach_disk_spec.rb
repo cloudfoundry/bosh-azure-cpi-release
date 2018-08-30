@@ -203,7 +203,8 @@ describe Bosh::AzureCloud::Cloud do
           let(:storage_account) do
             {
               location: location,
-              account_type: account_type
+              account_type: account_type,
+              sku_tier: 'Premium'
             }
           end
 
@@ -226,10 +227,12 @@ describe Bosh::AzureCloud::Cloud do
                 .with(disk_id_object, blob_uri, location, account_type, nil)
               expect(blob_manager).to receive(:set_blob_metadata)
 
-              expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
-                                                         .and_return(lun)
-              expect(registry_client).to receive(:read_settings).with(vm_cid)
-                                                                .and_return(old_settings)
+              expect(vm_manager).to receive(:attach_disk)
+                .with(instance_id_object, disk_id_object)
+                .and_return(lun)
+              expect(registry_client).to receive(:read_settings)
+                .with(vm_cid)
+                .and_return(old_settings)
               expect(registry_client).to receive(:update_settings)
                 .with(vm_cid, new_settings).and_return(true)
 

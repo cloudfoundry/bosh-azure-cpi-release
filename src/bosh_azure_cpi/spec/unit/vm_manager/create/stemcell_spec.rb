@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect(azure_client).to receive(:create_network_interface).exactly(2).times
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:image_uri]).to eq(stemcell_uri)
             expect(vm_params[:os_type]).to eq(os_type)
@@ -53,7 +53,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect(azure_client).to receive(:create_network_interface).twice
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:os_type]).to eq(os_type)
           end
@@ -67,17 +67,17 @@ describe Bosh::AzureCloud::VMManager do
       let(:storage_account_name) { nil }
 
       context 'when light stemcell is used' do
-        let(:stemcell_id) { 'bosh-light-stemcell-xxx' }
+        let(:stemcell_cid) { 'bosh-light-stemcell-xxx' }
 
         context 'when stemcell does not exist' do
           before do
-            allow(light_stemcell_manager).to receive(:has_stemcell?).with(location, stemcell_id).and_return(false)
+            allow(light_stemcell_manager).to receive(:has_stemcell?).with(location, stemcell_cid).and_return(false)
           end
 
           it 'should raise an error' do
             expect do
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
-            end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
+              vm_manager2.send(:_get_stemcell_info, stemcell_cid, vm_props, location, storage_account_name)
+            end.to raise_error("Given stemcell '#{stemcell_cid}' does not exist")
           end
         end
 
@@ -85,33 +85,33 @@ describe Bosh::AzureCloud::VMManager do
           let(:stemcell_info) { double('stemcell-info') }
 
           before do
-            allow(light_stemcell_manager).to receive(:has_stemcell?).with(location, stemcell_id).and_return(true)
-            allow(light_stemcell_manager).to receive(:get_stemcell_info).with(stemcell_id).and_return(stemcell_info)
+            allow(light_stemcell_manager).to receive(:has_stemcell?).with(location, stemcell_cid).and_return(true)
+            allow(light_stemcell_manager).to receive(:get_stemcell_info).with(stemcell_cid).and_return(stemcell_info)
           end
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager2.send(:_get_stemcell_info, stemcell_cid, vm_props, location, storage_account_name)
             ).to be(stemcell_info)
           end
         end
       end
 
       context 'when heavy stemcell is used' do
-        let(:stemcell_id) { 'bosh-stemcell-xxx' }
+        let(:stemcell_cid) { 'bosh-stemcell-xxx' }
 
         context 'when it gets user image successfully' do
           let(:stemcell_info) { double('stemcell-info') }
 
           before do
             allow(stemcell_manager2).to receive(:get_user_image_info)
-              .with(stemcell_id, 'Standard_LRS', location)
+              .with(stemcell_cid, 'Standard_LRS', location)
               .and_return(stemcell_info)
           end
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager2.send(:_get_stemcell_info, stemcell_cid, vm_props, location, storage_account_name)
             ).to be(stemcell_info)
           end
         end
@@ -121,14 +121,14 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(stemcell_manager2).to receive(:get_user_image_info)
-              .with(stemcell_id, 'Standard_LRS', location)
+              .with(stemcell_cid, 'Standard_LRS', location)
               .and_raise('fake-error')
           end
 
           it 'should return the stemcell info' do
             expect do
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
-            end.to raise_error(/Failed to get the user image information for the stemcell '#{stemcell_id}'/)
+              vm_manager2.send(:_get_stemcell_info, stemcell_cid, vm_props, location, storage_account_name)
+            end.to raise_error(/Failed to get the user image information for the stemcell '#{stemcell_cid}'/)
           end
         end
       end
@@ -148,18 +148,18 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context 'when light stemcell is used' do
-        let(:stemcell_id) { 'bosh-light-stemcell-xxx' }
+        let(:stemcell_cid) { 'bosh-light-stemcell-xxx' }
         let(:storage_account_name) { nil }
 
         context 'when stemcell does not exist' do
           before do
-            allow(light_stemcell_manager).to receive(:has_stemcell?).with(location, stemcell_id).and_return(false)
+            allow(light_stemcell_manager).to receive(:has_stemcell?).with(location, stemcell_cid).and_return(false)
           end
 
           it 'should raise an error' do
             expect do
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
-            end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
+              vm_manager.send(:_get_stemcell_info, stemcell_cid, vm_props, location, storage_account_name)
+            end.to raise_error("Given stemcell '#{stemcell_cid}' does not exist")
           end
         end
 
@@ -167,33 +167,33 @@ describe Bosh::AzureCloud::VMManager do
           let(:stemcell_info) { double('stemcell-info') }
 
           before do
-            allow(light_stemcell_manager).to receive(:has_stemcell?).with(location, stemcell_id).and_return(true)
-            allow(light_stemcell_manager).to receive(:get_stemcell_info).with(stemcell_id).and_return(stemcell_info)
+            allow(light_stemcell_manager).to receive(:has_stemcell?).with(location, stemcell_cid).and_return(true)
+            allow(light_stemcell_manager).to receive(:get_stemcell_info).with(stemcell_cid).and_return(stemcell_info)
           end
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager.send(:_get_stemcell_info, stemcell_cid, vm_props, location, storage_account_name)
             ).to be(stemcell_info)
           end
         end
       end
 
       context 'when heavy stemcell is used' do
-        let(:stemcell_id) { 'bosh-stemcell-xxx' }
+        let(:stemcell_cid) { 'bosh-stemcell-xxx' }
         let(:storage_account_name) { 'fake-storage-account-name' }
 
         context 'when it fails to get stemcell' do
           before do
             allow(stemcell_manager).to receive(:has_stemcell?)
-              .with('fake-storage-account-name', stemcell_id)
+              .with('fake-storage-account-name', stemcell_cid)
               .and_return(false)
           end
 
           it 'should raise an error' do
             expect do
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
-            end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
+              vm_manager.send(:_get_stemcell_info, stemcell_cid, vm_props, location, storage_account_name)
+            end.to raise_error("Given stemcell '#{stemcell_cid}' does not exist")
           end
         end
 
@@ -202,16 +202,16 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(stemcell_manager).to receive(:has_stemcell?)
-              .with('fake-storage-account-name', stemcell_id)
+              .with('fake-storage-account-name', stemcell_cid)
               .and_return(true)
             allow(stemcell_manager).to receive(:get_stemcell_info)
-              .with('fake-storage-account-name', stemcell_id)
+              .with('fake-storage-account-name', stemcell_cid)
               .and_return(stemcell_info)
           end
 
           it 'should return stemcell info' do
             expect(
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager.send(:_get_stemcell_info, stemcell_cid, vm_props, location, storage_account_name)
             ).to be(stemcell_info)
           end
         end

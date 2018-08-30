@@ -403,7 +403,8 @@ describe Bosh::AzureCloud::AzureClient do
           foo: 'bar'
         },
         sku: {
-          name: 'f'
+          name: 'f',
+          tier: 'g'
         },
         zones: ['fake-zone'],
         properties: {
@@ -421,6 +422,7 @@ describe Bosh::AzureCloud::AzureClient do
           'foo' => 'bar'
         },
         sku_name: 'f',
+        sku_tier: 'g',
         zone: 'fake-zone',
         provisioning_state: 'd',
         disk_size: 'e'

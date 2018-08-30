@@ -44,8 +44,8 @@ shared_context 'shared stuff for vm manager' do
   let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
   let(:agent_id) { 'fake-agent-id' }
-  let(:stemcell_id) { 'fake-stemcell-id' }
-  let(:bosh_vm_meta) { Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_id) }
+  let(:stemcell_cid) { 'fake-stemcell-id' }
+  let(:bosh_vm_meta) { Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_cid) }
   let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
   let(:vm_properties) do
     {
@@ -59,7 +59,7 @@ shared_context 'shared stuff for vm manager' do
   let(:vm_props) do
     props_factory.parse_vm_props(vm_properties)
   end
-
+  let(:disk_cids) { ['fake-disk-cid'] }
   let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
   let(:env) { {} }
 

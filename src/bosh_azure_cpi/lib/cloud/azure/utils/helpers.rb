@@ -88,6 +88,10 @@ module Bosh::AzureCloud
 
     AZURE_MAX_RETRY_COUNT = 10
 
+    # sku
+    SKU_TIER_STANDARD = 'Standard'
+    SKU_TIER_PREMIUM  = 'Premium'
+
     # Storage Account
     STORAGE_ACCOUNT_TYPE_STANDARD_LRS    = 'Standard_LRS'
     STORAGE_ACCOUNT_TYPE_STANDARDSSD_LRS = 'StandardSSD_LRS'
@@ -576,20 +580,20 @@ module Bosh::AzureCloud
     end
 
     def get_storage_account_type_by_instance_type(instance_type)
+      support_premium_storage?(instance_type) ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
+    end
+
+    def support_premium_storage?(instance_type)
       instance_type = instance_type.downcase
-      storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
-      if ((instance_type =~ /^standard_ds/) == 0) || # including DS and DSv2, e.g. Standard_DS1, Standard_DS1_v2
-         ((instance_type =~ /^standard_d(\d)+s_v3/) == 0) ||
-         ((instance_type =~ /^standard_gs/) == 0) ||
-         ((instance_type =~ /^standard_b(\d)+s/) == 0) ||
-         ((instance_type =~ /^standard_b(\d)+ms/) == 0) ||
-         ((instance_type =~ /^standard_f(\d)+s/) == 0) ||
-         ((instance_type =~ /^standard_e(\d)+s_v3/) == 0) ||
-         ((instance_type =~ /^standard_e(\d)+is_v3/) == 0) ||
-         ((instance_type =~ /^standard_l(\d)+s/) == 0)
-        storage_account_type = STORAGE_ACCOUNT_TYPE_PREMIUM_LRS
-      end
-      storage_account_type
+      ((instance_type =~ /^standard_ds/) == 0) || # including DS and DSv2, e.g. Standard_DS1, Standard_DS1_v2
+        ((instance_type =~ /^standard_d(\d)+s_v3/) == 0) ||
+        ((instance_type =~ /^standard_gs/) == 0) ||
+        ((instance_type =~ /^standard_b(\d)+s/) == 0) ||
+        ((instance_type =~ /^standard_b(\d)+ms/) == 0) ||
+        ((instance_type =~ /^standard_f(\d)+s/) == 0) ||
+        ((instance_type =~ /^standard_e(\d)+s_v3/) == 0) ||
+        ((instance_type =~ /^standard_e(\d)+is_v3/) == 0) ||
+        ((instance_type =~ /^standard_l(\d)+s/) == 0)
     end
 
     def is_stemcell_storage_account?(tags)
