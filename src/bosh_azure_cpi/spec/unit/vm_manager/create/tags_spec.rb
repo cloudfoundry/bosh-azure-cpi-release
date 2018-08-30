@@ -36,7 +36,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).to receive(:create_virtual_machine)
               .with(MOCK_RESOURCE_GROUP_NAME, hash_including(tags: custom_tags.merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
             expect do
-              vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             end.not_to raise_error
           end
         end

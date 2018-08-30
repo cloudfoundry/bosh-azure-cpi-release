@@ -407,14 +407,15 @@ module Bosh::AzureCloud
       http_put(url, vm, params)
     end
 
-    # List the available virtual machine sizes
+    # List the available virtual machine sizes by location
     # @param [String] location - Location of virtual machine.
     #
     # @return [Array]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-list-sizes-region
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinesizes/list
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
     #
-    def list_available_virtual_machine_sizes(location)
+    def list_available_virtual_machine_sizes_by_location(location)
       vm_sizes = []
       url =  "/subscriptions/#{URI.escape(@azure_config.subscription_id)}"
       url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
@@ -424,8 +425,28 @@ module Bosh::AzureCloud
 
       unless result.nil? || result['value'].nil?
         result['value'].each do |value|
-          vm_size = parse_vm_size(value)
-          vm_sizes << vm_size
+          vm_sizes << parse_vm_size(value)
+        end
+      end
+      vm_sizes
+    end
+
+    # List the available virtual machine sizes by availability set
+    # @param [String] availability_set_name - Name of availability set.
+    #
+    # @return [Array]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/listavailablesizes
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    #
+    def list_available_virtual_machine_sizes_by_availability_set(resource_group_name, availability_set_name)
+      vm_sizes = []
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: availability_set_name, others: REST_API_VM_SIZES)
+      result = get_resource_by_id(url)
+
+      unless result.nil? || result['value'].nil?
+        result['value'].each do |value|
+          vm_sizes << parse_vm_size(value)
         end
       end
       vm_sizes
@@ -1271,7 +1292,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
+    # @See https://docs.microsoft.com/en-us/rest/api/load-balancer/loadbalancers/get
     #
 
     def get_load_balancer_by_name(resource_group_name, name)
@@ -1284,7 +1305,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
+    # @See https://docs.microsoft.com/en-us/rest/api/load-balancer/loadbalancers/get
     #
     def _get_load_balancer(url)
       load_balancer = nil
@@ -1295,7 +1316,6 @@ module Bosh::AzureCloud
         load_balancer[:name] = result['name']
         load_balancer[:location] = result['location']
         load_balancer[:tags] = result['tags']
-
         properties = result['properties']
         load_balancer[:provisioning_state] = properties['provisioningState']
 
@@ -1906,6 +1926,7 @@ module Bosh::AzureCloud
         managed_disk[:location]  = result['location']
         managed_disk[:tags]      = result['tags']
         managed_disk[:sku_name]  = result['sku']['name']
+        managed_disk[:sku_tier]  = result['sku']['tier']
         managed_disk[:zone]      = result['zones'][0] unless result['zones'].nil?
         properties = result['properties']
         managed_disk[:provisioning_state] = properties['provisioningState']

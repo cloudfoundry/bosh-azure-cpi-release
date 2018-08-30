@@ -30,7 +30,7 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
     it 'raise an error' do
       expect do
         subject.map(desired_instance_size, available_vm_sizes)
-      end.to raise_error(/Unable to meet requested desired_instance_size: 3200 CPU, 102400 MB RAM/)
+      end.to raise_error(/Unable to meet desired instance size: 3200 CPU, 102400 MB RAM/)
     end
   end
 
@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
     end
 
     it 'return the instance type' do
-      expect(subject.map(desired_instance_size, available_vm_sizes)).to eq('Standard_F1')
+      expect(subject.map(desired_instance_size, available_vm_sizes)).to eq(%w[Standard_F1 Standard_F2])
     end
   end
 end

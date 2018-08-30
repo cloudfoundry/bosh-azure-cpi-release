@@ -5,7 +5,18 @@ require 'unit/cloud/shared_stuff.rb'
 
 describe Bosh::AzureCloud::VMCloudProps do
   include_context 'shared stuff'
+
   describe '#initialize' do
+    context 'when instance_type and instance_types are not provided' do
+      let(:vm_cloud_properties) { {} }
+
+      it 'should raise an error' do
+        expect do
+          Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config_managed)
+        end.to raise_error('You need to specify one of \'vm_type/instance_type\' or \'vm_resources\'.')
+      end
+    end
+
     context 'when availability_set is a hash' do
       let(:av_set_name) { 'fake_av_set_name' }
       let(:platform_update_domain_count) { 5 }
@@ -29,6 +40,53 @@ describe Bosh::AzureCloud::VMCloudProps do
         expect(vm_cloud_props.availability_set.name).to eq(av_set_name)
         expect(vm_cloud_props.availability_set.platform_update_domain_count).to eq(platform_update_domain_count)
         expect(vm_cloud_props.availability_set.platform_fault_domain_count).to eq(platform_fault_domain_count)
+      end
+    end
+
+    context 'when availability_zone is specified' do
+      let(:vm_cloud_properties) do
+        {
+          'availability_zone' => 'fake-az',
+          'instance_type' => 'fake-vm-size'
+        }
+      end
+
+      it 'should raise an error' do
+        expect do
+          Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config)
+        end.to raise_error('Virtual Machines deployed to an Availability Zone must use managed disks')
+      end
+    end
+
+    context 'when an invalid availability_zone is specified' do
+      let(:zone) { 'invalid-zone' } # valid values are '1', '2', '3'
+      let(:vm_cloud_properties) do
+        {
+          'availability_zone' => zone,
+          'instance_type' => 'c'
+        }
+      end
+
+      it 'should raise an error' do
+        expect do
+          Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config_managed)
+        end.to raise_error /'#{zone}' is not a valid zone/
+      end
+    end
+
+    context 'when both availability_zone and availability_set are specified' do
+      let(:vm_cloud_properties) do
+        {
+          'availability_zone' => '1',
+          'availability_set' => 'b',
+          'instance_type' => 'c'
+        }
+      end
+
+      it 'should raise an error' do
+        expect do
+          Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config_managed)
+        end.to raise_error /Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both/
       end
     end
 

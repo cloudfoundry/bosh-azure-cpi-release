@@ -19,23 +19,65 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(bosh_vm_meta, location, vm_props, network_configurator, env)
+    def create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
-      @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props.inspect}, ..., ...)")
+      @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props.inspect}, #{disk_cids}, ..., ...)")
 
       instance_id = _build_instance_id(bosh_vm_meta, location, vm_props)
-
       resource_group_name = vm_props.resource_group_name
+      _check_resource_group(resource_group_name, location)
       vm_name = instance_id.vm_name
 
-      # When both availability_zone and availability_set are specified, raise an error
-      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_props.availability_zone.nil? && !vm_props.availability_set.name.nil?
-      zone = vm_props.availability_zone
-      unless zone.nil?
-        cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
+      if vm_props.instance_type.nil?
+        calculated_instance_types = vm_props.instance_types.dup
+        @logger.debug("The cloud property 'instance_type' is nil. Will select one from '#{calculated_instance_types}', which are returned by calculate_vm_cloud_properties.")
+        is_persistent_disk_premium = false
+        disk_cids&.each do |disk_cid|
+          disk_id = DiskId.parse(disk_cid, @azure_config.resource_group_name)
+          # TODO: What if the disk was migrated from unmanaged disk
+          if @use_managed_disks
+            disk = @disk_manager2.get_data_disk(disk_id)
+            if disk[:sku_tier] == SKU_TIER_PREMIUM
+              is_persistent_disk_premium = true
+              break
+            end
+          else
+            storage_account_name = disk_id.storage_account_name
+            storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
+            if storage_account[:sku_tier] == SKU_TIER_PREMIUM
+              is_persistent_disk_premium = true
+              break
+            end
+          end
+        end
+        if is_persistent_disk_premium
+          @logger.debug("The disk '#{disk_cids}' to be attached is a Premium disk. Will select one instance type which supports Premium storage.")
+          calculated_instance_types = calculated_instance_types.select do |calculated_instance_type|
+            support_premium_storage?(calculated_instance_type)
+          end
+        end
+        cloud_error('No available instance type is found.') if calculated_instance_types.empty?
       end
+      zone = vm_props.availability_zone
+      if zone.nil?
+        availability_set_name = _get_availability_set_name(vm_props, env)
+        if vm_props.instance_type.nil?
+          availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
+          unless availability_set.nil?
+            available_vm_sizes = @azure_client.list_available_virtual_machine_sizes_by_availability_set(resource_group_name, availability_set_name)
+            available_vm_sizes = available_vm_sizes.map { |available_vm_size| available_vm_size[:name] }
+            @logger.debug("The availability set '#{availability_set_name}' supports VM sizes '#{available_vm_sizes}'")
+            calculated_instance_types &= available_vm_sizes
+          end
 
-      _check_resource_group(resource_group_name, location)
+          cloud_error('No available instance type is found.') if calculated_instance_types.empty?
+          vm_props.instance_type = calculated_instance_types[0]
+        end
+      else
+        availability_set_name = nil
+        vm_props.instance_type = vm_props.instance_types[0] if vm_props.instance_type.nil?
+      end
+      @logger.info("The instance type is '#{vm_props.instance_type}'")
 
       # tasks to prepare resources for VM
       #   * prepare stemcell
@@ -50,15 +92,11 @@ module Bosh::AzureCloud
         end
       )
 
-      # When availability_zone is specified, VM won't be in any availability set;
-      # Otherwise, VM can be in an availability set specified by availability_set or env['bosh']['group']
-      availability_set_name = vm_props.availability_zone.nil? ? _get_availability_set_name(vm_props, env) : nil
-
-      primary_nic_tags = AZURE_TAGS.dup
-      # Store the availability set name in the tags of the NIC
-      primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
       tasks.push(
         task_create_network_interfaces = Concurrent::Future.execute do
+          primary_nic_tags = AZURE_TAGS.dup
+          # Store the availability set name in the tags of the NIC
+          primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
           _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
         end
       )
@@ -173,6 +211,8 @@ module Bosh::AzureCloud
             ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
             error_message += "\t Managed Ephemeral Disk: #{ephemeral_disk_name}\n"
           end
+
+          # TODO: Output message to delete config disk
         else
           storage_account_name = instance_id.storage_account_name
           os_disk_name = @disk_manager.generate_os_disk_name(vm_name)

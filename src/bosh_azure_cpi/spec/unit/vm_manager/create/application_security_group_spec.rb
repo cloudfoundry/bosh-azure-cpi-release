@@ -30,7 +30,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(azure_client).to receive(:create_resource_group)
             .with(MOCK_RESOURCE_GROUP_NAME, location)
 
-          _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
           expect(vm_params[:name]).to eq(vm_name)
         end
       end
@@ -76,7 +76,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).to receive(:create_network_interface)
               .with(MOCK_RESOURCE_GROUP_NAME, hash_including(application_security_groups: asgs_in_network_spec), any_args).twice
             expect do
-              vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             end.not_to raise_error
           end
 
@@ -127,7 +127,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).not_to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(application_security_groups: asgs_in_network_spec), any_args)
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -178,7 +178,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(application_security_groups: asgs), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -212,7 +212,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_network_interface)
                   .with(rg_name_for_asg, hash_including(application_security_groups: asgs), any_args).twice
                 expect do
-                  vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                 end.not_to raise_error
               end
             end
@@ -230,7 +230,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_network_interface)
                   .with(MOCK_RESOURCE_GROUP_NAME, hash_including(application_security_groups: asgs), any_args).twice
                 expect do
-                  vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                 end.not_to raise_error
               end
             end
@@ -249,7 +249,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
                 expect(azure_client).not_to receive(:delete_network_interface)
                 expect do
-                  vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                 end.to raise_error /Cannot find the application security group '#{asg_name}'/
               end
             end
@@ -277,7 +277,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -295,7 +295,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -313,7 +313,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -337,7 +337,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -355,7 +355,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_ip_forwarding: false), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -373,7 +373,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_ip_forwarding: true), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -400,7 +400,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -418,7 +418,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -436,7 +436,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -460,7 +460,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -478,7 +478,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: false), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -496,7 +496,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_network_interface)
                 .with(MOCK_RESOURCE_GROUP_NAME, hash_including(enable_accelerated_networking: true), any_args).twice
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               end.not_to raise_error
             end
           end
@@ -511,7 +511,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect(azure_client).to receive(:create_network_interface).exactly(2).times
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:image_uri]).to eq(stemcell_uri)
             expect(vm_params[:os_type]).to eq(os_type)
@@ -540,7 +540,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect(azure_client).to receive(:create_network_interface).twice
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:os_type]).to eq(os_type)
           end
@@ -597,7 +597,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 application_gateway: application_gateway
                                               )).once
 
-            _, vm_params = vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -625,7 +625,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 application_gateway: application_gateway
                                               ))
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -679,7 +679,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
             expect(azure_client).to receive(:create_virtual_machine)
               .with(MOCK_RESOURCE_GROUP_NAME, vm_params, network_interfaces, nil)
-            _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -729,7 +729,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(MOCK_RESOURCE_GROUP_NAME, vm_params, network_interfaces, nil)
             expect(SecureRandom).to receive(:uuid).exactly(3).times
             expect do
-              vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -757,7 +757,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -781,7 +781,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             end.not_to raise_error
           end
         end
@@ -810,7 +810,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(storage_account_manager).to receive(:get_or_create_diagnostics_storage_account)
               .with(location)
               .and_return(storage_account)
-            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to eq(diag_storage_uri)
           end
         end
@@ -827,7 +827,7 @@ describe Bosh::AzureCloud::VMManager do
           let(:vm_location) { location }
 
           it 'should not enable diagnostics' do
-            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to be(nil)
           end
         end
@@ -864,7 +864,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -877,7 +877,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -894,7 +894,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:zone]).to eq('1')
           end
         end

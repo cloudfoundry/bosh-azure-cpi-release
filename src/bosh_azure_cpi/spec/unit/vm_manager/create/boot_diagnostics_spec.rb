@@ -39,7 +39,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(storage_account_manager).to receive(:get_or_create_diagnostics_storage_account)
               .with(location)
               .and_return(storage_account)
-            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to eq(diag_storage_uri)
           end
         end
@@ -56,7 +56,7 @@ describe Bosh::AzureCloud::VMManager do
           let(:vm_location) { location }
 
           it 'should not enable diagnostics' do
-            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:diag_storage_uri]).to be(nil)
           end
         end
@@ -93,7 +93,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -106,7 +106,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -123,7 +123,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:zone]).to eq('1')
           end
         end
