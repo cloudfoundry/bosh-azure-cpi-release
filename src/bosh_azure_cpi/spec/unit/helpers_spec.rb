@@ -691,7 +691,7 @@ describe Bosh::AzureCloud::Helpers do
         disk_info = Bosh::AzureCloud::Helpers::DiskInfo.for('STANDARD_D15_V2')
 
         expect(disk_info.size).to eq(1000)
-        expect(disk_info.count).to eq(40)
+        expect(disk_info.count).to eq(64)
       end
     end
 
