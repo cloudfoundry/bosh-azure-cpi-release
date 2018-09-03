@@ -230,6 +230,30 @@ describe Bosh::AzureCloud::BlobManager do
         end.to raise_error /Failed to create empty page blob/
       end
     end
+
+    context 'when container not exists' do
+      before do
+        times = 0
+        allow(blob_service).to receive(:create_page_blob) do
+          if times.zero?
+            times += 1
+            raise 'ContainerNotFound'
+          end
+          true
+        end
+      end
+
+      it 'should create container and retry one time' do
+        expect(blob_service).to receive(:create_container)
+          .with(container_name, {})
+          .and_return(true)
+        expect(blob_service).to receive(:create_page_blob)
+          .twice
+        expect do
+          blob_manager.create_empty_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1, metadata)
+        end.not_to raise_error
+      end
+    end
   end
 
   describe '#create_empty_vhd_blob' do
