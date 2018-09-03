@@ -62,7 +62,7 @@ module Bosh::AzureCloud
         begin
           _upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num, metadata)
         rescue StandardError => e
-          cloud_error("Failed to upload page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
+          cloud_error("Failed to upload page blob: inspect:#{e.inspect}\n backtrace:#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -78,9 +78,9 @@ module Bosh::AzureCloud
           blob_size = blob_size_in_kb * 1024
           options = merge_storage_common_options(options)
           @logger.info("create_empty_page_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
-          @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
+          _create_page_blob(container_name, blob_name, blob_size, options)
         rescue StandardError => e
-          cloud_error("Failed to create empty page blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
+          cloud_error("Failed to create empty page blob: inspect:#{e.inspect}\n backtrace:#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -115,7 +115,7 @@ module Bosh::AzureCloud
           }
           options = merge_storage_common_options(options)
           @logger.info("create_empty_vhd_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
-          @blob_service_client.create_page_blob(container_name, blob_name, blob_size, options)
+          _create_page_blob(container_name, blob_name, blob_size, options)
           blob_created = true
 
           @logger.info('create_empty_vhd_blob: Start to upload vhd footer')
@@ -130,7 +130,7 @@ module Bosh::AzureCloud
             @logger.info("create_empty_vhd_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
             @blob_service_client.delete_blob(container_name, blob_name, options)
           end
-          cloud_error("create_empty_vhd_blob: Failed to create empty vhd blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
+          cloud_error("create_empty_vhd_blob: Failed to create empty vhd blob: inspect:#{e.inspect}\nbacktrace:#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -159,7 +159,7 @@ module Bosh::AzureCloud
           blob = @blob_service_client.get_blob_metadata(container_name, blob_name, options)
           blob.metadata
         rescue StandardError => e
-          cloud_error("get_blob_metadata: #{e.inspect}\n#{e.backtrace.join("\n")}") unless e.message.include?('(404)')
+          cloud_error("get_blob_metadata: inspect:#{e.inspect}\nbacktrace:#{e.backtrace.join("\n")}") unless e.message.include?('(404)')
           nil
         end
       end
@@ -174,7 +174,7 @@ module Bosh::AzureCloud
           @logger.info("set_blob_metadata: Calling set_blob_metadata(#{container_name}, #{blob_name}, #{metadata}, #{options})")
           @blob_service_client.set_blob_metadata(container_name, blob_name, encode_metadata(metadata), options)
         rescue StandardError => e
-          cloud_error("set_blob_metadata: Failed to set the metadata for the blob: #{e.inspect}\n#{e.backtrace.join("\n")}")
+          cloud_error("set_blob_metadata: Failed to set the metadata for the blob: inspect:#{e.inspect}\nbacktrace:#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -296,8 +296,6 @@ module Bosh::AzureCloud
       end
     end
 
-    private
-
     def _set_stemcell_container_acl_to_public(storage_account_name)
       @logger.info("_set_stemcell_container_acl_to_public(#{storage_account_name})")
       @logger.debug("Set the public access level to '#{PUBLIC_ACCESS_LEVEL_BLOB}' for the container '#{STEMCELL_CONTAINER}' in the storage account '#{storage_account_name}'")
@@ -321,7 +319,7 @@ module Bosh::AzureCloud
       }
       options = merge_storage_common_options(options)
       @logger.debug("_upload_page_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{file_size}, #{options})")
-      @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
+      _create_page_blob(container_name, blob_name, file_size, options)
       begin
         _upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
       rescue StandardError => e
@@ -405,6 +403,17 @@ module Bosh::AzureCloud
       end
       threads.each(&:join)
       cloud_error(standard_errors.to_s) unless standard_errors.empty?
+    end
+
+    def _create_page_blob(container_name, blob_name, file_size, options)
+      @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
+    rescue StandardError => e
+      if e.inspect.include?('ContainerNotFound')
+        @blob_service_client.create_container(container_name, {})
+        @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
+      else
+        raise e
+      end
     end
   end
 
