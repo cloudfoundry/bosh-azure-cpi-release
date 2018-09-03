@@ -504,10 +504,7 @@ module Bosh::AzureCloud
             settings['disks']['persistent'] ||= {}
             settings['disks']['persistent'][disk_id.to_s] = {
               'lun'            => lun,
-              'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID,
-
-              # For compatiblity with old stemcells
-              'path'           => _get_disk_path_name(lun.to_i)
+              'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID
             }
           end
 
@@ -698,10 +695,7 @@ module Bosh::AzureCloud
         # Azure uses a data disk as the ephermeral disk and the lun is 0
         settings['disks']['ephemeral'] = {
           'lun'            => '0',
-          'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID,
-
-          # For compatiblity with old stemcells
-          'path'           => _get_disk_path_name(0)
+          'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID
         }
       end
 
@@ -722,14 +716,6 @@ module Bosh::AzureCloud
         settings['use_dhcp'] = true
         [name, settings]
       end.flatten]
-    end
-
-    def _get_disk_path_name(lun)
-      if (lun + 2) < 26
-        "/dev/sd#{('c'.ord + lun).chr}"
-      else
-        "/dev/sd#{('a'.ord + (lun + 2 - 26) / 26).chr}#{('a'.ord + (lun + 2) % 26).chr}"
-      end
     end
   end
 end
