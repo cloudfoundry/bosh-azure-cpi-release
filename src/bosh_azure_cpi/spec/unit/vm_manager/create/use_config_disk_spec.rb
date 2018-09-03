@@ -27,12 +27,11 @@ describe Bosh::AzureCloud::VMManager do
           expect(command_runner).to receive(:run_command).with(/mkfs/).exactly(1).times
           expect(command_runner).to receive(:run_command).with(/sudo -n chown/).exactly(1).times
           expect(command_runner).to receive(:run_command).with(/sudo -n umount/).exactly(1).times
-          expect(command_runner).to receive(:run_command).with(/qemu-img/).exactly(1).times
           expect(command_runner).to receive(:run_command).exactly(2).times.and_call_original
 
           expect(Bosh::AzureCloud::CommandRunner).to receive(:new).and_return(command_runner)
 
-          expect(blob_manager).to receive(:create_page_blob)
+          expect(blob_manager).to receive(:create_vhd_page_blob)
           expect(blob_manager).to receive(:delete_blob)
           expect(blob_manager).to receive(:get_blob_uri)
           expect(disk_manager2).to receive(:create_disk_from_blob)
@@ -49,7 +48,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(command_runner).to receive(:run_command).with(/sudo -n umount/).exactly(1).times
           expect(command_runner).to receive(:run_command).exactly(1).times.and_call_original
 
-          expect(blob_manager).not_to receive(:create_page_blob)
+          expect(blob_manager).not_to receive(:create_vhd_page_blob)
           expect(blob_manager).not_to receive(:delete_blob)
           expect(blob_manager).not_to receive(:get_blob_uri)
           expect(disk_manager2).not_to receive(:create_disk_from_blob)
@@ -66,12 +65,11 @@ describe Bosh::AzureCloud::VMManager do
           expect(command_runner).to receive(:run_command).with(/mkfs/).exactly(1).times
           expect(command_runner).to receive(:run_command).with(/sudo -n chown/).exactly(1).times
           expect(command_runner).to receive(:run_command).with(/sudo -n umount/).exactly(1).times
-          expect(command_runner).to receive(:run_command).with(/qemu-img/).exactly(1).times
           expect(command_runner).to receive(:run_command).exactly(2).times.and_call_original
 
           expect(Bosh::AzureCloud::CommandRunner).to receive(:new).and_return(command_runner)
 
-          expect(blob_manager).to receive(:create_page_blob)
+          expect(blob_manager).to receive(:create_vhd_page_blob)
           expect(blob_manager).to receive(:delete_blob)
           expect(blob_manager).to receive(:get_blob_uri)
           expect(disk_manager2).to receive(:create_disk_from_blob).and_raise('create disk failed')

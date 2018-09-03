@@ -265,7 +265,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       it 'raise no error' do
         expect do
-          blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)
+          blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1024)
         end.not_to raise_error
       end
     end
@@ -280,7 +280,7 @@ describe Bosh::AzureCloud::BlobManager do
           expect(blob_service).not_to receive(:delete_blob)
 
           expect do
-            blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)
+            blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1024)
           end.to raise_error /Failed to create empty vhd blob/
         end
       end
@@ -295,8 +295,56 @@ describe Bosh::AzureCloud::BlobManager do
           expect(blob_service).to receive(:delete_blob)
 
           expect do
-            blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1)
+            blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1024)
           end.to raise_error /Failed to create empty vhd blob/
+        end
+      end
+    end
+  end
+
+  describe '#create_vhd_page_blob' do
+    before(:context) do
+      @file_path = '/tmp/fake_image'
+      @empty_chunk_content = Array.new(2 * 1024 * 1024, 0).pack('c*')
+      File.open(@file_path, 'wb') { |f| f.write(@empty_chunk_content) }
+    end
+    after(:context) do
+      File.delete(@file_path) if File.exist?(@file_path)
+    end
+    context 'when creating vhd page blob succeeds' do
+      before do
+        allow(blob_service).to receive(:create_page_blob)
+        allow(blob_service).to receive(:put_blob_pages)
+      end
+      it 'raise no error' do
+        expect do
+          blob_manager.create_vhd_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when creating vhd page blob failed' do
+      context 'page blob created' do
+        before do
+          allow(blob_service).to receive(:create_page_blob)
+          allow(blob_service).to receive(:put_blob_pages).and_raise(StandardError)
+        end
+        it 'page blob should be deleted' do
+          expect(blob_service).to receive(:delete_blob)
+          expect do
+            blob_manager.create_vhd_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
+          end.to raise_error /Failed to upload page blob/
+        end
+      end
+      context 'page blob not created' do
+        before do
+          allow(blob_service).to receive(:create_page_blob).and_raise(StandardError)
+        end
+        it 'page blob should be deleted' do
+          expect(blob_service).not_to receive(:delete_blob)
+          expect do
+            blob_manager.create_vhd_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
+          end.to raise_error /Failed to upload page blob/
         end
       end
     end
