@@ -62,7 +62,7 @@ module Bosh::AzureCloud
 
     def get_stemcell_uri(storage_account_name, name)
       @logger.info("get_stemcell_uri(#{storage_account_name}, #{name})")
-      @blob_manager.get_blob_uri(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
+      @blob_manager.get_sas_blob_uri(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
     end
 
     def get_stemcell_info(storage_account_name, name)
@@ -89,11 +89,6 @@ module Bosh::AzureCloud
           stemcell_meta = Bosh::AzureCloud::StemcellMeta.new(name, storage_account_name, STEMCELL_STATUS_PENDING)
           insert_success = @meta_store.insert_stemcell_meta(stemcell_meta)
           return _wait_stemcell_copy(storage_account_name, name) unless insert_success
-
-          # Create containers if they are missing.
-          # Background: When users create a storage account without containers in it, and use that storage account for a resource pool,
-          #             CPI will try to create related containers when copying stemcell to that storage account.
-          @blob_manager.prepare_containers(storage_account_name, [DISK_CONTAINER, STEMCELL_CONTAINER], false)
 
           @logger.info("Copying stemcell #{name} to #{storage_account_name}")
           source_blob_uri = get_stemcell_uri(@default_storage_account_name, name)

@@ -292,18 +292,16 @@ describe Bosh::AzureCloud::StemcellManager do
         let(:stemcell_container) { 'stemcell' }
         let(:stemcell_blob_uri) { 'fake-blob-url' }
 
-        it 'should try to prepare containers, copy stecmell, and insert/update record to stemcell table' do
+        it 'should try to copy stecmell, and insert/update record to stemcell table' do
           allow(table_manager).to receive(:insert_entity)
             .with(stemcell_table, entity_create)
             .and_return(true)
-          allow(blob_manager).to receive(:get_blob_uri)
+          allow(blob_manager).to receive(:get_sas_blob_uri)
             .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
             .and_return(stemcell_blob_uri)
           allow(table_manager).to receive(:query_entities)
             .and_return(entities_query_before_insert, entities_query_after_insert)
 
-          expect(blob_manager).to receive(:prepare_containers)
-            .with(storage_account_name, %w[bosh stemcell], false)
           expect(blob_manager).to receive(:copy_blob)
             .with(storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
           expect(table_manager).to receive(:update_entity)
@@ -345,7 +343,7 @@ describe Bosh::AzureCloud::StemcellManager do
     let(:stemcell_blob_uri) { 'fake-blob-url' }
 
     before do
-      allow(blob_manager).to receive(:get_blob_uri)
+      allow(blob_manager).to receive(:get_sas_blob_uri)
         .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
         .and_return(stemcell_blob_uri)
     end
