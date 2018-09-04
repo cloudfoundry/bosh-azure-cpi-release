@@ -12,7 +12,6 @@ GEM
       azure-core (~> 0.1)
       faraday (~> 0.9)
       faraday_middleware (~> 0.10)
-    bit-struct (0.16)
     bosh_common (1.3262.24.0)
       logging (~> 1.8.2)
       semi_semantic (~> 1.2.0)
@@ -80,8 +79,6 @@ GEM
       simplecov-html (~> 0.10.0)
     simplecov-html (0.10.2)
     unicode-display_width (1.4.0)
-    vhd (0.0.4)
-      bit-struct
     webmock (3.0.1)
       addressable (>= 2.3.6)
       crack (>= 0.3.2)
@@ -100,7 +97,6 @@ DEPENDENCIES
   rspec (~> 3.5.0)
   rubocop (~> 0.57.1)
   simplecov
-  vhd (= 0.0.4)
   webmock
 
 BUNDLED WITH

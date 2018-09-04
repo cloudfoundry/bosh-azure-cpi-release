@@ -29,7 +29,6 @@ module Bosh::AzureCloud
     def _create_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data_obj)
       mounted_dir = nil
       config_disk_file_path = nil
-      config_disk_vhd_file_path = nil
       disk_name = nil
       page_blob_created = false
       command_runner = CommandRunner.new
@@ -70,20 +69,12 @@ module Bosh::AzureCloud
         unmount_cmd = "sudo -n umount #{mounted_dir}"
         command_runner.run_command(unmount_cmd)
         umounted = true
-        # convert the plain file to vhd
-        # TODO check whether qemu-utils is installed or not. if not, install it.
-        config_disk_vhd_file = Tempfile.new(CONFIG_DISK_FILE_PATH_PREFIX)
-        config_disk_vhd_file.close
-        config_disk_vhd_file_path = config_disk_vhd_file.path
-
-        convert_to_vhd_cmd = "qemu-img convert -O vpc -o subformat=fixed #{config_disk_file_path} #{config_disk_vhd_file_path}"
-        command_runner.run_command(convert_to_vhd_cmd)
 
         disk_name = "#{MANAGED_CONFIG_DISK_PREFIX}-#{vm_name}.vhd"
-        @blob_manager.create_page_blob(
+        @blob_manager.create_vhd_page_blob(
           @storage_account_manager.default_storage_account_name,
           CONFIG_DISK_CONTAINER,
-          config_disk_vhd_file_path,
+          config_disk_file_path,
           disk_name,
           {}
         )
@@ -110,7 +101,6 @@ module Bosh::AzureCloud
         end
         ignore_exception { FileUtils.remove_dir(mounted_dir) unless mounted_dir.nil? }
         ignore_exception { FileUtils.rm(config_disk_file_path) unless config_disk_file_path.nil? }
-        ignore_exception { FileUtils.rm(config_disk_vhd_file_path) unless config_disk_vhd_file_path.nil? }
         ignore_exception do
           @blob_manager.delete_blob(@storage_account_manager.default_storage_account_name, CONFIG_DISK_CONTAINER, disk_name) if page_blob_created
         end

@@ -59,9 +59,19 @@ module Bosh::AzureCloud
       @logger.info("create_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name}, #{metadata})")
       # Disable debug_mode because we never want to print the content of VHD in the logs
       _initialize_blob_client(storage_account_name, true) do
+        blob_created = false
         begin
-          _upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num, metadata)
+          file_size = File.lstat(file_path).size
+          options = {
+            timeout: TIMEOUT_FOR_BLOB_OPERATIONS,
+            metadata: encode_metadata(metadata)
+          }
+          _create_page_blob(container_name, blob_name, file_size, options)
+          blob_created = true
+
+          _upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num)
         rescue StandardError => e
+          @blob_service_client.delete_blob(container_name, blob_name, options) if blob_created
           cloud_error("Failed to upload page blob: inspect:#{e.inspect}\n backtrace:#{e.backtrace.join("\n")}")
         end
       end
@@ -76,11 +86,46 @@ module Bosh::AzureCloud
             metadata: encode_metadata(metadata)
           }
           blob_size = blob_size_in_kb * 1024
-          options = merge_storage_common_options(options)
-          @logger.info("create_empty_page_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
+          @logger.info("create_empty_page_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
           _create_page_blob(container_name, blob_name, blob_size, options)
         rescue StandardError => e
           cloud_error("Failed to create empty page blob: inspect:#{e.inspect}\n backtrace:#{e.backtrace.join("\n")}")
+        end
+      end
+    end
+
+    def create_vhd_page_blob(storage_account_name, container_name, file_path, blob_name, metadata)
+      @logger.info("create_vhd_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name}, #{metadata})")
+      _initialize_blob_client(storage_account_name, true) do
+        blob_created = false
+        begin
+          # create page blob first
+          vhd_size = File.lstat(file_path).size
+
+          options = {
+            timeout: TIMEOUT_FOR_BLOB_OPERATIONS,
+            metadata: encode_metadata(metadata)
+          }
+          blob_size = vhd_size + 512
+          @logger.info("create_vhd_page_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
+          _create_page_blob(container_name, blob_name, blob_size, options)
+
+          blob_created = true
+          # upload page blob
+          _upload_page_blob(container_name, blob_name, file_path, @parallel_upload_thread_num)
+
+          options = merge_storage_common_options
+          # write the vhd footer.
+          @logger.info("create_vhd_page_blob: Calling put_blob_pages(#{container_name}, #{blob_name}, #{vhd_size}, #{blob_size - 1}, [VHD-FOOTER], #{options})")
+          vhd_footer = VHDUtils.generate_footer(vhd_size).values.join
+          @blob_service_client.put_blob_pages(container_name, blob_name, vhd_size, blob_size - 1, vhd_footer, options)
+        rescue StandardError => e
+          if blob_created
+            options = merge_storage_common_options
+            @logger.info("create_vhd_page_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
+            @blob_service_client.delete_blob(container_name, blob_name, options)
+          end
+          cloud_error("Failed to upload page blob: inspect:#{e.inspect}\n backtrace:#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -99,22 +144,14 @@ module Bosh::AzureCloud
       _initialize_blob_client(storage_account_name) do
         begin
           @logger.info('create_empty_vhd_blob: Start to generate vhd footer')
-          opts = {
-            type: :fixed,
-            name: '/tmp/footer.vhd', # Only used to initialize Vhd, no local file is generated.
-            size: blob_size_in_gb
-          }
-          vhd_footer = Vhd::Library.new(opts).footer.values.join
-
-          # Reference Virtual Hard Disk Image Format Specification
-          # http://download.microsoft.com/download/f/f/e/ffef50a5-07dd-4cf8-aaa3-442c0673a029/Virtual%20Hard%20Disk%20Format%20Spec_10_18_06.doc
           vhd_size = blob_size_in_gb * 1024 * 1024 * 1024
+
+          vhd_footer = VHDUtils.generate_footer(vhd_size).values.join
           blob_size = vhd_size + 512
           options = {
             timeout: TIMEOUT_FOR_BLOB_OPERATIONS
           }
-          options = merge_storage_common_options(options)
-          @logger.info("create_empty_vhd_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
+          @logger.info("create_empty_vhd_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
           _create_page_blob(container_name, blob_name, blob_size, options)
           blob_created = true
 
@@ -309,27 +346,13 @@ module Bosh::AzureCloud
       end
     end
 
-    def _upload_page_blob(container_name, blob_name, file_path, thread_num, metadata)
-      @logger.info("_upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num}, #{metadata})")
+    def _upload_page_blob(container_name, blob_name, file_path, thread_num)
+      @logger.info("_upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num})")
       start_time = Time.new
       file_size = File.lstat(file_path).size
-      options = {
-        timeout: TIMEOUT_FOR_BLOB_OPERATIONS,
-        metadata: encode_metadata(metadata)
-      }
-      options = merge_storage_common_options(options)
-      @logger.debug("_upload_page_blob: Calling create_page_blob(#{container_name}, #{blob_name}, #{file_size}, #{options})")
-      _create_page_blob(container_name, blob_name, file_size, options)
-      begin
-        _upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
-      rescue StandardError => e
-        options = merge_storage_common_options
-        @logger.debug("_upload_page_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
-        @blob_service_client.delete_blob(container_name, blob_name, options)
-        raise e
-      end
+      _upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
       duration = Time.new - start_time
-      @logger.info("Duration: #{duration.inspect}")
+      @logger.info("_upload_page_blob_in_threads Duration: #{duration.inspect}")
     end
 
     def _initialize_blob_client(storage_account_name, disable_debug_mode = false)
@@ -406,6 +429,7 @@ module Bosh::AzureCloud
     end
 
     def _create_page_blob(container_name, blob_name, file_size, options)
+      options = merge_storage_common_options(options)
       @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
     rescue StandardError => e
       if e.inspect.include?('ContainerNotFound')
