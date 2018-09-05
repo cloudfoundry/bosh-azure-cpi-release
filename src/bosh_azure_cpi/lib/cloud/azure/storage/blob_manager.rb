@@ -29,6 +29,20 @@ module Bosh::AzureCloud
       end
     end
 
+    def get_sas_blob_uri(storage_account_name, container_name, blob_name)
+      @logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
+      _initialize_blob_client(storage_account_name) do
+        storage_account = @storage_accounts[storage_account_name]
+        generator = Azure::Storage::Core::Auth::SharedAccessSignature.new(storage_account_name, storage_account[:key])
+        token = generator.generate_service_sas_token(
+          "#{container_name}/#{blob_name}",
+          service: 'b', resource: 'b', permissions: 'r', protocol: 'https',
+          expiry: (Time.new + 3600 * 24 * 7).utc.iso8601 # one week is enough for copy blob and so on.
+        )
+        "#{@azure_storage_client.storage_blob_host}/#{container_name}/#{blob_name}?#{token}"
+      end
+    end
+
     def get_blob_uri(storage_account_name, container_name, blob_name)
       @logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do
@@ -300,51 +314,7 @@ module Bosh::AzureCloud
       end
     end
 
-    # Prepare containers in the storage account
-    # @param [string]  storage_account_name       - storage account name
-    # @param [Array]   containers                 - container names to be created
-    # @param [Boolean] is_default_storage_account - the storage account is the default storage account
-    # @return [void]
-    #
-    def prepare_containers(storage_account_name, containers, is_default_storage_account)
-      @logger.info("prepare_containers(#{storage_account_name}, #{containers}, #{is_default_storage_account})")
-      containers.each do |container|
-        @logger.debug("Creating the container '#{container}' in the storage account '#{storage_account_name}'")
-        _create_container(storage_account_name, container)
-      end
-      _set_stemcell_container_acl_to_public(storage_account_name) if is_default_storage_account
-    end
-
     private
-
-    def _create_container(storage_account_name, container_name, options = {})
-      @logger.info("_create_container(#{storage_account_name}, #{container_name}, #{options})")
-      _initialize_blob_client(storage_account_name) do
-        begin
-          options = merge_storage_common_options(options)
-          @logger.info("_create_container: Calling _create_container(#{container_name}, #{options})")
-          @blob_service_client.create_container(container_name, options)
-          true
-        rescue StandardError => e
-          # Still return true if the container is created by others.
-          return true if e.message.include?('ContainerAlreadyExists')
-          cloud_error("_create_container: Failed to create container: #{e.inspect}\n#{e.backtrace.join("\n")}")
-        end
-      end
-    end
-
-    def _set_stemcell_container_acl_to_public(storage_account_name)
-      @logger.info("_set_stemcell_container_acl_to_public(#{storage_account_name})")
-      @logger.debug("Set the public access level to '#{PUBLIC_ACCESS_LEVEL_BLOB}' for the container '#{STEMCELL_CONTAINER}' in the storage account '#{storage_account_name}'")
-      _initialize_blob_client(storage_account_name) do
-        begin
-          options = merge_storage_common_options
-          @blob_service_client.set_container_acl(STEMCELL_CONTAINER, PUBLIC_ACCESS_LEVEL_BLOB, options)
-        rescue StandardError => e
-          cloud_error("_set_stemcell_container_acl_to_public: Failed to set the public access level to '#{PUBLIC_ACCESS_LEVEL_BLOB}': #{e.inspect}\n#{e.backtrace.join("\n")}")
-        end
-      end
-    end
 
     def _upload_page_blob(container_name, blob_name, file_path, thread_num)
       @logger.info("_upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num})")
@@ -433,7 +403,7 @@ module Bosh::AzureCloud
       @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
     rescue StandardError => e
       if e.inspect.include?('ContainerNotFound')
-        @blob_service_client.create_container(container_name, {})
+        @blob_service_client.create_container(container_name, merge_storage_common_options)
         @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
       else
         raise e

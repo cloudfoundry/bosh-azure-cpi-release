@@ -284,7 +284,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
               end
 
               it 'should create a new user image and return the user image information' do
-                expect(blob_manager).not_to receive(:get_blob_uri)
+                expect(blob_manager).not_to receive(:get_sas_blob_uri)
                   .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
                 expect(blob_manager).not_to receive(:copy_blob)
                 expect(stemcell_manager2).to receive(:flock)
@@ -315,7 +315,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
                 end
 
                 it 'should copy the stemcell from default storage account to an existing storage account, create a new user image and return the user image information' do
-                  expect(blob_manager).to receive(:get_blob_uri)
+                  expect(blob_manager).to receive(:get_sas_blob_uri)
                     .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
                     .and_return(stemcell_blob_uri)
                   expect(stemcell_manager2).to receive(:flock)
@@ -335,7 +335,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
               context 'when copying blob raises an error' do
                 before do
-                  allow(blob_manager).to receive(:get_blob_uri)
+                  allow(blob_manager).to receive(:get_sas_blob_uri)
                     .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
                     .and_return(stemcell_blob_uri)
                   expect(blob_manager).to receive(:copy_blob)
@@ -398,7 +398,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
                   .and_return(nil) # The stemcell doesn't exist in the new storage account
 
                 # Copy blob
-                allow(blob_manager).to receive(:get_blob_uri)
+                allow(blob_manager).to receive(:get_sas_blob_uri)
                   .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
                   .and_return(stemcell_blob_uri)
                 allow(blob_manager).to receive(:copy_blob)

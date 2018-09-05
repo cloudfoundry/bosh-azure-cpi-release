@@ -79,8 +79,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
           .and_return(storage_account)
       end
 
-      it 'should try to prepare containers and then return the storage account' do
-        expect(blob_manager).to receive(:prepare_containers)
+      it 'should return the storage account' do
         expect(
           storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
         ).to be(storage_account)
@@ -184,9 +183,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
           allow(azure_client).to receive(:check_storage_account_name_availability).with(name).and_return(result)
         end
 
-        it 'should create the storage account and prepare the containers' do
-          expect(blob_manager).to receive(:prepare_containers)
-            .with(name, containers, is_default_storage_account)
+        it 'should create the storage account' do
           expect(azure_client).to receive(:create_storage_account)
             .with(name, location, type, kind, tags)
           expect(
@@ -210,27 +207,6 @@ describe Bosh::AzureCloud::StorageAccountManager do
           expect do
             storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
           end.to raise_error(/Storage account '#{name}' is not created/)
-        end
-      end
-
-      context 'when it fails to prepare containers' do
-        let(:result) { { available: true } }
-
-        before do
-          allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil, storage_account)
-          allow(azure_client).to receive(:check_storage_account_name_availability).with(name).and_return(result)
-          allow(azure_client).to receive(:create_storage_account)
-            .with(name, location, type, kind, tags)
-            .and_return(true)
-          expect(blob_manager).to receive(:prepare_containers)
-            .with(name, containers, is_default_storage_account)
-            .and_raise('failed to create container')
-        end
-
-        it 'should raise an error' do
-          expect do
-            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
-          end.to raise_error(/failed to create container/)
         end
       end
     end

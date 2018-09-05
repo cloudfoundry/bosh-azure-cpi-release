@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
         let(:last_post_timestamp) { now - 59 }
 
         before do
-          allow(Time).to receive(:now).and_return(now)
+          allow(Time).to receive(:new).and_return(now)
           allow(event_handler).to receive(:get_last_post_timestamp).and_return(last_post_timestamp)
         end
 
@@ -43,7 +43,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
         let(:now) { Time.new.round }
         let(:last_post_timestamp) { now - 61 }
         before do
-          allow(Time).to receive(:now).and_return(now)
+          allow(Time).to receive(:new).and_return(now)
           allow(event_handler).to receive(:get_last_post_timestamp).and_return(last_post_timestamp)
         end
 
