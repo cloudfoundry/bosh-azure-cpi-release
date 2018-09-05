@@ -65,18 +65,6 @@ module Bosh::AzureCloud
           storage_account = find_storage_account_by_name(name)
           cloud_error("Storage account '#{name}' is not created.") if storage_account.nil?
         end
-
-        begin
-          @blob_manager.prepare_containers(name, containers, is_default_storage_account) unless containers.empty?
-        rescue StandardError => e
-          error_msg = 'get_or_create_storage_account - ' \
-                      "The storage account '#{name}' is created successfully.\n" \
-                      "But it failed to prepare the containers '#{containers}'.\n" \
-                      "You need to manually create them if they don't exist.\n"
-          error_msg += "And set the public access level of the container '#{STEMCELL_CONTAINER}' to '#{PUBLIC_ACCESS_LEVEL_BLOB}'.\n" if is_default_storage_account
-          error_msg += "Error: #{e.inspect}\n#{e.backtrace.join("\n")}"
-          raise error_msg
-        end
       end
       storage_account
     end

@@ -79,7 +79,7 @@ module Bosh::AzureCloud
         flock("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", File::LOCK_EX) do
           unless has_stemcell?(storage_account_name, stemcell_name)
             @logger.info("get_user_image: Copying the stemcell from the default storage account '#{default_storage_account_name}' to the storage acccount '#{storage_account_name}'")
-            stemcell_source_blob_uri = @blob_manager.get_blob_uri(default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
+            stemcell_source_blob_uri = get_stemcell_uri(default_storage_account_name, stemcell_name)
             @blob_manager.copy_blob(storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd", stemcell_source_blob_uri)
           end
         end

@@ -451,7 +451,7 @@ describe Bosh::AzureCloud::Helpers do
       allow(cert).to receive(:to_der)
       allow(OpenSSL::Digest::SHA1).to receive(:new).and_return(thumbprint)
       allow(SecureRandom).to receive(:uuid).and_return(jti)
-      allow(Time).to receive(:now).and_return(now)
+      allow(Time).to receive(:new).and_return(now)
       allow(OpenSSL::PKey::RSA).to receive(:new).with(certificate_data).and_return(rsa_private)
     end
 

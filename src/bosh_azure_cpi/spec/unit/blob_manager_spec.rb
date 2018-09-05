@@ -32,12 +32,15 @@ describe Bosh::AzureCloud::BlobManager do
     }
   end
   let(:metadata) { {} }
+  let(:sas_generator) { instance_double(Azure::Storage::Core::Auth::SharedAccessSignature) }
 
   before do
     allow(Azure::Storage::Client).to receive(:create)
       .and_return(azure_storage_client)
     allow(Bosh::AzureCloud::AzureClient).to receive(:new)
       .and_return(azure_client)
+    allow(Azure::Storage::Core::Auth::SharedAccessSignature).to receive(:new)
+      .and_return(sas_generator)
     allow(azure_client).to receive(:get_storage_account_keys_by_name)
       .and_return(keys)
     allow(azure_client).to receive(:get_storage_account_by_name)
@@ -62,6 +65,26 @@ describe Bosh::AzureCloud::BlobManager do
       expect do
         blob_manager.delete_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
       end.not_to raise_error
+    end
+  end
+
+  describe '#get_sas_blob_uri' do
+    let(:now) { Time.new }
+    let(:mock_sas_token) { 'mock_sas_token' }
+    before do
+      allow(Time).to receive(:new).and_return(now)
+      allow(sas_generator).to receive(:generate_service_sas_token)
+        .with(
+          "#{container_name}/#{blob_name}",
+          service: 'b', resource: 'b', permissions: 'r', protocol: 'https',
+          expiry: (now + 3600 * 24 * 7).utc.iso8601
+        ).and_return(mock_sas_token)
+    end
+
+    it 'gets the sas uri of the blob' do
+      expect(
+        blob_manager.get_sas_blob_uri(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
+      ).to eq("#{blob_host}/#{container_name}/#{blob_name}?#{mock_sas_token}")
     end
   end
 
@@ -232,6 +255,11 @@ describe Bosh::AzureCloud::BlobManager do
     end
 
     context 'when container not exists' do
+      let(:options) do
+        {
+          request_id: request_id
+        }
+      end
       before do
         times = 0
         allow(blob_service).to receive(:create_page_blob) do
@@ -245,7 +273,7 @@ describe Bosh::AzureCloud::BlobManager do
 
       it 'should create container and retry one time' do
         expect(blob_service).to receive(:create_container)
-          .with(container_name, {})
+          .with(container_name, options)
           .and_return(true)
         expect(blob_service).to receive(:create_page_blob)
           .twice
@@ -741,89 +769,6 @@ describe Bosh::AzureCloud::BlobManager do
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
           end.to raise_error %r{The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted}
         end
-      end
-    end
-  end
-
-  describe '#prepare_containers' do
-    let(:another_storage_account_name) { 'another-storage-account-name' }
-    let(:containers) { [container_name] }
-    let(:another_storage_account) do
-      {
-        id: 'foo',
-        name: another_storage_account_name,
-        location: 'bar',
-        provisioning_state: 'bar',
-        account_type: 'foo',
-        storage_blob_host: "https://another-storage-account.blob.#{storage_dns_suffix}"
-      }
-    end
-
-    before do
-      allow(azure_client).to receive(:get_storage_account_by_name)
-        .with(another_storage_account_name)
-        .and_return(another_storage_account)
-    end
-
-    context 'when the storage account is default storage account' do
-      it 'creates the container, and set the acl' do
-        expect(blob_service).to receive(:create_container)
-          .with(container_name, options)
-          .and_return(true)
-        expect(blob_service).to receive(:set_container_acl).with('stemcell', 'blob', options)
-
-        expect do
-          blob_manager.prepare_containers(another_storage_account_name, containers, true)
-        end.not_to raise_error
-      end
-    end
-
-    context 'when the storage account is not default storage account' do
-      it "creates the container, and doesn't set the acl" do
-        expect(blob_service).to receive(:create_container)
-          .with(container_name, options)
-          .and_return(true)
-        expect(blob_service).not_to receive(:set_container_acl)
-
-        expect do
-          blob_manager.prepare_containers(another_storage_account_name, containers, false)
-        end.not_to raise_error
-      end
-    end
-
-    context 'when container alreay exists' do
-      it 'should succeed without error' do
-        expect(blob_service).to receive(:create_container)
-          .with(container_name, options)
-          .and_raise('ContainerAlreadyExists')
-        expect do
-          blob_manager.prepare_containers(another_storage_account_name, containers, false)
-        end.not_to raise_error
-      end
-    end
-
-    context 'when create container failed' do
-      it 'should got exception' do
-        expect(blob_service).to receive(:create_container)
-          .with(container_name, options)
-          .and_raise('COontainerAlreadyExists')
-        expect do
-          blob_manager.prepare_containers(another_storage_account_name, containers, false)
-        end.to raise_error /_create_container: Failed to create container/
-      end
-    end
-
-    context 'when set stemcell container to public failed' do
-      it 'should got exception' do
-        expect(blob_service).to receive(:create_container)
-          .with(container_name, options)
-          .and_return(true)
-        expect(blob_service).to receive(:set_container_acl)
-          .with('stemcell', 'blob', options)
-          .and_raise('failed')
-        expect do
-          blob_manager.prepare_containers(another_storage_account_name, containers, true)
-        end.to raise_error /_set_stemcell_container_acl_to_public: Failed to set the public access level to 'blob'/
       end
     end
   end
