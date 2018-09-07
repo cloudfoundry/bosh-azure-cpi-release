@@ -32,7 +32,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#update_tags_of_virtual_machine' do
-    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
+    let(:vm_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
 
     context 'when the virtual machine is found' do
       context "when VM's information contains tags" do

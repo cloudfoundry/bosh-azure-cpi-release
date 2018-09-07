@@ -32,7 +32,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#create_user_image' do
-    let(:image_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
+    let(:image_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
 
     let(:image_params) do
       {
@@ -94,7 +94,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#get_user_image_by_name' do
-    let(:image_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
+    let(:image_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
 
     let(:response_body) do
       {
@@ -143,7 +143,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#list_user_images' do
-    let(:images_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images?api-version=#{api_version_compute}" }
+    let(:images_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images?api-version=#{api_version_compute}" }
 
     let(:response_body) do
       {
@@ -218,7 +218,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#delete_user_image' do
-    let(:image_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
+    let(:image_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/images/#{image_name}?api-version=#{api_version_compute}" }
 
     context 'when token is valid, delete operation is accepted and completed' do
       it 'should delete the managed image without error' do

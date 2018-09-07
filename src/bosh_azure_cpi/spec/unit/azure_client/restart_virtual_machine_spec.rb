@@ -33,7 +33,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#restart_virtual_machine' do
-    let(:vm_restart_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}/restart?api-version=#{api_version_compute}" }
+    let(:vm_restart_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}/restart?api-version=#{api_version_compute}" }
 
     context 'when token is valid, restart operation is accepted and completed' do
       it 'should raise no error' do

@@ -32,7 +32,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#create_network_interface' do
-    let(:network_interface_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces/#{nic_name}?api-version=#{api_version_network}" }
+    let(:network_interface_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces/#{nic_name}?api-version=#{api_version_network}" }
 
     let(:nic_name) { 'fake-nic-name' }
     let(:nsg_id) { 'fake-nsg-id' }
