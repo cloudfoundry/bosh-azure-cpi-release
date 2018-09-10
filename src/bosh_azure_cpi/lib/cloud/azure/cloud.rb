@@ -150,6 +150,7 @@ module Bosh::AzureCloud
             bosh_vm_meta,
             location,
             vm_props,
+            disk_cids,
             network_configurator,
             environment
           )

@@ -131,7 +131,7 @@ describe Bosh::AzureCloud::Cloud do
 
       it 'should create the VM in the specified resource group' do
         expect(vm_manager).to receive(:create)
-          .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+          .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment)
           .and_return([instance_id, vm_params])
         expect(registry_client).to receive(:update_settings)
 
@@ -237,7 +237,7 @@ describe Bosh::AzureCloud::Cloud do
 
           it 'should create the VM in the specified resource group' do
             expect(vm_manager).to receive(:create)
-              .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+              .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment)
               .and_return([instance_id, vm_params])
             expect(registry_client).to receive(:update_settings)
 
@@ -350,7 +350,7 @@ describe Bosh::AzureCloud::Cloud do
             .with('create_vm', id: agent_id, extras: { 'instance_types' => instance_types })
             .and_call_original
           expect(vm_manager).to receive(:create)
-            .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+            .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment)
             .and_return([instance_id, vm_params])
           expect(registry_client).to receive(:update_settings)
 
@@ -379,7 +379,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should create the VM in the specified resource group' do
           expect(vm_manager).to receive(:create)
-            .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+            .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment)
             .and_return([instance_id, vm_params])
           expect(registry_client).to receive(:update_settings)
 

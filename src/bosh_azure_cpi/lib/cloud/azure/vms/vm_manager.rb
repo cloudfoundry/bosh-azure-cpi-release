@@ -19,9 +19,9 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(bosh_vm_meta, location, vm_props, network_configurator, env)
+    def create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
-      @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props}, ..., ...)")
+      @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props}, #{disk_cids}, ..., ...)")
 
       instance_id = _build_instance_id(bosh_vm_meta, location, vm_props)
       resource_group_name = vm_props.resource_group_name
@@ -33,17 +33,37 @@ module Bosh::AzureCloud
       if zone.nil?
         availability_set_name = _get_availability_set_name(vm_props, env)
         if vm_props.instance_type.nil?
-          backup_instance_types = vm_props.instance_types.dup
-          @logger.debug("The cloud property 'instance_type' is nil. Will select one from '#{backup_instance_types}', which are returned by calculate_vm_cloud_properties.")
+          calculated_instance_types = vm_props.instance_types.dup
+          @logger.debug("The cloud property 'instance_type' is nil. Will select one from '#{calculated_instance_types}', which are returned by calculate_vm_cloud_properties.")
+
+          is_persistent_disk_premium = false
+          disk_cids&.each do |disk_cid|
+            disk_id = DiskId.parse(disk_cid, @azure_config.resource_group_name)
+            disk = @disk_manager2.get_data_disk(disk_id)
+            if disk[:sku_tier] == SKU_TIER_PREMIUM
+              is_persistent_disk_premium = true
+              break
+            end
+          end
+          if is_persistent_disk_premium
+            calculated_instance_types = calculated_instance_types.select do |calculated_instance_type|
+              support_premium_storage?(calculated_instance_type)
+            end
+            @logger.debug("The disk that created VM will be attached is a Premium disk. One of the instance types '#{calculated_instance_types}' which support Premium storage will be used.")
+          end
+
           availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
           unless availability_set.nil?
             available_vm_sizes = @azure_client.list_available_virtual_machine_sizes_by_availability_set(resource_group_name, availability_set_name)
             available_vm_sizes = available_vm_sizes.map { |available_vm_size| available_vm_size[:name] }
-            backup_instance_types = backup_instance_types.select do |back_instance_type|
-              available_vm_sizes.include?(back_instance_type)
+            @logger.debug("The availability set '#{availability_set_name}' supports VM sizes '#{available_vm_sizes}'")
+            calculated_instance_types = calculated_instance_types.select do |calculated_instance_type|
+              available_vm_sizes.include?(calculated_instance_type)
             end
           end
-          vm_props.instance_type = backup_instance_types[0]
+
+          cloud_error('No available instance type is found') if calculated_instance_types.empty?
+          vm_props.instance_type = calculated_instance_types[0]
         end
       else
         availability_set_name = nil

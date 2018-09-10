@@ -1904,6 +1904,7 @@ module Bosh::AzureCloud
         managed_disk[:location]  = result['location']
         managed_disk[:tags]      = result['tags']
         managed_disk[:sku_name]  = result['sku']['name']
+        managed_disk[:sku_tier]  = result['sku']['tier']
         managed_disk[:zone]      = result['zones'][0] unless result['zones'].nil?
         properties = result['properties']
         managed_disk[:provisioning_state] = properties['provisioningState']
