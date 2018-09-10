@@ -38,127 +38,98 @@ module Bosh::AzureCloud
     end
 
     ##
-    # Creates a stemcell
+    # Returns information about the CPI to help the Director to make decisions
+    # on which CPI to call for certain operations in a multi CPI scenario.
     #
-    # @param [String] image_path path to an opaque blob containing the stemcell image
-    # @param [Hash] stemcell_properties properties required for creating this template
-    #               specific to a CPI
-    # @return [String] opaque id later used by {#create_vm} and {#delete_stemcell}
-    def create_stemcell(image_path, stemcell_properties)
-      with_thread_name("create_stemcell(#{image_path}, #{stemcell_properties})") do
+    # @return [Hash] Only one key 'stemcell_formats' is supported, which are stemcell formats supported by the CPI.
+    #                Currently used in combination with create_stemcell by the Director to determine which CPI to call when uploading a stemcell.
+    #
+    # @See https://www.bosh.io/docs/cpi-api-v1-method/info/
+    #
+    def info
+      @telemetry_manager.monitor('info') do
+        {
+          'stemcell_formats' => %w[azure-vhd azure-light]
+        }
+      end
+    end
+
+    ##
+    # Creates a reusable VM image in the IaaS from the stemcell image. It's used later for creating VMs.
+    #
+    # @param [String] image_path       Path to the stemcell image extracted from the stemcell tarball on a local filesystem.
+    # @param [Hash]   cloud_properties Cloud properties hash extracted from the stemcell tarball.
+    #
+    # @return [String] stemcell_cid Cloud ID of the created stemcell. It's used later by create_vm and delete_stemcell.
+    #
+    # @See https://www.bosh.io/docs/cpi-api-v1-method/create-stemcell/
+    #
+    def create_stemcell(image_path, cloud_properties)
+      with_thread_name("create_stemcell(#{image_path}, #{cloud_properties})") do
         extras = {
-          'stemcell' => "#{stemcell_properties.fetch('name', 'unknown_name')}-#{stemcell_properties.fetch('version', 'unknown_version')}"
+          'stemcell' => "#{cloud_properties.fetch('name', 'unknown_name')}-#{cloud_properties.fetch('version', 'unknown_version')}"
         }
         @telemetry_manager.monitor('create_stemcell', extras: extras) do
-          if has_light_stemcell_property?(stemcell_properties)
-            @light_stemcell_manager.create_stemcell(stemcell_properties)
+          if has_light_stemcell_property?(cloud_properties)
+            @light_stemcell_manager.create_stemcell(cloud_properties)
           elsif @use_managed_disks
-            @stemcell_manager2.create_stemcell(image_path, stemcell_properties)
+            @stemcell_manager2.create_stemcell(image_path, cloud_properties)
           else
-            @stemcell_manager.create_stemcell(image_path, stemcell_properties)
+            @stemcell_manager.create_stemcell(image_path, cloud_properties)
           end
         end
       end
     end
 
     ##
-    # Deletes a stemcell
+    # Deletes previously created stemcell. Assume that none of the VMs require presence of the stemcell.
     #
-    # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
+    # @param [String] stemcell_cid Cloud ID of the stemcell to delete; returned from create_stemcell.
+    #
     # @return [void]
-    def delete_stemcell(stemcell_id)
-      with_thread_name("delete_stemcell(#{stemcell_id})") do
-        @telemetry_manager.monitor('delete_stemcell', id: stemcell_id) do
-          if is_light_stemcell_id?(stemcell_id)
-            @light_stemcell_manager.delete_stemcell(stemcell_id)
+    #
+    # @See https://www.bosh.io/docs/cpi-api-v1-method/delete-stemcell/
+    #
+    def delete_stemcell(stemcell_cid)
+      with_thread_name("delete_stemcell(#{stemcell_cid})") do
+        @telemetry_manager.monitor('delete_stemcell', id: stemcell_cid) do
+          if is_light_stemcell_cid?(stemcell_cid)
+            @light_stemcell_manager.delete_stemcell(stemcell_cid)
           elsif @use_managed_disks
-            @stemcell_manager2.delete_stemcell(stemcell_id)
+            @stemcell_manager2.delete_stemcell(stemcell_cid)
           else
-            @stemcell_manager.delete_stemcell(stemcell_id)
+            @stemcell_manager.delete_stemcell(stemcell_cid)
           end
         end
       end
     end
 
     ##
-    # Creates a VM - creates (and powers on) a VM from a stemcell with the proper resources
-    # and on the specified network. When disk locality is present the VM will be placed near
-    # the provided disk so it won't have to move when the disk is attached later.
+    # Creates a new VM based on the stemcell.
+    # Created VM must be powered on and accessible on the provided networks.
+    # Waiting for the VM to finish booting is not required because the Director waits until the Agent on the VM responds back.
+    # Make sure to properly delete created resources if VM cannot be successfully created.
     #
-    # Sample networking config:
-    #  {"network_a" =>
-    #    {
-    #      "netmask"          => "255.255.248.0",
-    #      "ip"               => "172.30.41.40",
-    #      "gateway"          => "172.30.40.1",
-    #      "dns"              => ["172.30.22.153", "172.30.22.154"],
-    #      "default"          => ["dns", "gateway"],
-    #      "cloud_properties" => {
-    #        "virtual_network_name"        => "boshvnet",
-    #        "subnet_name"                 => "BOSH",
-    #        "resource_group_name"         => "rg1",
-    #        "security_group"              => "nsg-bosh",
-    #        "application_security_groups" => ["asg1", "asg2"],
-    #        "ip_forwarding"               => true,
-    #        "accelerated_networking"      => true
-    #      }
-    #    }
-    #  }
+    # @param [String]           agent_id         ID selected by the Director for the VM's agent
+    # @param [String]           stemcell_cid     Cloud ID of the stemcell to use as a base image for new VM,
+    #                                            which was once returned by {#create_stemcell}
+    # @param [Hash]             cloud_properties Cloud properties hash specified in the deployment manifest under VM's resource pool.
+    #                                            https://bosh.io/docs/azure-cpi/#resource-pools
+    # @param [Hash]             networks         Networks hash that specifies which VM networks must be configured.
+    # @param [Array of strings] disk_cids        Array of disk cloud IDs for each disk that created VM will most likely be attached;
+    #                                            they could be used to optimize VM placement so that disks are located nearby.
+    # @param [Hash]             environment      Resource pool's env hash specified in deployment manifest including initial properties added by the BOSH director.
     #
-    # Sample resource pool config (CPI specific):
-    #  {"instance_type" => "Standard_D1"}
-    #  {
-    #    "instance_type" => "Standard_D1",
-    #    "root_disk" => {
-    #      "size" => 50120, # disk size in MiB
-    #    },
-    #    "ephemeral_disk" => {
-    #      "use_root_disk" => false, # Whether to use OS disk to store the ephemeral data
-    #      "size" => 30720, # disk size in MiB
-    #    },
-    #    # storage_account_name may not exist. The default storage account will be used.
-    #    # storage_account_name may be a complete name. It will be used to create the VM.
-    #    # storage_account_name may be a pattern '*xxx*'. CPI will filter all storage accounts under the resource group
-    #    # by the pattern and pick one storage account which has less than 30 disks to create the VM.
-    #    "storage_account_name" => "xxx",
-    #    "storage_account_type" => "Standard_LRS",
-    #    "storage_account_max_disk_number" => 30,
-    #    "availability_zone" => "1",
-    #    "availability_set" => "DEA_set",
-    #    "platform_update_domain_count" => 5,
-    #    "platform_fault_domain_count" => 3,
-    #    "resource_group_name" => "rg1",
-    #    "assign_dynamic_public_ip" => true,
-    #    "security_group" => "nsg-bosh",
-    #    "application_security_groups" => ["asg1", "asg2"],
-    #    "ip_forwarding" => true,
-    #    "accelerated_networking" => true
-    #  }
+    # @return [String] vm_cid Cloud ID of the created VM. Later used by {#attach_disk}, {#detach_disk} and {#delete_vm}.
     #
-    # Sample env config:
-    #  {
-    #    "bosh" => {
-    #      "group" => "group"
-    #    }
-    #  }
+    # @See https://www.bosh.io/docs/cpi-api-v1-method/create-vm/
     #
-    # @param [String] agent_id UUID for the agent that will be used later on by the director
-    #                 to locate and talk to the agent
-    # @param [String] stemcell_id stemcell id that was once returned by {#create_stemcell}
-    # @param [Hash] vm_properties cloud specific properties describing the resources needed
-    #               for this VM
-    # @param [Hash] networks list of networks and their settings needed for this VM
-    # @param [optional, String, Array] disk_locality disk name(s) if known of the disk(s) that will be
-    #                                    attached to this vm
-    # @param [optional, Hash] env environment that will be passed to this vm
-    # @return [String] opaque id later used by {#configure_networks}, {#attach_disk},
-    #                  {#detach_disk}, and {#delete_vm}
-    def create_vm(agent_id, stemcell_id, vm_properties, networks, disk_locality = nil, env = nil)
-      # env may contain credentials so we must not log it
-      @logger.info("create_vm(#{agent_id}, #{stemcell_id}, #{vm_properties}, #{networks}, #{disk_locality}, ...)")
+    def create_vm(agent_id, stemcell_cid, cloud_properties, networks, disk_cids = nil, environment = nil)
+      # environment may contain credentials so we must not log it
+      @logger.info("create_vm(#{agent_id}, #{stemcell_cid}, #{cloud_properties}, #{networks}, #{disk_cids}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        bosh_vm_meta = Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_id)
-        vm_props = @props_factory.parse_vm_props(vm_properties)
+        bosh_vm_meta = Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_cid)
+        vm_props = @props_factory.parse_vm_props(cloud_properties)
         # TODO: move the validation into the factory's methods
         cloud_error("missing required cloud property 'instance_type'.") if vm_props.instance_type.nil?
         cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') if !@use_managed_disks && !vm_props.availability_zone.nil?
@@ -179,7 +150,7 @@ module Bosh::AzureCloud
             location,
             vm_props,
             network_configurator,
-            env
+            environment
           )
 
           @logger.info("Created new vm '#{instance_id}'")
@@ -188,7 +159,7 @@ module Bosh::AzureCloud
             registry_settings = _initial_agent_settings(
               bosh_vm_meta.agent_id,
               networks,
-              env,
+              environment,
               vm_params
             )
             registry.update_settings(instance_id.to_s, registry_settings)
@@ -203,42 +174,244 @@ module Bosh::AzureCloud
     end
 
     ##
-    # Deletes a VM
+    # Deletes the VM.
+    # This method will be called while the VM still has persistent disks attached.
+    # It's important to make sure that IaaS behaves appropriately in this case and properly disassociates persistent disks from the VM.
+    # To avoid losing track of VMs, make sure to raise an error if VM deletion is not absolutely certain.
     #
-    # @param [String] instance_id Instance id that was once returned by {#create_vm}
+    # @param [String] vm_cid Cloud ID of the VM to delete; returned from create_vm.
+    #
     # @return [void]
-    def delete_vm(instance_id)
-      with_thread_name("delete_vm(#{instance_id})") do
-        @telemetry_manager.monitor('delete_vm', id: instance_id) do
-          @logger.info("Deleting instance '#{instance_id}'")
-          @vm_manager.delete(InstanceId.parse(instance_id, _azure_config.resource_group_name))
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/delete-vm/
+    #
+    def delete_vm(vm_cid)
+      with_thread_name("delete_vm(#{vm_cid})") do
+        @telemetry_manager.monitor('delete_vm', id: vm_cid) do
+          @logger.info("Deleting instance '#{vm_cid}'")
+          @vm_manager.delete(InstanceId.parse(vm_cid, _azure_config.resource_group_name))
         end
       end
     end
 
     ##
-    # Checks if a VM exists
+    # Checks for VM presence in the IaaS.
+    # This method is mostly used by the consistency check tool (cloudcheck) to determine if the VM still exists.
     #
-    # @param [String] instance_id Instance id that was once returned by {#create_vm}
-    # @return [Boolean] True if the vm exists
-    def has_vm?(instance_id)
-      with_thread_name("has_vm?(#{instance_id})") do
-        @telemetry_manager.monitor('has_vm?', id: instance_id) do
-          vm = @vm_manager.find(InstanceId.parse(instance_id, _azure_config.resource_group_name))
+    # @param [String] vm_cid Cloud ID of the VM to check; returned from create_vm.
+    #
+    # @return [Boolean] exists True if VM is present.
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/has-vm/
+    #
+    def has_vm?(vm_cid)
+      with_thread_name("has_vm?(#{vm_cid})") do
+        @telemetry_manager.monitor('has_vm?', id: vm_cid) do
+          vm = @vm_manager.find(InstanceId.parse(vm_cid, _azure_config.resource_group_name))
           !vm.nil? && vm[:provisioning_state] != 'Deleting'
         end
       end
     end
 
     ##
-    # Checks if a disk exists
+    # Reboots the VM. Assume that VM can be either be powered on or off at the time of the call.
+    # Waiting for the VM to finish rebooting is not required because the Director waits until the Agent on the VM responds back.
     #
-    # @param [String] disk disk_id that was once returned by {#create_disk}
-    # @return [Boolean] True if the disk exists
-    def has_disk?(disk_id)
-      with_thread_name("has_disk?(#{disk_id})") do
-        @telemetry_manager.monitor('has_disk?', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, _azure_config.resource_group_name)
+    # @param [String] vm_cid Cloud ID of the VM to reboot; returned from create_vm.
+    #
+    # @return [void]
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/reboot-vm/
+    #
+    def reboot_vm(vm_cid)
+      with_thread_name("reboot_vm(#{vm_cid})") do
+        @telemetry_manager.monitor('reboot_vm', id: vm_cid) do
+          @vm_manager.reboot(InstanceId.parse(vm_cid, _azure_config.resource_group_name))
+        end
+      end
+    end
+
+    ##
+    # Sets VM's metadata to make it easier for operators to categorize VMs when looking at the IaaS management console.
+    #
+    # @param [String] vm_cid   Cloud ID of the VM to modify; returned from create_vm.
+    # @param [Hash]   metadata Collection of key-value pairs. CPI should not rely on presence of specific keys.
+    #
+    # @return [void]
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/set-vm-metadata/
+    #
+    def set_vm_metadata(vm_cid, metadata)
+      with_thread_name("set_vm_metadata(#{vm_cid})") do
+        @telemetry_manager.monitor('set_vm_metadata', id: vm_cid) do
+          @logger.info("set_vm_metadata(#{vm_cid}, #{metadata})")
+          @vm_manager.set_metadata(InstanceId.parse(vm_cid, _azure_config.resource_group_name), encode_metadata(metadata))
+        end
+      end
+    end
+
+    ##
+    # Returns a hash that can be used as VM cloud_properties when calling create_vm; it describes the IaaS instance type closest to the arguments passed.
+    #
+    # @param  [Hash] desired_instance_size Parameters of the desired size of the VM consisting of the following keys:
+    #                                      cpu [Integer]: Number of virtual cores desired
+    #                                      ram [Integer]: Amount of RAM, in MiB (i.e. 4096 for 4 GiB)
+    #                                      ephemeral_disk_size [Integer]: Size of ephemeral disk, in MB
+    #
+    # @return [Hash] cloud_properties an IaaS-specific set of cloud properties that define the size of the VM.
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/calculate-vm-cloud-properties/
+    #
+    def calculate_vm_cloud_properties(desired_instance_size)
+      with_thread_name("calculate_vm_cloud_properties(#{desired_instance_size})") do
+        @telemetry_manager.monitor('calculate_vm_cloud_properties') do
+          @logger.info("calculate_vm_cloud_properties(#{desired_instance_size})")
+          location = _azure_config.location
+          cloud_error("Missing the property 'location' in the global configuration") if location.nil?
+
+          required_keys = %w[cpu ram ephemeral_disk_size]
+          missing_keys = required_keys.reject { |key| desired_instance_size[key] }
+          unless missing_keys.empty?
+            missing_keys.map! { |k| "'#{k}'" }
+            raise "Missing VM cloud properties: #{missing_keys.join(', ')}"
+          end
+
+          available_vm_sizes = @azure_client.list_available_virtual_machine_sizes(location)
+          instance_type = @instance_type_mapper.map(desired_instance_size, available_vm_sizes)
+          {
+            'instance_type' => instance_type,
+            'ephemeral_disk' => {
+              'size' => (desired_instance_size['ephemeral_disk_size'] / 1024.0).ceil * 1024
+            }
+          }
+        end
+      end
+    end
+
+    ##
+    # Creates disk with specific size. Disk does not belong to any given VM.
+    #
+    # @param [Integer]          size             Size of the disk in MiB.
+    # @param [Hash]             cloud_properties Cloud properties hash specified in the deployment manifest under the disk pool.
+    #                                            https://bosh.io/docs/azure-cpi/#disk-pools
+    # @param [optional, String] vm_cid           Cloud ID of the VM created disk will most likely be attached;
+    #                                            it could be used to .optimize disk placement so that disk is located near the VM.
+    #
+    # @return [String] disk_cid Cloud ID of the created disk. It's used later by attach_disk, detach_disk, and delete_disk.
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/create-disk/
+    #
+    def create_disk(size, cloud_properties, vm_cid = nil)
+      with_thread_name("create_disk(#{size}, #{cloud_properties})") do
+        id = vm_cid.nil? ? '' : vm_cid
+        extras = { 'disk_size' => size }
+        @telemetry_manager.monitor('create_disk', id: id, extras: extras) do
+          validate_disk_size(size)
+          disk_id = nil
+          if @use_managed_disks
+            if vm_cid.nil?
+              # If instance_id is nil, the managed disk will be created in the resource group location.
+              resource_group_name = _azure_config.resource_group_name
+              resource_group = @azure_client.get_resource_group(resource_group_name)
+              location = resource_group[:location]
+              default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
+              zone = nil
+            else
+              instance_id = InstanceId.parse(vm_cid, _azure_config.resource_group_name)
+              cloud_error('Cannot create a managed disk for a VM with unmanaged disks') unless instance_id.use_managed_disks?
+              resource_group_name = instance_id.resource_group_name
+              # If the instance is a managed VM, the managed disk will be created in the location of the VM.
+              vm = @azure_client.get_virtual_machine_by_name(resource_group_name, instance_id.vm_name)
+              location = vm[:location]
+              instance_type = vm[:vm_size]
+              zone = vm[:zone]
+              default_storage_account_type = get_storage_account_type_by_instance_type(instance_type)
+            end
+            storage_account_type = cloud_properties.fetch('storage_account_type', default_storage_account_type)
+            caching = cloud_properties.fetch('caching', 'None')
+            validate_disk_caching(caching)
+            disk_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
+            @disk_manager2.create_disk(disk_id, location, size / 1024, storage_account_type, zone)
+          else
+            storage_account_name = _azure_config.storage_account_name
+            caching = cloud_properties.fetch('caching', 'None')
+            validate_disk_caching(caching)
+            unless vm_cid.nil?
+              instance_id = InstanceId.parse(vm_cid, _azure_config.resource_group_name)
+              @logger.info("Create disk for vm '#{instance_id.vm_name}'")
+              storage_account_name = instance_id.storage_account_name
+            end
+            disk_id = DiskId.create(caching, false, storage_account_name: storage_account_name)
+            @disk_manager.create_disk(disk_id, size / 1024)
+          end
+          disk_id.to_s
+        end
+      end
+    end
+
+    ##
+    # Deletes disk. Assume that disk was detached from all VMs.
+    # To avoid losing track of disks, make sure to raise an error if disk deletion is not absolutely certain.
+    #
+    # @param [String] disk_cid Cloud ID of the disk to delete; returned from create_disk.
+    #
+    # @return [void]
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/delete-disk/
+    #
+    def delete_disk(disk_cid)
+      with_thread_name("delete_disk(#{disk_cid})") do
+        @telemetry_manager.monitor('delete_disk', id: disk_cid) do
+          disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
+          if @use_managed_disks
+            # A managed disk may be created from an old blob disk, so its name still starts with 'bosh-data' instead of 'bosh-disk-data'
+            # CPI checks whether the managed disk with the name exists. If not, delete the old blob disk.
+            unless disk_id.disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
+              disk = @disk_manager2.get_data_disk(disk_id)
+              return @disk_manager.delete_data_disk(disk_id) if disk.nil?
+            end
+            @disk_manager2.delete_data_disk(disk_id)
+          else
+            @disk_manager.delete_data_disk(disk_id)
+          end
+        end
+      end
+    end
+
+    ##
+    # Resizes disk with IaaS-native methods. Assume that disk was detached from all VMs.
+    # Set property director.enable_cpi_resize_disk to true to have the Director call this method.
+    # Depending on the capabilities of the underlying infrastructure, this method may raise an
+    # Bosh::Clouds::NotSupported error when the new_size is smaller than the current disk size.
+    # The same error is raised when the method is not implemented.
+    # If Bosh::Clouds::NotSupported is raised, the Director falls back to creating a new disk and copying data.
+    #
+    # @param [String]  disk_cid Cloud ID of the disk to check; returned from create_disk.
+    # @param [Integer] new_size New disk size in MiB.
+    #
+    # @return [void]
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/resize-disk/
+    #
+    def resize_disk(disk_cid, new_size)
+      @logger.info("resize_disk(#{disk_cid}, #{new_size})")
+      raise Bosh::Clouds::NotSupported
+    end
+
+    ##
+    # Checks for disk presence in the IaaS.
+    # This method is mostly used by the consistency check tool (cloudcheck) to determine if the disk still exists.
+    #
+    # @param [String] disk_cid Cloud ID of the disk to check; returned from create_disk.
+    #
+    # @return [Boolean] True if disk is present.
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/has-disk/
+    #
+    def has_disk?(disk_cid)
+      with_thread_name("has_disk?(#{disk_cid})") do
+        @telemetry_manager.monitor('has_disk?', id: disk_cid) do
+          disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
           if disk_id.disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
             return @disk_manager2.has_data_disk?(disk_id)
           else
@@ -261,179 +434,27 @@ module Bosh::AzureCloud
     end
 
     ##
-    # Reboots a VM
+    # Attaches disk to the VM.
+    # Typically each VM will have one disk attached at a time to store persistent data;
+    # however, there are important cases when multiple disks may be attached to a VM.
+    # Most common scenario involves persistent data migration from a smaller to a larger disk.
+    # Given a VM with a smaller disk attached, the operator decides to increase the disk size for that VM,
+    # so new larger disk is created, it is then attached to the VM.
+    # The Agent then copies over the data from one disk to another, and smaller disk subsequently is detached and deleted.
+    # Agent settings should have been updated with necessary information about given disk.
     #
-    # @param [String] instance_id Instance id that was once returned by {#create_vm}
-    # @param [Optional, Hash] options CPI specific options (e.g hard/soft reboot)
+    # @param [String] vm_cid   Cloud ID of the VM.
+    # @param [String] disk_cid Cloud ID of the disk.
+    #
     # @return [void]
-    def reboot_vm(instance_id, options = nil)
-      with_thread_name("reboot_vm(#{instance_id}, #{options})") do
-        @telemetry_manager.monitor('reboot_vm', id: instance_id) do
-          @vm_manager.reboot(InstanceId.parse(instance_id, _azure_config.resource_group_name))
-        end
-      end
-    end
-
-    ##
-    # Set metadata for a VM
     #
-    # Optional. Implement to provide more information for the IaaS.
+    # @See https://bosh.io/docs/cpi-api-v1-method/attach-disk/
     #
-    # @param [String] instance_id Instance id that was once returned by {#create_vm}
-    # @param [Hash] metadata metadata key/value pairs
-    # @return [void]
-    def set_vm_metadata(instance_id, metadata)
-      @telemetry_manager.monitor('set_vm_metadata', id: instance_id) do
-        @logger.info("set_vm_metadata(#{instance_id}, #{metadata})")
-        @vm_manager.set_metadata(InstanceId.parse(instance_id, _azure_config.resource_group_name), encode_metadata(metadata))
-      end
-    end
-
-    ##
-    # Map a set of cloud agnostic VM properties (cpu, ram, ephemeral_disk_size) to
-    # a set of Azure specific cloud_properties
-    #
-    # @param  [Hash] vm_resources requested cpu, ram, and ephemeral_disk_size
-    # @return [Hash] Azure specific cloud_properties describing instance (e.g. instance_type)
-    def calculate_vm_cloud_properties(vm_resources)
-      @telemetry_manager.monitor('calculate_vm_cloud_properties') do
-        @logger.info("calculate_vm_cloud_properties(#{vm_resources})")
-        location = _azure_config.location
-        cloud_error("Missing the property 'location' in the global configuration") if location.nil?
-
-        required_keys = %w[cpu ram ephemeral_disk_size]
-        missing_keys = required_keys.reject { |key| vm_resources[key] }
-        unless missing_keys.empty?
-          missing_keys.map! { |k| "'#{k}'" }
-          raise "Missing VM cloud properties: #{missing_keys.join(', ')}"
-        end
-
-        available_vm_sizes = @azure_client.list_available_virtual_machine_sizes(location)
-        instance_type = @instance_type_mapper.map(vm_resources, available_vm_sizes)
-        {
-          'instance_type' => instance_type,
-          'ephemeral_disk' => {
-            'size' => (vm_resources['ephemeral_disk_size'] / 1024.0).ceil * 1024
-          }
-        }
-      end
-    end
-
-    ##
-    # Configures networking an existing VM.
-    #
-    # @param [String] instance_id Instance id that was once returned by {#create_vm}
-    # @param [Hash] networks list of networks and their settings needed for this VM,
-    #               same as the networks argument in {#create_vm}
-    # @return [void]
-    def configure_networks(instance_id, networks)
-      @logger.info("configure_networks(#{instance_id}, #{networks})")
-      # Azure does not support to configure the network of an existing VM,
-      # so we need to notify the InstanceUpdater to recreate it
-      raise Bosh::Clouds::NotSupported
-    end
-
-    ##
-    # Creates a disk (possibly lazily) that will be attached later to a VM. When
-    # VM locality is specified the disk will be placed near the VM so it won't have to move
-    # when it's attached later.
-    #
-    # @param [Integer] size disk size in MiB
-    # @param [Hash] cloud_properties properties required for creating this disk
-    #               specific to a CPI
-    # @param [optional, String] instance_id vm id if known of the VM that this disk will
-    #                           be attached to
-    #
-    # ==== cloud_properties
-    # [optional, String] caching the disk caching type. It can be either None, ReadOnly or ReadWrite.
-    #                            Default is None. Only None and ReadOnly are supported for premium disks.
-    # [optional, String] storage_account_type the storage account type. For blob disks, it can be either
-    #                    Standard_LRS, Standard_ZRS, Standard_GRS, Standard_RAGRS or Premium_LRS.
-    #                    For managed disks, it can only be Standard_LRS or Premium_LRS.
-    #
-    # @return [String] opaque id later used by {#attach_disk}, {#detach_disk}, and {#delete_disk}
-    def create_disk(size, cloud_properties, instance_id = nil)
-      with_thread_name("create_disk(#{size}, #{cloud_properties})") do
-        id = instance_id.nil? ? '' : instance_id
-        extras = { 'disk_size' => size }
-        @telemetry_manager.monitor('create_disk', id: id, extras: extras) do
-          validate_disk_size(size)
-          disk_id = nil
-          if @use_managed_disks
-            if instance_id.nil?
-              # If instance_id is nil, the managed disk will be created in the resource group location.
-              resource_group_name = _azure_config.resource_group_name
-              resource_group = @azure_client.get_resource_group(resource_group_name)
-              location = resource_group[:location]
-              default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
-              zone = nil
-            else
-              instance_id = InstanceId.parse(instance_id, _azure_config.resource_group_name)
-              cloud_error('Cannot create a managed disk for a VM with unmanaged disks') unless instance_id.use_managed_disks?
-              resource_group_name = instance_id.resource_group_name
-              # If the instance is a managed VM, the managed disk will be created in the location of the VM.
-              vm = @azure_client.get_virtual_machine_by_name(resource_group_name, instance_id.vm_name)
-              location = vm[:location]
-              instance_type = vm[:vm_size]
-              zone = vm[:zone]
-              default_storage_account_type = get_storage_account_type_by_instance_type(instance_type)
-            end
-            storage_account_type = cloud_properties.fetch('storage_account_type', default_storage_account_type)
-            caching = cloud_properties.fetch('caching', 'None')
-            validate_disk_caching(caching)
-            disk_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
-            @disk_manager2.create_disk(disk_id, location, size / 1024, storage_account_type, zone)
-          else
-            storage_account_name = _azure_config.storage_account_name
-            caching = cloud_properties.fetch('caching', 'None')
-            validate_disk_caching(caching)
-            unless instance_id.nil?
-              instance_id = InstanceId.parse(instance_id, _azure_config.resource_group_name)
-              @logger.info("Create disk for vm '#{instance_id.vm_name}'")
-              storage_account_name = instance_id.storage_account_name
-            end
-            disk_id = DiskId.create(caching, false, storage_account_name: storage_account_name)
-            @disk_manager.create_disk(disk_id, size / 1024)
-          end
-          disk_id.to_s
-        end
-      end
-    end
-
-    ##
-    # Deletes a disk
-    # Will raise an exception if the disk is attached to a VM
-    #
-    # @param [String] disk_id disk id that was once returned by {#create_disk}
-    # @return [void]
-    def delete_disk(disk_id)
-      with_thread_name("delete_disk(#{disk_id})") do
-        @telemetry_manager.monitor('delete_disk', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, _azure_config.resource_group_name)
-          if @use_managed_disks
-            # A managed disk may be created from an old blob disk, so its name still starts with 'bosh-data' instead of 'bosh-disk-data'
-            # CPI checks whether the managed disk with the name exists. If not, delete the old blob disk.
-            unless disk_id.disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
-              disk = @disk_manager2.get_data_disk(disk_id)
-              return @disk_manager.delete_data_disk(disk_id) if disk.nil?
-            end
-            @disk_manager2.delete_data_disk(disk_id)
-          else
-            @disk_manager.delete_data_disk(disk_id)
-          end
-        end
-      end
-    end
-
-    # Attaches a disk
-    # @param [String] instance_id Instance id that was once returned by {#create_vm}
-    # @param [String] disk_id disk id that was once returned by {#create_disk}
-    # @return [void]
-    def attach_disk(instance_id, disk_id)
-      with_thread_name("attach_disk(#{instance_id},#{disk_id})") do
-        @telemetry_manager.monitor('attach_disk', id: instance_id) do
-          instance_id = InstanceId.parse(instance_id, _azure_config.resource_group_name)
-          disk_id = DiskId.parse(disk_id, _azure_config.resource_group_name)
+    def attach_disk(vm_cid, disk_cid)
+      with_thread_name("attach_disk(#{vm_cid},#{disk_cid})") do
+        @telemetry_manager.monitor('attach_disk', id: vm_cid) do
+          instance_id = InstanceId.parse(vm_cid, _azure_config.resource_group_name)
+          disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
           vm_name = instance_id.vm_name
           disk_name = disk_id.disk_name
 
@@ -513,56 +534,94 @@ module Bosh::AzureCloud
       end
     end
 
-    # Detaches a disk
-    # @param [String] instance_id Instance id that was once returned by {#create_vm}
-    # @param [String] disk_id disk id that was once returned by {#create_disk}
+    ##
+    # Detaches disk from the VM.
+    # If the persistent disk is attached to a VM that will be deleted, it's more likely delete_vm CPI
+    # method will be called without a call to detach_disk with an expectation that delete_vm will
+    # make sure disks are disassociated from the VM upon its deletion.
+    # Agent settings should have been updated to remove information about given disk.
+    #
+    # @param [String] vm_cid   Cloud ID of the VM.
+    # @param [String] disk_cid Cloud ID of the disk.
+    #
     # @return [void]
-    def detach_disk(instance_id, disk_id)
-      with_thread_name("detach_disk(#{instance_id},#{disk_id})") do
-        @telemetry_manager.monitor('detach_disk', id: instance_id) do
-          _update_agent_settings(instance_id) do |settings|
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/detach-disk/
+    #
+    def detach_disk(vm_cid, disk_cid)
+      with_thread_name("detach_disk(#{vm_cid},#{disk_cid})") do
+        @telemetry_manager.monitor('detach_disk', id: vm_cid) do
+          _update_agent_settings(vm_cid) do |settings|
             settings['disks'] ||= {}
             settings['disks']['persistent'] ||= {}
-            settings['disks']['persistent'].delete(disk_id)
+            settings['disks']['persistent'].delete(disk_cid)
           end
 
           @vm_manager.detach_disk(
-            InstanceId.parse(instance_id, _azure_config.resource_group_name),
-            DiskId.parse(disk_id, _azure_config.resource_group_name)
+            InstanceId.parse(vm_cid, _azure_config.resource_group_name),
+            DiskId.parse(disk_cid, _azure_config.resource_group_name)
           )
 
-          @logger.info("Detached '#{disk_id}' from '#{instance_id}'")
+          @logger.info("Detached '#{disk_cid}' from '#{vm_cid}'")
         end
       end
     end
 
-    # List the attached disks of the VM.
-    # @param [String] instance_id is the CPI-standard instance_id (eg, returned from current_vm_id)
-    # @return [array[String]] list of opaque disk_ids that can be used with the
-    # other disk-related methods on the CPI
-    def get_disks(instance_id)
-      with_thread_name("get_disks(#{instance_id})") do
-        @telemetry_manager.monitor('get_disks', id: instance_id) do
+    ##
+    # Sets disk's metadata to make it easier for operators to categorize disks when looking at the IaaS management console.
+    # Disk metadata is written when the disk is attached to a VM. Metadata is not removed when disk is detached or VM is deleted.
+    #
+    # @param [String] disk_cid Cloud ID of the disk to modify; returned from create_disk.
+    # @param [Hash]   metadata Collection of key-value pairs. CPI should not rely on presence of specific keys.
+    #
+    # @return [void]
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/set-disk-metadata/
+    #
+    def set_disk_metadata(disk_cid, metadata)
+      @logger.info("set_disk_metadata(#{disk_cid}, #{metadata})")
+      raise Bosh::Clouds::NotImplemented
+    end
+
+    ##
+    # Returns list of disks currently attached to the VM.
+    # This method is mostly used by the consistency check tool (cloudcheck) to determine if the VM has required disks attached.
+    #
+    # @param [String] vm_cid Cloud ID of the VM.
+    #
+    # @return [Array of strings] disk_cids Array of disk_cid that are currently attached to the VM.
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/get-disks/
+    #
+    def get_disks(vm_cid)
+      with_thread_name("get_disks(#{vm_cid})") do
+        @telemetry_manager.monitor('get_disks', id: vm_cid) do
           disks = []
-          vm = @vm_manager.find(InstanceId.parse(instance_id, _azure_config.resource_group_name))
-          raise Bosh::Clouds::VMNotFound, "VM '#{instance_id}' cannot be found" if vm.nil?
+          vm = @vm_manager.find(InstanceId.parse(vm_cid, _azure_config.resource_group_name))
+          raise Bosh::Clouds::VMNotFound, "VM '#{vm_cid}' cannot be found" if vm.nil?
 
           vm[:data_disks].each do |disk|
-            disks << disk[:disk_bosh_id] unless is_ephemeral_disk?(disk[:name])
+            disks << disk[:disk_bosh_id] unless is_ephemeral_disk?(disk[:name]) # disk_bosh_id is same to disk_cid
           end
           disks
         end
       end
     end
 
-    # Take snapshot of disk
-    # @param [String] disk_id disk id of the disk to take the snapshot of
-    # @param [Hash] metadata metadata key/value pairs
-    # @return [String] snapshot id
-    def snapshot_disk(disk_id, metadata = {})
-      with_thread_name("snapshot_disk(#{disk_id},#{metadata})") do
-        @telemetry_manager.monitor('snapshot_disk', id: disk_id) do
-          disk_id = DiskId.parse(disk_id, _azure_config.resource_group_name)
+    ##
+    # Takes a snapshot of the disk.
+    #
+    # @param [String] disk_cid Cloud ID of the disk.
+    # @param [Hash]   metadata Collection of key-value pairs. CPI should not rely on presence of specific keys.
+    #
+    # @return [String] snapshot_cid Cloud ID of the disk snapshot.
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/snapshot-disk/
+    #
+    def snapshot_disk(disk_cid, metadata = {})
+      with_thread_name("snapshot_disk(#{disk_cid},#{metadata})") do
+        @telemetry_manager.monitor('snapshot_disk', id: disk_cid) do
+          disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
           resource_group_name = disk_id.resource_group_name
           disk_name = disk_id.disk_name
           caching = disk_id.caching
@@ -587,13 +646,19 @@ module Bosh::AzureCloud
       end
     end
 
-    # Delete a disk snapshot
-    # @param [String] snapshot_id snapshot id to delete
+    ##
+    # Deletes the disk snapshot.
+    #
+    # @param [String] snapshot_cid Cloud ID of the disk snapshot.
+    #
     # @return [void]
-    def delete_snapshot(snapshot_id)
-      with_thread_name("delete_snapshot(#{snapshot_id})") do
-        @telemetry_manager.monitor('delete_snapshot', id: snapshot_id) do
-          snapshot_id = DiskId.parse(snapshot_id, _azure_config.resource_group_name)
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/delete-snapshot/
+    #
+    def delete_snapshot(snapshot_cid)
+      with_thread_name("delete_snapshot(#{snapshot_cid})") do
+        @telemetry_manager.monitor('delete_snapshot', id: snapshot_cid) do
+          snapshot_id = DiskId.parse(snapshot_cid, _azure_config.resource_group_name)
           snapshot_name = snapshot_id.disk_name
           if snapshot_name.start_with?(MANAGED_DATA_DISK_PREFIX)
             @disk_manager2.delete_snapshot(snapshot_id)
@@ -606,27 +671,34 @@ module Bosh::AzureCloud
     end
 
     ##
-    # Set metadata for a disk
+    # The recommended implementation is to raise Bosh::Clouds::NotSupported error. This method will be deprecated in API v2.
+    # After the Director received NotSupported error, it will delete the VM (via delete_vm) and create a new VM with desired network configuration (via create_vm).
     #
-    # Optional. Implement to provide more information for the IaaS.
+    # @param [String] vm_cid   Cloud ID of the VM to modify; returned from create_vm.
+    # @param [Hash]   networks Network hashes that specify networks VM must be configured.
     #
-    # @param [String] disk_id disk id that was once returned by {#create_disk}
-    # @param [Hash] metadata metadata key/value pairs
     # @return [void]
-    def set_disk_metadata(disk_id, metadata)
-      @logger.info("set_disk_metadata(#{disk_id}, #{metadata})")
-      # TBD
-      raise Bosh::Clouds::NotImplemented
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/configure-networks/
+    #
+    def configure_networks(vm_cid, networks)
+      @logger.info("configure_networks(#{vm_cid}, #{networks})")
+      # Azure does not support to configure the network of an existing VM,
+      # so we need to notify the InstanceUpdater to recreate it
+      raise Bosh::Clouds::NotSupported
     end
 
-    # Information about the CPI
-    # @return [Hash] CPI properties
-    def info
-      @telemetry_manager.monitor('info') do
-        {
-          'stemcell_formats' => %w[azure-vhd azure-light]
-        }
-      end
+    ##
+    # Determines cloud ID of the VM executing the CPI code. Currently used in combination with get_disks by the Director to determine which disks to self-snapshot.
+    # Do not implement; this method will be deprecated and removed.
+    #
+    # @return [String] vm_cid Cloud ID of the VM.
+    #
+    # @See https://bosh.io/docs/cpi-api-v1-method/current-vm-id/
+    #
+    def current_vm_id
+      @logger.info('current_vm_id')
+      raise Bosh::Clouds::NotSupported
     end
 
     private

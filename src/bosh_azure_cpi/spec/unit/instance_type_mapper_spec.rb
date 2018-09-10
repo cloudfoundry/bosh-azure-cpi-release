@@ -6,7 +6,7 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
   subject { described_class.new }
 
   context 'when no possible VM sizes are found' do
-    let(:vm_resources) do
+    let(:desired_instance_size) do
       {
         'cpu' => 3200,
         'ram' => 102_400
@@ -29,13 +29,13 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
 
     it 'raise an error' do
       expect do
-        subject.map(vm_resources, available_vm_sizes)
-      end.to raise_error(/Unable to meet requested vm_resources: 3200 CPU, 102400 MB RAM/)
+        subject.map(desired_instance_size, available_vm_sizes)
+      end.to raise_error(/Unable to meet requested desired_instance_size: 3200 CPU, 102400 MB RAM/)
     end
   end
 
   context 'when the closest matched VM sizes are not found' do
-    let(:vm_resources) do
+    let(:desired_instance_size) do
       {
         'cpu' => 1,
         'ram' => 512
@@ -58,13 +58,13 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
 
     it 'raise an error' do
       expect do
-        subject.map(vm_resources, available_vm_sizes)
+        subject.map(desired_instance_size, available_vm_sizes)
       end.to raise_error(/Unable to find the closest matched VM sizes/)
     end
   end
 
   context 'when the closest matched VM sizes are found' do
-    let(:vm_resources) do
+    let(:desired_instance_size) do
       {
         'cpu' => 1,
         'ram' => 512
@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
     end
 
     it 'return the instance type' do
-      expect(subject.map(vm_resources, available_vm_sizes)).to eq('Standard_F1')
+      expect(subject.map(desired_instance_size, available_vm_sizes)).to eq('Standard_F1')
     end
   end
 end

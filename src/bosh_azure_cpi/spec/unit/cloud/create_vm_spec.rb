@@ -8,12 +8,15 @@ describe Bosh::AzureCloud::Cloud do
 
   describe '#create_vm' do
     # Parameters
-    let(:light_stemcell_id) { 'bosh-light-stemcell-xxx' }
-    let(:vm_properties) { { 'instance_type' => 'fake-vm-size' } }
-    let(:vm_props) { cloud.props_factory.parse_vm_props(vm_properties) }
-    let(:networks_spec) { {} }
-    let(:disk_locality) { double('disk locality') }
+    let(:agent_id) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
+    let(:stemcell_cid) { 'bosh-stemcell-e8ad4cab-befe-4e91-a139-f925830ffcbe' }
+    let(:cloud_properties) { { 'instance_type' => 'fake-vm-size' } }
+    let(:networks) { {} }
+    let(:disk_cids) { double('disk_cids') }
     let(:environment) { double('environment') }
+
+    let(:bosh_vm_meta) { Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_cid) }
+    let(:vm_props) { cloud.props_factory.parse_vm_props(cloud_properties) }
     let(:default_resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
     let(:virtual_network_name) { 'fake-virual-network-name' }
     let(:location) { 'fake-location' }
@@ -42,7 +45,7 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'when instance_type is not provided' do
-      let(:vm_properties) { {} }
+      let(:cloud_properties) { {} }
       before do
         allow(cloud.props_factory).to receive(:parse_vm_props)
           .and_call_original
@@ -51,10 +54,10 @@ describe Bosh::AzureCloud::Cloud do
         expect do
           cloud.create_vm(
             agent_id,
-            stemcell_id,
-            vm_properties,
-            networks_spec,
-            disk_locality,
+            stemcell_cid,
+            cloud_properties,
+            networks,
+            disk_cids,
             environment
           )
         end.to raise_error(/missing required cloud property 'instance_type'./)
@@ -64,7 +67,7 @@ describe Bosh::AzureCloud::Cloud do
     context 'when vnet is not found' do
       before do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-          .with(azure_config, networks_spec)
+          .with(azure_config, networks)
           .and_return(network_configurator)
         allow(azure_client).to receive(:get_virtual_network_by_name)
           .with(default_resource_group_name, virtual_network_name)
@@ -75,10 +78,10 @@ describe Bosh::AzureCloud::Cloud do
         expect do
           cloud.create_vm(
             agent_id,
-            stemcell_id,
-            vm_properties,
-            networks_spec,
-            disk_locality,
+            stemcell_cid,
+            cloud_properties,
+            networks,
+            disk_cids,
             environment
           )
         end.to raise_error(/Cannot find the virtual network/)
@@ -108,7 +111,7 @@ describe Bosh::AzureCloud::Cloud do
         }
       end
       let(:resource_group_name) { 'fake-resource-group-name' }
-      let(:vm_properties) do
+      let(:cloud_properties) do
         {
           'instance_type' => 'fake-vm-size',
           'resource_group_name' => resource_group_name
@@ -117,10 +120,10 @@ describe Bosh::AzureCloud::Cloud do
 
       let(:vm_props) do
         cloud.props_factory.parse_vm_props(
-          vm_properties
+          cloud_properties
         )
       end
-      let(:networks_spec) do
+      let(:networks) do
         {
           'network_a' => {
             'dns' => ['172.30.22.153', '172.30.22.154']
@@ -132,15 +135,15 @@ describe Bosh::AzureCloud::Cloud do
           .with(vm_props, location)
           .and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?)
-          .with(storage_account_name, stemcell_id)
+          .with(storage_account_name, stemcell_cid)
           .and_return(true)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-          .with(azure_config, networks_spec)
+          .with(azure_config, networks)
           .and_return(network_configurator)
         allow(instance_id).to receive(:to_s)
           .and_return(instance_id_string)
         allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
-          .with(agent_id, stemcell_id)
+          .with(agent_id, stemcell_cid)
           .and_return(bosh_vm_meta)
         allow(cloud.props_factory).to receive(:parse_vm_props)
           .and_return(vm_props)
@@ -155,10 +158,10 @@ describe Bosh::AzureCloud::Cloud do
         expect(
           cloud.create_vm(
             agent_id,
-            stemcell_id,
-            vm_properties,
-            networks_spec,
-            disk_locality,
+            stemcell_cid,
+            cloud_properties,
+            networks,
+            disk_cids,
             environment
           )
         ).to eq(instance_id_string)
@@ -170,7 +173,7 @@ describe Bosh::AzureCloud::Cloud do
       let(:cloud_with_location) { mock_cloud(cloud_properties_with_location) }
       before do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-          .with(cloud_with_location.config.azure, networks_spec)
+          .with(cloud_with_location.config.azure, networks)
           .and_return(network_configurator)
         allow(azure_client).to receive(:get_virtual_network_by_name)
           .with(default_resource_group_name, virtual_network_name)
@@ -181,10 +184,10 @@ describe Bosh::AzureCloud::Cloud do
         expect do
           cloud_with_location.create_vm(
             agent_id,
-            stemcell_id,
-            vm_properties,
-            networks_spec,
-            disk_locality,
+            stemcell_cid,
+            cloud_properties,
+            networks,
+            disk_cids,
             environment
           )
         end.to raise_error(/The location in the global configuration 'location-other-than-#{location}' is different from the location of the virtual network '#{location}'/)
@@ -219,22 +222,22 @@ describe Bosh::AzureCloud::Cloud do
           .with(vm_props, location)
           .and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?)
-          .with(storage_account_name, stemcell_id)
+          .with(storage_account_name, stemcell_cid)
           .and_return(true)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-          .with(azure_config, networks_spec)
+          .with(azure_config, networks)
           .and_return(network_configurator)
         allow(instance_id).to receive(:to_s)
           .and_return(instance_id_string)
         allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
-          .with(agent_id, stemcell_id)
+          .with(agent_id, stemcell_cid)
           .and_return(bosh_vm_meta)
       end
 
       context 'when everything is OK' do
         context 'when resource group is specified' do
           let(:resource_group_name) { 'fake-resource-group-name' }
-          let(:vm_properties) do
+          let(:cloud_properties) do
             {
               'instance_type' => 'fake-vm-size',
               'resource_group_name' => resource_group_name
@@ -243,7 +246,7 @@ describe Bosh::AzureCloud::Cloud do
 
           let(:vm_props) do
             cloud.props_factory.parse_vm_props(
-              vm_properties
+              cloud_properties
             )
           end
 
@@ -261,10 +264,10 @@ describe Bosh::AzureCloud::Cloud do
             expect(
               cloud.create_vm(
                 agent_id,
-                stemcell_id,
-                vm_properties,
-                networks_spec,
-                disk_locality,
+                stemcell_cid,
+                cloud_properties,
+                networks,
+                disk_cids,
                 environment
               )
             ).to eq(instance_id_string)
@@ -273,7 +276,7 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       context 'when availability_zone is specified' do
-        let(:vm_properties) do
+        let(:cloud_properties) do
           { 'availability_zone' => 'fake-az',
             'instance_type' => 'fake-vm-size' }
         end
@@ -282,10 +285,10 @@ describe Bosh::AzureCloud::Cloud do
           expect do
             cloud.create_vm(
               agent_id,
-              stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
               environment
             )
           end.to raise_error('Virtual Machines deployed to an Availability Zone must use managed disks')
@@ -302,10 +305,10 @@ describe Bosh::AzureCloud::Cloud do
           expect do
             cloud.create_vm(
               agent_id,
-              stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
               environment
             )
           end.to raise_error StandardError
@@ -321,10 +324,10 @@ describe Bosh::AzureCloud::Cloud do
           expect do
             cloud.create_vm(
               agent_id,
-              stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
               environment
             )
           end.to raise_error StandardError
@@ -344,10 +347,10 @@ describe Bosh::AzureCloud::Cloud do
           expect do
             cloud.create_vm(
               agent_id,
-              stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
               environment
             )
           end.to raise_error(StandardError)
@@ -367,25 +370,25 @@ describe Bosh::AzureCloud::Cloud do
 
       before do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-          .with(azure_config_managed, networks_spec)
+          .with(azure_config_managed, networks)
           .and_return(network_configurator)
 
         allow(instance_id).to receive(:to_s)
           .and_return(instance_id_string)
         allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
-          .with(agent_id, stemcell_id)
+          .with(agent_id, stemcell_cid)
           .and_return(bosh_vm_meta)
       end
 
       context 'when resource group is specified' do
         let(:resource_group_name) { 'fake-resource-group-name' }
-        let(:vm_properties) do
+        let(:cloud_properties) do
           {
             'instance_type' => 'fake-vm-size',
             'resource_group_name' => resource_group_name
           }
         end
-        let(:vm_props) { managed_cloud.props_factory.parse_vm_props(vm_properties) }
+        let(:vm_props) { managed_cloud.props_factory.parse_vm_props(cloud_properties) }
 
         it 'should create the VM in the specified resource group' do
           expect(vm_manager).to receive(:create)
@@ -396,10 +399,10 @@ describe Bosh::AzureCloud::Cloud do
           expect(
             managed_cloud.create_vm(
               agent_id,
-              stemcell_id,
-              vm_properties,
-              networks_spec,
-              disk_locality,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
               environment
             )
           ).to eq(instance_id_string)
