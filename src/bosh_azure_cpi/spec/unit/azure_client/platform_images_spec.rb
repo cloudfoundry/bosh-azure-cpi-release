@@ -31,7 +31,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   describe '#list_platform_image_versions' do
-    let(:images_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/providers/Microsoft.Compute/locations/#{location}/publishers/#{publisher}/artifacttypes/vmimage/offers/#{offer}/skus/#{sku}/versions?api-version=#{api_version_compute}" }
+    let(:images_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/providers/Microsoft.Compute/locations/#{location}/publishers/#{publisher}/artifacttypes/vmimage/offers/#{offer}/skus/#{sku}/versions?api-version=#{api_version_compute}" }
 
     let(:response_body) do
       [

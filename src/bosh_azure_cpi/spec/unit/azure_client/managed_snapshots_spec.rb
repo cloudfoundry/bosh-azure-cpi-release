@@ -33,8 +33,8 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#create_managed_snapshot' do
-    let(:snapshot_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
-    let(:disk_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
+    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
 
     let(:snapshot_params) do
       {
@@ -114,7 +114,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#delete_managed_snapshot' do
-    let(:snapshot_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
+    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
 
     context 'when token is valid, delete operation is accepted and completed' do
       it 'should delete the managed snapshot without error' do
@@ -140,7 +140,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#get_managed_snapshot_by_name' do
-    let(:snapshot_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
+    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
 
     context 'when response body is null' do
       it 'should return nil' do

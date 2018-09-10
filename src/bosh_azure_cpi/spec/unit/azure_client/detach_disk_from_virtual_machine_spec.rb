@@ -36,7 +36,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#detach_disk_from_virtual_machine' do
     disk_name = 'fake-disk-name'
-    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
+    let(:vm_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
     let(:response_body) do
       {
         'id' => 'fake-id',

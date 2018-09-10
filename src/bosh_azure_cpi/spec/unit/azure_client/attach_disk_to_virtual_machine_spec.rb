@@ -37,7 +37,7 @@ describe Bosh::AzureCloud::AzureClient do
   describe '#attach_disk_to_virtual_machine' do
     let(:disk_name) { 'fake-disk-name' }
     let(:caching) { 'ReadWrite' }
-    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
+    let(:vm_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
     let(:disk_bosh_id) { 'fake-bosh-id' }
 
     context 'when attaching a managed disk' do
