@@ -38,6 +38,7 @@ module Bosh::AzureCloud
         records = @table_service_client.query_entities(table_name, options)
         records.each { |r| entities.push(r.properties) } unless records.empty?
         break if records.continuation_token.nil? || records.continuation_token.empty?
+
         options[:continuation_token] = records.continuation_token
       end
       entities

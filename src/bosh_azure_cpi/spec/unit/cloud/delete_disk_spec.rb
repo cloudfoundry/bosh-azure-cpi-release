@@ -7,7 +7,6 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#delete_disk' do
-    let(:disk_id) { 'fake-disk-id' }
     let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
 
     before do
@@ -17,7 +16,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when use_managed_disks is true' do
       before do
-        allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+        allow(Bosh::AzureCloud::InstanceIdParser).to receive(:parse)
           .with(disk_id, azure_config_managed.resource_group_name)
           .and_return(disk_id_object)
       end
@@ -78,7 +77,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when use_managed_disks is false' do
       before do
-        allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+        allow(Bosh::AzureCloud::InstanceIdParser).to receive(:parse)
           .with(disk_id, azure_config.resource_group_name)
           .and_return(disk_id_object)
       end

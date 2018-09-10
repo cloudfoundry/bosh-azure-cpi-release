@@ -131,6 +131,7 @@ module Bosh::AzureCloud
     def get_ip_from_lease_value(fallback_lease_value)
       unescaped_value = fallback_lease_value.delete('\\')
       return unless unescaped_value.length > 4
+
       unescaped_value.split(':').map(&:hex).join('.')
     end
   end

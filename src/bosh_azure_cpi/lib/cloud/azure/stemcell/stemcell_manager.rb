@@ -79,7 +79,7 @@ module Bosh::AzureCloud
       stemcell_meta = @meta_store.find_first_stemcell_meta(name, storage_account_name)
       if !stemcell_meta.nil?
         if stemcell_meta.status == STEMCELL_STATUS_SUCCESS
-          return true
+          true
         elsif stemcell_meta.status != STEMCELL_STATUS_PENDING
           cloud_error("The status of the stemcell #{name} in the storage account #{storage_account_name} is unknown: #{stemcell_meta.status}")
         end

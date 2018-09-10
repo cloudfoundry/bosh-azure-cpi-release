@@ -3,6 +3,7 @@
 module Bosh::AzureCloud
   class DiskId < ResObjectId
     include Helpers
+    include ObjectIDKeys
     # V1 format:
     #   With unmanaged disks:
     #         data disk:      "bosh-data-[STORAGE-ACCOUNT-NAME]-[UUID]-[CACHING]"
@@ -23,16 +24,9 @@ module Bosh::AzureCloud
     #   disk_id = DiskId.create(caching, false, storage_account_name: 'ss') # Create V2 unmanaged disk id
     #   disk_id = DiskId.create(caching, true,  resource_group_name: 'rr')  # Create V2 managed disk id
     #  Parsing id for an existing disk
-    #   disk_id = DiskId.parse(id, default_resource_group_name)
+    #   disk_id = InstanceIdParser.parse(id, default_resource_group_name)
     #
     #  TODO: The method `caching` and `storage_account_name` doesn't work for V1 format with unmanaged snapshot disk because of the postfix "--[SNAPSHOTTIME]".
-
-    CACHING_KEY = 'caching'
-    DISK_NAME_KEY = 'disk_name'
-    STORAGE_ACCOUNT_NAME_KEY = 'storage_account_name'
-
-    private_class_method :new
-
     def self.create(caching, use_managed_disks, disk_name: nil, resource_group_name: nil, storage_account_name: nil)
       id_hash = {
         DISK_NAME_KEY => disk_name.nil? ? _generate_data_disk_name(use_managed_disks) : disk_name,
@@ -43,8 +37,7 @@ module Bosh::AzureCloud
       new(id_hash)
     end
 
-    def self.parse(id_str, default_resource_group_name)
-      id_hash, plain_id = ResObjectId.parse_with_resource_group(id_str, default_resource_group_name)
+    def self.create_from_hash(id_hash, plain_id)
       obj_id = new(id_hash, plain_id)
       obj_id.validate
       obj_id
@@ -52,6 +45,7 @@ module Bosh::AzureCloud
 
     def disk_name
       return @plain_id unless @plain_id.nil?
+
       @id_hash[DISK_NAME_KEY]
     end
 
@@ -60,6 +54,7 @@ module Bosh::AzureCloud
       cloud_error('This function should only be called for data disks') if invalid
 
       return _parse_data_disk_caching_plain(@plain_id) unless @plain_id.nil?
+
       @id_hash[CACHING_KEY]
     end
 
@@ -68,11 +63,12 @@ module Bosh::AzureCloud
       cloud_error('This function should only be called for unmanaged disks') if invalid
 
       return _parse_storage_account_plain(@plain_id) unless @plain_id.nil?
+
       @id_hash[STORAGE_ACCOUNT_NAME_KEY]
     end
 
     def validate
-      if @plain_id.nil?
+      if @plain_id.nil? # means it's new version
         cloud_error("Invalid disk_name in disk id (version 2) '#{self}'") if disk_name.nil? || disk_name.empty?
         cloud_error("Invalid caching in disk id (version 2) '#{self}'") if caching.nil? || caching.empty?
         unless resource_group_name.nil?
@@ -86,6 +82,7 @@ module Bosh::AzureCloud
 
     def to_s
       return @plain_id unless @plain_id.nil?
+
       id_hash_clone = @id_hash.clone
       id_hash_clone.delete(RESOURCE_GROUP_NAME_KEY) if id_hash_clone.key?(STORAGE_ACCOUNT_NAME_KEY)
       array = []

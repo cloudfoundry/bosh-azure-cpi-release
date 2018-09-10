@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'when network/ephemeral_disk specified' do
-      let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+      let(:instance_id) { instance_double(Bosh::AzureCloud::VMInstanceId) }
       let(:instance_id_string) { 'fake-instance-id' }
       let(:vm_params) do
         {
@@ -192,7 +192,7 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'when use_managed_disks is not set' do
-      let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+      let(:instance_id) { instance_double(Bosh::AzureCloud::VMInstanceId) }
       let(:instance_id_string) { 'fake-instance-id' }
       let(:vm_params) do
         {
@@ -356,7 +356,7 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'when use_managed_disks is set' do
-      let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+      let(:instance_id) { instance_double(Bosh::AzureCloud::VMInstanceId) }
       let(:instance_id_string) { 'fake-instance-id' }
       let(:vm_params) do
         {

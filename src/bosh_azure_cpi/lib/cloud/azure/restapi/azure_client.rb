@@ -80,6 +80,7 @@ module Bosh::AzureCloud
 
     REST_API_PROVIDER_COMPUTE            = 'Microsoft.Compute'
     REST_API_VIRTUAL_MACHINES            = 'virtualMachines'
+    REST_API_VIRTUAL_MACHINE_SCALE_SETS  = 'virtualMachineScaleSets'
     REST_API_AVAILABILITY_SETS           = 'availabilitySets'
     REST_API_DISKS                       = 'disks'
     REST_API_IMAGES                      = 'images'
@@ -123,6 +124,7 @@ module Bosh::AzureCloud
     def parse_name_from_id(id)
       ret = id.match('/subscriptions/([^/]*)/resourceGroups/([^/]*)/providers/([^/]*)/([^/]*)/([^/]*)(.*)')
       raise AzureError, "\"#{id}\" is not a valid URL." if ret.nil?
+
       result = {}
       result[:subscription_id]     = ret[1]
       result[:resource_group_name] = ret[2]
@@ -392,7 +394,6 @@ module Bosh::AzureCloud
       params = {
         'validating' => 'true'
       }
-
       http_put(url, vm, params)
     end
 
@@ -446,6 +447,7 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       vm = get_resource_by_id(url)
       raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name '#{name}' in resource group '#{resource_group_name}'" if vm.nil?
+
       vm = remove_resources_from_vm(vm)
       vm['tags'].merge!(tags)
       http_put(url, vm)
@@ -491,16 +493,12 @@ module Bosh::AzureCloud
 
       vm = remove_resources_from_vm(vm)
 
-      disk_info = DiskInfo.for(vm['properties']['hardwareProfile']['vmSize'])
-      lun = nil
-      data_disks = vm['properties']['storageProfile']['dataDisks']
-      (0..(disk_info.count - 1)).each do |i|
-        disk = data_disks.find { |disk| disk['lun'] == i }
-        if disk.nil?
-          lun = i
-          break
-        end
-      end
+      lun = _get_next_available_lun(
+        vm['properties']['hardwareProfile']['vmSize'],
+        vm['properties']['storageProfile']['dataDisks']
+      )
+
+      raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine '#{vm_name}' for the new disk '#{disk_params[:disk_name]}'" if lun.nil?
 
       disk_name = disk_params[:disk_name]
       caching = disk_params[:caching]
@@ -508,8 +506,6 @@ module Bosh::AzureCloud
       disk_id = disk_params[:disk_id]
       disk_uri = disk_params[:disk_uri]
       disk_size = disk_params[:disk_size]
-
-      raise AzureError, "attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine '#{vm_name}' for the new disk '#{disk_name}'" if lun.nil?
 
       new_disk = {
         'name'         => disk_name,
@@ -1059,6 +1055,7 @@ module Bosh::AzureCloud
       @logger.debug("create_managed_snapshot - trying to create a snapshot '#{snapshot_name}' for the managed disk '#{disk_name}'")
       disk = get_managed_disk_by_name(resource_group_name, disk_name)
       raise AzureNotFoundError, "The disk '#{disk_name}' cannot be found" if disk.nil?
+
       snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
       # By default, the snapshot sku is Standard_LRS. TODO: should the snapshot use the disk sku?
       snapshot = {
@@ -1759,6 +1756,7 @@ module Bosh::AzureCloud
       }
       result = http_post(url, storage_account)
       raise AzureError, "Cannot check the availability of the storage account name '#{name}'" unless result.is_a?(Hash)
+
       ret = {
         available: result['nameAvailable'],
         reason: result['reason'],
@@ -2048,6 +2046,7 @@ module Bosh::AzureCloud
 
     def filter_credential_in_logs(uri)
       return true if !is_debug_mode(@azure_config) && uri.request_uri.include?('/listKeys')
+
       false
     end
 
@@ -2096,6 +2095,7 @@ module Bosh::AzureCloud
           @logger.debug("get_token - #{retry_count}: #{message}")
           status_code = response.code.to_i
           break unless retryable_error_codes.include?(status_code)
+
           retry_count += 1
           if retry_count >= max_retry_count
             cloud_error("get_token - Failed to get token after #{retry_count} retries")
@@ -2307,7 +2307,9 @@ module Bosh::AzureCloud
         error += get_http_common_headers(response)
         error += "Error message: #{response.body}"
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
+
         raise AzureNotFoundError, error if response.code.to_i == HTTP_CODE_NOT_FOUND
+
         raise AzureError, error
       end
       retry_after = options[:retry_after]
@@ -2328,6 +2330,7 @@ module Bosh::AzureCloud
         raise AzureAsynchronousError.new, "check_completion - http code: #{response.code}. Error message: #{response.body}" if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
 
         raise AzureAsynchronousError.new, 'The body of the asynchronous response is empty' if response.body.nil?
+
         result = JSON(response.body)
         raise AzureAsynchronousError.new, "The body of the asynchronous response does not contain 'status'. Response: #{response.body}" if result['status'].nil?
 
@@ -2356,7 +2359,6 @@ module Bosh::AzureCloud
     def http_get(url, params = {}, retry_after = 5)
       uri = http_url(url, params)
       @logger.info("http_get - trying to get #{uri}")
-
       request = Net::HTTP::Get.new(uri.request_uri)
       response = http_get_response(uri, request, retry_after)
       status_code = response.code.to_i
@@ -2379,7 +2381,6 @@ module Bosh::AzureCloud
 
       begin
         @logger.info("http_put - #{retry_count}: trying to put #{uri}")
-
         request = Net::HTTP::Put.new(uri.request_uri)
         unless body.nil?
           request_body = body.to_json
@@ -2471,7 +2472,6 @@ module Bosh::AzureCloud
 
       begin
         @logger.info("http_post - #{retry_count}: trying to post #{uri}")
-
         request = Net::HTTP::Post.new(uri.request_uri)
         request['Content-Length'] = 0
         unless body.nil?
