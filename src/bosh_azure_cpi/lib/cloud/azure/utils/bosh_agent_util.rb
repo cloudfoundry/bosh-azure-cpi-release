@@ -3,8 +3,31 @@
 module Bosh::AzureCloud
   class BoshAgentUtil
     # Example -
-    # For Linux:     {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"server":{"name":"<instance-id>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
-    # For Windows:   {"registry":{"endpoint":"http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"},"instance-id":"<instance-id>","server":{"name":"<randomgeneratedname>"},"dns":{"nameserver":["168.63.129.16","8.8.8.8"]}}
+    # For Linux:
+    # {
+    #   "registry": {
+    #     "endpoint": "http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"
+    #   },
+    #   "server": {
+    #     "name": "<instance-id>"
+    #   },
+    #   "dns": {
+    #     "nameserver": ["168.63.129.16","8.8.8.8"]
+    #   }
+    # }
+    # For Windows:
+    # {
+    #   "registry": {
+    #     "endpoint": "http://registry:ba42b9e9-fe2c-4d7d-47fb-3eeb78ff49b1@127.0.0.1:6901"
+    #   },
+    #   "instance-id": "<instance-id>",
+    #   "server": {
+    #     "name": "<randomgeneratedname>"
+    #   },
+    #   "dns": {
+    #     "nameserver": ["168.63.129.16","8.8.8.8"]
+    #   }
+    # }
     def self.get_encoded_user_data(registry_endpoint, instance_id, dns, computer_name = nil)
       user_data = get_user_data_obj(registry_endpoint, instance_id, dns, computer_name)
       Base64.strict_encode64(JSON.dump(user_data))

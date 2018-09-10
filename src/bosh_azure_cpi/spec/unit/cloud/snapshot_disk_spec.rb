@@ -8,20 +8,20 @@ describe Bosh::AzureCloud::Cloud do
 
   describe '#snapshot_disk' do
     let(:metadata) { {} }
-    let(:snapshot_id) { 'fake-snapshot-id' }
+    let(:snapshot_cid) { 'fake-snapshot-cid' }
     let(:snapshot_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
     let(:resource_group_name) { 'fake-resource-group-name' }
     let(:caching) { 'fake-cacing' }
-    let(:disk_id) { 'fake-disk-id' }
+    let(:disk_cid) { 'fake-disk-cid' }
     let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
 
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-        .with(disk_id, MOCK_RESOURCE_GROUP_NAME)
+        .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
 
       allow(snapshot_id_object).to receive(:to_s)
-        .and_return(snapshot_id)
+        .and_return(snapshot_cid)
 
       allow(disk_id_object).to receive(:resource_group_name)
         .and_return(resource_group_name)
@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(caching)
 
       allow(telemetry_manager).to receive(:monitor)
-        .with('snapshot_disk', id: disk_id).and_call_original
+        .with('snapshot_disk', id: disk_cid).and_call_original
     end
 
     context 'when the disk is a managed disk' do
@@ -48,7 +48,7 @@ describe Bosh::AzureCloud::Cloud do
           expect(disk_manager2).to receive(:snapshot_disk)
             .with(snapshot_id_object, disk_name, metadata)
 
-          expect(cloud.snapshot_disk(disk_id, metadata)).to eq(snapshot_id)
+          expect(cloud.snapshot_disk(disk_cid, metadata)).to eq(snapshot_cid)
         end
       end
 
@@ -60,7 +60,7 @@ describe Bosh::AzureCloud::Cloud do
             .and_return(disk_name)
           expect(disk_manager2).to receive(:get_data_disk)
             .with(disk_id_object)
-            .and_return(name: disk_id)
+            .and_return(name: disk_cid)
         end
 
         it 'should take a managed snapshot of the disk' do
@@ -70,7 +70,7 @@ describe Bosh::AzureCloud::Cloud do
           expect(disk_manager2).to receive(:snapshot_disk)
             .with(snapshot_id_object, disk_name, metadata)
 
-          expect(cloud.snapshot_disk(disk_id, metadata)).to eq(snapshot_id)
+          expect(cloud.snapshot_disk(disk_cid, metadata)).to eq(snapshot_cid)
         end
       end
     end
@@ -98,7 +98,7 @@ describe Bosh::AzureCloud::Cloud do
           .with(caching, false, disk_name: snapshot_name, storage_account_name: storage_account_name)
           .and_return(snapshot_id_object)
 
-        expect(cloud.snapshot_disk(disk_id, metadata)).to eq(snapshot_id)
+        expect(cloud.snapshot_disk(disk_cid, metadata)).to eq(snapshot_cid)
       end
     end
   end

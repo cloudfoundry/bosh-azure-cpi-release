@@ -16,7 +16,7 @@ describe Bosh::AzureCloud::Cloud do
         'foo' => 'bar',
         'disks' => {
           'persistent' => {
-            disk_id => {
+            disk_cid => {
               'lun' => lun,
               'host_device_id' => host_device_id
             }
@@ -25,11 +25,11 @@ describe Bosh::AzureCloud::Cloud do
       }
     end
     let(:disk_name) { 'fake-disk-name' }
-    let(:disk_id) { 'fake-disk-id' }
+    let(:disk_cid) { 'fake-disk-cid' }
     let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
 
     let(:vm_name) { 'fake-vm-name' }
-    let(:instance_id) { 'fake-instance-id' }
+    let(:vm_cid) { 'fake-vm-cid' }
     let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
     let(:vm) do
       {
@@ -44,15 +44,15 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-        .with(disk_id, MOCK_RESOURCE_GROUP_NAME)
+        .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
       allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
-        .with(instance_id, MOCK_RESOURCE_GROUP_NAME)
+        .with(vm_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(instance_id_object)
       allow(instance_id_object).to receive(:to_s)
-        .and_return(instance_id)
+        .and_return(vm_cid)
       allow(disk_id_object).to receive(:to_s)
-        .and_return(disk_id)
+        .and_return(disk_cid)
 
       allow(disk_id_object).to receive(:disk_name)
         .and_return(disk_name)
@@ -63,7 +63,7 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(vm)
 
       allow(telemetry_manager).to receive(:monitor)
-        .with('attach_disk', id: instance_id).and_call_original
+        .with('attach_disk', id: vm_cid).and_call_original
     end
 
     context 'when use_managed_disks is true' do
@@ -86,13 +86,13 @@ describe Bosh::AzureCloud::Cloud do
             end
 
             it 'attaches the managed disk to the vm' do
-              expect(registry_client).to receive(:read_settings).with(instance_id)
+              expect(registry_client).to receive(:read_settings).with(vm_cid)
                                                                 .and_return(old_settings)
               expect(registry_client).to receive(:update_settings)
-                .with(instance_id, new_settings).and_return(true)
+                .with(vm_cid, new_settings).and_return(true)
 
               expect do
-                managed_cloud.attach_disk(instance_id, disk_id)
+                managed_cloud.attach_disk(vm_cid, disk_cid)
               end.not_to raise_error
             end
           end
@@ -108,7 +108,7 @@ describe Bosh::AzureCloud::Cloud do
               expect(disk_manager2).not_to receive(:create_disk_from_blob)
 
               expect do
-                managed_cloud.attach_disk(instance_id, disk_id)
+                managed_cloud.attach_disk(vm_cid, disk_cid)
               end.to raise_error 'disk not found'
             end
           end
@@ -123,7 +123,7 @@ describe Bosh::AzureCloud::Cloud do
 
             it "can't attach a managed disk to a VM with unmanaged disks" do
               expect do
-                managed_cloud.attach_disk(instance_id, disk_id)
+                managed_cloud.attach_disk(vm_cid, disk_cid)
               end.to raise_error /Cannot attach a managed disk to a VM with unmanaged disks/
             end
           end
@@ -138,7 +138,7 @@ describe Bosh::AzureCloud::Cloud do
               expect(vm_manager).to receive(:attach_disk)
               expect(managed_cloud).to receive(:_update_agent_settings)
               expect do
-                managed_cloud.attach_disk(instance_id, disk_id)
+                managed_cloud.attach_disk(vm_cid, disk_cid)
               end.not_to raise_error
             end
           end
@@ -164,13 +164,13 @@ describe Bosh::AzureCloud::Cloud do
             it 'attach the disk' do
               expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
                                                          .and_return(lun)
-              expect(registry_client).to receive(:read_settings).with(instance_id)
+              expect(registry_client).to receive(:read_settings).with(vm_cid)
                                                                 .and_return(old_settings)
               expect(registry_client).to receive(:update_settings)
-                .with(instance_id, new_settings).and_return(true)
+                .with(vm_cid, new_settings).and_return(true)
 
               expect do
-                managed_cloud.attach_disk(instance_id, disk_id)
+                managed_cloud.attach_disk(vm_cid, disk_cid)
               end.not_to raise_error
             end
           end
@@ -183,7 +183,7 @@ describe Bosh::AzureCloud::Cloud do
 
             it 'raise an error' do
               expect do
-                managed_cloud.attach_disk(instance_id, disk_id)
+                managed_cloud.attach_disk(vm_cid, disk_cid)
               end.to raise_error /attach_disk - Failed to migrate disk/
             end
           end
@@ -228,13 +228,13 @@ describe Bosh::AzureCloud::Cloud do
 
               expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
                                                          .and_return(lun)
-              expect(registry_client).to receive(:read_settings).with(instance_id)
+              expect(registry_client).to receive(:read_settings).with(vm_cid)
                                                                 .and_return(old_settings)
               expect(registry_client).to receive(:update_settings)
-                .with(instance_id, new_settings).and_return(true)
+                .with(vm_cid, new_settings).and_return(true)
 
               expect do
-                managed_cloud.attach_disk(instance_id, disk_id)
+                managed_cloud.attach_disk(vm_cid, disk_cid)
               end.not_to raise_error
             end
           end
@@ -255,7 +255,7 @@ describe Bosh::AzureCloud::Cloud do
                 expect(blob_manager).not_to receive(:set_blob_metadata)
 
                 expect do
-                  managed_cloud.attach_disk(instance_id, disk_id)
+                  managed_cloud.attach_disk(vm_cid, disk_cid)
                 end.to raise_error /attach_disk - Failed to create the managed disk/
               end
             end
@@ -269,7 +269,7 @@ describe Bosh::AzureCloud::Cloud do
                 expect(blob_manager).not_to receive(:set_blob_metadata)
 
                 expect do
-                  managed_cloud.attach_disk(instance_id, disk_id)
+                  managed_cloud.attach_disk(vm_cid, disk_cid)
                 end.to raise_error /attach_disk - Failed to create the managed disk/
               end
             end
@@ -285,13 +285,13 @@ describe Bosh::AzureCloud::Cloud do
           it 'attaches the unmanaged disk to the vm' do
             expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
                                                        .and_return(lun)
-            expect(registry_client).to receive(:read_settings).with(instance_id)
+            expect(registry_client).to receive(:read_settings).with(vm_cid)
                                                               .and_return(old_settings)
             expect(registry_client).to receive(:update_settings)
-              .with(instance_id, new_settings).and_return(true)
+              .with(vm_cid, new_settings).and_return(true)
 
             expect do
-              cloud.attach_disk(instance_id, disk_id)
+              cloud.attach_disk(vm_cid, disk_cid)
             end.not_to raise_error
           end
         end
@@ -302,13 +302,13 @@ describe Bosh::AzureCloud::Cloud do
       it 'attaches the unmanaged disk to the vm' do
         expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
                                                    .and_return(lun)
-        expect(registry_client).to receive(:read_settings).with(instance_id)
+        expect(registry_client).to receive(:read_settings).with(vm_cid)
                                                           .and_return(old_settings)
         expect(registry_client).to receive(:update_settings)
-          .with(instance_id, new_settings).and_return(true)
+          .with(vm_cid, new_settings).and_return(true)
 
         expect do
-          cloud.attach_disk(instance_id, disk_id)
+          cloud.attach_disk(vm_cid, disk_cid)
         end.not_to raise_error
       end
     end
@@ -324,14 +324,14 @@ describe Bosh::AzureCloud::Cloud do
       it 'should sleep 30 seconds before attaching disk to the vm' do
         expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
                                                    .and_return(lun)
-        expect(registry_client).to receive(:read_settings).with(instance_id)
+        expect(registry_client).to receive(:read_settings).with(vm_cid)
                                                           .and_return(old_settings)
         expect(registry_client).to receive(:update_settings)
-          .with(instance_id, new_settings).and_return(true)
+          .with(vm_cid, new_settings).and_return(true)
         expect(cloud).to receive(:sleep).with(30)
 
         expect do
-          cloud.attach_disk(instance_id, disk_id)
+          cloud.attach_disk(vm_cid, disk_cid)
         end.not_to raise_error
       end
     end

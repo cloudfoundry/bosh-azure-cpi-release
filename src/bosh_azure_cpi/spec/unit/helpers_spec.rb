@@ -1148,23 +1148,23 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
-  describe '#is_light_stemcell_id?' do
+  describe '#is_light_stemcell_cid?' do
     context 'when stemcell is light' do
-      let(:stemcell_id) { 'bosh-light-stemcell-xxx' }
+      let(:stemcell_cid) { 'bosh-light-stemcell-xxx' }
 
       it 'should return true' do
         expect(
-          helpers_tester.is_light_stemcell_id?(stemcell_id)
+          helpers_tester.is_light_stemcell_cid?(stemcell_cid)
         ).to be(true)
       end
     end
 
     context 'when stemcell is heavy' do
-      let(:stemcell_id) { 'bosh-stemcell-xxx' }
+      let(:stemcell_cid) { 'bosh-stemcell-xxx' }
 
       it 'should return false' do
         expect(
-          helpers_tester.is_light_stemcell_id?(stemcell_id)
+          helpers_tester.is_light_stemcell_cid?(stemcell_cid)
         ).to be(false)
       end
     end

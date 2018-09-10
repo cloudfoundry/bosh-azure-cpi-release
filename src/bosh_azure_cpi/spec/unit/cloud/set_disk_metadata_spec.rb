@@ -7,12 +7,12 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#set_disk_metadata' do
-    let(:disk_id) { 'fake-disk-id' }
+    let(:disk_cid) { 'fake-disk-cid' }
     let(:metadata) { {} }
 
     it 'should raise a NotSupported error' do
       expect do
-        cloud.set_disk_metadata(disk_id, metadata)
+        cloud.set_disk_metadata(disk_cid, metadata)
       end.to raise_error {
         Bosh::Clouds::NotSupported
       }
