@@ -11,7 +11,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#get_vmss_by_name' do
     context 'when everything ok' do
-      let(:vmss_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}?api-version=#{api_version_compute}" }
+      let(:vmss_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}?api-version=#{api_version_compute}" }
       let(:vmss_result) do
         {
           sku: {
@@ -42,7 +42,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#get_vmss_instances' do
     context 'when everything ok' do
-      let(:vmss_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines?api-version=#{api_version_compute}" }
+      let(:vmss_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines?api-version=#{api_version_compute}" }
       let(:vmss_instances_result) do
         {
           value: [
@@ -76,7 +76,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#get_vmss_instance' do
     context 'when os disk is managed disk' do
-      let(:vmss_instance_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}" }
+      let(:vmss_instance_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}" }
       let(:fake_nic_id) { 'nic_1' }
       let(:nic_instance_uri) { "https://management.azure.com/#{fake_nic_id}?api-version=#{group_api_version}" }
       let(:vmss_instance_result) do
@@ -191,7 +191,7 @@ describe Bosh::AzureCloud::AzureClient do
       ]
     end
     context 'when everything ok' do
-      let(:vmss_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets?api-version=#{api_version_compute}&validating=true" }
+      let(:vmss_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets?api-version=#{api_version_compute}&validating=true" }
       let(:create_vmss_request_body) do
         {}
       end
@@ -233,7 +233,7 @@ describe Bosh::AzureCloud::AzureClient do
   describe '#scale_vmss_up' do
     context 'when everything ok' do
       let(:number) { 1 }
-      let(:vmss_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}?api-version=#{api_version_compute}" }
+      let(:vmss_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}?api-version=#{api_version_compute}" }
       let(:vmss_uri_put) { "#{vmss_uri}&validating=true" }
       let(:vmss_result) do
         {
@@ -269,7 +269,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#attach_disk_to_vmss_instance' do
-    let(:vmss_instance_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}" }
+    let(:vmss_instance_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}" }
     let(:vmss_instance_uri_put) { "#{vmss_instance_uri}&validating=true" }
     let(:vmss_instance_result) do
       {
@@ -319,7 +319,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#detach_disk_from_vmss_instance' do
-    let(:vmss_instance_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}" }
+    let(:vmss_instance_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}" }
     let(:vmss_instance_uri_put) { "#{vmss_instance_uri}&validating=true" }
     let(:vmss_instance_result) do
       {
@@ -366,7 +366,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#reboot_vmss_instance' do
     context 'when everything ok' do
-      let(:vmss_instance_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}/restart?api-version=#{api_version_compute}" }
+      let(:vmss_instance_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}/restart?api-version=#{api_version_compute}" }
       let(:vmss_instance_uri_post) { "#{vmss_instance_uri}&validating=true" }
       it 'should not raise error' do
         stub_request(:post, token_uri).to_return(
@@ -391,7 +391,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#delete_vmss_instance' do
     context 'when everything ok' do
-      let(:vmss_instance_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}&validating=true" }
+      let(:vmss_instance_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}&validating=true" }
       it 'should not raise error' do
         stub_request(:post, token_uri).to_return(
           status: 200,
@@ -426,7 +426,7 @@ describe Bosh::AzureCloud::AzureClient do
       let(:vmss_instance_without_tags) do
         {}
       end
-      let(:vmss_instance_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}" }
+      let(:vmss_instance_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}/virtualMachines/#{vmss_instance_id}?api-version=#{api_version_compute}" }
       let(:vmss_instance_uri_put) { "#{vmss_instance_uri}&validating=true" }
       context 'when tags existing' do
         it 'should not raise error' do

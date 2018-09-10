@@ -10,7 +10,7 @@ describe Bosh::AzureCloud::AzureClient do
   include_context 'shared stuff for azure client'
 
   describe '#create_resource_group' do
-    let(:resource_group_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}?api-version=#{group_api_version}" }
+    let(:resource_group_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}?api-version=#{group_api_version}" }
 
     let(:location) { 'fake-location' }
 

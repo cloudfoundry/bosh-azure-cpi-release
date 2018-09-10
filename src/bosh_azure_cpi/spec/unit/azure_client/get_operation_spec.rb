@@ -16,7 +16,7 @@ describe Bosh::AzureCloud::AzureClient do
   # Public IP
   let(:public_ip_name) { 'fake-name' }
   let(:public_ip_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}" }
-  let(:public_ip_uri) { "https://management.azure.com/#{public_ip_id}?api-version=#{api_version_network}" }
+  let(:public_ip_uri) { "https://management.azure.com#{public_ip_id}?api-version=#{api_version_network}" }
   let(:public_ip_response_body) do
     {
       'id' => 'fake-id',
@@ -158,7 +158,7 @@ describe Bosh::AzureCloud::AzureClient do
   # Network Interface
   let(:nic_name) { 'fake-name' }
   let(:nic_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces/#{nic_name}" }
-  let(:nic_uri) { "https://management.azure.com/#{nic_id}?api-version=#{api_version_network}" }
+  let(:nic_uri) { "https://management.azure.com#{nic_id}?api-version=#{api_version_network}" }
   let(:nic_response_body) do
     {
       'id' => 'fake-id',
@@ -198,7 +198,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   # Virtual Network
   let(:vnet_name) { 'fake-vnet-name' }
-  let(:vnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}?api-version=#{api_version_network}" }
+  let(:vnet_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}?api-version=#{api_version_network}" }
   let(:vnet_response_body) do
     {
       'id' => 'fake-vnet-id',
@@ -241,7 +241,7 @@ describe Bosh::AzureCloud::AzureClient do
   # Subnet
   let(:vnet_name) { 'fake-name' }
   let(:subnet_name) { 'bar' }
-  let(:network_subnet_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}/subnets/#{subnet_name}?api-version=#{api_version_network}" }
+  let(:network_subnet_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/virtualNetworks/#{vnet_name}/subnets/#{subnet_name}?api-version=#{api_version_network}" }
   let(:network_subnet_response_body) do
     {
       'id' => 'fake-id',
@@ -264,7 +264,7 @@ describe Bosh::AzureCloud::AzureClient do
   # Network Security Group
   let(:nsg_name) { 'fake-nsg-name' }
   let(:nsg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkSecurityGroups/#{nsg_name}" }
-  let(:nsg_uri) { "https://management.azure.com/#{nsg_id}?api-version=#{api_version_network}" }
+  let(:nsg_uri) { "https://management.azure.com#{nsg_id}?api-version=#{api_version_network}" }
   let(:nsg_response_body) do
     {
       'id' => 'fake-id',
@@ -329,7 +329,7 @@ describe Bosh::AzureCloud::AzureClient do
   # Application Security Group
   let(:asg_name) { 'fake-asg-name' }
   let(:asg_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/applicationSecurityGroups/#{asg_name}" }
-  let(:asg_uri) { "https://management.azure.com/#{asg_id}?api-version=#{api_version_network}" }
+  let(:asg_uri) { "https://management.azure.com#{asg_id}?api-version=#{api_version_network}" }
   let(:asg_response_body) do
     {
       'id' => 'fake-id',
@@ -456,7 +456,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#list_public_ips' do
-    let(:list_public_ips_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses?api-version=#{api_version_network}" }
+    let(:list_public_ips_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses?api-version=#{api_version_network}" }
     let(:list_public_ips_response_body) do
       {
         'value' => [public_ip_response_body]
@@ -1326,7 +1326,7 @@ describe Bosh::AzureCloud::AzureClient do
     let(:api_version) { AZURE_API_VERSION }
     let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
     let(:vm_name) { 'fake-vm-name' }
-    let(:vm_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
+    let(:vm_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachines/#{vm_name}?api-version=#{api_version_compute}" }
 
     context 'when the response body is null' do
       it 'should return null' do
