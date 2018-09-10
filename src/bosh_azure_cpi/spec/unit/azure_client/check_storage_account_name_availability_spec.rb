@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:storage_account_name) { 'fake-storage-account-name' }
 
   describe '#check_storage_account_name_availability' do
-    let(:check_name_availability_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/providers/Microsoft.Storage/checkNameAvailability?api-version=#{storage_api_version}" }
+    let(:check_name_availability_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/providers/Microsoft.Storage/checkNameAvailability?api-version=#{storage_api_version}" }
     let(:request_body) do
       {
         name: storage_account_name,

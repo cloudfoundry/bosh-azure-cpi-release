@@ -27,7 +27,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   describe '#list_network_interfaces_by_keyword' do
-    let(:network_interfaces_url) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces?api-version=#{api_version_network}" }
+    let(:network_interfaces_url) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/networkInterfaces?api-version=#{api_version_network}" }
     let(:instance_id) { 'fake-instance-id' }
 
     context 'when network interfaces are not found' do

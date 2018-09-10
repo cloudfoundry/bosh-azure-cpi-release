@@ -32,7 +32,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#create_availability_set' do
-    let(:avset_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/availabilitySets/#{avset_name}?api-version=#{api_version_compute}" }
+    let(:avset_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/availabilitySets/#{avset_name}?api-version=#{api_version_compute}" }
 
     let(:avset_params) do
       {
@@ -159,7 +159,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#get_availability_set_by_name' do
-    let(:avset_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/availabilitySets/#{avset_name}?api-version=#{api_version_compute}" }
+    let(:avset_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/availabilitySets/#{avset_name}?api-version=#{api_version_compute}" }
 
     let(:response_body) do
       {
@@ -329,7 +329,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#delete_availability_set' do
-    let(:avset_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/availabilitySets/#{avset_name}?api-version=#{api_version_compute}" }
+    let(:avset_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/availabilitySets/#{avset_name}?api-version=#{api_version_compute}" }
 
     context 'when token is valid, delete operation is accepted and completed' do
       it 'should delete the availability set without error' do

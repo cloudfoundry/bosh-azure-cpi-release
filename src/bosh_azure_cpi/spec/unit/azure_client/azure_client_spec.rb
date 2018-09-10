@@ -141,7 +141,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#get_resource_by_id' do
     let(:url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/foo/bar/foo" }
-    let(:resource_uri) { "https://management.azure.com/#{url}?api-version=#{api_version}" }
+    let(:resource_uri) { "https://management.azure.com#{url}?api-version=#{api_version}" }
     let(:response_body) do
       {
         'id' => 'foo',
@@ -369,7 +369,7 @@ describe Bosh::AzureCloud::AzureClient do
   describe '#get_resource_group' do
     let(:url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}" }
     let(:group_api_version) { AZURE_RESOURCE_PROVIDER_GROUP }
-    let(:resource_uri) { "https://management.azure.com/#{url}?api-version=#{group_api_version}" }
+    let(:resource_uri) { "https://management.azure.com#{url}?api-version=#{group_api_version}" }
     let(:response_body) do
       {
         'id' => 'fake-id',

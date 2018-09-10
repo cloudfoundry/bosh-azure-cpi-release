@@ -2187,7 +2187,7 @@ module Bosh::AzureCloud
                             end
         params['api-version'] = get_api_version(@azure_config, resource_provider)
       end
-      uri = URI(get_arm_endpoint(@azure_config) + url)
+      uri = URI.join(get_arm_endpoint(@azure_config), url)
       uri.query = URI.encode_www_form(params)
       uri
     end

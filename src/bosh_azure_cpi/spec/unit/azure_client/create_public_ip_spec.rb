@@ -33,7 +33,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#create_public_ip' do
-    let(:public_ip_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}?api-version=#{api_version_network}" }
+    let(:public_ip_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}?api-version=#{api_version_network}" }
 
     let(:location) { 'fake-location' }
 

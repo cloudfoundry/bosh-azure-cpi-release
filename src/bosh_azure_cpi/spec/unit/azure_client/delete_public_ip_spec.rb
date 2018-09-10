@@ -27,7 +27,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:expires_on) { (Time.new + 1800).to_i.to_s }
 
   describe '#delete_public_ip' do
-    let(:public_ip_uri) { "https://management.azure.com//subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}?api-version=#{api_version_network}" }
+    let(:public_ip_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Network/publicIPAddresses/#{public_ip_name}?api-version=#{api_version_network}" }
 
     context 'when token is valid, delete operation is accepted and completed' do
       it 'should delete a public ip without error' do

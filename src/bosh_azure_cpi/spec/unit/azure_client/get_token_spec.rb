@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#get_token' do
     let(:url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/foo/bar/foo" }
-    let(:resource_uri) { "https://management.azure.com/#{url}?api-version=#{api_version}" }
+    let(:resource_uri) { "https://management.azure.com#{url}?api-version=#{api_version}" }
     let(:response_body) do
       {
         'id' => 'foo',
