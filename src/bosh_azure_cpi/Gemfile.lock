@@ -43,7 +43,7 @@ GEM
     nokogiri (1.8.2)
       mini_portile2 (~> 2.3.0)
     parallel (1.12.1)
-    parser (2.5.1.0)
+    parser (2.5.1.2)
       ast (~> 2.4.0)
     powerpack (0.1.2)
     public_suffix (3.0.0)
@@ -62,15 +62,15 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.5.0)
     rspec-support (3.5.0)
-    rubocop (0.57.2)
+    rubocop (0.59.0)
       jaro_winkler (~> 1.5.1)
       parallel (~> 1.10)
-      parser (>= 2.5)
+      parser (>= 2.5, != 2.5.1.1)
       powerpack (~> 0.1)
       rainbow (>= 2.2.2, < 4.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (~> 1.0, >= 1.0.1)
-    ruby-progressbar (1.9.0)
+    ruby-progressbar (1.10.0)
     safe_yaml (1.0.4)
     semi_semantic (1.2.0)
     simplecov (0.15.0)
@@ -95,9 +95,9 @@ DEPENDENCIES
   jwt (= 1.5.6)
   rake (~> 12.0)
   rspec (~> 3.5.0)
-  rubocop (~> 0.57.1)
+  rubocop (~> 0.59.0)
   simplecov
   webmock
 
 BUNDLED WITH
-   1.16.2
+   1.16.4
