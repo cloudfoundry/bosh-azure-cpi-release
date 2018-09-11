@@ -23,6 +23,7 @@ module Bosh::AzureCloud
         array.each do |item|
           ret = item.match('^([^:]*):(.*)$')
           raise Bosh::Clouds::CloudError, ErrorMsg::OBJ_ID_KEY_VALUE_FORMAT_ERROR if ret.nil?
+
           id_hash[ret[1]] = ret[2]
         end
         [id_hash, nil]
@@ -31,6 +32,7 @@ module Bosh::AzureCloud
 
     def to_s
       return @plain_id unless @plain_id.nil?
+
       array = []
       @id_hash.each { |key, value| array << "#{key}:#{value}" }
       array.sort.join(KEY_SEPERATOR)

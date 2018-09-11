@@ -136,6 +136,7 @@ module Bosh::AzureCloud
 
     def initialize(event_list)
       raise "event_list must be an Array, but it is a #{event_list.class}" unless event_list.is_a?(Array)
+
       @event_list = event_list
     end
 
