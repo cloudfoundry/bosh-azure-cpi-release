@@ -15,7 +15,7 @@ describe Bosh::AzureCloud::VMManager do
     let(:light_stemcell_manager) { instance_double(Bosh::AzureCloud::LightStemcellManager) }
     let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
-    let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+    let(:instance_id) { instance_double(Bosh::AzureCloud::VMInstanceId) }
     let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
 
     let(:vm_name) { 'fake-vm-name' }

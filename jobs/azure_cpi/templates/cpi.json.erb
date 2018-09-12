@@ -90,7 +90,6 @@
   end
 
   if p('azure.config_disk.enabled')
-    config_disk = p('azure.config_disk')
     params['cloud']['properties']['azure']['config_disk'] = {
       "enabled" => true
     }
@@ -100,6 +99,15 @@
     }
   end
 
+  if p('azure.vmss.enabled')
+    params['cloud']['properties']['azure']['vmss'] = {
+      "enabled" => true
+    }
+  else
+    params['cloud']['properties']['azure']['vmss'] = {
+      "enabled" => false
+    }
+  end
 
   if_p('registry.endpoint') do |endpoint|
     params['cloud']['properties']['registry']['endpoint'] = endpoint
@@ -145,5 +153,5 @@
     params['cloud']['properties']['agent']['mbus'] = "nats://#{p('nats.user')}:#{p('nats.password')}@#{p(['agent.nats.address', 'nats.address'])}:#{p('nats.port')}"
   end
   
-  JSON.dump(params)
+  JSON.pretty_generate(params)
 %>

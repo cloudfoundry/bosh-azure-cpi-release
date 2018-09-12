@@ -80,6 +80,9 @@ describe 'cpi.json.erb' do
             'enable_vm_boot_diagnostics'  => false,
             'config_disk'                 => {
               'enabled' => false
+            },
+            'vmss' => {
+              'enabled' => false
             }
           },
           'registry' => {

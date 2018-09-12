@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vms/shared_stuff.rb'
 
 describe Bosh::AzureCloud::VMManager do
-  include_context 'shared stuff for vm manager'
+  include_context 'shared stuff for vm managers'
 
   describe '#create' do
     before do
@@ -280,20 +280,6 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'and keep_failed_vms is true in global configuration' do
-            let(:azure_config_to_keep_failed_vms) do
-              mock_azure_config_merge(
-                'keep_failed_vms' => true
-              )
-            end
-            let(:vm_manager_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
-            let(:azure_config_managed_to_keep_failed_vms) do
-              mock_azure_config_merge(
-                'use_managed_disks' => true,
-                'keep_failed_vms'   => true
-              )
-            end
-            let(:vm_manager2_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_managed_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
-
             before do
               allow(vm_manager_to_keep_failed_vms).to receive(:_get_stemcell_info).and_return(stemcell_info)
               allow(vm_manager2_to_keep_failed_vms).to receive(:_get_stemcell_info).and_return(stemcell_info)

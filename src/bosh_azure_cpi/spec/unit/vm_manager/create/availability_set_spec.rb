@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vms/shared_stuff.rb'
 
 describe Bosh::AzureCloud::VMManager do
-  include_context 'shared stuff for vm manager'
+  include_context 'shared stuff for vm managers'
 
   describe '#create' do
     context 'when VM is created' do
@@ -411,16 +411,6 @@ describe Bosh::AzureCloud::VMManager do
 
             context 'when the environment is AzureStack' do
               # VM manager for AzureStack
-              let(:azure_config_azure_stack) do
-                mock_azure_config_merge(
-                  'environment' => 'AzureStack'
-                )
-              end
-              let(:vm_manager_azure_stack) do
-                Bosh::AzureCloud::VMManager.new(
-                  azure_config_azure_stack, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
-                )
-              end
               let(:vm_props) do
                 Bosh::AzureCloud::VMCloudProps.new(
                   {

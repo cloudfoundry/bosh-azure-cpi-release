@@ -12,11 +12,9 @@ describe Bosh::AzureCloud::Cloud do
     let(:snapshot_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
     let(:resource_group_name) { 'fake-resource-group-name' }
     let(:caching) { 'fake-cacing' }
-    let(:disk_cid) { 'fake-disk-cid' }
-    let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
 
     before do
-      allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+      allow(Bosh::AzureCloud::CloudIdParser).to receive(:parse)
         .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
 

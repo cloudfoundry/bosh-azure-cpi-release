@@ -24,13 +24,11 @@ describe Bosh::AzureCloud::Cloud do
         }
       }
     end
-    let(:disk_name) { 'fake-disk-name' }
-    let(:disk_cid) { 'fake-disk-cid' }
-    let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
+    let(:disk_id_object) { Bosh::AzureCloud::DiskId.create_from_hash({}, disk_cid) }
 
-    let(:vm_name) { 'fake-vm-name' }
-    let(:vm_cid) { 'fake-vm-cid' }
-    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
+    let(:vm_name) { '041c71c3-daa6-4b04-96eb-e422c2f49a7b' }
+    let(:vm_cid) { '041c71c3-daa6-4b04-96eb-e422c2f49a7b' }
+    let(:instance_id_object) { Bosh::AzureCloud::VMInstanceId.create_from_hash({}, vm_cid) }
     let(:vm) do
       {
         name: vm_name,
@@ -43,10 +41,10 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     before do
-      allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+      allow(Bosh::AzureCloud::CloudIdParser).to receive(:parse)
         .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
-      allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
+      allow(Bosh::AzureCloud::CloudIdParser).to receive(:parse)
         .with(vm_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(instance_id_object)
       allow(instance_id_object).to receive(:to_s)

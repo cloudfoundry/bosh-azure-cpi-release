@@ -827,6 +827,7 @@ describe Bosh::AzureCloud::Helpers do
             stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
             expect(stemcell_info.os_type).to eq('windows')
             expect(stemcell_info.image_size).to eq(12_345)
+            expect(stemcell_info.to_s).to eq('uri: fake-uri, os_type: windows, name: fake-name')
           end
         end
       end
@@ -842,6 +843,7 @@ describe Bosh::AzureCloud::Helpers do
         expect(stemcell_info.name).to be(nil)
         expect(stemcell_info.version).to be(nil)
         expect(stemcell_info.image_size).to eq(3072)
+        expect(stemcell_info.to_s).to eq('uri: fake-uri, os_type: linux, name: ')
       end
     end
   end

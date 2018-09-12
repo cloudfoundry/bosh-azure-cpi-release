@@ -7,11 +7,10 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#has_disk?' do
-    let(:disk_cid) { 'fake-disk-id' }
     let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
 
     before do
-      allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+      allow(Bosh::AzureCloud::CloudIdParser).to receive(:parse)
         .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
 

@@ -117,7 +117,7 @@ describe Bosh::AzureCloud::DiskId do
 
       it 'should initialize a v2 disk_id' do
         expect do
-          disk_id = Bosh::AzureCloud::DiskId.parse(id, default_resource_group_name)
+          disk_id = Bosh::AzureCloud::CloudIdParser.parse(id, default_resource_group_name)
           expect(disk_id.instance_variable_get('@plain_id')).to eq(nil)
           expect(disk_id.instance_variable_get('@id_hash')).to eq(id_hash)
         end.not_to raise_error
@@ -125,11 +125,11 @@ describe Bosh::AzureCloud::DiskId do
     end
 
     context 'when id does not contain ":"' do
-      let(:id) { 'fake-id' }
+      let(:id) { 'bosh-disk-data-disk-1' }
 
       it 'should initialize a v1 disk_id' do
         expect do
-          disk_id = Bosh::AzureCloud::DiskId.parse(id, default_resource_group_name)
+          disk_id = Bosh::AzureCloud::CloudIdParser.parse(id, default_resource_group_name)
           expect(disk_id.instance_variable_get('@plain_id')).to eq(id)
         end.not_to raise_error
       end
@@ -138,8 +138,8 @@ describe Bosh::AzureCloud::DiskId do
 
   describe '#to_s' do
     context 'when disk id is a v1 id' do
-      let(:disk_id_string) { 'fake-disk-id' }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'default-resource-group-name') }
+      let(:disk_id_string) { 'bosh-disk-data-disk-1' }
+      let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'default-resource-group-name') }
 
       it 'should return the v1 string' do
         expect(disk_id.to_s).to eq(disk_id_string)
@@ -149,7 +149,7 @@ describe Bosh::AzureCloud::DiskId do
     context 'when disk id is a v2 id' do
       context 'when disk id is initialized by self.parse' do
         let(:disk_id_string) { 'caching:c;disk_name:bosh-disk-data-d;resource_group_name:r' }
-        let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'r') }
+        let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'r') }
 
         it 'should return the v2 string' do
           expect(disk_id.to_s).to eq(disk_id_string)
@@ -173,7 +173,7 @@ describe Bosh::AzureCloud::DiskId do
         let(:disk_name) { 'bosh-disk-data-fake-disk-name' }
         let(:resource_group_name) { 'fake-resource-group-name' }
         let(:disk_id_1) { Bosh::AzureCloud::DiskId.create(caching, true, disk_name: disk_name, resource_group_name: resource_group_name) }
-        let(:disk_id_2) { Bosh::AzureCloud::DiskId.parse(disk_id_1.to_s, resource_group_name) }
+        let(:disk_id_2) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_1.to_s, resource_group_name) }
 
         it 'should have same output string' do
           expect(disk_id_1.to_s).to eq(disk_id_2.to_s)
@@ -186,7 +186,7 @@ describe Bosh::AzureCloud::DiskId do
     context 'when disk id is a v1 id' do
       let(:default_resource_group_name) { 'fake-resource-group-name' }
       let(:disk_id_string) { "bosh-disk-data-#{SecureRandom.uuid}-None" }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, default_resource_group_name) }
+      let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, default_resource_group_name) }
 
       it 'should return the default resource group' do
         expect(disk_id.resource_group_name).to eq(default_resource_group_name)
@@ -197,7 +197,7 @@ describe Bosh::AzureCloud::DiskId do
       context 'when disk id contains resource_group_name' do
         let(:resource_group_name) { 'fake-resource-group-name' }
         let(:disk_id_string) { "disk_name:bosh-disk-data-fake-uuid;caching:None;resource_group_name:#{resource_group_name}" }
-        let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name') }
+        let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'fake-resource-group-name') }
 
         it 'should return the resource group specified in disk id' do
           expect(disk_id.resource_group_name).to eq(resource_group_name)
@@ -207,7 +207,7 @@ describe Bosh::AzureCloud::DiskId do
       context 'when disk id does not contain resource_group_name' do
         let(:default_resource_group_name) { 'fake-resource-group-name' }
         let(:disk_id_string) { "disk_name:bosh-data-fake-uuid;caching:None;storage_account_name:#{default_resource_group_name}" }
-        let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, default_resource_group_name) }
+        let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, default_resource_group_name) }
 
         it 'should return the default resource group' do
           expect(disk_id.resource_group_name).to eq(default_resource_group_name)
@@ -219,7 +219,7 @@ describe Bosh::AzureCloud::DiskId do
   describe '#disk_name' do
     context 'when disk id is a v1 id' do
       let(:disk_id_string) { "bosh-disk-data-#{SecureRandom.uuid}-None" }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name') }
+      let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'fake-resource-group-name') }
 
       it 'should return v1 id' do
         expect(disk_id.disk_name).to eq(disk_id_string)
@@ -230,7 +230,7 @@ describe Bosh::AzureCloud::DiskId do
       context 'when disk_name contains ":"' do
         let(:disk_name) { 'bosh-data-fake-uuid--a:b:c' }
         let(:disk_id_string) { "disk_name:#{disk_name};caching:cc;storage_account_name:ss" }
-        let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name') }
+        let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'fake-resource-group-name') }
 
         it 'should return the disk name specified in disk id' do
           expect(disk_id.disk_name).to eq(disk_name)
@@ -240,7 +240,7 @@ describe Bosh::AzureCloud::DiskId do
       context 'when disk_name does not contain ":"' do
         let(:disk_name) { 'bosh-disk-data-fake-uuid' }
         let(:disk_id_string) { "disk_name:#{disk_name};caching:cc;resource_group_name:rr" }
-        let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name') }
+        let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'fake-resource-group-name') }
 
         it 'should return the disk name specified in disk id' do
           expect(disk_id.disk_name).to eq(disk_name)
@@ -253,7 +253,7 @@ describe Bosh::AzureCloud::DiskId do
     context 'when disk id is a v1 id' do
       let(:caching) { 'None' }
       let(:disk_id_string) { "bosh-disk-data-#{SecureRandom.uuid}-#{caching}" }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name') }
+      let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'fake-resource-group-name') }
 
       it 'should get caching from v1 disk name' do
         expect(disk_id.caching).to eq(caching)
@@ -263,7 +263,7 @@ describe Bosh::AzureCloud::DiskId do
     context 'when disk id is a v2 id' do
       let(:caching) { 'None' }
       let(:disk_id_string) { "disk_name:bosh-disk-data-uuid;caching:#{caching};resource_group_name:rr" }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name') }
+      let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'fake-resource-group-name') }
 
       it 'should return caching specified in disk id' do
         expect(disk_id.caching).to eq(caching)
@@ -290,7 +290,7 @@ describe Bosh::AzureCloud::DiskId do
       let(:disk_id_string) { "wrongbosh-data-#{storage_account_name}-#{SecureRandom.uuid}-#{caching}" }
       it 'should raise error' do
         expect do
-          disk_id = Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name')
+          disk_id = Bosh::AzureCloud::DiskId.create_from_hash({}, disk_id_string)
           disk_id.storage_account_name
         end.to raise_error /Invalid data disk name/
       end
@@ -300,7 +300,7 @@ describe Bosh::AzureCloud::DiskId do
       let(:caching) { 'None' }
       let(:storage_account_name) { 'fakestorageaccountname' }
       let(:disk_id_string) { "bosh-data-#{storage_account_name}-#{SecureRandom.uuid}-#{caching}" }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name') }
+      let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'fake-resource-group-name') }
 
       it 'should get storage account from v1 disk name' do
         expect(disk_id.storage_account_name).to eq(storage_account_name)
@@ -310,7 +310,7 @@ describe Bosh::AzureCloud::DiskId do
     context 'when disk id is a v2 id' do
       let(:storage_account_name) { 'fakestorageaccountname' }
       let(:disk_id_string) { "disk_name:bosh-data-uuid;caching:cc;storage_account_name:#{storage_account_name}" }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name') }
+      let(:disk_id) { Bosh::AzureCloud::CloudIdParser.parse(disk_id_string, 'fake-resource-group-name') }
 
       it 'should return the resource group specified in disk id' do
         expect(disk_id.storage_account_name).to eq(storage_account_name)

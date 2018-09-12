@@ -77,6 +77,9 @@ def mock_cloud_options
         'request_id'                 => MOCK_REQUEST_ID,
         'config_disk' => {
           'enabled' => false
+        },
+        'vmss' => {
+          'enabled' => false
         }
       },
       'registry' => {

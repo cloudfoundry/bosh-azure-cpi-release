@@ -23,7 +23,7 @@ describe Bosh::AzureCloud::VMManager do
 
     let(:vm_name) { 'fake-vm-name' }
     let(:disk_name) { "bosh-data-#{storage_account_name}-fake-disk-name-#{caching}" }
-    let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+    let(:instance_id) { instance_double(Bosh::AzureCloud::VMInstanceId) }
     let(:disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
     let(:disk_id_string) { 'fake-disk-id' }
 
