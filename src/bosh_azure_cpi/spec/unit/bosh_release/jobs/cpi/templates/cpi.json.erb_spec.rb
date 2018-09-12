@@ -523,6 +523,7 @@ class TemplateEvaluationContext
       return result unless result.nil?
     end
     return args[1] if args.length == 2
+
     raise UnknownProperty, names
   end
 
@@ -530,6 +531,7 @@ class TemplateEvaluationContext
     values = names.map do |name|
       value = lookup_property(@raw_properties, name)
       return ActiveElseBlock.new(self) if value.nil?
+
       value
     end
     yield *values

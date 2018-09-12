@@ -83,6 +83,7 @@ module Bosh::AzureCloud
         elsif stemcell_meta.status != STEMCELL_STATUS_PENDING
           cloud_error("The status of the stemcell #{name} in the storage account #{storage_account_name} is unknown: #{stemcell_meta.status}")
         end
+
         return _wait_stemcell_copy(storage_account_name, name)
       else
         begin
