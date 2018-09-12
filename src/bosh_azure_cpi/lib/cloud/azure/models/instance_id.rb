@@ -45,12 +45,14 @@ module Bosh::AzureCloud
 
     def vm_name
       return @plain_id unless @plain_id.nil?
+
       @id_hash[AGENT_ID_KEY]
     end
 
     def storage_account_name
       unless @plain_id.nil?
         return nil if use_managed_disks?
+
         return _parse_with_unmanaged_disks_plain(@plain_id)[0]
       end
       @id_hash[STORAGE_ACCOUNT_NAME_KEY]
@@ -58,6 +60,7 @@ module Bosh::AzureCloud
 
     def use_managed_disks?
       return @plain_id.length == UUID_LENGTH unless @plain_id.nil?
+
       @id_hash[STORAGE_ACCOUNT_NAME_KEY].nil?
     end
 

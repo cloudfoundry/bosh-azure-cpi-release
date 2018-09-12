@@ -85,6 +85,7 @@ end
 def check_vm(cpi, instance_id)
   has_vm = cpi.has_vm?(instance_id)
   raise "vm #{instance_id} not found" unless has_vm
+
   cpi.reboot_vm(instance_id)
   cpi.set_vm_metadata(instance_id, 'key' => 'value')
 end

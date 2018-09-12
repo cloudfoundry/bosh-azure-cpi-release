@@ -70,6 +70,7 @@ module Bosh::AzureCloud
       checksum = 0
       footer.each do |k, v|
         next if k == :checksum
+
         checksum += v.codepoints.inject(0) { |sum, n| sum + n }
       end
       [format('%08x', (~checksum) & 0xFFFFFFFF)].pack('H*')

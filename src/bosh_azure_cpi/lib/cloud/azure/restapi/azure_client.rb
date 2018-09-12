@@ -123,6 +123,7 @@ module Bosh::AzureCloud
     def parse_name_from_id(id)
       ret = id.match('/subscriptions/([^/]*)/resourceGroups/([^/]*)/providers/([^/]*)/([^/]*)/([^/]*)(.*)')
       raise AzureError, "\"#{id}\" is not a valid URL." if ret.nil?
+
       result = {}
       result[:subscription_id]     = ret[1]
       result[:resource_group_name] = ret[2]
@@ -446,6 +447,7 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       vm = get_resource_by_id(url)
       raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name '#{name}' in resource group '#{resource_group_name}'" if vm.nil?
+
       vm = remove_resources_from_vm(vm)
       vm['tags'].merge!(tags)
       http_put(url, vm)
@@ -1059,6 +1061,7 @@ module Bosh::AzureCloud
       @logger.debug("create_managed_snapshot - trying to create a snapshot '#{snapshot_name}' for the managed disk '#{disk_name}'")
       disk = get_managed_disk_by_name(resource_group_name, disk_name)
       raise AzureNotFoundError, "The disk '#{disk_name}' cannot be found" if disk.nil?
+
       snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
       # By default, the snapshot sku is Standard_LRS. TODO: should the snapshot use the disk sku?
       snapshot = {
@@ -1759,6 +1762,7 @@ module Bosh::AzureCloud
       }
       result = http_post(url, storage_account)
       raise AzureError, "Cannot check the availability of the storage account name '#{name}'" unless result.is_a?(Hash)
+
       ret = {
         available: result['nameAvailable'],
         reason: result['reason'],
@@ -2048,6 +2052,7 @@ module Bosh::AzureCloud
 
     def filter_credential_in_logs(uri)
       return true if !is_debug_mode(@azure_config) && uri.request_uri.include?('/listKeys')
+
       false
     end
 
@@ -2096,6 +2101,7 @@ module Bosh::AzureCloud
           @logger.debug("get_token - #{retry_count}: #{message}")
           status_code = response.code.to_i
           break unless retryable_error_codes.include?(status_code)
+
           retry_count += 1
           if retry_count >= max_retry_count
             cloud_error("get_token - Failed to get token after #{retry_count} retries")
@@ -2308,6 +2314,7 @@ module Bosh::AzureCloud
         error += "Error message: #{response.body}"
         raise AzureConflictError, error if response.code.to_i == HTTP_CODE_CONFLICT
         raise AzureNotFoundError, error if response.code.to_i == HTTP_CODE_NOT_FOUND
+
         raise AzureError, error
       end
       retry_after = options[:retry_after]
@@ -2328,6 +2335,7 @@ module Bosh::AzureCloud
         raise AzureAsynchronousError.new, "check_completion - http code: #{response.code}. Error message: #{response.body}" if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
 
         raise AzureAsynchronousError.new, 'The body of the asynchronous response is empty' if response.body.nil?
+
         result = JSON(response.body)
         raise AzureAsynchronousError.new, "The body of the asynchronous response does not contain 'status'. Response: #{response.body}" if result['status'].nil?
 

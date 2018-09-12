@@ -214,6 +214,7 @@ describe Bosh::AzureCloud::VMManager do
             allow(azure_client).to receive(:create_virtual_machine) do
               count += 1
               raise Bosh::AzureCloud::AzureAsynchronousError, 'Failed' if count == 1
+
               nil
             end
 
@@ -239,6 +240,7 @@ describe Bosh::AzureCloud::VMManager do
             allow(azure_client).to receive(:create_virtual_machine) do
               count += 1
               raise Bosh::AzureCloud::AzureAsynchronousError, 'Failed' if count == 1
+
               nil
             end
 
