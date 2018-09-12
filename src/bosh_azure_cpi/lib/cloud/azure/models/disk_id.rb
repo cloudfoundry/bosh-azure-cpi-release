@@ -52,6 +52,7 @@ module Bosh::AzureCloud
 
     def disk_name
       return @plain_id unless @plain_id.nil?
+
       @id_hash[DISK_NAME_KEY]
     end
 
@@ -60,6 +61,7 @@ module Bosh::AzureCloud
       cloud_error('This function should only be called for data disks') if invalid
 
       return _parse_data_disk_caching_plain(@plain_id) unless @plain_id.nil?
+
       @id_hash[CACHING_KEY]
     end
 
@@ -68,6 +70,7 @@ module Bosh::AzureCloud
       cloud_error('This function should only be called for unmanaged disks') if invalid
 
       return _parse_storage_account_plain(@plain_id) unless @plain_id.nil?
+
       @id_hash[STORAGE_ACCOUNT_NAME_KEY]
     end
 
@@ -86,6 +89,7 @@ module Bosh::AzureCloud
 
     def to_s
       return @plain_id unless @plain_id.nil?
+
       id_hash_clone = @id_hash.clone
       id_hash_clone.delete(RESOURCE_GROUP_NAME_KEY) if id_hash_clone.key?(STORAGE_ACCOUNT_NAME_KEY)
       array = []

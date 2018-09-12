@@ -15,6 +15,7 @@ module Bosh::AzureCloud
       network_security_group_name = vm_props.security_group.nil? ? network.security_group : vm_props.security_group
       network_security_group_name = @azure_config.default_security_group if network_security_group_name.nil?
       return nil if network_security_group_name.nil?
+
       cloud_error('Cannot specify an empty string to the network security group') if network_security_group_name.empty?
       # The resource group which the NSG belongs to can be specified in networks and global configuration (ordered by priority)
       resource_group_name = network.resource_group_name
