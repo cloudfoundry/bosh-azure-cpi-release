@@ -77,6 +77,7 @@ module Bosh::AzureCloud
       storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
       return false unless _has_disk?(storage_account_name, disk_name)
+
       metadata = @blob_manager.get_blob_metadata(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
       (METADATA_FOR_MIGRATED_BLOB_DISK.to_a - metadata.to_a).empty?
     end

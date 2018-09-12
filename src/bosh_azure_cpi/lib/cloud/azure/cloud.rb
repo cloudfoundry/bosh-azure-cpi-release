@@ -546,6 +546,7 @@ module Bosh::AzureCloud
           disks = []
           vm = @vm_manager.find(InstanceId.parse(instance_id, _azure_config.resource_group_name))
           raise Bosh::Clouds::VMNotFound, "VM '#{instance_id}' cannot be found" if vm.nil?
+
           vm[:data_disks].each do |disk|
             disks << disk[:disk_bosh_id] unless is_ephemeral_disk?(disk[:name])
           end

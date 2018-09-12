@@ -245,6 +245,7 @@ module Bosh::AzureCloud
 
           blobs += temp unless temp.empty?
           break if temp.continuation_token.nil? || temp.continuation_token.empty?
+
           options[:marker] = temp.continuation_token
         end
       end

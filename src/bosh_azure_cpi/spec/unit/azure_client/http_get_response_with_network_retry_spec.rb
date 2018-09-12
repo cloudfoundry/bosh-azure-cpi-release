@@ -44,6 +44,7 @@ describe Bosh::AzureCloud::AzureClient do
             allow(http_handler).to receive(:request).with(request) do
               times_called += 1
               raise error if times_called == 1 # raise error 1 time
+
               response
             end
           end

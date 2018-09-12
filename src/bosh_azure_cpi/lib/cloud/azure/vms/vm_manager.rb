@@ -393,6 +393,7 @@ module Bosh::AzureCloud
       if @use_managed_disks
         if is_light_stemcell_id?(stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
+
           stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
         else
           begin
@@ -408,9 +409,11 @@ module Bosh::AzureCloud
 
         if is_light_stemcell_id?(stemcell_id)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_id)
+
           stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_id)
         else
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_id}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_id)
+
           stemcell_info = @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_id)
         end
       end
@@ -513,6 +516,7 @@ module Bosh::AzureCloud
     def _check_resource_group(resource_group_name, location)
       resource_group = @azure_client.get_resource_group(resource_group_name)
       return true unless resource_group.nil?
+
       # If resource group does not exist, create it
       @azure_client.create_resource_group(resource_group_name, location)
     end

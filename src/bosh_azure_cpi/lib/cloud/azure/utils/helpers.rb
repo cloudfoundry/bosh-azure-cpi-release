@@ -517,6 +517,7 @@ module Bosh::AzureCloud
       #
       def image_reference
         return nil unless is_light_stemcell?
+
         {
           'publisher' => @image['publisher'],
           'offer'     => @image['offer'],
