@@ -33,9 +33,7 @@
     certutil -encode root.cer root.pem
     ```
 
-## Deploy BOSH director
-
-You need to update the [global configurations](http://bosh.io/docs/azure-cpi.html#global), including setting the `environment` to `AzureStack` and configuring the `azure_stack` properties.
+## [CPI Global Configurations](http://bosh.io/docs/azure-cpi.html#global) for Azure Stack
 
 ### Environment
 
@@ -84,7 +82,7 @@ azure:
 
 * Authentication
 
-  Azure Stack uses either Azure Active Directory (AzureAD), Azure China Cloud Active Directory (AzureChinaCloudAD) or Active Directory Federation Services (AD FS) as an identity provider.
+  Three [identity provider](https://docs.microsoft.com/en-us/azure/azure-stack/azure-stack-identity-overview) are supported: Azure Active Directory (AzureAD), Azure China Cloud Active Directory (AzureChinaCloudAD) and Active Directory Federation Services (AD FS).
 
   * Azure Active Directory
 
@@ -128,7 +126,7 @@ azure:
 
 * CA Root Certificate
 
-  If a self-signed root certificate is used when deploying Azure Stack, you **MUST** specify the `ca_cert` in the global configuration to make CPI trust the Azure Stack CA root certificate.
+  If a self-signed root certificate is used when deploying Azure Stack, you **MUST** specify the `ca_cert` in the global configuration to make CPI trust the Azure Stack CA root certificate. Check the section `Pre-requisite` to get the certificate.
 
   ```
   azure:
@@ -139,9 +137,93 @@ azure:
         -----END CERTIFICATE-----
   ```
 
+## Deploy via bosh-setup template
+
+You can [deploy CF via bosh-setup templates](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md). Here's a sample Powershell script to deploy the template in ASDK. Before running it, you need to download [AzureStack-Tools](https://docs.microsoft.com/en-us/azure/azure-stack/azure-stack-powershell-download). You can also use Azure CLI or Azure Portal to deploy it.
+
+```
+Set-StrictMode -Version 2.0
+Clear-Host
+
+Import-Module C:\AzureStack-Tools-master\Connect\AzureStack.Connect.psm1
+
+$myLocation = "local"
+$azureStackDomain = "local.azurestack.external" # If you are using Azure Stack integrated systems, contact your service provider to get the domain.
+$tenantArmEndPoint = "https://management." + $azureStackDomain + "/"
+
+###########
+# CONNECT #
+###########
+
+Add-AzureRMEnvironment -Name "AzureStackUser" -ARMEndpoint $tenantArmEndPoint
+# Get Azure Stack Environment Information
+$env = Get-AzureRmEnvironment 'AzureStackUser'
+
+$AadTenantId = "<your-tenant-id>"
+$clientID     = "<your-client-id>"
+$clientSecret = ("<your-client-secret>" | ConvertTo-SecureString -AsPlainText -Force)
+$credential = New-Object System.Management.Automation.PSCredential($clientID,$clientSecret)
+Add-AzureRmAccount -Environment $env -Credential $credential -TenantId $AadTenantId -ServicePrincipal -Verbose
+
+# Get Azure Stack Environment Subscription
+Get-AzureRmSubscription -SubscriptionName "<your-subscription-name>" | Select-AzureRmSubscription
+
+##########
+# DEPLOY #
+##########
+
+# Set Deployment Variables
+$myNum = "{0:000}" -f (Get-Random -Minimum 1 -Maximum 999)
+$RGName = "bosh$myNum"
+
+# Create Resource Group for Template Deployment
+New-AzureRMResourceGroup -Name ($RGName + "RG") -Location $myLocation -Force -Verbose
+
+# Deploy Simple IaaS Template 
+$rgDeploymentResult = New-AzureRmResourceGroupDeployment `
+    -Name ($RGName + "Deployment") `
+    -ResourceGroupName ($RGName + "RG") `
+    -TemplateUri "https://raw.githubusercontent.com/Azure/azure-quickstart-templates/master/bosh-setup/azuredeploy.json" `
+    -vmName ($RGName + "VM") `
+    -ubuntuOSVersion "16.04-LTS" `
+    -adminUsername "<your-admin-username>" `
+    -sshKeyData "<your-ssh-public-key>" `
+    -environment "AzureStack" `
+    -tenantID $AadTenantId `
+    -clientID $clientID `
+    -clientSecret $clientSecret `
+    -loadBalancerSku "basic" `
+    -autoDeployBosh "disabled" `
+    -autoDeployCloudFoundry "disabled" `
+    -azureStackDomain $azureStackDomain `
+    -azureStackResource (Get-AzureRmEnvironment "AzureStackUser" | Select-Object -ExpandProperty ActiveDirectoryServiceEndpointResourceId) `
+    -Verbose -Force
+```
+
+Note:
+
+1. The Ubuntu OS version is based on which version is uploaded to your Azure Stack.
+
+1. The Standard SKU load balancer is not supported in Azure Stack, so the `loadBalancerSku` has to be `basic`.
+
+1. You can enable `autoDeployBosh` and `autoDeployCloudFoundry`. If enabled, you can skip the next two sections.
+
+## Deploy BOSH director
+
+You need to update the [CPI global configurations](http://bosh.io/docs/azure-cpi.html#global), including setting the `environment` to `AzureStack` and configuring the `azure_stack` properties.
+
+Run `./deploy_bosh.sh` and export the following environment variables from `~/login_bosh.sh` into `~/.profile`.
+
+```
+export BOSH_ENVIRONMENT=10.0.0.4
+export BOSH_CLIENT=admin
+export BOSH_CLIENT_SECRET="\$(bosh int ~/bosh-deployment-vars.yml --path /admin_password)"
+export BOSH_CA_CERT="\$(bosh int ~/bosh-deployment-vars.yml --path /director_ssl/ca)"
+```
+
 ## Deploy Cloud Foundry
 
-Deploying Cloud Foundry on Azure Stack is basically same with the deployment on Azure. You can [deploy it via ARM templates](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md).
+Deploying Cloud Foundry on Azure Stack is basically same with the deployment on Azure. Run `./deploy_cloud_foundry.sh`.
 
 ### Use Azure Stack Storage as Cloud Foundry Blobstore
 
