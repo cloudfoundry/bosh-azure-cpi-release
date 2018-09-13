@@ -272,8 +272,8 @@ module Bosh::AzureCloud
         begin
           start_time = Time.new
           options = merge_storage_common_options
-          @logger.info("copy_blob: Calling copy_blob_from_uri(#{container_name}, #{blob_name}, #{source_blob_uri}, #{options})")
-          copy_id, copy_status = @blob_service_client.copy_blob_from_uri(container_name, blob_name, source_blob_uri, options)
+          @logger.info("copy_blob: Calling _copy_blob_from_uri(#{container_name}, #{blob_name}, #{source_blob_uri}, #{options})")
+          copy_id, copy_status = _copy_blob_from_uri(container_name, blob_name, source_blob_uri, options)
           @logger.info("copy_blob: x-ms-copy-id: #{copy_id}, x-ms-copy-status: #{copy_status}")
 
           copy_status_description = ''
@@ -403,9 +403,22 @@ module Bosh::AzureCloud
       options = merge_storage_common_options(options)
       @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
     rescue StandardError => e
+      # create the container if it does not exists
       if e.inspect.include?('ContainerNotFound')
         @blob_service_client.create_container(container_name, merge_storage_common_options)
         @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
+      else
+        raise e
+      end
+    end
+
+    def _copy_blob_from_uri(container_name, blob_name, source_blob_uri, options)
+      @blob_service_client.copy_blob_from_uri(container_name, blob_name, source_blob_uri, options)
+    rescue StandardError => e
+      # create the container if it does not exists
+      if e.inspect.include?('ContainerNotFound')
+        @blob_service_client.create_container(container_name, merge_storage_common_options)
+        @blob_service_client.copy_blob_from_uri(container_name, blob_name, source_blob_uri, options)
       else
         raise e
       end
