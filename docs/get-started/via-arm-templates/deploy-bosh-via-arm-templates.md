@@ -37,12 +37,16 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 | certificate | NO | "" | Base64-encoded Certificate of the service principal. You can run `cat <PATH_TO_YOUR_PEM_CERTIFICATE> \| base64 -w 0`, and input the result. Check how to [create a service principal with a certificate](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?toc=%2Fazure%2Fazure-resource-manager%2Ftoc.json&view=azure-cli-latest#create-a-service-principal-for-your-application). |
 | azureStackDomain | NO | NotApplicableIfEnvironmentIsNotAzureStack | Azure Stack deployment domain. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
 | azureStackResource | NO | NotApplicableIfEnvironmentIsNotAzureStack | Azure Stack Active Directory Service Endpoint Resource ID. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
-| azureStackAuthentication | NO | AzureAD | Azure Stack Authentication. Available values: `AzureAD` and `ADFS`. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
+| azureStackAuthentication | NO | AzureAD | Azure Stack Authentication. Available values: `AzureAD`, `AzureChinaAD` and `ADFS`. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
 | azureStackCARootCertificate | NO | "" | Azure Stack CA root certificate, which is base64 encoded. Get the Azure Stack CA root certificate from the Azure Stack operator, run `cat <PATH_TO_YOUR_PEM_CERTIFICATE> \| base64 -w 0`, and input the result. If not provided, `/var/lib/waagent/Certificates.pem` will be used. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack#azure-stack-properties). |
+| loadBalancerSku | NO | standard | The sku of the load balancer to be used. Note: Standard Sku LB is not supported in Azure Stack and Azure China Cloud. |
 | useAvailabilityZones | NO | disabled | The flag to enable availability zones in cloud config. |
 | autoDeployBosh | NO | enabled | The flag allowing to deploy the Bosh director. |
 | boshVmSize | NO | Standard_D2_v2 | The VM size of the BOSH director VM. Please check if the region support this VM size https://azure.microsoft.com/en-us/regions/#services. For more information about virtual machine sizes, see https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/ |
+| boshLogLevel | NO | debug | The log level for Bosh. https://bosh.io/docs/cli-global-flags/#logging |
 | autoDeployCloudFoundry | NO | disabled | The flag allowing to deploy Cloud Foundry automatically or not. |
+| cloudFoundrySystemDomain | NO | NotConfigured | The Cloud Foundry system domain. If not specified, a xip.io domain will be used. |
+| stemcellOSVersion | NO | Trusty | The OS version of stemcell when deploying Cloud Foundry |
 
 **NOTE:**
   * Currently BOSH can be only deployed from a Virtual Machine (dev-box) in the same virtual network on Azure.
@@ -159,3 +163,12 @@ Run the following commands in your home directory to deploy bosh:
   * Never use root to perform these steps.
   * More verbose logs are written to `~/run.log`.
   * If you hit any issue, please see [**troubleshooting**](../../additional-information/troubleshooting.md), [**known issues**](../../additional-information/known-issues.md) and [**migration**](../../additional-information/migration.md). If it does not work, you can file an issue [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues).
+
+Export the following environment variables from `~/login_bosh.sh` into `~/.profile`.
+
+```
+export BOSH_ENVIRONMENT=10.0.0.4
+export BOSH_CLIENT=admin
+export BOSH_CLIENT_SECRET="\$(bosh int ~/bosh-deployment-vars.yml --path /admin_password)"
+export BOSH_CA_CERT="\$(bosh int ~/bosh-deployment-vars.yml --path /director_ssl/ca)"
+```
