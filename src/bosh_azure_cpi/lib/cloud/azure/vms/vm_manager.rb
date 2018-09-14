@@ -181,6 +181,9 @@ module Bosh::AzureCloud
         end
       else
         begin
+          # Delete the empty availability set
+          _delete_empty_availability_set(resource_group_name, availability_set[:name]) if availability_set
+
           # Delete NICs
           if network_interfaces
             network_interfaces.each do |network_interface|
@@ -468,9 +471,6 @@ module Bosh::AzureCloud
               flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_SH) do
                 @azure_client.delete_virtual_machine(resource_group_name, vm_name)
               end
-
-              # Delete the empty availability set
-              _delete_empty_availability_set(resource_group_name, availability_set[:name])
             else
               @azure_client.delete_virtual_machine(resource_group_name, vm_name)
             end
