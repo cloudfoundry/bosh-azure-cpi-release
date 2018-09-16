@@ -41,16 +41,14 @@ module Bosh::AzureCloud
 
     def map(desired_instance_size, available_vm_sizes)
       @logger = Bosh::Clouds::Config.logger
-
-      possible_vm_sizes = find_possible_vm_sizes(desired_instance_size, available_vm_sizes)
+      @logger.debug("The available VM sizes in the specified region are '#{_vm_sizes_to_string(available_vm_sizes)}'")
+      possible_vm_sizes = _find_possible_vm_sizes(desired_instance_size, available_vm_sizes)
       if possible_vm_sizes.empty?
-        raise ["Unable to meet requested desired_instance_size: #{desired_instance_size['cpu']} CPU, #{desired_instance_size['ram']} MB RAM.\n",
-               "Available VM sizes:\n",
-               available_vm_sizes.map { |vm_size| "#{vm_size[:name]}: #{vm_size[:number_of_cores]} CPU, #{vm_size[:memory_in_mb]} MB RAM\n" }].join
+        cloud_error("Unable to meet desired instance size: #{desired_instance_size['cpu']} CPU, #{desired_instance_size['ram']} MB RAM")
       end
-      @logger.debug("The possible VM sizes are '#{possible_vm_sizes}'")
+      @logger.debug("The possible VM sizes which meet desired instance size are '#{_vm_sizes_to_string(possible_vm_sizes)}'")
 
-      closest_matched_vm_sizes = find_closest_matched_vm_sizes(possible_vm_sizes)
+      closest_matched_vm_sizes = _find_closest_matched_vm_sizes(possible_vm_sizes)
       @logger.debug("The closest matched VM sizes are '#{closest_matched_vm_sizes}'")
 
       closest_matched_vm_sizes
@@ -58,28 +56,44 @@ module Bosh::AzureCloud
 
     private
 
-    def find_possible_vm_sizes(desired_instance_size, available_vm_sizes)
+    def _find_possible_vm_sizes(desired_instance_size, available_vm_sizes)
       available_vm_sizes.select do |vm_size|
         vm_size[:number_of_cores] >= desired_instance_size['cpu'] &&
           vm_size[:memory_in_mb] >= desired_instance_size['ram']
       end
     end
 
-    def find_closest_matched_vm_sizes(possible_vm_sizes)
-      closest_matched_vm_sizes = []
-      RECOMMENDED_VM_SIZES.each do |series|
-        recommended_vm_sizes = possible_vm_sizes.select do |vm_size|
-          series.include?(vm_size[:name])
-        end
-        unless recommended_vm_sizes.empty?
-          vm_size = recommended_vm_sizes.min_by do |vm_size|
-            [vm_size[:number_of_cores], vm_size[:memory_in_mb]]
-          end
-          closest_matched_vm_sizes.push(vm_size[:name])
-        end
+    def _find_closest_matched_vm_sizes(possible_vm_sizes)
+      vm_sizes = possible_vm_sizes.reject do |vm_size|
+        _find_index(vm_size) == -1
       end
-      cloud_error('Unable to find the closest matched VM sizes') if closest_matched_vm_sizes.empty?
+      cloud_error('Unable to find the closest matched VM sizes') if vm_sizes.empty?
+      @logger.debug("The recommended VM sizes are '#{_vm_sizes_to_string(vm_sizes)}'")
+
+      vm_sizes = vm_sizes.sort_by do |vm_size|
+        priority = _find_index(vm_size)
+        [vm_size[:number_of_cores], vm_size[:memory_in_mb], priority]
+      end
+      cloud_error('Unable to find the closest matched VM sizes') if vm_sizes.empty?
+      @logger.debug("The sorted VM sizes are '#{_vm_sizes_to_string(vm_sizes)}'")
+
+      closest_matched_vm_sizes = []
+      vm_sizes.each do |vm_size|
+        closest_matched_vm_sizes.push(vm_size[:name])
+      end
       closest_matched_vm_sizes
+    end
+
+    def _find_index(vm_size)
+      RECOMMENDED_VM_SIZES.each_index do |index|
+        return index if RECOMMENDED_VM_SIZES[index].map(&:downcase).include?(vm_size[:name].downcase)
+      end
+      -1
+    end
+
+    def _vm_sizes_to_string(vm_sizes)
+      vm_sizes = vm_sizes.map { |vm_size| "#{vm_size[:name]}: #{vm_size[:number_of_cores]} CPU, #{vm_size[:memory_in_mb]} MB RAM" }
+      vm_sizes.join(';')
     end
   end
 end
