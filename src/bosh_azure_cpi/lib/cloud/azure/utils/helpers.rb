@@ -599,8 +599,8 @@ module Bosh::AzureCloud
       stemcell_properties.key?(LIGHT_STEMCELL_PROPERTY)
     end
 
-    def is_light_stemcell_id?(stemcell_id)
-      stemcell_id.start_with?(LIGHT_STEMCELL_PREFIX)
+    def is_light_stemcell_cid?(stemcell_cid)
+      stemcell_cid.start_with?(LIGHT_STEMCELL_PREFIX)
     end
 
     # use timestamp and process id to generate a unique string for computer name of Windows

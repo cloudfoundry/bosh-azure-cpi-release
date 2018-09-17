@@ -7,16 +7,16 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#has_disk?' do
-    let(:disk_id) { 'fake-disk-id' }
+    let(:disk_cid) { 'fake-disk-id' }
     let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
 
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-        .with(disk_id, MOCK_RESOURCE_GROUP_NAME)
+        .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(disk_id_object)
 
       allow(telemetry_manager).to receive(:monitor)
-        .with('has_disk?', id: disk_id).and_call_original
+        .with('has_disk?', id: disk_cid).and_call_original
     end
 
     context 'when disk name starts with DATA_DISK_PREFIX' do
@@ -32,7 +32,7 @@ describe Bosh::AzureCloud::Cloud do
           end
 
           it 'should return true' do
-            expect(managed_cloud.has_disk?(disk_id)).to be(true)
+            expect(managed_cloud.has_disk?(disk_cid)).to be(true)
           end
         end
 
@@ -48,7 +48,7 @@ describe Bosh::AzureCloud::Cloud do
 
             it 'should return false' do
               expect(disk_manager).not_to receive(:has_data_disk?)
-              expect(managed_cloud.has_disk?(disk_id)).to be(false)
+              expect(managed_cloud.has_disk?(disk_cid)).to be(false)
             end
           end
 
@@ -63,7 +63,7 @@ describe Bosh::AzureCloud::Cloud do
               end
 
               it 'should return true' do
-                expect(managed_cloud.has_disk?(disk_id)).to be(true)
+                expect(managed_cloud.has_disk?(disk_cid)).to be(true)
               end
             end
 
@@ -73,7 +73,7 @@ describe Bosh::AzureCloud::Cloud do
               end
 
               it 'should return false' do
-                expect(managed_cloud.has_disk?(disk_id)).to be(false)
+                expect(managed_cloud.has_disk?(disk_cid)).to be(false)
               end
             end
           end
@@ -87,7 +87,7 @@ describe Bosh::AzureCloud::Cloud do
           end
 
           it 'should return true' do
-            expect(cloud.has_disk?(disk_id)).to be(true)
+            expect(cloud.has_disk?(disk_cid)).to be(true)
           end
         end
 
@@ -97,7 +97,7 @@ describe Bosh::AzureCloud::Cloud do
           end
 
           it 'should return false' do
-            expect(cloud.has_disk?(disk_id)).to be(false)
+            expect(cloud.has_disk?(disk_cid)).to be(false)
           end
         end
       end
@@ -115,7 +115,7 @@ describe Bosh::AzureCloud::Cloud do
         end
 
         it 'should return true' do
-          expect(managed_cloud.has_disk?(disk_id)).to be(true)
+          expect(managed_cloud.has_disk?(disk_cid)).to be(true)
         end
       end
 
@@ -125,7 +125,7 @@ describe Bosh::AzureCloud::Cloud do
         end
 
         it 'should return false' do
-          expect(managed_cloud.has_disk?(disk_id)).to be(false)
+          expect(managed_cloud.has_disk?(disk_cid)).to be(false)
         end
       end
     end

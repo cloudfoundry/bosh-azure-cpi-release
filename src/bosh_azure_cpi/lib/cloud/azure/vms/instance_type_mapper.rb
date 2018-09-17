@@ -39,12 +39,12 @@ module Bosh::AzureCloud
       ]
     ].freeze
 
-    def map(vm_resources, available_vm_sizes)
+    def map(desired_instance_size, available_vm_sizes)
       @logger = Bosh::Clouds::Config.logger
 
-      possible_vm_sizes = find_possible_vm_sizes(vm_resources, available_vm_sizes)
+      possible_vm_sizes = find_possible_vm_sizes(desired_instance_size, available_vm_sizes)
       if possible_vm_sizes.empty?
-        raise ["Unable to meet requested vm_resources: #{vm_resources['cpu']} CPU, #{vm_resources['ram']} MB RAM.\n",
+        raise ["Unable to meet requested desired_instance_size: #{desired_instance_size['cpu']} CPU, #{desired_instance_size['ram']} MB RAM.\n",
                "Available VM sizes:\n",
                available_vm_sizes.map { |vm_size| "#{vm_size[:name]}: #{vm_size[:number_of_cores]} CPU, #{vm_size[:memory_in_mb]} MB RAM\n" }].join
       end
@@ -58,10 +58,10 @@ module Bosh::AzureCloud
 
     private
 
-    def find_possible_vm_sizes(vm_resources, available_vm_sizes)
+    def find_possible_vm_sizes(desired_instance_size, available_vm_sizes)
       available_vm_sizes.select do |vm_size|
-        vm_size[:number_of_cores] >= vm_resources['cpu'] &&
-          vm_size[:memory_in_mb] >= vm_resources['ram']
+        vm_size[:number_of_cores] >= desired_instance_size['cpu'] &&
+          vm_size[:memory_in_mb] >= desired_instance_size['ram']
       end
     end
 

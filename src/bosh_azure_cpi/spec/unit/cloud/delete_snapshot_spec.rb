@@ -7,13 +7,13 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#delete_snapshot' do
-    let(:snapshot_id) { 'fake-snapshot-id' }
+    let(:snapshot_cid) { 'fake-snapshot-cid' }
     let(:snapshot_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
     before do
       allow(telemetry_manager).to receive(:monitor)
-        .with('delete_snapshot', id: snapshot_id).and_call_original
+        .with('delete_snapshot', id: snapshot_cid).and_call_original
       allow(Bosh::AzureCloud::DiskId).to receive(:parse)
-        .with(snapshot_id, MOCK_RESOURCE_GROUP_NAME)
+        .with(snapshot_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(snapshot_id_object)
     end
 
@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::Cloud do
         expect(disk_manager2).to receive(:delete_snapshot).with(snapshot_id_object)
 
         expect do
-          cloud.delete_snapshot(snapshot_id)
+          cloud.delete_snapshot(snapshot_cid)
         end.not_to raise_error
       end
     end
@@ -46,7 +46,7 @@ describe Bosh::AzureCloud::Cloud do
         expect(disk_manager).to receive(:delete_snapshot).with(snapshot_id_object)
 
         expect do
-          cloud.delete_snapshot(snapshot_id)
+          cloud.delete_snapshot(snapshot_cid)
         end.not_to raise_error
       end
     end

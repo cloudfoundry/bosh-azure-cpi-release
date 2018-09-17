@@ -673,6 +673,34 @@ describe Bosh::AzureCloud::BlobManager do
           end.not_to raise_error
         end
       end
+
+      context 'when container not exists and created successfully' do
+        let(:options) do
+          {
+            request_id: request_id
+          }
+        end
+        before do
+          times = 0
+          allow(blob_service).to receive(:copy_blob_from_uri) do
+            if times.zero?
+              times += 1
+              raise 'ContainerNotFound'
+            end
+            ['fake-copy-id', 'success']
+          end
+        end
+        it 'succeeds to copy the blob' do
+          expect(blob_service).to receive(:create_container)
+            .with(container_name, options)
+            .and_return(true)
+          expect(blob_service).to receive(:copy_blob_from_uri)
+            .twice
+          expect do
+            blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+          end.not_to raise_error
+        end
+      end
     end
 
     context 'when copy status is failed' do
@@ -769,6 +797,17 @@ describe Bosh::AzureCloud::BlobManager do
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
           end.to raise_error %r{The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted}
         end
+      end
+    end
+
+    context 'when unexpected error happens' do
+      before do
+        allow(blob_service).to receive(:copy_blob_from_uri).and_raise('Unexpected Error')
+      end
+      it 'succeeds to copy the blob' do
+        expect do
+          blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+        end.to raise_error /Unexpected Error/
       end
     end
   end

@@ -8,7 +8,7 @@ describe Bosh::AzureCloud::Cloud do
 
   describe '#create_disk' do
     let(:cloud_properties) { {} }
-    let(:instance_id) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
+    let(:vm_cid) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
     let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
     let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
     let(:default_resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
@@ -23,7 +23,7 @@ describe Bosh::AzureCloud::Cloud do
       allow(instance_id_object).to receive(:vm_name)
         .and_return(vm_name)
       allow(telemetry_manager).to receive(:monitor)
-        .with('create_disk', id: instance_id, extras: { 'disk_size' => disk_size })
+        .with('create_disk', id: vm_cid, extras: { 'disk_size' => disk_size })
         .and_call_original
     end
 
@@ -33,7 +33,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should raise an error' do
           expect do
-            cloud.create_disk(disk_size, cloud_properties, instance_id)
+            cloud.create_disk(disk_size, cloud_properties, vm_cid)
           end.to raise_error(
             ArgumentError,
             "The disk size needs to be an integer. The current value is '#{disk_size}'."
@@ -46,7 +46,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should raise an error' do
           expect do
-            cloud.create_disk(disk_size, cloud_properties, instance_id)
+            cloud.create_disk(disk_size, cloud_properties, vm_cid)
           end.to raise_error /Azure CPI minimum disk size is 1 GiB/
         end
       end
@@ -63,7 +63,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should raise an error' do
           expect do
-            cloud.create_disk(disk_size, cloud_properties, instance_id)
+            cloud.create_disk(disk_size, cloud_properties, vm_cid)
           end.to raise_error /Unknown disk caching/
         end
       end
@@ -79,8 +79,8 @@ describe Bosh::AzureCloud::Cloud do
         }
       end
 
-      context 'when instance_id is nil' do
-        let(:instance_id) { nil }
+      context 'when vm_cid is nil' do
+        let(:vm_cid) { nil }
         let(:rg_location) { 'fake-resource-group-location' }
         let(:resource_group) do
           {
@@ -104,12 +104,12 @@ describe Bosh::AzureCloud::Cloud do
             .and_call_original
 
           expect do
-            managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
+            managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
           end.not_to raise_error
         end
       end
 
-      context 'when instance_id is not nil' do
+      context 'when vm_cid is not nil' do
         context 'when the instance is an unmanaged vm' do
           before do
             allow(instance_id_object).to receive(:use_managed_disks?)
@@ -118,7 +118,7 @@ describe Bosh::AzureCloud::Cloud do
 
           it "can't create a managed disk for a VM with unmanaged disks" do
             expect do
-              managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
+              managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
             end.to raise_error /Cannot create a managed disk for a VM with unmanaged disks/
           end
         end
@@ -151,7 +151,7 @@ describe Bosh::AzureCloud::Cloud do
                 .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone)
 
               expect do
-                managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
+                managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
               end.not_to raise_error
             end
           end
@@ -171,7 +171,7 @@ describe Bosh::AzureCloud::Cloud do
                 .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone)
 
               expect do
-                managed_cloud.create_disk(disk_size, cloud_properties, instance_id)
+                managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
               end.not_to raise_error
             end
           end
@@ -190,7 +190,7 @@ describe Bosh::AzureCloud::Cloud do
         }
       end
 
-      context 'when instance_id is not nil' do
+      context 'when vm_cid is not nil' do
         let(:vm_storage_account_name) { 'vmstorageaccountname' }
 
         before do
@@ -206,13 +206,13 @@ describe Bosh::AzureCloud::Cloud do
             .with(disk_id_object, disk_size_in_gib)
 
           expect do
-            cloud.create_disk(disk_size, cloud_properties, instance_id)
+            cloud.create_disk(disk_size, cloud_properties, vm_cid)
           end.not_to raise_error
         end
       end
 
-      context 'when instance_id is nil' do
-        let(:instance_id) { nil }
+      context 'when vm_cid is nil' do
+        let(:vm_cid) { nil }
 
         it 'should create an unmanaged disk in the default storage account of global configuration' do
           expect(Bosh::AzureCloud::DiskId).to receive(:create)
@@ -225,7 +225,7 @@ describe Bosh::AzureCloud::Cloud do
             .and_call_original
 
           expect do
-            cloud.create_disk(disk_size, cloud_properties, instance_id)
+            cloud.create_disk(disk_size, cloud_properties, vm_cid)
           end.not_to raise_error
         end
       end

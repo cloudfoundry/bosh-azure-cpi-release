@@ -7,7 +7,7 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#get_disks' do
-    let(:instance_id) { 'fake-instance-id' }
+    let(:vm_cid) { 'fake-vm-cid' }
     let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
 
     let(:data_disks) do
@@ -40,7 +40,7 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(instance_id_object)
 
       allow(telemetry_manager).to receive(:monitor)
-        .with('get_disks', id: instance_id).and_call_original
+        .with('get_disks', id: vm_cid).and_call_original
     end
 
     context 'when the instance has data disks' do
@@ -49,7 +49,7 @@ describe Bosh::AzureCloud::Cloud do
           .with(instance_id_object)
           .and_return(instance)
 
-        expect(cloud.get_disks(instance_id)).to eq(['fake-id-1', 'fake-id-2', 'fake-id-3'])
+        expect(cloud.get_disks(vm_cid)).to eq(['fake-id-1', 'fake-id-2', 'fake-id-3'])
       end
     end
 
@@ -59,7 +59,7 @@ describe Bosh::AzureCloud::Cloud do
           .with(instance_id_object)
           .and_return(instance_no_disks)
 
-        expect(cloud.get_disks(instance_id)).to eq([])
+        expect(cloud.get_disks(vm_cid)).to eq([])
       end
     end
   end
