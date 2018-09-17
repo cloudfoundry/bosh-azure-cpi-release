@@ -181,25 +181,37 @@ module Bosh::AzureCloud
         end
       else
         begin
+          tasks = []
           # Delete the empty availability set
-          _delete_empty_availability_set(resource_group_name, availability_set[:name]) if availability_set
-
-          # Delete NICs
-          if network_interfaces
-            network_interfaces.each do |network_interface|
-              @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
+          tasks.push(
+            Concurrent::Future.execute do
+              _delete_empty_availability_set(resource_group_name, availability_set[:name]) if availability_set
             end
-          else
-            # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
-            # CPI need to cleanup these NICs.
-            _delete_possible_network_interfaces(resource_group_name, vm_name)
-          end
+          )
 
-          # Delete the dynamic public IP
-          dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
-          @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+          tasks.push(
+            Concurrent::Future.execute do
+              # Delete NICs
+              if network_interfaces
+                network_interfaces.each do |network_interface|
+                  @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
+                end
+              else
+                # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
+                # CPI need to cleanup these NICs.
+                _delete_possible_network_interfaces(resource_group_name, vm_name)
+              end
+
+              # Delete the dynamic public IP
+              dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
+              @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+            end
+          )
 
           # TODO: delete the config disk.
+
+          tasks.map(&:wait)
+          tasks.map(&:wait!)
         rescue StandardError => error
           error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
           error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
