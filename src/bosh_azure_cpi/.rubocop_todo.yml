@@ -97,7 +97,9 @@ Metrics/CyclomaticComplexity:
 # Offense count: 131
 # Configuration parameters: CountComments.
 Metrics/MethodLength:
-  Max: 140
+  Max: 131
+  Exclude:
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
 # Offense count: 1
 # Configuration parameters: CountComments.
