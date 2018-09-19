@@ -93,7 +93,7 @@ properties:
     description: will use one config disk to pass the meta data into the vm, only works in Linux stemcell now.
     default: false
   azure.vmss.enabled:
-    description: Whether the vmss will be used when creating vm. The use_managed_disks must be true to use this.
+    description: Whether the vmss will be used when creating vm. The config_disk.enabled should be true to use this.
     default: false
 
   registry.username:
