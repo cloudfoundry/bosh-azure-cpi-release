@@ -15,10 +15,5 @@ module Bosh::AzureCloud
     # VMSS
     VMSS_NAME_KEY = 'vmss_name'
     VMSS_INSTANCE_ID_KEY = 'vmss_instance_id'
-
-    # Types
-    DISK_ID_TYPE = 'disk_id'
-    VM_ID_TYPE = 'vm_id'
-    VMMS_ID_TYPE = 'vmss_id'
   end
 end

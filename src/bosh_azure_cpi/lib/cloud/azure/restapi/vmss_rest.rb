@@ -3,6 +3,15 @@
 module Bosh::AzureCloud
   class AzureClient
     # VMSS related starts
+
+    # Get the information for the vmss
+    #
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [String] vmss_name  - Name of the vmss
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesets/get
+    #
     def get_vmss_by_name(resource_group_name, vmss_name)
       vmss = nil
       result = _get_vmss_by_name(resource_group_name, vmss_name)
@@ -16,6 +25,15 @@ module Bosh::AzureCloud
       vmss
     end
 
+    # Create one vmss
+    #
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [Hash] vm_params  - parameters for creating the vmss
+    # @param [Array] network_interfaces   - Network Interface Instances. network_interfaces[0] will be picked as the primary network and bound to public ip or load balancers.
+    # @return [Hash]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesets/createorupdate
+    #
     def create_vmss(resource_group_name, vm_params, network_interfaces)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vm_params[:vmss_name])
       os_profile = {
@@ -131,6 +149,8 @@ module Bosh::AzureCloud
       http_put(url, vmss, params)
     end
 
+    # Will call the update api of the vmss
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesets/createorupdate
     def scale_vmss_up(resource_group_name, vmss_name, number)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
       vmss = _get_vmss_by_name(resource_group_name, vmss_name)
@@ -143,8 +163,11 @@ module Bosh::AzureCloud
     # VMSS related ends
 
     # Instances related starts
-    def get_vmss_instances(resource_group_name, name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: name)
+
+    # List the instances in the vmss.
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/list
+    def get_vmss_instances(resource_group_name, vmss_name)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
       url += '/virtualMachines'
       result = get_resource_by_id(url)
       vmss_instances = nil
@@ -161,6 +184,8 @@ module Bosh::AzureCloud
       vmss_instances
     end
 
+    # Get information of the one instance in the vmss.
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/get
     def get_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
       vmss_instance = nil
       result = _get_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
@@ -219,6 +244,12 @@ module Bosh::AzureCloud
       vmss_instance
     end
 
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [String] vmss_name  - Name of the vmss.
+    # @param [String] vmss_instance_id  - Id of the instance.
+    # @param [Hash] vm_params  - parameters for creating the disk.
+    # @return [String] lun of the created disk.
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/update
     def attach_disk_to_vmss_instance(resource_group_name, vmss_name, vmss_instance_id, disk_params)
       vmss_instance = _get_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
       lun = _get_next_available_lun(
@@ -246,6 +277,12 @@ module Bosh::AzureCloud
       lun
     end
 
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [String] vmss_name  - Name of the vmss.
+    # @param [String] vmss_instance_id  - Id of the instance.
+    # @param [String] disk_id  - id of the disk to be detached.
+    # @return [Boolean]
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/update
     def detach_disk_from_vmss_instance(resource_group_name, vmss_name, vmss_instance_id, disk_id)
       vmss_instance = _get_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
       found = false
@@ -264,6 +301,11 @@ module Bosh::AzureCloud
       http_put(url, vmss_instance, params)
     end
 
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [String] vmss_name  - Name of the vmss.
+    # @param [String] vmss_instance_id  - Id of the instance.
+    # @return [Boolean]
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/restart
     def reboot_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
       url += "/virtualMachines/#{vmss_instance_id}/restart"
@@ -273,6 +315,11 @@ module Bosh::AzureCloud
       http_post(url, nil, params)
     end
 
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [String] vmss_name  - Name of the vmss.
+    # @param [String] vmss_instance_id  - Id of the instance.
+    # @return [Boolean]
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/delete
     def delete_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
       url += "/virtualMachines/#{vmss_instance_id}"
@@ -282,6 +329,7 @@ module Bosh::AzureCloud
       http_delete(url, params)
     end
 
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/update
     def set_vmss_instance_metadata(resource_group_name, vmss_name, vmss_instance_id, tags)
       vmss_instance = _get_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
