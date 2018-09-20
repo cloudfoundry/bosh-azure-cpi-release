@@ -36,8 +36,7 @@ module Bosh::AzureCloud
     #
     def create_vmss(resource_group_name, vm_params, network_interfaces)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vm_params[:vmss_name])
-      os_profile = {
-      }
+      os_profile = {}
       case vm_params[:os_type]
       when 'linux'
         os_profile['computerNamePrefix'] = vm_params[:vmss_name]
