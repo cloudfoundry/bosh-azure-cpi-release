@@ -103,8 +103,7 @@ module Bosh::AzureCloud
           'storageAccountType' => 'Standard_LRS'
         }
       }
-      # TODO: investigate whether vmss support overwrite diskSizeGB.
-      # os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
+      os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
       data_disks = []
       unless vm_params[:ephemeral_disk].nil?
         data_disks.push(
