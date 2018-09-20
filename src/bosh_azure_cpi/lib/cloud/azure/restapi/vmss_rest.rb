@@ -99,9 +99,11 @@ module Bosh::AzureCloud
       os_disk = {
         'createOption' => 'FromImage',
         'caching'      => vm_params[:os_disk][:disk_caching],
-        'managedDisk' => {
-          'storageAccountType' => 'Standard_LRS'
-        }
+        # Comment this out, use the default in the image,
+        # will handle this when resolving https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/533
+        # 'managedDisk' => {
+        #   'storageAccountType' => 'Standard_LRS'
+        # }
       }
       os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
       data_disks = []
