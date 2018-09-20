@@ -167,8 +167,7 @@ module Bosh::AzureCloud
     # List the instances in the vmss.
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/list
     def get_vmss_instances(resource_group_name, vmss_name)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
-      url += '/virtualMachines'
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name, others: 'virtualMachines')
       result = get_resource_by_id(url)
       vmss_instances = nil
       unless result.nil?
