@@ -131,7 +131,7 @@ module Bosh::AzureCloud
           private_ip: network.is_a?(ManualNetwork) ? network.private_ip : nil,
           network_security_group: network_security_group,
           application_security_groups: application_security_groups,
-          ipconfig_name: "ipconfig#{index}",
+          ipconfig_name: "ipconfig-#{index}",
           enable_ip_forwarding: ip_forwarding,
           enable_accelerated_networking: accelerated_networking
         }
