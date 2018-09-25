@@ -5,6 +5,21 @@ shared_context 'shared stuff' do
   let(:registry_client) { mock_registry }
   let(:azure_config) { cloud.config.azure }
   let(:managed_cloud) { mock_cloud(mock_cloud_properties_merge('azure' => { 'use_managed_disks' => true })) }
+  let(:use_vmss_cloud) do
+    mock_cloud(
+      mock_cloud_properties_merge(
+        'azure' => {
+          'use_managed_disks' => true,
+          'config_disk' => {
+            'enabled' => true
+          },
+          'vmss' => {
+            'enabled' => true
+          }
+        }
+      )
+    )
+  end
   let(:azure_config_managed) { managed_cloud.config.azure }
   let(:azure_client) { instance_double('Bosh::AzureCloud::AzureClient') }
   let(:blob_manager) { instance_double('Bosh::AzureCloud::BlobManager') }
@@ -18,6 +33,23 @@ shared_context 'shared stuff' do
   let(:vm_manager) { instance_double('Bosh::AzureCloud::VMManager') }
   let(:instance_type_mapper) { instance_double('Bosh::AzureCloud::InstanceTypeMapper') }
   let(:telemetry_manager) { MockTelemetryManager.new }
+
+  # models
+  let(:default_resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
+  let(:agent_id) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
+  let(:stemcell_id) { 'bosh-stemcell-xxx' }
+  let(:vm_cid) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
+  let(:vm_name) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
+  let(:instance_id_object) { Bosh::AzureCloud::VMInstanceId.create_from_hash({}, vm_cid) }
+
+  let(:vmss_name) { 'fake-vmss-name' }
+  let(:vmss_instance_id) { '0' }
+  let(:instance_id_vmss) { "resource_group_name:#{default_resource_group_name};agent_id:a;vmss_name:v;vmss_instance_id:0" }
+
+  let(:disk_cid) { 'bosh-disk-data-0a1171c3-d9a6-4a04-96cb-e422c1f49a7b' }
+  let(:disk_id_object) { Bosh::AzureCloud::DiskId.create_from_hash({}, disk_cid) }
+  let(:disk_name) { 'bosh-disk-data-0a1171c3-d9a6-4a04-96cb-e422c1f49a7b' }
+  let(:bosh_vm_meta) { Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_id) }
 
   before do
     allow(Bosh::Cpi::RegistryClient).to receive(:new)

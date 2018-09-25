@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vms/shared_stuff.rb'
 
 describe Bosh::AzureCloud::VMManager do
-  include_context 'shared stuff for vm manager'
+  include_context 'shared stuff for vm managers'
 
   # The following variables are defined in shared_stuff.rb. You can override it if needed.
   #   - resource_group_name
@@ -31,14 +31,6 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         context 'and pip_idle_timeout_in_minutes is set' do
-          let(:idle_timeout) { 20 }
-          let(:vm_manager_for_pip) do
-            Bosh::AzureCloud::VMManager.new(
-              mock_azure_config_merge(
-                'pip_idle_timeout_in_minutes' => idle_timeout
-              ), registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
-            )
-          end
           let(:public_ip_params) do
             {
               name: vm_name,
@@ -143,7 +135,7 @@ describe Bosh::AzureCloud::VMManager do
           it 'should succeed' do
             expect(instance_id).to receive(:resource_group_name)
               .and_return(MOCK_RESOURCE_GROUP_NAME)
-            expect(Bosh::AzureCloud::InstanceId).to receive(:create)
+            expect(Bosh::AzureCloud::VMInstanceId).to receive(:create)
               .with(MOCK_RESOURCE_GROUP_NAME, agent_id)
               .and_return(instance_id)
             expect(azure_client).not_to receive(:delete_virtual_machine)
@@ -194,7 +186,7 @@ describe Bosh::AzureCloud::VMManager do
           it 'should succeed' do
             expect(instance_id).to receive(:resource_group_name)
               .and_return(MOCK_RESOURCE_GROUP_NAME)
-            expect(Bosh::AzureCloud::InstanceId).to receive(:create)
+            expect(Bosh::AzureCloud::VMInstanceId).to receive(:create)
               .with(MOCK_RESOURCE_GROUP_NAME, agent_id)
               .and_return(instance_id)
             expect(azure_client).to receive(:create_virtual_machine)

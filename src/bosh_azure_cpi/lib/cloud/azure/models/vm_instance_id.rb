@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class InstanceId < ResObjectId
+  class VMInstanceId < ResObjectId
     include Helpers
+    include ObjectIDKeys
+
     # V1 format:
     #   With unmanaged disks: "[STORAGE-ACCOUNT-NAME]-[AGENT-ID]"
     #   With managed disks:   "[AGENT-ID]"
@@ -11,19 +13,10 @@ module Bosh::AzureCloud
     #   With managed disks:   "resource_group_name:[RESOURCE-GROUP-NAME];agent_id:[AGENT-ID]"
     # Usage:
     #  Creating id for a new VM
-    #   instance_id = InstanceId.create(resource_group_name, agent_id, storage_account_name) # Create V2 instance id with unmanaged disks
-    #   instance_id = InstanceId.create(resource_group_name, agent_id)                       # Create V2 instance id with managed disks
+    #   instance_id = VMInstanceId.create(resource_group_name, agent_id, storage_account_name) # Create V2 instance id with unmanaged disks
+    #   instance_id = VMInstanceId.create(resource_group_name, agent_id)                       # Create V2 instance id with managed disks
     #  Paring id for an existing VM
-    #   instance_id = InstanceId.parse(id, resource_group_name)
-
-    AGENT_ID_KEY = 'agent_id'
-    STORAGE_ACCOUNT_NAME_KEY = 'storage_account_name'
-    private_class_method :new
-
-    # Params:
-    # - resource_group_name: the resource group name which the instance will be in.
-    # - agent_id: the agent id.
-    # - storage_account_name: the storage account name.
+    #   instance_id = CloudIdParser.parse(id, resource_group_name)
     def self.create(resource_group_name, agent_id, storage_account_name = nil)
       id_hash = {
         RESOURCE_GROUP_NAME_KEY  => resource_group_name,
@@ -33,11 +26,7 @@ module Bosh::AzureCloud
       new(id_hash)
     end
 
-    # Params:
-    # - id: the id string
-    # - default_resource_group_name: the default resource group name in global config.
-    def self.parse(id_str, default_resource_group_name)
-      id_hash, plain_id = ResObjectId.parse_with_resource_group(id_str, default_resource_group_name)
+    def self.create_from_hash(id_hash, plain_id)
       obj_id = new(id_hash, plain_id)
       obj_id.validate
       obj_id
@@ -64,6 +53,7 @@ module Bosh::AzureCloud
       @id_hash[STORAGE_ACCOUNT_NAME_KEY].nil?
     end
 
+    # add validate logic for the vmss instance id to the vmss.
     def validate
       if !@plain_id.nil?
         invalid = @plain_id.length != UUID_LENGTH && _parse_with_unmanaged_disks_plain(@plain_id)[1].length != UUID_LENGTH
@@ -75,6 +65,10 @@ module Bosh::AzureCloud
           cloud_error("Invalid storage_account_name in instance id (version 2) '#{self}'") if storage_account_name.empty?
         end
       end
+    end
+
+    def to_s
+      super.to_s
     end
 
     private

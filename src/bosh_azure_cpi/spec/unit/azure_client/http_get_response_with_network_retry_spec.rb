@@ -1,23 +1,17 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'unit/azure_client/shared_stuff.rb'
 require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient do
-  let(:logger) { Bosh::Clouds::Config.logger }
-
+  include_context 'shared stuff for azure client'
   describe '#http_get_response_with_network_retry' do
     let(:http_handler) { double('http') }
     let(:request) { double('request') }
     let(:response) { double('response') }
-    let(:azure_client) do
-      Bosh::AzureCloud::AzureClient.new(
-        mock_azure_config,
-        logger
-      )
-    end
 
     context 'when retrable network errors happen' do
       [

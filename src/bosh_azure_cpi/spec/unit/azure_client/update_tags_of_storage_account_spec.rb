@@ -1,27 +1,13 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'unit/azure_client/shared_stuff.rb'
 require 'webmock/rspec'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient do
-  let(:logger) { Bosh::Clouds::Config.logger }
-  let(:azure_client) do
-    Bosh::AzureCloud::AzureClient.new(
-      mock_azure_config,
-      logger
-    )
-  end
-  let(:subscription_id) { mock_azure_config.subscription_id }
-  let(:tenant_id) { mock_azure_config.tenant_id }
-  let(:token_api_version) { AZURE_API_VERSION }
-  let(:token_uri) { "https://login.microsoftonline.com/#{tenant_id}/oauth2/token?api-version=#{token_api_version}" }
-  let(:valid_access_token) { 'valid-access-token' }
-  let(:expires_on) { (Time.new + 1800).to_i.to_s }
-
-  let(:request_id) { 'fake-request-id' }
-  let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
+  include_context 'shared stuff for azure client'
 
   let(:storage_api_version) { AZURE_RESOURCE_PROVIDER_STORAGE }
   let(:storage_account_name) { 'fake-storage-account-name' }

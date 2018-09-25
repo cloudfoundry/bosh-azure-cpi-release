@@ -525,6 +525,10 @@ module Bosh::AzureCloud
           'version'   => @image['version']
         }
       end
+
+      def to_s
+        "uri: #{@uri}, os_type: #{@os_type}, name: #{@name}"
+      end
     end
 
     def get_os_disk_size(root_disk_size, stemcell_info, use_root_disk)

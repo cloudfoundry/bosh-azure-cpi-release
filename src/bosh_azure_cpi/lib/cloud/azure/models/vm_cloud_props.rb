@@ -12,6 +12,7 @@ module Bosh::AzureCloud
     attr_reader :ip_forwarding, :accelerated_networking, :assign_dynamic_public_ip, :load_balancer, :application_gateway
     attr_reader :application_security_groups, :security_group
     attr_reader :platform_update_domain_count, :platform_fault_domain_count
+    attr_reader :vmss
 
     attr_writer :availability_zone, :availability_set
     attr_writer :assign_dynamic_public_ip
@@ -67,6 +68,13 @@ module Bosh::AzureCloud
 
       @platform_update_domain_count = vm_properties['platform_update_domain_count'] || default_update_domain_count(global_azure_config)
       @platform_fault_domain_count = vm_properties['platform_fault_domain_count'] || default_fault_domain_count(global_azure_config)
+
+      vmss_hash = vm_properties.fetch('vmss', {})
+      @vmss = Bosh::AzureCloud::VMSSConfig.new(vmss_hash['name'], vmss_hash['availability_zones'])
+    end
+
+    def to_s
+      @vm_properties.to_s
     end
   end
 end

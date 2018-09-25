@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vms/shared_stuff.rb'
 
 describe Bosh::AzureCloud::VMManager do
-  include_context 'shared stuff for vm manager'
+  include_context 'shared stuff for vm managers'
 
   describe '#create' do
     before do

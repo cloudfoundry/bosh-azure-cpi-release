@@ -7,12 +7,10 @@ describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
 
   describe '#has_vm?' do
-    let(:vm_cid) { 'e55144a3-0c06-4240-8f15-9a7bc7b35d1f' }
-    let(:instance_id_object) { instance_double(Bosh::AzureCloud::InstanceId) }
     let(:instance) { double('instance') }
 
     before do
-      allow(Bosh::AzureCloud::InstanceId).to receive(:parse)
+      allow(Bosh::AzureCloud::CloudIdParser).to receive(:parse)
         .with(vm_cid, azure_config.resource_group_name)
         .and_return(instance_id_object)
 

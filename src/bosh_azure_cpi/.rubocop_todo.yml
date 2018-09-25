@@ -110,6 +110,8 @@ Metrics/ParameterLists:
   Max: 7
   Exclude:
     - 'lib/cloud/azure/vms/vm_manager.rb'
+    - 'lib/cloud/azure/vms/vm_manager_adaptive.rb'
+    - 'lib/cloud/azure/vms/vmss_manager.rb'
 
 # Offense count: 28
 Metrics/PerceivedComplexity:
