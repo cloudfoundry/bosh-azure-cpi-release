@@ -70,7 +70,7 @@ module Bosh::AzureCloud
             'enableIPForwarding' => true,
             'ipConfigurations' => [
               {
-                'name' => "ipcfg-#{index}",
+                'name' => "ipconfig#{index}",
                 'properties' => {
                   'subnet' => {
                     'id' => network[:subnet][:id]
