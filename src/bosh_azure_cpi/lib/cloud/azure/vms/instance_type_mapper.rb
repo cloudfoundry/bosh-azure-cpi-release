@@ -17,8 +17,8 @@ module Bosh::AzureCloud
       # v3
       %w[Standard_D2s_v3 Standard_D4s_v3 Standard_D8s_v3 Standard_D16s_v3 Standard_D32s_v3 Standard_D64s_v3],
       %w[Standard_D2_v3 Standard_D4_v3 Standard_D8_v3 Standard_D16_v3 Standard_D32_v3 Standard_D64_v3],
-      %w[Standard_E2s_v3 Standard_E4s_v3 Standard_E8s_v3 Standard_E16s_v3 Standard_E32s_v3 Standard_E64s_v3, Standard_E64is_v3],
-      %w[Standard_E2_v3 Standard_E4_v3 Standard_E8_v3 Standard_E16_v3 Standard_E32_v3 Standard_E64_v3, Standard_E64i_v3],
+      %w[Standard_E2s_v3 Standard_E4s_v3 Standard_E8s_v3 Standard_E16s_v3 Standard_E32s_v3 Standard_E64s_v3 Standard_E64is_v3],
+      %w[Standard_E2_v3 Standard_E4_v3 Standard_E8_v3 Standard_E16_v3 Standard_E32_v3 Standard_E64_v3 Standard_E64i_v3],
       # v2
       %w[Standard_DS1_v2 Standard_DS2_v2 Standard_DS3_v2 Standard_DS4_v2 Standard_DS5_v2],
       %w[Standard_D1_v2 Standard_D2_v2 Standard_D3_v2 Standard_D4_v2 Standard_D5_v2],
@@ -43,9 +43,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
       @logger.debug("The available VM sizes in the specified region are '#{_vm_sizes_to_string(available_vm_sizes)}'")
       possible_vm_sizes = _find_possible_vm_sizes(desired_instance_size, available_vm_sizes)
-      if possible_vm_sizes.empty?
-        cloud_error("Unable to meet desired instance size: #{desired_instance_size['cpu']} CPU, #{desired_instance_size['ram']} MB RAM")
-      end
+      cloud_error("Unable to meet desired instance size: #{desired_instance_size['cpu']} CPU, #{desired_instance_size['ram']} MB RAM") if possible_vm_sizes.empty?
       @logger.debug("The possible VM sizes which meet desired instance size are '#{_vm_sizes_to_string(possible_vm_sizes)}'")
 
       closest_matched_vm_sizes = _find_closest_matched_vm_sizes(possible_vm_sizes)

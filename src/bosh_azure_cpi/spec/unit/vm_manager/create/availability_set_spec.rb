@@ -72,7 +72,7 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when all instance types are available in the availaiblity set' do
-            let(:instance_types) { ['Standard_D2_v3', 'Standard_DS2_v2'] }
+            let(:instance_types) { %w[Standard_D2_v3 Standard_DS2_v2] }
             let(:vm_props) do
               props_factory.parse_vm_props(
                 'instance_type'                => nil,
@@ -85,14 +85,14 @@ describe Bosh::AzureCloud::VMManager do
             let(:available_vm_sizes) do
               [
                 {
-                  :name => 'Standard_D2_v3',
-                  :number_of_cores => '2',
-                  :memory_in_mb => 4096
+                  name: 'Standard_D2_v3',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
                 },
                 {
-                  :name => 'Standard_DS2_v2',
-                  :number_of_cores => '2',
-                  :memory_in_mb => 4096
+                  name: 'Standard_DS2_v2',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
                 }
               ]
             end
@@ -137,7 +137,7 @@ describe Bosh::AzureCloud::VMManager do
               context 'when the disk is Standand SKU' do
                 let(:disk) do
                   {
-                    :sku_tier => 'Standard'
+                    sku_tier: 'Standard'
                   }
                 end
                 before do
@@ -164,7 +164,7 @@ describe Bosh::AzureCloud::VMManager do
               context 'when the disk is Premium SKU' do
                 let(:disk) do
                   {
-                    :sku_tier => 'Premium'
+                    sku_tier: 'Premium'
                   }
                 end
                 before do
@@ -191,7 +191,7 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when some of the instance types are available in the availaiblity set' do
-            let(:instance_types) { ['Standard_D2_v3', 'Standard_D2s_v3', 'Standard_DS2_v2', 'Standard_D2_v2'] }
+            let(:instance_types) { %w[Standard_D2_v3 Standard_D2s_v3 Standard_DS2_v2 Standard_D2_v2] }
             let(:vm_props) do
               props_factory.parse_vm_props(
                 'instance_type'                => nil,
@@ -204,14 +204,14 @@ describe Bosh::AzureCloud::VMManager do
             let(:available_vm_sizes) do
               [
                 {
-                  :name => 'Standard_D2_v3',
-                  :number_of_cores => '2',
-                  :memory_in_mb => 4096
+                  name: 'Standard_D2_v3',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
                 },
                 {
-                  :name => 'Standard_DS2_v2',
-                  :number_of_cores => '2',
-                  :memory_in_mb => 4096
+                  name: 'Standard_DS2_v2',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
                 }
               ]
             end
@@ -256,7 +256,7 @@ describe Bosh::AzureCloud::VMManager do
               context 'when the disk is Standand SKU' do
                 let(:disk) do
                   {
-                    :sku_tier => 'Standard'
+                    sku_tier: 'Standard'
                   }
                 end
                 before do
@@ -283,7 +283,7 @@ describe Bosh::AzureCloud::VMManager do
               context 'when the disk is Premium SKU' do
                 let(:disk) do
                   {
-                    :sku_tier => 'Premium'
+                    sku_tier: 'Premium'
                   }
                 end
                 before do
@@ -310,7 +310,7 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when instance types of the availaiblity set do not support premium storage' do
-            let(:instance_types) { ['Standard_D2_v3', 'Standard_D2s_v3', 'Standard_DS2_v2', 'Standard_D2_v2'] }
+            let(:instance_types) { %w[Standard_D2_v3 Standard_D2s_v3 Standard_DS2_v2 Standard_D2_v2] }
             let(:vm_props) do
               props_factory.parse_vm_props(
                 'instance_type'                => nil,
@@ -323,14 +323,14 @@ describe Bosh::AzureCloud::VMManager do
             let(:available_vm_sizes) do
               [
                 {
-                  :name => 'Standard_D2_v3',
-                  :number_of_cores => '2',
-                  :memory_in_mb => 4096
+                  name: 'Standard_D2_v3',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
                 },
                 {
-                  :name => 'Standard_D2_v2',
-                  :number_of_cores => '2',
-                  :memory_in_mb => 4096
+                  name: 'Standard_D2_v2',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
                 }
               ]
             end
@@ -357,7 +357,7 @@ describe Bosh::AzureCloud::VMManager do
               context 'when the disk is Premium SKU' do
                 let(:disk) do
                   {
-                    :sku_tier => 'Premium'
+                    sku_tier: 'Premium'
                   }
                 end
                 before do

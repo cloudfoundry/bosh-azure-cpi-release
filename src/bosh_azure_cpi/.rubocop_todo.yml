@@ -74,6 +74,8 @@ Lint/UselessAssignment:
 # Offense count: 79
 Metrics/AbcSize:
   Max: 160
+  Exclude:
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
 # Offense count: 625
 # Configuration parameters: CountComments, ExcludedMethods.
@@ -93,6 +95,8 @@ Metrics/ClassLength:
 # Offense count: 30
 Metrics/CyclomaticComplexity:
   Max: 25
+  Exclude:
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
 # Offense count: 131
 # Configuration parameters: CountComments.
@@ -116,6 +120,8 @@ Metrics/ParameterLists:
 # Offense count: 28
 Metrics/PerceivedComplexity:
   Max: 30
+  Exclude:
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
 # Offense count: 7
 Naming/AccessorMethodName:
