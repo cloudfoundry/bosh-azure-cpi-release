@@ -44,8 +44,337 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).to receive(:delete_network_interface).exactly(2).times
 
             expect do
-              vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             end.to raise_error /availability set is not created/
+          end
+        end
+
+        context 'when instance_type is nil and instance_types exist' do
+          let(:env) { nil }
+          let(:availability_set_name) { SecureRandom.uuid.to_s }
+          let(:platform_update_domain_count) { 5 }
+          let(:platform_fault_domain_count) { 3 }
+          let(:avset_params) do
+            {
+              name: availability_set_name,
+              location: location,
+              tags: { 'user-agent' => 'bosh' },
+              platform_update_domain_count: platform_update_domain_count,
+              platform_fault_domain_count: platform_fault_domain_count,
+              managed: false
+            }
+          end
+          let(:availability_set) do
+            {
+              name: availability_set_name,
+              location: location
+            }
+          end
+
+          context 'when all instance types are available in the availaiblity set' do
+            let(:instance_types) { %w[Standard_D2_v3 Standard_DS2_v2] }
+            let(:vm_props) do
+              props_factory.parse_vm_props(
+                'instance_type'                => nil,
+                'instance_types'               => instance_types,
+                'availability_set'             => availability_set_name,
+                'platform_update_domain_count' => platform_update_domain_count,
+                'platform_fault_domain_count'  => platform_fault_domain_count
+              )
+            end
+            let(:available_vm_sizes) do
+              [
+                {
+                  name: 'Standard_D2_v3',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
+                },
+                {
+                  name: 'Standard_DS2_v2',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
+                }
+              ]
+            end
+
+            before do
+              allow(azure_client).to receive(:get_availability_set_by_name)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .and_return(availability_set)
+              allow(azure_client).to receive(:list_available_virtual_machine_sizes_by_availability_set)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .and_return(available_vm_sizes)
+            end
+
+            context 'when disk_cids are not provided' do
+              let(:disk_cids) { nil }
+
+              it 'should select a VM size which is available in the availability set' do
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                  .and_call_original
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                  .and_call_original
+                expect(azure_client).to receive(:create_network_interface).twice
+
+                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+                expect(vm_params[:name]).to eq(vm_name)
+                expect(vm_props.instance_type).to eq('Standard_D2_v3')
+              end
+            end
+
+            context 'when disk_cids are provided' do
+              let(:disk_cid) { 'fake-disk-cid' }
+              let(:disk_cids) { [disk_cid] }
+              let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
+              before do
+                allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+                  .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
+                  .and_return(disk_id_object)
+              end
+
+              context 'when the disk is Standand SKU' do
+                let(:disk) do
+                  {
+                    sku_tier: 'Standard'
+                  }
+                end
+                before do
+                  allow(disk_manager2).to receive(:get_data_disk)
+                    .with(disk_id_object)
+                    .and_return(disk)
+                end
+
+                it 'should select a VM size which is available in the availability set' do
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                    .and_call_original
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                    .and_call_original
+                  expect(azure_client).to receive(:create_network_interface).twice
+
+                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+                  expect(vm_params[:name]).to eq(vm_name)
+                  expect(vm_props.instance_type).to eq('Standard_D2_v3')
+                end
+              end
+
+              context 'when the disk is Premium SKU' do
+                let(:disk) do
+                  {
+                    sku_tier: 'Premium'
+                  }
+                end
+                before do
+                  allow(disk_manager2).to receive(:get_data_disk)
+                    .with(disk_id_object)
+                    .and_return(disk)
+                end
+
+                it 'should select a VM size which is available in the availability set' do
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                    .and_call_original
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                    .and_call_original
+                  expect(azure_client).to receive(:create_network_interface).twice
+
+                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+                  expect(vm_params[:name]).to eq(vm_name)
+                  expect(vm_props.instance_type).to eq('Standard_DS2_v2')
+                end
+              end
+            end
+          end
+
+          context 'when some of the instance types are available in the availaiblity set' do
+            let(:instance_types) { %w[Standard_D2_v3 Standard_D2s_v3 Standard_DS2_v2 Standard_D2_v2] }
+            let(:vm_props) do
+              props_factory.parse_vm_props(
+                'instance_type'                => nil,
+                'instance_types'               => instance_types,
+                'availability_set'             => availability_set_name,
+                'platform_update_domain_count' => platform_update_domain_count,
+                'platform_fault_domain_count'  => platform_fault_domain_count
+              )
+            end
+            let(:available_vm_sizes) do
+              [
+                {
+                  name: 'Standard_D2_v3',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
+                },
+                {
+                  name: 'Standard_DS2_v2',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
+                }
+              ]
+            end
+
+            before do
+              allow(azure_client).to receive(:get_availability_set_by_name)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .and_return(availability_set)
+              allow(azure_client).to receive(:list_available_virtual_machine_sizes_by_availability_set)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .and_return(available_vm_sizes)
+            end
+
+            context 'when disk_cids are not provided' do
+              let(:disk_cids) { nil }
+
+              it 'should select a VM size which is available in the availability set' do
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                  .and_call_original
+                expect(vm_manager).to receive(:flock)
+                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                  .and_call_original
+                expect(azure_client).to receive(:create_network_interface).twice
+
+                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+                expect(vm_params[:name]).to eq(vm_name)
+                expect(vm_props.instance_type).to eq('Standard_D2_v3')
+              end
+            end
+
+            context 'when disk_cids are provided' do
+              let(:disk_cid) { 'fake-disk-cid' }
+              let(:disk_cids) { [disk_cid] }
+              let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
+              before do
+                allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+                  .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
+                  .and_return(disk_id_object)
+              end
+
+              context 'when the disk is Standand SKU' do
+                let(:disk) do
+                  {
+                    sku_tier: 'Standard'
+                  }
+                end
+                before do
+                  allow(disk_manager2).to receive(:get_data_disk)
+                    .with(disk_id_object)
+                    .and_return(disk)
+                end
+
+                it 'should select a VM size which is available in the availability set' do
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                    .and_call_original
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                    .and_call_original
+                  expect(azure_client).to receive(:create_network_interface).twice
+
+                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+                  expect(vm_params[:name]).to eq(vm_name)
+                  expect(vm_props.instance_type).to eq('Standard_D2_v3')
+                end
+              end
+
+              context 'when the disk is Premium SKU' do
+                let(:disk) do
+                  {
+                    sku_tier: 'Premium'
+                  }
+                end
+                before do
+                  allow(disk_manager2).to receive(:get_data_disk)
+                    .with(disk_id_object)
+                    .and_return(disk)
+                end
+
+                it 'should select a VM size which is available in the availability set' do
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
+                    .and_call_original
+                  expect(vm_manager).to receive(:flock)
+                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
+                    .and_call_original
+                  expect(azure_client).to receive(:create_network_interface).twice
+
+                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+                  expect(vm_params[:name]).to eq(vm_name)
+                  expect(vm_props.instance_type).to eq('Standard_DS2_v2')
+                end
+              end
+            end
+          end
+
+          context 'when instance types of the availaiblity set do not support premium storage' do
+            let(:instance_types) { %w[Standard_D2_v3 Standard_D2s_v3 Standard_DS2_v2 Standard_D2_v2] }
+            let(:vm_props) do
+              props_factory.parse_vm_props(
+                'instance_type'                => nil,
+                'instance_types'               => instance_types,
+                'availability_set'             => availability_set_name,
+                'platform_update_domain_count' => platform_update_domain_count,
+                'platform_fault_domain_count'  => platform_fault_domain_count
+              )
+            end
+            let(:available_vm_sizes) do
+              [
+                {
+                  name: 'Standard_D2_v3',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
+                },
+                {
+                  name: 'Standard_D2_v2',
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
+                }
+              ]
+            end
+
+            before do
+              allow(azure_client).to receive(:get_availability_set_by_name)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .and_return(availability_set)
+              allow(azure_client).to receive(:list_available_virtual_machine_sizes_by_availability_set)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .and_return(available_vm_sizes)
+            end
+
+            context 'when disk_cids are provided' do
+              let(:disk_cid) { 'fake-disk-cid' }
+              let(:disk_cids) { [disk_cid] }
+              let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
+              before do
+                allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+                  .with(disk_cid, MOCK_RESOURCE_GROUP_NAME)
+                  .and_return(disk_id_object)
+              end
+
+              context 'when the disk is Premium SKU' do
+                let(:disk) do
+                  {
+                    sku_tier: 'Premium'
+                  }
+                end
+                before do
+                  allow(disk_manager2).to receive(:get_data_disk)
+                    .with(disk_id_object)
+                    .and_return(disk)
+                end
+
+                it 'should raise an error' do
+                  expect(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
+
+                  expect do
+                    vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+                  end.to raise_error /No available instance type is found/
+                end
+              end
+            end
           end
         end
 
@@ -94,7 +423,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(MOCK_RESOURCE_GROUP_NAME, avset_params)
             expect(azure_client).to receive(:create_network_interface).twice
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -150,7 +479,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_availability_set)
                 .with(MOCK_RESOURCE_GROUP_NAME, avset_params)
 
-              _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               expect(vm_params[:name]).to eq(vm_name)
             end
           end
@@ -201,7 +530,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_availability_set)
                   .with(MOCK_RESOURCE_GROUP_NAME, avset_params)
 
-                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -237,7 +566,7 @@ describe Bosh::AzureCloud::VMManager do
 
                 expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
 
-                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -293,7 +622,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                 expect(azure_client).to receive(:create_network_interface).twice
 
-                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -324,7 +653,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                 expect(azure_client).to receive(:create_network_interface).twice
 
-                _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -372,7 +701,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                   expect(azure_client).to receive(:create_network_interface).twice
 
-                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -403,7 +732,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                   expect(azure_client).to receive(:create_network_interface).twice
 
-                  _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -456,7 +785,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                   expect(azure_client).to receive(:create_network_interface).twice
 
-                  _, vm_params = vm_manager_azure_stack.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  _, vm_params = vm_manager_azure_stack.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -498,8 +827,8 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:delete_network_interface).exactly(2).times
 
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
-              end.to raise_error /create_availability_set - the availability set '#{availability_set_name}' already exists, but in a different location/
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+              end.to raise_error /availability set '#{availability_set_name}' already exists, but in a different location/
             end
           end
 
@@ -534,7 +863,7 @@ describe Bosh::AzureCloud::VMManager do
             it 'should not create availability set' do
               expect(azure_client).not_to receive(:create_availability_set)
 
-              _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
               expect(vm_params[:name]).to eq(vm_name)
             end
           end
@@ -597,7 +926,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                 expect(azure_client).to receive(:create_network_interface).twice
 
-                _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -614,8 +943,8 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_network_interface).twice
 
                 expect do
-                  vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
-                end.to raise_error /create_availability_set - the availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./
+                  vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+                end.to raise_error /availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./
               end
             end
           end

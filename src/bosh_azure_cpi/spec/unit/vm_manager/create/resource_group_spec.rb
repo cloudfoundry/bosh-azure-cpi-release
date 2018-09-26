@@ -32,7 +32,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(azure_client).to receive(:create_resource_group)
             .with(MOCK_RESOURCE_GROUP_NAME, location)
 
-          _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
           expect(vm_params[:name]).to eq(vm_name)
         end
       end
