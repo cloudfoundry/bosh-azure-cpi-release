@@ -124,7 +124,7 @@ shared_context 'shared stuff for vm manager' do
       .with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP)
       .and_return(default_security_group)
     allow(azure_client).to receive(:get_load_balancer_by_name)
-      .with(vm_properties['load_balancer'])
+      .with(MOCK_RESOURCE_GROUP_NAME, vm_properties['load_balancer'])
       .and_return(load_balancer)
     allow(azure_client).to receive(:get_application_gateway_by_name)
       .with(vm_properties['application_gateway'])

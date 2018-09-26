@@ -74,9 +74,9 @@ module Bosh::AzureCloud
 
     def _get_load_balancer(vm_props)
       load_balancer = nil
-      unless vm_props.load_balancer.nil?
-        load_balancer_name = vm_props.load_balancer
-        load_balancer = @azure_client.get_load_balancer_by_name(load_balancer_name)
+      unless vm_props.load_balancer.name.nil?
+        load_balancer_name = vm_props.load_balancer.name
+        load_balancer = @azure_client.get_load_balancer_by_name(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
         cloud_error("Cannot find the load balancer '#{load_balancer_name}'") if load_balancer.nil?
       end
       load_balancer

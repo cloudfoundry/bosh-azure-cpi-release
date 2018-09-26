@@ -29,7 +29,7 @@ module Bosh::AzureCloud
       vm_name = instance_id.vm_name
 
       # When both availability_zone and availability_set are specified, raise an error
-      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_props.availability_zone.nil? && !vm_props.availability_set.nil?
+      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_props.availability_zone.nil? && !vm_props.availability_set.name.nil?
       zone = vm_props.availability_zone
       unless zone.nil?
         cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)

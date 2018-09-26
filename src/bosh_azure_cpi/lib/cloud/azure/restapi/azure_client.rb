@@ -120,7 +120,7 @@ module Bosh::AzureCloud
       url
     end
 
-    def parse_name_from_id(id)
+    def _parse_name_from_id(id)
       ret = id.match('/subscriptions/([^/]*)/resourceGroups/([^/]*)/providers/([^/]*)/([^/]*)/([^/]*)(.*)')
       raise AzureError, "\"#{id}\" is not a valid URL." if ret.nil?
 
@@ -1263,9 +1263,10 @@ module Bosh::AzureCloud
     #
     # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
     #
-    def get_load_balancer_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, name: name)
-      get_load_balancer(url)
+
+    def get_load_balancer_by_name(resource_group_name, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, resource_group_name: resource_group_name, name: name)
+      _get_load_balancer(url)
     end
 
     # Get a load balancer's information
@@ -1275,7 +1276,7 @@ module Bosh::AzureCloud
     #
     # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
     #
-    def get_load_balancer(url)
+    def _get_load_balancer(url)
       load_balancer = nil
       result = get_resource_by_id(url)
       unless result.nil?
@@ -1959,15 +1960,15 @@ module Bosh::AzureCloud
         end
         unless ip_configuration_properties['loadBalancerBackendAddressPools'].nil?
           if recursive
-            names = parse_name_from_id(ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'])
-            interface[:load_balancer] = get_load_balancer_by_name(names[:resource_name])
+            names = _parse_name_from_id(ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'])
+            interface[:load_balancer] = get_load_balancer_by_name(names[:resource_group_name], names[:resource_name])
           else
             interface[:load_balancer] = { id: ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'] }
           end
         end
         unless ip_configuration_properties['applicationGatewayBackendAddressPools'].nil?
           if recursive
-            names = parse_name_from_id(ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id'])
+            names = _parse_name_from_id(ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id'])
             interface[:application_gateway] = get_application_gateway_by_name(names[:resource_name])
           else
             interface[:application_gateway] = { id: ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id'] }
