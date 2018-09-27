@@ -78,7 +78,9 @@ module Bosh::AzureCloud
       @use_managed_disks = azure_config_hash['use_managed_disks']
       @storage_account_name = azure_config_hash['storage_account_name']
 
-      @default_security_group = azure_config_hash['default_security_group']
+      @default_security_group = Bosh::AzureCloud::SecurityGroup.parse_security_group(
+        azure_config_hash['default_security_group']
+      )
 
       # Troubleshooting
       @enable_vm_boot_diagnostics = azure_config_hash['enable_vm_boot_diagnostics']

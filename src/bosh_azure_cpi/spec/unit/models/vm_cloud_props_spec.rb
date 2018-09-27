@@ -53,6 +53,7 @@ describe Bosh::AzureCloud::VMCloudProps do
           expect(vm_cloud_props.load_balancer.resource_group_name).to eq(resource_group_name)
         end
       end
+
       context 'when resource group empty' do
         let(:vm_cloud_props) do
           Bosh::AzureCloud::VMCloudProps.new(

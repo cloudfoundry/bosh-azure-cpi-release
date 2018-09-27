@@ -33,7 +33,8 @@ describe Bosh::AzureCloud::DynamicNetwork do
       expect(network.resource_group_name).to eq(rg_name)
       expect(network.virtual_network_name).to eq(vnet_name)
       expect(network.subnet_name).to eq(subnet_name)
-      expect(network.security_group).to eq(nsg_name)
+      expect(network.security_group.name).to eq(nsg_name)
+      expect(network.security_group.resource_group_name).to eq(nil)
       expect(network.application_security_groups).to eq(asg_names)
       expect(network.ip_forwarding).to eq(true)
       expect(network.accelerated_networking).to eq(true)
@@ -139,7 +140,7 @@ describe Bosh::AzureCloud::DynamicNetwork do
 
     it 'should return default values for the optional cloud properties' do
       network = Bosh::AzureCloud::DynamicNetwork.new(azure_config, 'default', network_spec)
-      expect(network.security_group).to be_nil
+      expect(network.security_group.name).to be_nil
       expect(network.application_security_groups).to eq([])
       expect(network.ip_forwarding).to be false
       expect(network.accelerated_networking).to be false

@@ -12,7 +12,8 @@ module Bosh::AzureCloud
     attr_reader :root_disk, :ephemeral_disk
     attr_reader :ip_forwarding, :accelerated_networking, :assign_dynamic_public_ip, :application_gateway
     attr_reader :load_balancer
-    attr_reader :application_security_groups, :security_group
+    attr_reader :application_security_groups
+    attr_reader :security_group
 
     attr_writer :availability_zone
     attr_writer :availability_set
@@ -46,7 +47,7 @@ module Bosh::AzureCloud
       @application_gateway = vm_properties['application_gateway']
 
       @application_security_groups = vm_properties['application_security_groups']
-      @security_group = vm_properties['security_group']
+      @security_group = Bosh::AzureCloud::SecurityGroup.parse_security_group(vm_properties['security_group'])
 
       root_disk_hash = vm_properties.fetch('root_disk', {})
       ephemeral_disk_hash = vm_properties.fetch('ephemeral_disk', {})
