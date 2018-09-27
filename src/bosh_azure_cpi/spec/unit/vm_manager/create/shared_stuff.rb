@@ -64,7 +64,7 @@ shared_context 'shared stuff for vm manager' do
   let(:env) { {} }
 
   # Security Group
-  let(:empty_security_group) { Bosh::AzureCloud::SecurityGroup.new(nil,nil) }
+  let(:empty_security_group) { Bosh::AzureCloud::SecurityGroup.new(nil, nil) }
 
   # Instance ID
   let(:vm_name) { agent_id }
