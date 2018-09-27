@@ -63,6 +63,9 @@ shared_context 'shared stuff for vm manager' do
   let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
   let(:env) { {} }
 
+  # Security Group
+  let(:empty_security_group) { Bosh::AzureCloud::SecurityGroup.new(nil, nil) }
+
   # Instance ID
   let(:vm_name) { agent_id }
   let(:storage_account_name) { 'fake-storage-acount-name' }
@@ -124,7 +127,7 @@ shared_context 'shared stuff for vm manager' do
       .with(MOCK_RESOURCE_GROUP_NAME, MOCK_DEFAULT_SECURITY_GROUP)
       .and_return(default_security_group)
     allow(azure_client).to receive(:get_load_balancer_by_name)
-      .with(vm_properties['load_balancer'])
+      .with(MOCK_RESOURCE_GROUP_NAME, vm_properties['load_balancer'])
       .and_return(load_balancer)
     allow(azure_client).to receive(:get_application_gateway_by_name)
       .with(vm_properties['application_gateway'])
@@ -137,6 +140,7 @@ shared_context 'shared stuff for vm manager' do
   end
 
   # Network
+
   let(:vip_network) { instance_double(Bosh::AzureCloud::VipNetwork) }
   let(:manual_network) { instance_double(Bosh::AzureCloud::ManualNetwork) }
   let(:dynamic_network) { instance_double(Bosh::AzureCloud::DynamicNetwork) }
@@ -166,7 +170,7 @@ shared_context 'shared stuff for vm manager' do
     allow(manual_network).to receive(:private_ip)
       .and_return('private-ip')
     allow(manual_network).to receive(:security_group)
-      .and_return(nil)
+      .and_return(empty_security_group)
     allow(manual_network).to receive(:application_security_groups)
       .and_return([])
     allow(manual_network).to receive(:ip_forwarding)
@@ -181,7 +185,7 @@ shared_context 'shared stuff for vm manager' do
     allow(dynamic_network).to receive(:subnet_name)
       .and_return('fake-subnet-name')
     allow(dynamic_network).to receive(:security_group)
-      .and_return(nil)
+      .and_return(empty_security_group)
     allow(dynamic_network).to receive(:application_security_groups)
       .and_return([])
     allow(dynamic_network).to receive(:ip_forwarding)

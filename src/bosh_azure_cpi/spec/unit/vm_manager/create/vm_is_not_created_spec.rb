@@ -45,7 +45,11 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           before do
-            vm_props.availability_set = availability_set_name
+            vm_props.availability_set = Bosh::AzureCloud::AvailabilitySetConfig.new(
+              availability_set_name,
+              5,
+              1
+            )
 
             allow(azure_client).to receive(:create_virtual_machine)
               .and_raise('virtual machine is not created')
@@ -143,8 +147,11 @@ describe Bosh::AzureCloud::VMManager do
                 end
 
                 before do
-                  vm_props.availability_set = availability_set_name
-
+                  vm_props.availability_set = Bosh::AzureCloud::AvailabilitySetConfig.new(
+                    availability_set_name,
+                    5,
+                    1
+                  )
                   allow(azure_client).to receive(:get_availability_set_by_name)
                     .and_return(availability_set)
 

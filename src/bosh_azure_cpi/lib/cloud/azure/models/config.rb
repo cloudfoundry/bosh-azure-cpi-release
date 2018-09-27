@@ -1,6 +1,32 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
+  class LoadBalancerConfig
+    attr_reader :name, :resource_group_name
+    def initialize(resource_group_name, name)
+      @resource_group_name = resource_group_name
+      @name = name
+    end
+
+    def to_s
+      "name: #{@name}, resource_group_name: #{@resource_group_name}"
+    end
+  end
+
+  class AvailabilitySetConfig
+    attr_reader :name
+    attr_reader :platform_update_domain_count, :platform_fault_domain_count
+    def initialize(name, platform_update_domain_count, platform_fault_domain_count)
+      @name = name
+      @platform_update_domain_count = platform_update_domain_count
+      @platform_fault_domain_count = platform_fault_domain_count
+    end
+
+    def to_s
+      "name: #{@name}, platform_update_domain_count: #{@platform_update_domain_count} platform_fault_domain_count: #{@platform_fault_domain_count}"
+    end
+  end
+
   class AzureStackConfig
     attr_reader :domain, :authentication, :resource, :endpoint_prefix
     attr_writer :authentication
@@ -52,7 +78,9 @@ module Bosh::AzureCloud
       @use_managed_disks = azure_config_hash['use_managed_disks']
       @storage_account_name = azure_config_hash['storage_account_name']
 
-      @default_security_group = azure_config_hash['default_security_group']
+      @default_security_group = Bosh::AzureCloud::SecurityGroup.parse_security_group(
+        azure_config_hash['default_security_group']
+      )
 
       # Troubleshooting
       @enable_vm_boot_diagnostics = azure_config_hash['enable_vm_boot_diagnostics']

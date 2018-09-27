@@ -93,12 +93,12 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
-  describe '#parse_name_from_id' do
+  describe '#_parse_name_from_id' do
     context 'when id is empty' do
       it 'should raise an error' do
         id = ''
         expect do
-          azure_client.parse_name_from_id(id)
+          azure_client.send(:_parse_name_from_id, id)
         end.to raise_error /\"#{id}\" is not a valid URL./
       end
     end
@@ -107,7 +107,7 @@ describe Bosh::AzureCloud::AzureClient do
       id = '/subscriptions/a/resourceGroups/b/providers/c/d'
       it 'should raise an error' do
         expect do
-          azure_client.parse_name_from_id(id)
+          azure_client.send(:_parse_name_from_id, id)
         end.to raise_error /\"#{id}\" is not a valid URL./
       end
     end
@@ -121,7 +121,7 @@ describe Bosh::AzureCloud::AzureClient do
         result[:provider_name]       = 'c'
         result[:resource_type]       = 'd'
         result[:resource_name]       = 'e'
-        expect(azure_client.parse_name_from_id(id)).to eq(result)
+        expect(azure_client.send(:_parse_name_from_id, id)).to eq(result)
       end
     end
 
@@ -134,7 +134,7 @@ describe Bosh::AzureCloud::AzureClient do
         result[:provider_name]       = 'c'
         result[:resource_type]       = 'd'
         result[:resource_name]       = 'e'
-        expect(azure_client.parse_name_from_id(id)).to eq(result)
+        expect(azure_client.send(:_parse_name_from_id, id)).to eq(result)
       end
     end
   end
