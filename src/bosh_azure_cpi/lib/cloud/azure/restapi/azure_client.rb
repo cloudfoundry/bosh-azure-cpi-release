@@ -120,19 +120,6 @@ module Bosh::AzureCloud
       url
     end
 
-    def _parse_name_from_id(id)
-      ret = id.match('/subscriptions/([^/]*)/resourceGroups/([^/]*)/providers/([^/]*)/([^/]*)/([^/]*)(.*)')
-      raise AzureError, "\"#{id}\" is not a valid URL." if ret.nil?
-
-      result = {}
-      result[:subscription_id]     = ret[1]
-      result[:resource_group_name] = ret[2]
-      result[:provider_name]       = ret[3]
-      result[:resource_type]       = ret[4]
-      result[:resource_name]       = ret[5]
-      result
-    end
-
     def get_resource_by_id(url, params = {})
       result = nil
       begin
@@ -1862,6 +1849,19 @@ module Bosh::AzureCloud
     end
 
     private
+
+    def _parse_name_from_id(id)
+      ret = id.match('/subscriptions/([^/]*)/resourceGroups/([^/]*)/providers/([^/]*)/([^/]*)/([^/]*)(.*)')
+      raise AzureError, "\"#{id}\" is not a valid URL." if ret.nil?
+
+      result = {}
+      result[:subscription_id]     = ret[1]
+      result[:resource_group_name] = ret[2]
+      result[:provider_name]       = ret[3]
+      result[:resource_type]       = ret[4]
+      result[:resource_name]       = ret[5]
+      result
+    end
 
     def parse_vm_size(result)
       vm_size = nil

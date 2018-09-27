@@ -81,11 +81,7 @@ module Bosh::AzureCloud
 
     def _parse_load_balancer_config(vm_properties, global_azure_config)
       if vm_properties[LOAD_BALANCER_KEY].is_a?(Hash)
-        resource_group_name = if vm_properties[LOAD_BALANCER_KEY][RESOURCE_GROUP_NAME_KEY].nil?
-                                global_azure_config.resource_group_name
-                              else
-                                vm_properties[LOAD_BALANCER_KEY][RESOURCE_GROUP_NAME_KEY]
-                              end
+        resource_group_name = vm_properties[LOAD_BALANCER_KEY][RESOURCE_GROUP_NAME_KEY] || global_azure_config.resource_group_name
         Bosh::AzureCloud::LoadBalancerConfig.new(
           resource_group_name,
           vm_properties[LOAD_BALANCER_KEY][NAME_KEY]
