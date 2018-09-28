@@ -62,11 +62,11 @@ describe Bosh::AzureCloud::VMManager do
           end
           let(:avset_params) do
             {
-              name: vm_props.availability_set,
+              name: vm_props.availability_set.name,
               location: location,
               tags: { 'user-agent' => 'bosh' },
-              platform_update_domain_count: vm_props.platform_update_domain_count,
-              platform_fault_domain_count: vm_props.platform_fault_domain_count,
+              platform_update_domain_count: vm_props.availability_set.platform_update_domain_count,
+              platform_fault_domain_count: vm_props.availability_set.platform_fault_domain_count,
               managed: false
             }
           end
@@ -78,7 +78,7 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(azure_client).to receive(:get_availability_set_by_name)
-              .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+              .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
               .and_return(nil, availability_set)
           end
 
@@ -119,11 +119,11 @@ describe Bosh::AzureCloud::VMManager do
             end
             let(:avset_params) do
               {
-                name: vm_props.availability_set,
+                name: vm_props.availability_set.name,
                 location: location,
                 tags: { 'user-agent' => 'bosh' },
-                platform_update_domain_count: vm_props.platform_update_domain_count,
-                platform_fault_domain_count: vm_props.platform_fault_domain_count,
+                platform_update_domain_count: vm_props.availability_set.platform_update_domain_count,
+                platform_fault_domain_count: vm_props.availability_set.platform_fault_domain_count,
                 managed: false
               }
             end
@@ -135,7 +135,7 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(azure_client).to receive(:get_availability_set_by_name)
-                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
                 .and_return(nil, availability_set)
             end
 
@@ -261,7 +261,7 @@ describe Bosh::AzureCloud::VMManager do
           context 'when platform_update_domain_count and platform_fault_domain_count are set' do
             let(:avset_params) do
               {
-                name: vm_props.availability_set,
+                name: vm_props.availability_set.name,
                 location: location,
                 tags: { 'user-agent' => 'bosh' },
                 platform_update_domain_count: 4,
@@ -339,7 +339,7 @@ describe Bosh::AzureCloud::VMManager do
             end
             let(:avset_params) do
               {
-                name: vm_props.availability_set,
+                name: vm_props.availability_set.name,
                 location: location,
                 tags: { 'user-agent' => 'bosh' }
               }
@@ -479,7 +479,7 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(azure_client).to receive(:get_availability_set_by_name)
-                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
                 .and_return(availability_set)
             end
 
@@ -517,7 +517,7 @@ describe Bosh::AzureCloud::VMManager do
 
             before do
               allow(azure_client).to receive(:get_availability_set_by_name)
-                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
                 .and_return(availability_set)
             end
 
@@ -540,7 +540,7 @@ describe Bosh::AzureCloud::VMManager do
 
             let(:existing_avset) do
               {
-                name: vm_props.availability_set,
+                name: vm_props.availability_set.name,
                 location: location,
                 tags: { 'user-agent' => 'bosh' },
                 platform_update_domain_count: 5,
@@ -550,7 +550,7 @@ describe Bosh::AzureCloud::VMManager do
             end
             let(:existing_avset_managed) do
               {
-                name: vm_props.availability_set,
+                name: vm_props.availability_set.name,
                 location: location,
                 tags: { 'user-agent' => 'bosh' },
                 platform_update_domain_count: 5,
@@ -572,7 +572,7 @@ describe Bosh::AzureCloud::VMManager do
             context 'existing avset is unmanaged' do
               before do
                 allow(azure_client).to receive(:get_availability_set_by_name)
-                  .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                  .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
                   .and_return(existing_avset)
               end
 
@@ -595,7 +595,7 @@ describe Bosh::AzureCloud::VMManager do
             context 'when using managed avset in unmanaged vm' do
               before do
                 allow(azure_client).to receive(:get_availability_set_by_name)
-                  .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set)
+                  .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
                   .and_return(existing_avset_managed)
               end
 

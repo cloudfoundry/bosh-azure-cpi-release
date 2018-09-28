@@ -499,7 +499,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_load_balancer_by_name(load_balancer_name)
+          azure_client.get_load_balancer_by_name(default_resource_group_name, load_balancer_name)
         ).to be_nil
       end
 
@@ -515,7 +515,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_load_balancer_by_name(load_balancer_name)
+          azure_client.get_load_balancer_by_name(default_resource_group_name, load_balancer_name)
         ).to eq(fake_load_balancer)
       end
     end

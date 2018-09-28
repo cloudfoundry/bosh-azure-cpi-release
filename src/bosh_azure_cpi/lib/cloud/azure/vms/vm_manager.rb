@@ -29,7 +29,7 @@ module Bosh::AzureCloud
       vm_name = instance_id.vm_name
 
       # When both availability_zone and availability_set are specified, raise an error
-      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_props.availability_zone.nil? && !vm_props.availability_set.nil?
+      cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !vm_props.availability_zone.nil? && !vm_props.availability_set.name.nil?
       zone = vm_props.availability_zone
       unless zone.nil?
         cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
@@ -181,20 +181,37 @@ module Bosh::AzureCloud
         end
       else
         begin
-          # Delete NICs
-          if network_interfaces
-            network_interfaces.each do |network_interface|
-              @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
+          tasks = []
+          # Delete the empty availability set
+          tasks.push(
+            Concurrent::Future.execute do
+              _delete_empty_availability_set(resource_group_name, availability_set[:name]) if availability_set
             end
-          else
-            # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
-            # CPI need to cleanup these NICs.
-            _delete_possible_network_interfaces(resource_group_name, vm_name)
-          end
+          )
 
-          # Delete the dynamic public IP
-          dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
-          @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+          tasks.push(
+            Concurrent::Future.execute do
+              # Delete NICs
+              if network_interfaces
+                network_interfaces.each do |network_interface|
+                  @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
+                end
+              else
+                # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
+                # CPI need to cleanup these NICs.
+                _delete_possible_network_interfaces(resource_group_name, vm_name)
+              end
+
+              # Delete the dynamic public IP
+              dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
+              @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+            end
+          )
+
+          # TODO: delete the config disk.
+
+          tasks.map(&:wait)
+          tasks.map(&:wait!)
         rescue StandardError => error
           error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
           error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
@@ -415,9 +432,6 @@ module Bosh::AzureCloud
               flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_SH) do
                 @azure_client.delete_virtual_machine(resource_group_name, vm_name)
               end
-
-              # Delete the empty availability set
-              _delete_empty_availability_set(resource_group_name, availability_set[:name])
             else
               @azure_client.delete_virtual_machine(resource_group_name, vm_name)
             end

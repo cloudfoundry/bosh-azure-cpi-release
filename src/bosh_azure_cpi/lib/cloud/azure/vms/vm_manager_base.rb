@@ -73,21 +73,37 @@ module Bosh::AzureCloud
 
     def _get_network_security_group(vm_props, network)
       # Network security group name can be specified in vm_types or vm_extensions, networks and global configuration (ordered by priority)
-      network_security_group_name = vm_props.security_group.nil? ? network.security_group : vm_props.security_group
-      network_security_group_name = @azure_config.default_security_group if network_security_group_name.nil?
-      return nil if network_security_group_name.nil?
+      network_security_group_cfg = vm_props.security_group.name.nil? ? network.security_group : vm_props.security_group
+      network_security_group_cfg = @azure_config.default_security_group if network_security_group_cfg.name.nil?
+      return nil if network_security_group_cfg.name.nil?
 
-      cloud_error('Cannot specify an empty string to the network security group') if network_security_group_name.empty?
-      # The resource group which the NSG belongs to can be specified in networks and global configuration (ordered by priority)
+      cloud_error('Cannot specify an empty string to the network security group') if network_security_group_cfg.name.empty?
+
+      unless network_security_group_cfg.resource_group_name.nil?
+        network_security_group = @azure_client.get_network_security_group_by_name(
+          network_security_group_cfg.resource_group_name,
+          network_security_group_cfg.name
+        )
+        cloud_error("Cannot found the security group: #{network_security_group_cfg.name} in the specified resource group: #{network_security_group_cfg.resource_group_name}") if network_security_group.nil?
+        return network_security_group
+      end
+
       resource_group_name = network.resource_group_name
-      network_security_group = @azure_client.get_network_security_group_by_name(resource_group_name, network_security_group_name)
+
+      # The resource group which the NSG belongs to can be specified in networks and global configuration (ordered by priority)
+      network_security_group = @azure_client.get_network_security_group_by_name(
+        resource_group_name,
+        network_security_group_cfg.name
+      )
+
       # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
       default_resource_group_name = @azure_config.resource_group_name
       if network_security_group.nil? && resource_group_name != default_resource_group_name
-        @logger.info("Cannot find the network security group '#{network_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
-        network_security_group = @azure_client.get_network_security_group_by_name(default_resource_group_name, network_security_group_name)
+        @logger.info("Cannot find the network security group '#{network_security_group_cfg.name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
+        network_security_group = @azure_client.get_network_security_group_by_name(default_resource_group_name, network_security_group_cfg.name)
       end
-      cloud_error("Cannot find the network security group '#{network_security_group_name}'") if network_security_group.nil?
+
+      cloud_error("Cannot find the network security group '#{network_security_group_cfg.name}'") if network_security_group.nil?
       network_security_group
     end
 

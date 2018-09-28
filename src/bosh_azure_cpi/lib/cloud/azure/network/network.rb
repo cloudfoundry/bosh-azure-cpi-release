@@ -3,7 +3,9 @@
 module Bosh::AzureCloud
   class Network
     attr_reader :resource_group_name
+    attr_reader :spec
 
+    RESOURCE_GROUP_NAME_KEY = 'resource_group_name'
     ##
     # Creates a new network
     #
@@ -22,13 +24,11 @@ module Bosh::AzureCloud
       @ip = spec['ip']
       @cloud_properties = spec['cloud_properties']
       @spec = spec
-      @resource_group_name = if @cloud_properties.nil? || @cloud_properties['resource_group_name'].nil?
+      @resource_group_name = if @cloud_properties.nil? || @cloud_properties[RESOURCE_GROUP_NAME_KEY].nil?
                                @azure_config.resource_group_name
                              else
-                               @cloud_properties['resource_group_name']
+                               @cloud_properties[RESOURCE_GROUP_NAME_KEY]
                              end
     end
-
-    attr_reader :spec
   end
 end

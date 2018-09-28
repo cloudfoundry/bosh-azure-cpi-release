@@ -63,8 +63,8 @@ module Bosh::AzureCloud
           network_interfaces.push(subnet: subnet, network_security_group: network_security_group)
         end
         # TODO: handle the application gateway, public ip too.
-        unless vm_props.load_balancer.nil?
-          load_balancer = @azure_client.get_load_balancer_by_name(vm_props.load_balancer)
+        unless vm_props.load_balancer.name.nil?
+          load_balancer = @azure_client.get_load_balancer_by_name(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
           vmss_params[:load_balancer] = load_balancer
         end
         flock(vmss_name.to_s, File::LOCK_EX) do

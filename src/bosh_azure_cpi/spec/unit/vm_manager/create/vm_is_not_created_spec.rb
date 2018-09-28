@@ -45,7 +45,11 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           before do
-            vm_props.availability_set = availability_set_name
+            vm_props.availability_set = Bosh::AzureCloud::AvailabilitySetConfig.new(
+              availability_set_name,
+              5,
+              1
+            )
 
             allow(azure_client).to receive(:create_virtual_machine)
               .and_raise('virtual machine is not created')
@@ -132,6 +136,43 @@ describe Bosh::AzureCloud::VMManager do
 
           context 'and keep_failed_vms is false in global configuration' do
             context 'and use_managed_disks is false' do
+              context 'and VM is in an availability set' do
+                let(:availability_set_name) { 'fake-avset-name' }
+                let(:availability_set) do
+                  {
+                    name: availability_set_name,
+                    location: location,
+                    virtual_machines: []
+                  }
+                end
+
+                before do
+                  vm_props.availability_set = Bosh::AzureCloud::AvailabilitySetConfig.new(
+                    availability_set_name,
+                    5,
+                    1
+                  )
+                  allow(azure_client).to receive(:get_availability_set_by_name)
+                    .and_return(availability_set)
+
+                  allow(disk_manager).to receive(:delete_disk)
+                end
+
+                it 'should delete vm, availability set and then raise an error' do
+                  expect(azure_client).to receive(:create_virtual_machine).exactly(3).times
+                  expect(azure_client).to receive(:delete_virtual_machine).exactly(3).times
+                  expect(azure_client).to receive(:delete_network_interface).twice
+                  expect(azure_client).to receive(:delete_availability_set).once
+
+                  expect do
+                    vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  end.to raise_error { |error|
+                    expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
+                    expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
+                  }
+                end
+              end
+
               context 'and ephemeral_disk does not exist' do
                 before do
                   allow(disk_manager).to receive(:ephemeral_disk)

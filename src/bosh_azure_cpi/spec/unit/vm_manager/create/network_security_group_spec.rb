@@ -92,6 +92,12 @@ describe Bosh::AzureCloud::VMManager do
 
             context ' and network specs' do
               let(:nsg_name_in_network_spec) { 'fake-nsg-name-specified-in-network-spec' }
+              let(:nsg_in_network_spec) do
+                Bosh::AzureCloud::SecurityGroup.new(
+                  MOCK_RESOURCE_GROUP_NAME,
+                  nsg_name_in_network_spec
+                )
+              end
               let(:security_group_in_network_spec) do
                 {
                   name: nsg_name_in_network_spec
@@ -99,8 +105,8 @@ describe Bosh::AzureCloud::VMManager do
               end
 
               before do
-                allow(manual_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
-                allow(dynamic_network).to receive(:security_group).and_return(nsg_name_in_network_spec)
+                allow(manual_network).to receive(:security_group).and_return(nsg_in_network_spec)
+                allow(dynamic_network).to receive(:security_group).and_return(nsg_in_network_spec)
                 allow(azure_client).to receive(:get_network_security_group_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, nsg_name_in_network_spec)
                   .and_return(security_group_in_network_spec)

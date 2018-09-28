@@ -5,7 +5,7 @@ module Bosh::AzureCloud
     private
 
     def _get_availability_set_name(vm_props, env)
-      availability_set_name = vm_props.availability_set
+      availability_set_name = vm_props.availability_set.name
       if availability_set_name.nil?
         unless env.nil? || env['bosh'].nil? || env['bosh']['group'].nil?
           availability_set_name = env['bosh']['group']
@@ -32,8 +32,8 @@ module Bosh::AzureCloud
         name: availability_set_name,
         location: location,
         tags: AZURE_TAGS,
-        platform_update_domain_count: vm_props.platform_update_domain_count || default_update_domain_count,
-        platform_fault_domain_count: vm_props.platform_fault_domain_count || default_fault_domain_count,
+        platform_update_domain_count: vm_props.availability_set.platform_update_domain_count,
+        platform_fault_domain_count: vm_props.availability_set.platform_fault_domain_count,
         managed: @use_managed_disks
       }
       availability_set = nil

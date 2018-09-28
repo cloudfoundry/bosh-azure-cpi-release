@@ -47,7 +47,7 @@ module Bosh::AzureCloud
 
       cloud_error('ip address required for manual network') if @ip.nil?
 
-      @security_group = @cloud_properties['security_group']
+      @security_group = Bosh::AzureCloud::SecurityGroup.parse_security_group(@cloud_properties['security_group'])
 
       @application_security_groups = @cloud_properties.fetch('application_security_groups', [])
 

@@ -62,6 +62,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Use Azure Accelerated Networking](./advanced/accelerated-networking/)
   * [Use Azure Managed Service Identity](./advanced/managed-service-identity/)
 * Cloud Foundry Scenarios
+  * [Hybrid Cloud Foundry across Azure and Azure Stack](./advanced/hybrid-cloud-foundry-across-azure-and-azure-stack/)
   * [Configure Cloud Foundry external databases using Azure MySQL/Postgres Service](./advanced/configure-cf-external-databases-using-azure-mysql-postgres-service)
   * [Integrating Application Gateway](./advanced/application-gateway/)
   * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)

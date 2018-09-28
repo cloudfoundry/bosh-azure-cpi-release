@@ -43,7 +43,7 @@ module Bosh::AzureCloud
         @subnet_name = @cloud_properties['subnet_name']
       end
 
-      @security_group = @cloud_properties['security_group']
+      @security_group = Bosh::AzureCloud::SecurityGroup.parse_security_group(@cloud_properties['security_group'])
 
       @application_security_groups = @cloud_properties.fetch('application_security_groups', [])
 
