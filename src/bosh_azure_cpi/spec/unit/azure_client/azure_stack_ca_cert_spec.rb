@@ -35,6 +35,7 @@ describe Bosh::AzureCloud::AzureClient do
 
       it 'should not configure the ca file' do
         expect(http).to receive(:use_ssl=).with(true)
+        expect(http).to receive(:ssl_version=).with(:TLSv1_2)
         expect(http).not_to receive(:ca_file=).with(ca_file_path)
         expect(http).to receive(:open_timeout=).with(60)
         azure_client.send(:http, uri)
@@ -46,6 +47,7 @@ describe Bosh::AzureCloud::AzureClient do
 
       it 'should configure the ca file' do
         expect(http).to receive(:use_ssl=).with(true)
+        expect(http).to receive(:ssl_version=).with(:TLSv1_2)
         expect(http).to receive(:ca_file=).with(ca_file_path)
         expect(http).to receive(:open_timeout=).with(60)
         azure_client.send(:http, uri)
