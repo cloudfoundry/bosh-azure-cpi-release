@@ -323,7 +323,7 @@ resources:
   - name: bosh-cpi-src-in
     type: git
     source:
-      uri: https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release.git
+      uri: https://github.com/cloudfoundry/bosh-azure-cpi-release.git
       branch: develop
       ignore_paths:
         - .final_builds/**/*.yml

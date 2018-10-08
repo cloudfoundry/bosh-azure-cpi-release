@@ -83,7 +83,7 @@
 
     ```bash
     cd ~/workspace
-    git clone https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release
+    git clone https://github.com/cloudfoundry/bosh-azure-cpi-release
     cd bosh-azure-cpi-release/
     direnv allow
     ```
@@ -103,7 +103,7 @@ Your development environment is prepared successfully.
 
 ### Unit tests
 
-The [unit tests](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/unit) are **REQUIRED** before you submit a PR. When submitting a PR, you need to provide the test coverage and make sure that the coverage doesn't decrease.
+The [unit tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/unit) are **REQUIRED** before you submit a PR. When submitting a PR, you need to provide the test coverage and make sure that the coverage doesn't decrease.
 
 ```bash
 cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
@@ -114,7 +114,7 @@ If unit tests are passed, you can create a dev release and deploy it for tests.
 
 ### CI Pipeline
 
-You can setup a [CI pipeline](../ci/) to run the [integration tests](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/integration) and [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests/tree/gocli-bats). It's optional for submitting a PR and required for publishing a new CPI release.
+You can setup a [CI pipeline](../ci/) to run the [integration tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/integration) and [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests/tree/gocli-bats). It's optional for submitting a PR and required for publishing a new CPI release.
 
 ### Test CPI methods
 
@@ -166,7 +166,7 @@ You can use `bosh_azure_console` to test your code changes quickly.
   # Prepare database for bosh-registry
   bosh-registry-migrate -c ~/workspace/registry.cfg
 
-  # Assume that you have cloned https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release.git into ~/workspace/bosh-azure-cpi-release
+  # Assume that you have cloned https://github.com/cloudfoundry/bosh-azure-cpi-release.git into ~/workspace/bosh-azure-cpi-release
   cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
   bundle install
 

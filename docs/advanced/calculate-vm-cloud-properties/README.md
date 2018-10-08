@@ -1,6 +1,6 @@
 # Calculate the VM Cloud Properties
 
-The deployment manifest supports a new feature `vm_resources` in the [instance groups block](https://bosh.io/docs/manifest-v2.html#instance-groups). The feature is based on a CPI method [`calculate_vm_cloud_properties`](https://bosh.io/docs/cpi-api-v1.html#calculate-vm-cloud-properties) which is available in Azure CPI [`v33+`](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/releases/tag/v33).
+The deployment manifest supports a new feature `vm_resources` in the [instance groups block](https://bosh.io/docs/manifest-v2.html#instance-groups). The feature is based on a CPI method [`calculate_vm_cloud_properties`](https://bosh.io/docs/cpi-api-v1.html#calculate-vm-cloud-properties) which is available in Azure CPI [`v33+`](https://github.com/cloudfoundry/bosh-azure-cpi-release/releases/tag/v33).
 
 The format of `vm_resources`:
 
@@ -61,7 +61,7 @@ The returned Azure specific cloud properites contain two parts: `instance_type` 
 
     The `closest matched` is defined by Azure CPI. Please note VM size is determined on best effort basis. Azure CPI tries to select the VM size with the balance of cost and performance.
 
-    CPI maintains a table of recommended VM sizes. Please check [`RECOMMENDED_VM_SIZES`](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/blob/master/src/bosh_azure_cpi/lib/cloud/azure/instance_type_mapper.rb). The table may **CHANGE** in future.
+    CPI maintains a table of recommended VM sizes. Please check [`RECOMMENDED_VM_SIZES`](https://github.com/cloudfoundry/bosh-azure-cpi-release/blob/master/src/bosh_azure_cpi/lib/cloud/azure/instance_type_mapper.rb). The table may **CHANGE** in future.
 
     CPI searches each series in the table from the top to the bottom, and selects the VM sizes which are also in the list of possible VM sizes. It means these VM sizes statisfy the requirements of `vm_resources`.
 

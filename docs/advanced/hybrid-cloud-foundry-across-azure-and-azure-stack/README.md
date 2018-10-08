@@ -12,7 +12,7 @@ Remove: * You can connect to Azure or Azure Stack with CLI or Powershell. Here's
 
 ## Deploy Cloud Foundry seperately on Azure and Azure Stack
 
-The [bosh-setup](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup) template supports both Azure and Azure Stack. For Azure Stack specific configurations, please refer to the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack).
+The [bosh-setup](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup) template supports both Azure and Azure Stack. For Azure Stack specific configurations, please refer to the [doc](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack).
 
 We use the following configurations as an example.
 

@@ -8,9 +8,9 @@
 
     If you hit the error when you try to login Cloud Foundry, you should check if your DNS is ready. You can prepare your own DNS and configure it properly. Otherwise, you can follow [**HERE**](../advanced/deploy-azuredns/) to setup a DNS.
 
-1. Director could not be targeted after VM restart, see [#55](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/55)
+1. Director could not be targeted after VM restart, see [#55](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues/55)
 
-1. Failed to deploy BOSH with `get_token` error, see [#49](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/49)
+1. Failed to deploy BOSH with `get_token` error, see [#49](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues/49)
 
     You should verify whether the service principal is valid by [the steps](../get-started/create-service-principal.md#verify-your-service-principal).
 
@@ -31,7 +31,7 @@
 
         * Go to the portal and file a support issue to raise your quota.
 
-        * Update your manifest to reduce the core number. For example, you can reduce the workers of `compilation` into 1. See [#57](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/57)
+        * Update your manifest to reduce the core number. For example, you can reduce the workers of `compilation` into 1. See [#57](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues/57)
 
             ```YAML
             compilation:
@@ -52,7 +52,7 @@
 
         If this deployment succeeds, then you can skip the next step.
 
-    1. If the above re-deployment failed again, please follow the below steps, keep the unreachable VMs for the further investigation, and file an issue [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues).
+    1. If the above re-deployment failed again, please follow the below steps, keep the unreachable VMs for the further investigation, and file an issue [**HERE**](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues).
 
         1. Update `~/bosh.yml` if the debug option is not enabled.
 

@@ -1,6 +1,6 @@
 # Deploy BOSH on Azure via ARM templates
 
->**NOTE**: This guidance is for the version `v3.0.0+` of [bosh-setup template](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup). The `v3.0.0+` is based on [cf-deployment](https://github.com/cloudfoundry/cf-deployment). The older version `v2.7.0` of the template is based on [cf-release](https://github.com/cloudfoundry/cf-release). If you would like to follow the guidance for the older template, please go to the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/a5a3f6c3d0c773aa274fe96f2e5fee4ecf3d7b00/docs/get-started/via-arm-templates/deploy-bosh-via-arm-templates.md).
+>**NOTE**: This guidance is for the version `v3.0.0+` of [bosh-setup template](https://github.com/Azure/azure-quickstart-templates/tree/master/bosh-setup). The `v3.0.0+` is based on [cf-deployment](https://github.com/cloudfoundry/cf-deployment). The older version `v2.7.0` of the template is based on [cf-release](https://github.com/cloudfoundry/cf-release). If you would like to follow the guidance for the older template, please go to the [doc](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/a5a3f6c3d0c773aa274fe96f2e5fee4ecf3d7b00/docs/get-started/via-arm-templates/deploy-bosh-via-arm-templates.md).
 
 # 1 Prepare Azure Resources
 
@@ -35,10 +35,10 @@ The [**bosh-setup**](https://github.com/Azure/azure-quickstart-templates/tree/ma
 | clientID | **YES**  | | ID of the client |
 | clientSecret | NO | "" | secret of the client |
 | certificate | NO | "" | Base64-encoded Certificate of the service principal. You can run `cat <PATH_TO_YOUR_PEM_CERTIFICATE> \| base64 -w 0`, and input the result. Check how to [create a service principal with a certificate](https://docs.microsoft.com/en-us/cli/azure/create-an-azure-service-principal-azure-cli?toc=%2Fazure%2Fazure-resource-manager%2Ftoc.json&view=azure-cli-latest#create-a-service-principal-for-your-application). |
-| azureStackDomain | NO | NotApplicableIfEnvironmentIsNotAzureStack | Azure Stack deployment domain. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
-| azureStackResource | NO | NotApplicableIfEnvironmentIsNotAzureStack | Azure Stack Active Directory Service Endpoint Resource ID. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
-| azureStackAuthentication | NO | AzureAD | Azure Stack Authentication. Available values: `AzureAD`, `AzureChinaAD` and `ADFS`. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
-| azureStackCARootCertificate | NO | "" | Azure Stack CA root certificate, which is base64 encoded. Get the Azure Stack CA root certificate from the Azure Stack operator, run `cat <PATH_TO_YOUR_PEM_CERTIFICATE> \| base64 -w 0`, and input the result. If not provided, `/var/lib/waagent/Certificates.pem` will be used. Please check the [doc](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack#azure-stack-properties). |
+| azureStackDomain | NO | NotApplicableIfEnvironmentIsNotAzureStack | Azure Stack deployment domain. Please check the [doc](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
+| azureStackResource | NO | NotApplicableIfEnvironmentIsNotAzureStack | Azure Stack Active Directory Service Endpoint Resource ID. Please check the [doc](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
+| azureStackAuthentication | NO | AzureAD | Azure Stack Authentication. Available values: `AzureAD`, `AzureChinaAD` and `ADFS`. Please check the [doc](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack). |
+| azureStackCARootCertificate | NO | "" | Azure Stack CA root certificate, which is base64 encoded. Get the Azure Stack CA root certificate from the Azure Stack operator, run `cat <PATH_TO_YOUR_PEM_CERTIFICATE> \| base64 -w 0`, and input the result. If not provided, `/var/lib/waagent/Certificates.pem` will be used. Please check the [doc](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/docs/advanced/azure-stack#azure-stack-properties). |
 | loadBalancerSku | NO | standard | The sku of the load balancer to be used. Note: Standard Sku LB is not supported in Azure Stack and Azure China Cloud. |
 | useAvailabilityZones | NO | disabled | The flag to enable availability zones in cloud config. |
 | autoDeployBosh | NO | enabled | The flag allowing to deploy the Bosh director. |
@@ -162,7 +162,7 @@ Run the following commands in your home directory to deploy bosh:
 **NOTE:**
   * Never use root to perform these steps.
   * More verbose logs are written to `~/run.log`.
-  * If you hit any issue, please see [**troubleshooting**](../../additional-information/troubleshooting.md), [**known issues**](../../additional-information/known-issues.md) and [**migration**](../../additional-information/migration.md). If it does not work, you can file an issue [**HERE**](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues).
+  * If you hit any issue, please see [**troubleshooting**](../../additional-information/troubleshooting.md), [**known issues**](../../additional-information/known-issues.md) and [**migration**](../../additional-information/migration.md). If it does not work, you can file an issue [**HERE**](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues).
 
 Export the following environment variables from `~/login_bosh.sh` into `~/.profile`.
 
