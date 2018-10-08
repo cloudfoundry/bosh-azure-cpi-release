@@ -11,9 +11,9 @@ describe Bosh::AzureCloud::TableManager do
   let(:table_name) { 'fake-table-name' }
   let(:keys) { ['fake-key-1', 'fake-key-2'] }
 
-  let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
+  let(:azure_storage_client) { instance_double(Azure::Storage::Common::Client) }
   let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
-  let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
+  let(:exponential_retry) { instance_double(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter) }
   let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
   let(:blob_host) { "https://#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}.blob.#{storage_dns_suffix}" }
   let(:table_host) { "https://#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}.table.#{storage_dns_suffix}" }
@@ -38,7 +38,7 @@ describe Bosh::AzureCloud::TableManager do
   before do
     allow(storage_account_manager).to receive(:default_storage_account)
       .and_return(storage_account)
-    allow(Azure::Storage::Client).to receive(:create)
+    allow(Azure::Storage::Common::Client).to receive(:create)
       .and_return(azure_storage_client)
     allow(Bosh::AzureCloud::AzureClient).to receive(:new)
       .and_return(azure_client)
@@ -48,9 +48,9 @@ describe Bosh::AzureCloud::TableManager do
       .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
       .and_return(storage_account)
 
-    allow(azure_storage_client).to receive(:table_client)
+    allow(Azure::Storage::Table::TableService).to receive(:new)
       .and_return(table_service)
-    allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
+    allow(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
       .and_return(exponential_retry)
     allow(table_service).to receive(:with_filter).with(exponential_retry)
 
