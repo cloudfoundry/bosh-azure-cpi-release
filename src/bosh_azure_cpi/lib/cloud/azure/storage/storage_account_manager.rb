@@ -206,8 +206,8 @@ module Bosh::AzureCloud
       storage_account = @azure_client.get_storage_account_by_name(name)
       storage_account[:key] = @azure_client.get_storage_account_keys_by_name(name)[0]
       azure_storage_client = initialize_azure_storage_client(storage_account, @azure_config)
-      table_service_client = azure_storage_client.table_client
-      table_service_client.with_filter(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter.new)
+      table_service_client = Azure::Storage::Table::TableService.new(client: azure_storage_client)
+      table_service_client.with_filter(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter.new)
       table_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_config)
       begin
         options = merge_storage_common_options

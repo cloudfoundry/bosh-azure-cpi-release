@@ -288,11 +288,12 @@ module Bosh::AzureCloud
         storage_account_name: storage_account[:name],
         storage_access_key: storage_account[:key],
         storage_dns_suffix: URI.parse(storage_account[:storage_blob_host]).host.split('.')[2..-1].join('.'),
-        user_agent_prefix: USER_AGENT_FOR_REST
+        user_agent_prefix: USER_AGENT_FOR_REST,
+        # TODO: set the value after the new azure storage sdk common released.
+        # ssl_version: :TLSv1_2
       }
       options[:ca_file] = get_ca_cert_path if azure_config.environment == ENVIRONMENT_AZURESTACK
-
-      Azure::Storage::Client.create(options)
+      Azure::Storage::Common::Client.create(options)
     end
 
     def get_ca_cert_path
