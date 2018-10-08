@@ -1,6 +1,6 @@
 # Deploy Cloud Foundry using multiple storage accounts
 
->**NOTE:** With the latest CPI release ([V21](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/releases/tag/v21)+) that supports Azure Managed Disks, you no longer need to manage the storage account yourself. You can migrate your existing deployment, or start a new deployment utilizing Managed Disks, without worrying about the storage account limitation, see the [doc](../managed-disks/) for detailed steps. If your region or your scenario does not support Managed Disks temporally, you need to follow below steps to manage the storage accounts.
+>**NOTE:** With the latest CPI release ([V21](https://github.com/cloudfoundry/bosh-azure-cpi-release/releases/tag/v21)+) that supports Azure Managed Disks, you no longer need to manage the storage account yourself. You can migrate your existing deployment, or start a new deployment utilizing Managed Disks, without worrying about the storage account limitation, see the [doc](../managed-disks/) for detailed steps. If your region or your scenario does not support Managed Disks temporally, you need to follow below steps to manage the storage accounts.
 
 This document provides additional configuration options for high availability and performance of your Cloud Foundry infrastructure. You can configure these advanced settings at your initial deployment, or at ongoing deployment. For basic Cloud Foundry deployment steps, please check the section [**Get Started**](../../guidance.md#get-started).
 

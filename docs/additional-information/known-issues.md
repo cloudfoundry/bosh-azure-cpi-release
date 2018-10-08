@@ -2,7 +2,7 @@
 
 1. Connection dropped
 
-    By default, Azure load balancer has an `idle timeout` setting of 4 minutes but the default timeout of HAProxy is 900 as 15 minutes, this would cause the problem of connection dropped. [#99](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/99)
+    By default, Azure load balancer has an `idle timeout` setting of 4 minutes but the default timeout of HAProxy is 900 as 15 minutes, this would cause the problem of connection dropped. [#99](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues/99)
 
     The timeout values of Azure load balancer and HAProxy need to be matched. There are two options:
 
@@ -65,7 +65,7 @@
                   Post https://mbus-user:mbus-password@10.0.0.4:6868/agent: dial tcp 10.0.0.4:6868: getsockopt: connection refused
     ```
 
-    It is recommended to use the latest version. For example, Stemcell v3232.5 or later, and CPI v12 or later. You may hit the issue [#135](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/135) if you still use an older stemcell than v3232.5.
+    It is recommended to use the latest version. For example, Stemcell v3232.5 or later, and CPI v12 or later. You may hit the issue [#135](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues/135) if you still use an older stemcell than v3232.5.
 
 1. Invalid or expired service principal
 
@@ -126,4 +126,4 @@
     Error 450002: Timed out sending 'list_disk' to c4e6e2ff-8ee2-463b-a1d2-f1190b4e21e1 after 45 seconds
     ```
 
-    A workaround has been included in Azure CPI [v33](https://bosh.io/d/github.com/cloudfoundry-incubator/bosh-azure-cpi-release?v=33) to mitigate the issue. Since January, 2018, the issue was fixed on Azure, but the workaround will be kept for while until the fix is fully tested.
+    A workaround has been included in Azure CPI [v33](https://bosh.io/d/github.com/cloudfoundry/bosh-azure-cpi-release?v=33) to mitigate the issue. Since January, 2018, the issue was fixed on Azure, but the workaround will be kept for while until the fix is fully tested.
