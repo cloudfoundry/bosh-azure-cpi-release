@@ -2068,6 +2068,8 @@ module Bosh::AzureCloud
     def http(uri, use_ssl = true)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true && use_ssl
+      # TODO: set the min_version instead after we upgraded to ruby 2.5.
+      http.ssl_version = :TLSv1_2
       if @azure_config.environment == ENVIRONMENT_AZURESTACK
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
         http.ca_file = get_ca_cert_path if uri.host.include?(@azure_config.azure_stack.domain)
