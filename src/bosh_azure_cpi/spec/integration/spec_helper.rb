@@ -48,7 +48,9 @@ RSpec.configure do |rspec_config|
       'resource_group_name' => @default_resource_group_name,
       'use_managed_disks' => @use_managed_disks,
       'storage_account_name' => @storage_account_name,
-      'parallel_upload_thread_num' => 16
+      'parallel_upload_thread_num' => 16,
+      'enable_vm_boot_diagnostics' => true,
+      'keep_failed_vms' => true
     }
     @azure_config = Bosh::AzureCloud::AzureConfig.new(azure_config_hash)
 

@@ -152,18 +152,16 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
       - <<: *create-integration-environment
+      - <<: *upload-stemcell
+      - <<: *run-integration
+        params:
+          <<: *run-integration-params
+          AZURE_USE_MANAGED_DISKS: false
       - do:
-        - <<: *upload-stemcell
-        - <<: *run-integration
-          params:
-            <<: *run-integration-params
-            AZURE_USE_MANAGED_DISKS: false
+          - <<: *destroy-integration-environment
         ensure:
           do:
-            - <<: *destroy-integration-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
+            - <<: *ensure-cleanup
 
   - name: integration-managed-disks
     serial: true
@@ -173,18 +171,16 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
       - <<: *create-integration-environment
+      - <<: *upload-stemcell
+      - <<: *run-integration
+        params:
+          <<: *run-integration-params
+          AZURE_USE_MANAGED_DISKS: true
       - do:
-        - <<: *upload-stemcell
-        - <<: *run-integration
-          params:
-            <<: *run-integration-params
-            AZURE_USE_MANAGED_DISKS: true
+          - <<: *destroy-integration-environment
         ensure:
           do:
-            - <<: *destroy-integration-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
+            - <<: *ensure-cleanup
 
   - name: integration-windows-unmanaged-disks
     serial: true
@@ -194,21 +190,19 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
       - <<: *create-integration-environment
+      - <<: *upload-stemcell
+        params:
+          <<: *azure-environment-params
+          IS_HEAVY_STEMCELL: false
+      - <<: *run-integration-windows
+        params:
+          <<: *run-integration-windows-params
+          AZURE_USE_MANAGED_DISKS: false
       - do:
-        - <<: *upload-stemcell
-          params:
-            <<: *azure-environment-params
-            IS_HEAVY_STEMCELL: false
-        - <<: *run-integration-windows
-          params:
-            <<: *run-integration-windows-params
-            AZURE_USE_MANAGED_DISKS: false
+          - <<: *destroy-integration-environment
         ensure:
           do:
-            - <<: *destroy-integration-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
+            - <<: *ensure-cleanup
 
   - name: integration-windows-managed-disks
     serial: true
@@ -218,21 +212,19 @@ jobs:
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
       - <<: *create-integration-environment
+      - <<: *upload-stemcell
+        params:
+          <<: *azure-environment-params
+          IS_HEAVY_STEMCELL: false
+      - <<: *run-integration-windows
+        params:
+          <<: *run-integration-windows-params
+          AZURE_USE_MANAGED_DISKS: true
       - do:
-        - <<: *upload-stemcell
-          params:
-            <<: *azure-environment-params
-            IS_HEAVY_STEMCELL: false
-        - <<: *run-integration-windows
-          params:
-            <<: *run-integration-windows-params
-            AZURE_USE_MANAGED_DISKS: true
+          - <<: *destroy-integration-environment
         ensure:
           do:
-            - <<: *destroy-integration-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
+            - <<: *ensure-cleanup
 
   - name: bats-unmanaged-disks
     serial: true
@@ -247,25 +239,23 @@ jobs:
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
       - <<: *create-bats-environment
+      - <<: *prepare-director
+        params:
+          <<: *prepare-director-params
+          OPTIONAL_OPS_FILE: |
+            -o pipelines/shared/assets/ops/remove-hm.yml
+            -o bosh-deployment/external-ip-with-registry-not-recommended.yml
       - do:
-        - <<: *prepare-director
-          params:
-            <<: *prepare-director-params
-            OPTIONAL_OPS_FILE: |
-              -o pipelines/shared/assets/ops/remove-hm.yml
-              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
-        - do:
-          - <<: *deploy-director
-          - <<: *run-bats
-          ensure:
-            do:
-              - <<: *teardown
+        - <<: *deploy-director
+        - <<: *run-bats
         ensure:
           do:
-            - <<: *destroy-bats-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
+            - <<: *teardown
+      - do:
+          - <<: *destroy-bats-environment
+        ensure:
+          do:
+            - <<: *ensure-cleanup
 
   - name: bats-managed-disks
     serial: true
@@ -280,26 +270,24 @@ jobs:
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
       - <<: *create-az-bats-environment
+      - <<: *prepare-director
+        params:
+          <<: *prepare-director-params
+          OPTIONAL_OPS_FILE: |
+            -o pipelines/shared/assets/ops/remove-hm.yml
+            -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+            -o bosh-deployment/azure/use-managed-disks.yml
       - do:
-        - <<: *prepare-director
-          params:
-            <<: *prepare-director-params
-            OPTIONAL_OPS_FILE: |
-              -o pipelines/shared/assets/ops/remove-hm.yml
-              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
-              -o bosh-deployment/azure/use-managed-disks.yml
-        - do:
-          - <<: *deploy-director
-          - <<: *run-az-bats
-          ensure:
-            do:
-              - <<: *teardown
+        - <<: *deploy-director
+        - <<: *run-az-bats
         ensure:
           do:
-            - <<: *destroy-az-bats-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
+            - <<: *teardown
+      - do:
+          - <<: *destroy-az-bats-environment
+        ensure:
+          do:
+            - <<: *ensure-cleanup
 
 resource_types:
   - name: terraform_type
