@@ -2,6 +2,7 @@
 
 module Bosh::AzureCloud
   class VMManager
+    # This function is not idempotent, make sure it is not called more than once
     def get_storage_account_from_vm_properties(vm_properties, location)
       @logger.debug("get_storage_account_from_vm_properties(#{vm_properties}, #{location})")
 
