@@ -225,3 +225,8 @@ Style/NumericPredicate:
 # URISchemes: http, https
 Metrics/LineLength:
   Max: 1214
+
+# Offense count: 1
+Style/IfInsideElse:
+  Exclude:
+    - 'lib/cloud/azure/vms/vm_manager.rb'

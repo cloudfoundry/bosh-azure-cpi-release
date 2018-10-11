@@ -46,7 +46,7 @@ module Bosh::AzureCloud
 
       tasks.push(
         task_get_stemcell_info = Concurrent::Future.execute do
-          _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location)
+          _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location, instance_id.storage_account_name)
         end
       )
 
@@ -403,7 +403,7 @@ module Bosh::AzureCloud
       instance_id
     end
 
-    def _get_stemcell_info(stemcell_cid, vm_props, location)
+    def _get_stemcell_info(stemcell_cid, vm_props, location, storage_account_name)
       stemcell_info = nil
       if @use_managed_disks
         if is_light_stemcell_cid?(stemcell_cid)
@@ -420,16 +420,14 @@ module Bosh::AzureCloud
           end
         end
       else
-        storage_account = get_storage_account_from_vm_properties(vm_props, location)
-
         if is_light_stemcell_cid?(stemcell_cid)
           raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
 
           stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
         else
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_cid)
+          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account_name, stemcell_cid)
 
-          stemcell_info = @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_cid)
+          stemcell_info = @stemcell_manager.get_stemcell_info(storage_account_name, stemcell_cid)
         end
       end
 
