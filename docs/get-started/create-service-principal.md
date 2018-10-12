@@ -61,7 +61,7 @@ Azure CPI provisions resources in Azure using the Azure Resource Manager (ARM) A
 
 ## 2.1 Via Script (RECOMMENDED)
 
-1. Download [bash script](https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/get-started/create-service-principal.sh) or [Powershell script](https://raw.githubusercontent.com/cloudfoundry-incubator/bosh-azure-cpi-release/master/docs/get-started/create-service-principal.ps1) according to your command line tool.
+1. Download [bash script](https://raw.githubusercontent.com/cloudfoundry/bosh-azure-cpi-release/master/docs/get-started/create-service-principal.sh) or [Powershell script](https://raw.githubusercontent.com/cloudfoundry/bosh-azure-cpi-release/master/docs/get-started/create-service-principal.ps1) according to your command line tool.
 
 2. Run the script to generate your Service Principal.
 
@@ -373,4 +373,4 @@ Please verify it with the following steps:
 
 1. Recreate a service principal on your tenant if the service principal is invalid.
 
-> **NOTE:** In some cases, if the service principal is invalid, then the deployment of BOSH will fail. Errors in `~/run.log` will show `get_token - http error` like this [reported issue](https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/49).
+> **NOTE:** In some cases, if the service principal is invalid, then the deployment of BOSH will fail. Errors in `~/run.log` will show `get_token - http error` like this [reported issue](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues/49).

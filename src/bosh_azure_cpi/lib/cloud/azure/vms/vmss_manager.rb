@@ -33,7 +33,7 @@ module Bosh::AzureCloud
       existing_vmss = @azure_client.get_vmss_by_name(resource_group_name, vmss_name)
       vmss_params = {}
       instance_id = _build_instance_id(bosh_vm_meta, vm_props, vmss_name, nil)
-      stemcell_info = _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location)
+      stemcell_info = _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location, nil)
       vmss_instance_id = nil # this is the instance id like '1', '2', concept in vmss.
       vm_name = nil
       vmss_instance_zone = nil

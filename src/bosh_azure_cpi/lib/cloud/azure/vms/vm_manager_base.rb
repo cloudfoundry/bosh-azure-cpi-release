@@ -115,7 +115,7 @@ module Bosh::AzureCloud
       @azure_client.create_resource_group(resource_group_name, location)
     end
 
-    def _get_stemcell_info(stemcell_cid, vm_props, location)
+    def _get_stemcell_info(stemcell_cid, vm_props, location, storage_account_name)
       stemcell_info = nil
       if @use_managed_disks
         if is_light_stemcell_cid?(stemcell_cid)
@@ -131,18 +131,14 @@ module Bosh::AzureCloud
             raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell '#{stemcell_cid}': #{e.inspect}\n#{e.backtrace.join("\n")}"
           end
         end
+      elsif is_light_stemcell_cid?(stemcell_cid)
+        raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
+
+        stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
       else
-        storage_account = get_storage_account_from_vm_properties(vm_props, location)
+        raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account_name, stemcell_cid)
 
-        if is_light_stemcell_cid?(stemcell_cid)
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
-
-          stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
-        else
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account[:name], stemcell_cid)
-
-          stemcell_info = @stemcell_manager.get_stemcell_info(storage_account[:name], stemcell_cid)
-        end
+        stemcell_info = @stemcell_manager.get_stemcell_info(storage_account_name, stemcell_cid)
       end
 
       @logger.debug("get_stemcell_info - got stemcell '#{stemcell_info.inspect}'")

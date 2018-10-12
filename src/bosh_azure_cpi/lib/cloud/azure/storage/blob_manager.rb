@@ -499,7 +499,7 @@ module Bosh::AzureCloud
 
         if error_message.include?(Bosh::AzureCloud::Helpers::ERROR_OPENSSL_RESET)
           # Retry on "Connection reset by peer - SSL_connect" error (OpenSSL::SSL::SSLError, OpenSSL::X509::StoreError)
-          # https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/234
+          # https://github.com/cloudfoundry/bosh-azure-cpi-release/issues/234
           retry_data[:retryable] = true
         end
       end

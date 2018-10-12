@@ -144,6 +144,8 @@ shared_context 'shared stuff for vm managers' do
   before do
     allow(instance_id).to receive(:vm_name)
       .and_return(vm_name)
+    allow(instance_id).to receive(:storage_account_name)
+      .and_return(storage_account_name)
     allow(instance_id).to receive(:to_s)
       .and_return(instance_id_string)
     allow(vm_manager).to receive(:get_storage_account_from_vm_properties)

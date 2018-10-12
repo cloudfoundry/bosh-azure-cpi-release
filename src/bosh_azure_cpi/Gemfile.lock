@@ -37,6 +37,7 @@ GEM
     hashdiff (0.3.6)
     httpclient (2.8.3)
     jaro_winkler (1.5.1)
+    jaro_winkler (1.5.1-x86_64-darwin-17)
     json (2.1.0)
     jwt (1.5.6)
     little-plugger (1.1.4)
@@ -93,6 +94,7 @@ GEM
 
 PLATFORMS
   ruby
+  x86_64-darwin-17
 
 DEPENDENCIES
   azure-storage-blob (= 1.0.1)
@@ -109,4 +111,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   1.16.5
+   1.16.6

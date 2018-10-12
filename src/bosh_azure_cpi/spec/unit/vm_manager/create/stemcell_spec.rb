@@ -64,6 +64,8 @@ describe Bosh::AzureCloud::VMManager do
 
   describe '#get_stemcell_info' do
     context 'when managed disks are used' do
+      let(:storage_account_name) { nil }
+
       context 'when light stemcell is used' do
         let(:stemcell_id) { 'bosh-light-stemcell-xxx' }
 
@@ -74,7 +76,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should raise an error' do
             expect do
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location)
+              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
             end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
           end
         end
@@ -89,7 +91,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location)
+              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
             ).to be(stemcell_info)
           end
         end
@@ -109,7 +111,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location)
+              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
             ).to be(stemcell_info)
           end
         end
@@ -125,7 +127,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return the stemcell info' do
             expect do
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location)
+              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
             end.to raise_error(/Failed to get the user image information for the stemcell '#{stemcell_id}'/)
           end
         end
@@ -147,6 +149,7 @@ describe Bosh::AzureCloud::VMManager do
 
       context 'when light stemcell is used' do
         let(:stemcell_id) { 'bosh-light-stemcell-xxx' }
+        let(:storage_account_name) { nil }
 
         context 'when stemcell does not exist' do
           before do
@@ -155,7 +158,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should raise an error' do
             expect do
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location)
+              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
             end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
           end
         end
@@ -170,7 +173,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location)
+              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
             ).to be(stemcell_info)
           end
         end
@@ -178,6 +181,7 @@ describe Bosh::AzureCloud::VMManager do
 
       context 'when heavy stemcell is used' do
         let(:stemcell_id) { 'bosh-stemcell-xxx' }
+        let(:storage_account_name) { 'fake-storage-account-name' }
 
         context 'when it fails to get stemcell' do
           before do
@@ -188,7 +192,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should raise an error' do
             expect do
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location)
+              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
             end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
           end
         end
@@ -207,7 +211,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return stemcell info' do
             expect(
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location)
+              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
             ).to be(stemcell_info)
           end
         end

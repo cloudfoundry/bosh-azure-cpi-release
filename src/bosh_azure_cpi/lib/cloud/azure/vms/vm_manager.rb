@@ -46,7 +46,7 @@ module Bosh::AzureCloud
 
       tasks.push(
         task_get_stemcell_info = Concurrent::Future.execute do
-          _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location)
+          _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location, instance_id.storage_account_name)
         end
       )
 
