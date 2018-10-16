@@ -7,10 +7,10 @@ describe Bosh::AzureCloud::CPILogger do
     let(:message) { 'fake-message' }
     let(:request_id) { 'fake-req-id' }
     let(:log_file) { '/tmp/cpi-fake-logger.log' }
-    let(:logger) { Bosh::AzureCloud::CPILogger.get_logger(log_file) }
+    let(:logger) { Bosh::AzureCloud::CPILogger.instance.get_logger(log_file) }
 
     before do
-      Bosh::AzureCloud::CPILogger.set_request_id(request_id)
+      Bosh::AzureCloud::CPILogger.instance.set_request_id(request_id)
     end
 
     after do

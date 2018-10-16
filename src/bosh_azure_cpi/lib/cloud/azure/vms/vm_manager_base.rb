@@ -5,7 +5,7 @@ module Bosh::AzureCloud
     include Helpers
 
     def get_storage_account_from_vm_properties(vm_properties, location)
-      @logger.debug("get_storage_account_from_vm_properties(#{vm_properties}, #{location})")
+      CPILogger.instance.logger.debug("get_storage_account_from_vm_properties(#{vm_properties}, #{location})")
 
       # If storage_account_name is not specified in vm_types or vm_extensions, use the default storage account in global configurations
       storage_account_name = nil
@@ -21,12 +21,12 @@ module Bosh::AzureCloud
           # is not more than the limitation.
           pattern = vm_properties.storage_account_name
           storage_account_max_disk_number = vm_properties.storage_account_max_disk_number
-          @logger.debug("get_storage_account_from_vm_properties - Picking one available storage account by pattern '#{pattern}', max disk number '#{storage_account_max_disk_number}'")
+          CPILogger.instance.logger.debug("get_storage_account_from_vm_properties - Picking one available storage account by pattern '#{pattern}', max disk number '#{storage_account_max_disk_number}'")
 
           # Remove * in the pattern
           pattern = pattern[1..-2]
           storage_accounts = @azure_client.list_storage_accounts.select { |s| s[:name] =~ /^.*#{pattern}.*$/ }
-          @logger.debug("get_storage_account_from_vm_properties - Pick all storage accounts by pattern:\n#{storage_accounts.inspect}")
+          CPILogger.instance.logger.debug("get_storage_account_from_vm_properties - Pick all storage accounts by pattern:\n#{storage_accounts.inspect}")
 
           result = []
           # Randomaly pick one storage account
@@ -34,7 +34,7 @@ module Bosh::AzureCloud
           storage_accounts.each do |storage_account|
             disks = @disk_manager.list_disks(storage_account[:name])
             if disks.size <= storage_account_max_disk_number
-              @logger.debug("get_storage_account_from_vm_properties - Pick the available storage account '#{storage_account[:name]}', current disk numbers: '#{disks.size}'")
+              CPILogger.instance.logger.debug("get_storage_account_from_vm_properties - Pick the available storage account '#{storage_account[:name]}', current disk numbers: '#{disks.size}'")
               return storage_account
             else
               result << {
@@ -56,7 +56,7 @@ module Bosh::AzureCloud
         storage_account_name = @storage_account_manager.default_storage_account_name
       end
 
-      @logger.debug("get_storage_account_from_vm_properties: use the storage account '#{storage_account_name}'")
+      CPILogger.instance.logger.debug("get_storage_account_from_vm_properties: use the storage account '#{storage_account_name}'")
       storage_account = @azure_client.get_storage_account_by_name(storage_account_name) if storage_account.nil?
       storage_account
     end
@@ -99,7 +99,7 @@ module Bosh::AzureCloud
       # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
       default_resource_group_name = @azure_config.resource_group_name
       if network_security_group.nil? && resource_group_name != default_resource_group_name
-        @logger.info("Cannot find the network security group '#{network_security_group_cfg.name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
+        CPILogger.instance.logger.info("Cannot find the network security group '#{network_security_group_cfg.name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
         network_security_group = @azure_client.get_network_security_group_by_name(default_resource_group_name, network_security_group_cfg.name)
       end
 
@@ -141,7 +141,7 @@ module Bosh::AzureCloud
         stemcell_info = @stemcell_manager.get_stemcell_info(storage_account_name, stemcell_cid)
       end
 
-      @logger.debug("get_stemcell_info - got stemcell '#{stemcell_info.inspect}'")
+      CPILogger.instance.logger.debug("get_stemcell_info - got stemcell '#{stemcell_info.inspect}'")
       stemcell_info
     end
 

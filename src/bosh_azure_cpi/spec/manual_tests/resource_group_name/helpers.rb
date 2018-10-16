@@ -44,10 +44,13 @@ def load_bosh_azure_cpi(cpi_dir, config)
 
   $LOAD_PATH.shift
 
-  cloud_config = OpenStruct.new(logger: Logger.new(STDOUT))
+  logger = Logger.new(STDOUT)
+  cloud_config = OpenStruct.new(logger: logger)
   Bosh::Clouds::Config.configure(cloud_config)
+  Bosh::AzureCloud::CPILogger.instance.logger = logger
 
-  cpi = Bosh::AzureCloud::Cloud.new(config)
+  Bosh::AzureCloud::Config.instance.update(config)
+  cpi = Bosh::AzureCloud::Cloud.new
 
   cpi
 end

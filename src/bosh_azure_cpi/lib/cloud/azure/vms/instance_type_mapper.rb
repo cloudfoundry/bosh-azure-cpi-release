@@ -40,18 +40,16 @@ module Bosh::AzureCloud
     ].freeze
 
     def map(desired_instance_size, available_vm_sizes)
-      @logger = Bosh::Clouds::Config.logger
-
       possible_vm_sizes = find_possible_vm_sizes(desired_instance_size, available_vm_sizes)
       if possible_vm_sizes.empty?
         raise ["Unable to meet requested desired_instance_size: #{desired_instance_size['cpu']} CPU, #{desired_instance_size['ram']} MB RAM.\n",
                "Available VM sizes:\n",
                available_vm_sizes.map { |vm_size| "#{vm_size[:name]}: #{vm_size[:number_of_cores]} CPU, #{vm_size[:memory_in_mb]} MB RAM\n" }].join
       end
-      @logger.debug("The possible VM sizes are '#{possible_vm_sizes}'")
+      CPILogger.instance.logger.debug("The possible VM sizes are '#{possible_vm_sizes}'")
 
       closest_matched_vm_size = find_closest_matched_vm_size(possible_vm_sizes)
-      @logger.debug("The closest matched VM size is '#{closest_matched_vm_size}'")
+      CPILogger.instance.logger.debug("The closest matched VM size is '#{closest_matched_vm_size}'")
 
       closest_matched_vm_size[:name]
     end

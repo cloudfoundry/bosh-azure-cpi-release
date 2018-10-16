@@ -18,7 +18,6 @@ module Bosh::AzureCloud
                              "#{spec.class} provided"
       end
 
-      @logger = Bosh::Clouds::Config.logger
       @azure_config = azure_config
       @name = name
       @ip = spec['ip']

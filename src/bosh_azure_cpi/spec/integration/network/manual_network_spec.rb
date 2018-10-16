@@ -6,7 +6,7 @@ describe Bosh::AzureCloud::Cloud do
   before { @disk_id_pool = [] }
   after do
     @disk_id_pool.each do |disk_id|
-      @logger.info("Cleanup: Deleting the disk '#{disk_id}'")
+      Bosh::AzureCloud::CPILogger.instance.logger.info("Cleanup: Deleting the disk '#{disk_id}'")
       @cpi.delete_disk(disk_id) if disk_id
     end
   end

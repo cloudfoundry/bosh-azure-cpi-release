@@ -789,9 +789,9 @@ describe Bosh::AzureCloud::AzureClient do
 
         context 'redact credentials in logs' do
           let(:azure_client) do
+            Bosh::AzureCloud::CPILogger.instance.logger = Logger.new(logger_strio)
             Bosh::AzureCloud::AzureClient.new(
-              mock_azure_config,
-              Logger.new(logger_strio)
+              mock_azure_config
             )
           end
 
@@ -830,9 +830,9 @@ describe Bosh::AzureCloud::AzureClient do
 
         context 'do not redact credentials in logs' do
           let(:azure_client) do
+            Bosh::AzureCloud::CPILogger.instance.logger = Logger.new(logger_strio)
             Bosh::AzureCloud::AzureClient.new(
-              mock_azure_config_merge('debug_mode' => true),
-              Logger.new(logger_strio)
+              mock_azure_config_merge('debug_mode' => true)
             )
           end
 

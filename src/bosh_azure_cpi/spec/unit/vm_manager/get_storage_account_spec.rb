@@ -4,7 +4,12 @@ require 'spec_helper'
 
 describe Bosh::AzureCloud::VMManager do
   describe '#get_storage_account_from_vm_properties' do
-    let(:props_factory) { Bosh::AzureCloud::PropsFactory.new(Bosh::AzureCloud::ConfigFactory.build(mock_cloud_options)) }
+    let(:props_factory) do
+      Bosh::AzureCloud::Config.instance.update(mock_cloud_options['properties'])
+      Bosh::AzureCloud::PropsFactory.new(
+        Bosh::AzureCloud::Config.instance.azure
+      )
+    end
     let(:azure_config) { mock_azure_config }
     let(:registry_endpoint) { mock_registry.endpoint }
     let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }

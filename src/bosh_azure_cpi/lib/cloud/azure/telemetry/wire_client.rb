@@ -22,7 +22,7 @@ module Bosh::AzureCloud
     }.freeze
 
     def initialize(logger)
-      @logger = logger
+      CPILogger.instance.logger = logger
     end
 
     # Post data to wireserver
@@ -33,7 +33,7 @@ module Bosh::AzureCloud
       endpoint = get_endpoint
 
       if endpoint.nil?
-        @logger.warn('[Telemetry] Wire server endpoint is nil, drop data')
+        CPILogger.instance.logger.warn('[Telemetry] Wire server endpoint is nil, drop data')
       else
         uri = URI.parse(format(TELEMETRY_URI_FORMAT, endpoint: endpoint))
         retried = false
@@ -47,7 +47,7 @@ module Bosh::AzureCloud
 
           status_code = res.code.to_i
           if status_code == 200
-            @logger.debug("[Telemetry] Data posted: #{event_list.length} event(s)")
+            CPILogger.instance.logger.debug("[Telemetry] Data posted: #{event_list.length} event(s)")
           elsif RETRY_ERROR_CODES.include?(status_code)
             raise RetriableError, "POST response - code: #{res.code}\nbody:#{res.body}"
           else
@@ -57,13 +57,13 @@ module Bosh::AzureCloud
           if !retried
             retried = true
             sleep(SLEEP_BEFORE_RETRY)
-            @logger.debug('[Telemetry] Failed to post data, retrying...')
+            CPILogger.instance.logger.debug('[Telemetry] Failed to post data, retrying...')
             retry
           else
-            @logger.warn("[Telemetry] Failed to post data to uri '#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
+            CPILogger.instance.logger.warn("[Telemetry] Failed to post data to uri '#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
           end
         rescue StandardError => e
-          @logger.warn("[Telemetry] Failed to post data to uri '#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
+          CPILogger.instance.logger.warn("[Telemetry] Failed to post data to uri '#{uri}'. Error: \n#{e.inspect}\n#{e.backtrace.join("\n")}")
         end
       end
     end
@@ -114,7 +114,7 @@ module Bosh::AzureCloud
                 expire_date = ret[2]
                 expired = false if Time.parse(expire_date) > Time.new
               rescue StandardError => e
-                @logger.warn("[Telemetry] Failed to get expired data for leases of endpoint. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
+                CPILogger.instance.logger.warn("[Telemetry] Failed to get expired data for leases of endpoint. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
               end
             end
           when /#{FOOTER_LEASE}/
@@ -123,7 +123,7 @@ module Bosh::AzureCloud
         end
       end
 
-      @logger.warn("Can't find endpoint from leases_path '#{leases_path}'")
+      CPILogger.instance.logger.warn("Can't find endpoint from leases_path '#{leases_path}'")
       nil
     end
 

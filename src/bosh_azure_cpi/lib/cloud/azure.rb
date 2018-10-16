@@ -31,6 +31,7 @@ require 'resolv-replace.rb'
 
 require 'digest/md5'
 require 'net/http'
+require 'singleton'
 
 # Load Azure Libs before cloud/azure/* in case they are used by the latter
 require 'azure/storage/common'
@@ -55,7 +56,6 @@ require 'cloud/azure/utils/command_runner'
 require 'cloud/azure/models/error_msg'
 require 'cloud/azure/models/object_id_keys'
 require 'cloud/azure/models/config'
-require 'cloud/azure/models/config_factory'
 require 'cloud/azure/models/object_id'
 require 'cloud/azure/models/res_object_id'
 require 'cloud/azure/models/disk_id'

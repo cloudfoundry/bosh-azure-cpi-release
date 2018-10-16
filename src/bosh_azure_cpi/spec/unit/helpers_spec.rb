@@ -13,11 +13,11 @@ describe Bosh::AzureCloud::Helpers do
     include Bosh::AzureCloud::Helpers
 
     def initialize
-      @logger = Logger.new('/dev/null')
+      Bosh::AzureCloud::CPILogger.instance.logger = Logger.new('/dev/null')
     end
 
     def set_logger(logger)
-      @logger = logger
+      Bosh::AzureCloud::CPILogger.instance.logger = logger
     end
   end
 

@@ -3,7 +3,6 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::AzureClient do
-  let(:logger) { Bosh::Clouds::Config.logger }
   let(:azure_stack_domain) { 'fake-azure-stack-domain' }
   let(:http) { instance_double(Net::HTTP) }
 
@@ -24,8 +23,7 @@ describe Bosh::AzureCloud::AzureClient do
               'ca_cert'             => 'fake-ca-cert-content'
             }
           )
-        ),
-        logger
+        )
       )
     end
     let(:ca_file_path) { '/var/vcap/jobs/azure_cpi/config/azure_stack_ca_cert.pem' }

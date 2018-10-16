@@ -40,7 +40,7 @@ module Bosh::AzureCloud
       flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX) do
         availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
         if availability_set.nil?
-          @logger.info("create_availability_set - the availability set '#{availability_set_name}' doesn't exist. Will create a new one.")
+          CPILogger.instance.logger.info("create_availability_set - the availability set '#{availability_set_name}' doesn't exist. Will create a new one.")
           @azure_client.create_availability_set(resource_group_name, availability_set_params)
           availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
         # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
@@ -49,7 +49,7 @@ module Bosh::AzureCloud
         elsif !@use_managed_disks && availability_set[:managed]
           cloud_error("create_availability_set - the availability set '#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
         elsif @use_managed_disks && !availability_set[:managed]
-          @logger.info("create_availability_set - the availability set '#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
+          CPILogger.instance.logger.info("create_availability_set - the availability set '#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
           availability_set_params.merge!(
             platform_update_domain_count: availability_set[:platform_update_domain_count],
             platform_fault_domain_count: availability_set[:platform_fault_domain_count],
@@ -58,7 +58,7 @@ module Bosh::AzureCloud
           @azure_client.create_availability_set(resource_group_name, availability_set_params)
           availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
         else
-          @logger.info("create_availability_set - the availability set '#{availability_set_name}' exists. No need to update.")
+          CPILogger.instance.logger.info("create_availability_set - the availability set '#{availability_set_name}' exists. No need to update.")
         end
       end
       cloud_error("get_or_create_availability_set - availability set '#{availability_set_name}' is not created.") if availability_set.nil?

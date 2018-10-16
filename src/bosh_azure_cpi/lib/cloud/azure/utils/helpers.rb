@@ -173,8 +173,8 @@ module Bosh::AzureCloud
     # @param [String] message Message about what went wrong
     # @param [Exception] exception Exception to be logged (optional)
     def cloud_error(message, exception = nil)
-      @logger&.error(message)
-      @logger.error(exception) if @logger && exception
+      CPILogger.instance.logger&.error(message)
+      CPILogger.instance.logger.error(exception) if CPILogger.instance.logger && exception
       raise Bosh::Clouds::CloudError, message
     end
 
@@ -260,10 +260,10 @@ module Bosh::AzureCloud
     def get_jwt_assertion(authentication_endpoint, client_id)
       certificate_path = get_service_principal_certificate_path
       certificate_data = File.read(certificate_path)
-      @logger.info("Reading the certificate from '#{certificate_path}'")
+      CPILogger.instance.logger.info("Reading the certificate from '#{certificate_path}'")
       cert = OpenSSL::X509::Certificate.new(certificate_data)
       thumbprint = OpenSSL::Digest::SHA1.new(cert.to_der).to_s
-      @logger.debug("The certificate thumbprint is '#{thumbprint}'")
+      CPILogger.instance.logger.debug("The certificate thumbprint is '#{thumbprint}'")
       header = {
         "alg": 'RS256',
         "typ": 'JWT',
@@ -538,7 +538,7 @@ module Bosh::AzureCloud
       unless root_disk_size.nil?
         validate_disk_size_type(root_disk_size)
         if root_disk_size < image_size
-          @logger.warn("root_disk.size '#{root_disk_size}' MiB is smaller than the default OS disk size '#{image_size}' MiB. root_disk.size is ignored and use '#{image_size}' MiB as root disk size.")
+          CPILogger.instance.logger.warn("root_disk.size '#{root_disk_size}' MiB is smaller than the default OS disk size '#{image_size}' MiB. root_disk.size is ignored and use '#{image_size}' MiB as root disk size.")
           root_disk_size = image_size
         end
         disk_size = (root_disk_size / 1024.0).ceil
@@ -619,7 +619,7 @@ module Bosh::AzureCloud
       if padding_length >= 0
         prefix + '0' * padding_length + suffix
       else
-        @logger.warn('Length of generated string is longer than expected, so it is truncated. It may be not unique.')
+        CPILogger.instance.logger.warn('Length of generated string is longer than expected, so it is truncated. It may be not unique.')
         (prefix + suffix)[prefix.length + suffix.length - WINDOWS_VM_NAME_LENGTH, prefix.length + suffix.length] # get tail
       end
     end

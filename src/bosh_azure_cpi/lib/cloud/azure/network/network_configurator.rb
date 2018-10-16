@@ -16,7 +16,6 @@ module Bosh::AzureCloud
     include Helpers
 
     attr_reader :vip_network, :networks
-    attr_accessor :logger
 
     ##
     # Creates new network spec
@@ -31,26 +30,24 @@ module Bosh::AzureCloud
                              "'#{spec.class}' provided"
       end
 
-      @logger = Bosh::Clouds::Config.logger
-      @azure_config = azure_config
       @networks = []
       @vip_network = nil
 
-      logger.debug "networks: '#{spec}'"
+      CPILogger.instance.logger.debug "networks: '#{spec}'"
       spec.each_pair do |name, network_spec|
         network = nil
         network_type = network_spec['type'] || 'manual'
 
         case network_type
         when 'dynamic'
-          network = DynamicNetwork.new(@azure_config, name, network_spec)
+          network = DynamicNetwork.new(azure_config, name, network_spec)
 
         when 'manual'
-          network = ManualNetwork.new(@azure_config, name, network_spec)
+          network = ManualNetwork.new(azure_config, name, network_spec)
 
         when 'vip'
           cloud_error("More than one vip network for '#{name}'") if @vip_network
-          @vip_network = VipNetwork.new(@azure_config, name, network_spec)
+          @vip_network = VipNetwork.new(azure_config, name, network_spec)
 
         else
           cloud_error("Invalid network type '#{network_type}' for Azure, " \

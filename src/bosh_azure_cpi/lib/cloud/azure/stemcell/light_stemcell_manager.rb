@@ -9,7 +9,6 @@ module Bosh::AzureCloud
       @blob_manager = blob_manager
       @storage_account_manager = storage_account_manager
       @azure_client = azure_client
-      @logger = Bosh::Clouds::Config.logger
 
       default_storage_account = @storage_account_manager.default_storage_account
       @default_storage_account_name = default_storage_account[:name]
@@ -17,13 +16,13 @@ module Bosh::AzureCloud
     end
 
     def delete_stemcell(name)
-      @logger.info("delete_stemcell(#{name})")
+      CPILogger.instance.logger.info("delete_stemcell(#{name})")
       metadata = _get_metadata(name)
       @blob_manager.delete_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") unless metadata.nil?
     end
 
     def create_stemcell(stemcell_properties)
-      @logger.info("create_stemcell(#{stemcell_properties})")
+      CPILogger.instance.logger.info("create_stemcell(#{stemcell_properties})")
       cloud_error("Cannot find the light stemcell (#{stemcell_properties['image']}) in the location '#{@default_location}'") unless _platform_image_exists?(@default_location, stemcell_properties)
 
       stemcell_name = "#{LIGHT_STEMCELL_PREFIX}-#{SecureRandom.uuid}"
@@ -34,7 +33,7 @@ module Bosh::AzureCloud
     end
 
     def has_stemcell?(location, name)
-      @logger.info("has_stemcell?(#{location}, #{name})")
+      CPILogger.instance.logger.info("has_stemcell?(#{location}, #{name})")
       metadata = _get_metadata(name)
       return false if metadata.nil?
 
@@ -42,7 +41,7 @@ module Bosh::AzureCloud
     end
 
     def get_stemcell_info(name)
-      @logger.info("get_stemcell_info(#{name})")
+      CPILogger.instance.logger.info("get_stemcell_info(#{name})")
       metadata = _get_metadata(name)
       cloud_error("The light stemcell '#{name}' does not exist in the storage account '#{@default_storage_account_name}'") if metadata.nil?
       StemcellInfo.new('', metadata)
@@ -60,10 +59,10 @@ module Bosh::AzureCloud
 
     def _platform_image_exists?(location, stemcell_properties)
       stemcell_info = StemcellInfo.new('', stemcell_properties)
-      @logger.debug("list_platform_image_versions(#{location}, #{stemcell_info.image['publisher']}, #{stemcell_info.image['offer']}, #{stemcell_info.image['sku']})")
+      CPILogger.instance.logger.debug("list_platform_image_versions(#{location}, #{stemcell_info.image['publisher']}, #{stemcell_info.image['offer']}, #{stemcell_info.image['sku']})")
       versions = @azure_client.list_platform_image_versions(location, stemcell_info.image['publisher'], stemcell_info.image['offer'], stemcell_info.image['sku'])
       version = versions.find { |v| v[:name] == stemcell_info.image['version'] }
-      @logger.debug("list_platform_image_versions: The version '#{stemcell_info.image['version']}' of the image is not found") if version.nil?
+      CPILogger.instance.logger.debug("list_platform_image_versions: The version '#{stemcell_info.image['version']}' of the image is not found") if version.nil?
       !version.nil?
     end
   end

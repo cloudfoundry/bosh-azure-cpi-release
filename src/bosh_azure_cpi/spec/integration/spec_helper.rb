@@ -33,8 +33,8 @@ RSpec.configure do |rspec_config|
     allow(Bosh::Cpi::RegistryClient).to receive(:new).and_return(@registry)
     allow(@registry).to receive(:read_settings).and_return({})
 
-    @logger = Bosh::AzureCloud::CPILogger.get_logger(STDERR)
-    allow(Bosh::Clouds::Config).to receive_messages(logger: @logger)
+    Bosh::AzureCloud::CPILogger.instance.logger = Bosh::AzureCloud::CPILogger.instance.get_logger(STDERR)
+    allow(Bosh::Clouds::Config).to receive_messages(logger: Bosh::AzureCloud::CPILogger.instance.logger)
 
     azure_config_hash = {
       'environment' => @azure_environment,
@@ -62,7 +62,8 @@ RSpec.configure do |rspec_config|
         'password' => 'fake'
       }
     }
-    @cpi = Bosh::AzureCloud::Cloud.new(@cloud_options)
+    Bosh::AzureCloud::Config.instance.update(@cloud_options)
+    @cpi = Bosh::AzureCloud::Cloud.new
 
     @vm_metadata = { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' }
   end

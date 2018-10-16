@@ -4,7 +4,7 @@ require 'spec_helper'
 
 describe Bosh::AzureCloud::TelemetryManager do
   describe '#monitor' do
-    let(:logger) { instance_double(Bosh::Cpi::Logger) }
+    let(:logger) { instance_double(Logger) }
     let(:telemetry_event) { instance_double(Bosh::AzureCloud::TelemetryEvent) }
 
     let(:id) { 'fake-id' }
@@ -20,8 +20,9 @@ describe Bosh::AzureCloud::TelemetryManager do
     let(:event_param_duration) { instance_double(Bosh::AzureCloud::TelemetryEventParam) }
 
     before do
-      allow(Bosh::Cpi::Logger).to receive(:new).and_return(logger)
-
+      allow(Bosh::AzureCloud::CPILogger.instance).to receive(:get_logger)
+        .with(Bosh::AzureCloud::Helpers::CPI_TELEMETRY_LOG_FILE)
+        .and_return(logger)
       allow(Bosh::AzureCloud::TelemetryEventParam).to receive(:new)
         .with('Name', 'BOSH-CPI')
         .and_return(event_param_name)
@@ -193,7 +194,7 @@ describe Bosh::AzureCloud::TelemetryManager do
   end
 
   describe '#_report_event' do
-    let(:logger) { instance_double(Bosh::Cpi::Logger) }
+    let(:logger) { instance_double(Logger) }
     let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_config) }
     let(:telemetry_event) { instance_double(Bosh::AzureCloud::TelemetryEvent) }
     let(:telemetry_event_handler) { instance_double(Bosh::AzureCloud::TelemetryEventHandler) }
@@ -201,7 +202,9 @@ describe Bosh::AzureCloud::TelemetryManager do
     let(:event_handler) { instance_double(Bosh::AzureCloud::TelemetryEventHandler) }
 
     before do
-      allow(Bosh::Cpi::Logger).to receive(:new).and_return(logger)
+      allow(Bosh::AzureCloud::CPILogger.instance).to receive(:get_logger)
+        .with(Bosh::AzureCloud::Helpers::CPI_TELEMETRY_LOG_FILE)
+        .and_return(logger)
       allow(Bosh::AzureCloud::TelemetryEventHandler).to receive(:new).and_return(event_handler)
     end
 

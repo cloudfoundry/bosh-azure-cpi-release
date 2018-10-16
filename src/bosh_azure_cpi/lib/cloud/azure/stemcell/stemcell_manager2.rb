@@ -11,7 +11,7 @@ module Bosh::AzureCloud
     end
 
     def delete_stemcell(name)
-      @logger.info("delete_stemcell(#{name})")
+      CPILogger.instance.logger.info("delete_stemcell(#{name})")
 
       # Both the old format and new format of user image are deleted
       stemcell_uuid = name.sub("#{STEMCELL_PREFIX}-", '')
@@ -20,7 +20,7 @@ module Bosh::AzureCloud
       end
       user_images.each do |user_image|
         user_image_name = user_image[:name]
-        @logger.info("Delete user image '#{user_image_name}'")
+        CPILogger.instance.logger.info("Delete user image '#{user_image_name}'")
         @azure_client.delete_user_image(user_image_name)
       end
 
@@ -28,7 +28,7 @@ module Bosh::AzureCloud
       storage_accounts = @azure_client.list_storage_accounts
       storage_accounts.each do |storage_account|
         storage_account_name = storage_account[:name]
-        @logger.info("Delete stemcell '#{name}' in the storage '#{storage_account_name}'")
+        CPILogger.instance.logger.info("Delete stemcell '#{name}' in the storage '#{storage_account_name}'")
         @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(storage_account_name, name)
       end
 
@@ -37,13 +37,13 @@ module Bosh::AzureCloud
     end
 
     def has_stemcell?(storage_account_name, name)
-      @logger.info("has_stemcell?(#{storage_account_name}, #{name})")
+      CPILogger.instance.logger.info("has_stemcell?(#{storage_account_name}, #{name})")
       blob_properties = @blob_manager.get_blob_properties(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
       !blob_properties.nil?
     end
 
     def get_user_image_info(stemcell_name, storage_account_type, location)
-      @logger.info("get_user_image_info(#{stemcell_name}, #{storage_account_type}, #{location})")
+      CPILogger.instance.logger.info("get_user_image_info(#{stemcell_name}, #{storage_account_type}, #{location})")
       user_image = _get_user_image(stemcell_name, storage_account_type, location)
       StemcellInfo.new(user_image[:id], user_image[:tags])
     end
@@ -51,7 +51,7 @@ module Bosh::AzureCloud
     private
 
     def _get_user_image(stemcell_name, storage_account_type, location)
-      @logger.info("_get_user_image(#{stemcell_name}, #{storage_account_type}, #{location})")
+      CPILogger.instance.logger.info("_get_user_image(#{stemcell_name}, #{storage_account_type}, #{location})")
 
       # The old user image name's length exceeds 80 in some location, which would cause the creation failure.
       # Old format: bosh-stemcell-<UUID>-Standard_LRS-<LOCATION>, bosh-stemcell-<UUID>-Premium_LRS-<LOCATION>
@@ -79,7 +79,7 @@ module Bosh::AzureCloud
 
         flock("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", File::LOCK_EX) do
           unless has_stemcell?(storage_account_name, stemcell_name)
-            @logger.info("get_user_image: Copying the stemcell from the default storage account '#{default_storage_account_name}' to the storage acccount '#{storage_account_name}'")
+            CPILogger.instance.logger.info("get_user_image: Copying the stemcell from the default storage account '#{default_storage_account_name}' to the storage acccount '#{storage_account_name}'")
             stemcell_source_blob_uri = get_stemcell_uri(default_storage_account_name, stemcell_name)
             @blob_manager.copy_blob(storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd", stemcell_source_blob_uri)
           end
