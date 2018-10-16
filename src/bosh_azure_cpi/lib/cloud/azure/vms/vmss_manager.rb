@@ -32,7 +32,6 @@ module Bosh::AzureCloud
 
       existing_vmss = @azure_client.get_vmss_by_name(resource_group_name, vmss_name)
       vmss_params = {}
-      instance_id = _build_instance_id(bosh_vm_meta, vm_props, vmss_name, nil)
       stemcell_info = _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location, nil)
       vmss_instance_id = nil # this is the instance id like '1', '2', concept in vmss.
       vm_name = nil
@@ -52,7 +51,7 @@ module Bosh::AzureCloud
         vmss_params[:ssh_username]  = @azure_config.ssh_user
         vmss_params[:ssh_cert_data] = @azure_config.ssh_public_key
         # there's extra name field in os_disk and ephemeral_disk, will ignore it when creating vmss.
-        vmss_params[:os_disk], vmss_params[:ephemeral_disk] = _build_vmss_disks(instance_id, stemcell_info, vm_props)
+        vmss_params[:os_disk], vmss_params[:ephemeral_disk] = _build_vmss_disks(vmss_name, stemcell_info, vm_props)
 
         network_interfaces = []
         vmss_params[:initial_capacity] = 1
@@ -76,7 +75,7 @@ module Bosh::AzureCloud
           vmss_instance_zone = first_instance[:zones]
         end
       else
-        vmss_params[:os_disk], vmss_params[:ephemeral_disk] = _build_vmss_disks(instance_id, stemcell_info, vm_props)
+        vmss_params[:os_disk], vmss_params[:ephemeral_disk] = _build_vmss_disks(vmss_name, stemcell_info, vm_props)
         # TODO: create one task to batch the scale up.
         flock(vmss_name.to_s, File::LOCK_EX) do
           existing_instances = @azure_client.get_vmss_instances(resource_group_name, vmss_name)
@@ -185,10 +184,10 @@ module Bosh::AzureCloud
 
     private
 
-    def _build_vmss_disks(instance_id, stemcell_info, vm_props)
+    def _build_vmss_disks(vmss_name, stemcell_info, vm_props)
       # TODO: add support for the unmanaged disk.
-      os_disk = @disk_manager2.os_disk(instance_id.vmss_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
-      ephemeral_disk = @disk_manager2.ephemeral_disk(instance_id.vmss_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
+      os_disk = @disk_manager2.os_disk(vmss_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
+      ephemeral_disk = @disk_manager2.ephemeral_disk(vmss_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk)
       [os_disk, ephemeral_disk]
     end
 
