@@ -392,8 +392,8 @@ resources:
   - name: bosh-cpi-src-in
     type: git
     source:
-      uri: git@github.com:cloudfoundry-incubator/bosh-azure-cpi-release.git
-      branch: master
+      uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
+      branch: v34.x
       private_key: {{github_deployment_key__bosh-azure-cpi-release}}
       ignore_paths:
         - .final_builds/**/*.yml
@@ -401,8 +401,8 @@ resources:
   - name: bosh-cpi-src-out
     type: git
     source:
-      uri: git@github.com:cloudfoundry-incubator/bosh-azure-cpi-release.git
-      branch: master
+      uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
+      branch: v34.x
       private_key: {{github_deployment_key__bosh-azure-cpi-release}}
   - name: version-semver
     type: semver
@@ -414,7 +414,7 @@ resources:
   - name: release-version-semver
     type: semver
     source:
-      key:               release-current-version
+      key:               release-current-version-v34
       bucket:            {{s3_azure_cpi_pipeline_bucket}}
       access_key_id:     {{s3_access_key__primary}}
       secret_access_key: {{s3_secret_key__primary}}
