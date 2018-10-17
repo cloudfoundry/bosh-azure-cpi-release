@@ -11,6 +11,7 @@ describe Bosh::AzureCloud::VMSSManager do
         allow(azure_client).to receive(:get_managed_disk_by_name)
           .and_return(id: 'fake_id')
         expect(azure_client).to receive(:attach_disk_to_vmss_instance)
+          .and_return(1)
         expect do
           vmss_manager.attach_disk(instance_id_vmss, data_disk_obj)
         end.not_to raise_error

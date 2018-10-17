@@ -169,7 +169,10 @@ module Bosh::AzureCloud
       vmss_name = instance_id.vmss_name
       vmss_instance_id = instance_id.vmss_instance_id
       disk_params = _get_disk_params(disk_id, instance_id.use_managed_disks?)
-      _attach_disk(resource_group_name, vmss_name, vmss_instance_id, disk_params)
+      lun = _attach_disk(resource_group_name, vmss_name, vmss_instance_id, disk_params)
+      raise Bosh::Clouds::CloudError, "Failed to attach disk: #{disk_id} to #{instance_id}." if lun.nil?
+
+      lun.to_s
     end
 
     def detach_disk(instance_id, disk_id)
