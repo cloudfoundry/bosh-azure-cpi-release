@@ -2,12 +2,11 @@
 
 module Bosh::AzureCloud
   class VMManager < VMManagerBase
-    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager = nil)
+    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager)
       super(azure_config.use_managed_disks, azure_client, stemcell_manager, stemcell_manager2, light_stemcell_manager)
 
       @azure_config = azure_config
       @registry_endpoint = registry_endpoint
-      @config_disk_manager = config_disk_manager
       @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
       @azure_client = azure_client
@@ -110,18 +109,9 @@ module Bosh::AzureCloud
       when 'linux'
         vm_params[:ssh_username]  = @azure_config.ssh_user
         vm_params[:ssh_cert_data] = @azure_config.ssh_public_key
-        if @azure_config.config_disk.enabled
-          meta_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_meta_data_obj(
-            instance_id.to_s,
-            @azure_config.ssh_public_key
-          )
-          user_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
-          _, disk = @config_disk_manager.prepare_config_disk(resource_group_name, vm_name, location, zone, meta_data_obj, user_data_obj)
-          vm_params[:config_disk] = disk
-        else
-          user_data = Bosh::AzureCloud::BoshAgentUtil.get_encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
-          vm_params[:custom_data] = user_data
-        end
+
+        user_data = Bosh::AzureCloud::BoshAgentUtil.get_encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
+        vm_params[:custom_data] = user_data
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
         # Users do not use this credential to logon to Windows VMs

@@ -310,6 +310,7 @@ module Bosh::AzureCloud
           validate_disk_size(size)
           disk_id = nil
           if @use_managed_disks
+            zone = nil
             if vm_cid.nil?
               @logger.info('vm_cid is nil')
               # If instance_id is nil, the managed disk will be created in the resource group location.
@@ -333,7 +334,7 @@ module Bosh::AzureCloud
                 vmss_instance = @azure_client.get_vmss_instance(resource_group_name, instance_id_obj.vmss_name, instance_id_obj.vmss_instance_id)
                 location = vmss_instance[:location]
                 instance_type = vmss_instance[:sku][:name]
-                zone = vmss_instance[:zones][0]
+                zone = vmss_instance[:zones][0] unless vmss_instance[:zones].nil?
               end
               default_storage_account_type = get_storage_account_type_by_instance_type(instance_type)
             end
@@ -465,7 +466,7 @@ module Bosh::AzureCloud
         @telemetry_manager.monitor('attach_disk', id: vm_cid) do
           instance_id = CloudIdParser.parse(vm_cid, _azure_config.resource_group_name)
           disk_id = CloudIdParser.parse(disk_cid, _azure_config.resource_group_name)
-          vm_name = instance_id.vm_name
+
           disk_name = disk_id.disk_name
 
           vm = @vm_manager.find(instance_id)
@@ -525,7 +526,7 @@ module Bosh::AzureCloud
               end
             else
               cloud_error('Cannot attach a managed disk to a VM with unmanaged disks') unless disk.nil?
-              @logger.debug("attach_disk - although use_managed_disks is enabled, will still attach the unmanaged disk '#{disk_name}' to the VM '#{vm_name}' with unmanaged disks")
+              @logger.debug("attach_disk - although use_managed_disks is enabled, will still attach the unmanaged disk '#{disk_name}' to the VM '#{instance_id.vm_name}' with unmanaged disks")
             end
           end
 

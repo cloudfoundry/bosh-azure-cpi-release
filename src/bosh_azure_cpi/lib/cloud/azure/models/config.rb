@@ -38,13 +38,6 @@ module Bosh::AzureCloud
     end
   end
 
-  class ConfigDisk
-    attr_reader :enabled
-    def initialize(config_disk_config_hash)
-      @enabled = config_disk_config_hash['enabled']
-    end
-  end
-
   class VMSS
     attr_reader :enabled
     def initialize(vmss_config_hash)
@@ -64,7 +57,6 @@ module Bosh::AzureCloud
     attr_reader :pip_idle_timeout_in_minutes
     attr_reader :parallel_upload_thread_num
     attr_reader :ssh_user, :ssh_public_key
-    attr_reader :config_disk
     attr_reader :vmss
     attr_writer :storage_account_name
 
@@ -106,8 +98,6 @@ module Bosh::AzureCloud
 
       @ssh_user = azure_config_hash['ssh_user']
       @ssh_public_key = azure_config_hash['ssh_public_key']
-
-      @config_disk = ConfigDisk.new(azure_config_hash.fetch('config_disk', 'enabled' => false))
       @vmss = VMSS.new(azure_config_hash.fetch('vmss', 'enabled' => false))
     end
   end
