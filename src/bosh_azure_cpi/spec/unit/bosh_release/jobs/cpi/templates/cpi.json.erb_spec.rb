@@ -78,9 +78,6 @@ describe 'cpi.json.erb' do
             'use_managed_disks'           => false,
             'pip_idle_timeout_in_minutes' => 4,
             'enable_vm_boot_diagnostics'  => false,
-            'config_disk'                 => {
-              'enabled' => false
-            },
             'vmss' => {
               'enabled' => false
             }
@@ -380,42 +377,6 @@ describe 'cpi.json.erb' do
 
         it 'is able to render isv_tracking_guid' do
           expect(subject['cloud']['properties']['azure']['isv_tracking_guid']).to eq('cd237ace-be2a-425c-a30f-dd91d5e93d96')
-        end
-      end
-    end
-
-    context 'when config disk enabled' do
-      before do
-        manifest['properties']['azure']['config_disk'] = { 'enabled' => true }
-      end
-      it 'is able to render config_disk' do
-        expect(subject['cloud']['properties']['azure']['config_disk']['enabled']).to eq(true)
-      end
-
-      context 'when vmss is enabled' do
-        before do
-          manifest['properties']['azure']['vmss'] = { 'enabled' => true }
-        end
-        it 'is able to render vmss' do
-          expect(subject['cloud']['properties']['azure']['config_disk']['enabled']).to eq(true)
-        end
-      end
-    end
-
-    context 'when config disk disabled' do
-      before do
-        manifest['properties']['azure']['config_disk'] = { 'enabled' => false }
-      end
-      it 'is able to render config_disk' do
-        expect(subject['cloud']['properties']['azure']['config_disk']['enabled']).to eq(false)
-      end
-
-      context 'when vmss is enabled' do
-        before do
-          manifest['properties']['azure']['vmss'] = { 'enabled' => true }
-        end
-        it 'should raise ' do
-          expect { subject }.to raise_error('Config disk need to be enabled to use vmss.')
         end
       end
     end

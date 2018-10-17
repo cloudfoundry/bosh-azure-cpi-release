@@ -89,18 +89,7 @@
     params['cloud']['properties']['azure']['isv_tracking_guid'] = isv_tracking_guid
   end
 
-  if p('azure.config_disk.enabled')
-    params['cloud']['properties']['azure']['config_disk'] = {
-      "enabled" => true
-    }
-  else
-    params['cloud']['properties']['azure']['config_disk'] = {
-      "enabled" => false
-    }
-  end
-
   if p('azure.vmss.enabled')
-    raise 'Config disk need to be enabled to use vmss.' if !p('azure.config_disk.enabled')
     params['cloud']['properties']['azure']['vmss'] = {
       "enabled" => true
     }

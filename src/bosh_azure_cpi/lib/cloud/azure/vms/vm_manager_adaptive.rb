@@ -16,7 +16,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
 
       @vmss_manager = VMSSManager.new(@azure_config, @registry_endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager, @config_disk_manager)
-      @vm_manager = VMManager.new(@azure_config, @registry_endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager, @config_disk_manager)
+      @vm_manager = VMManager.new(@azure_config, @registry_endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
     end
 
     def create(bosh_vm_meta, location, vm_props, network_configurator, env)

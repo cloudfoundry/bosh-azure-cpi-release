@@ -65,8 +65,6 @@ shared_context 'shared stuff for vm managers' do
   let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
   # VM manager for managed disks
   let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
-  # VM manager for config disks
-  let(:vm_manager_config_disk) { Bosh::AzureCloud::VMManager.new(azure_config_use_config_disk, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager) }
   # VM manager for azure stack
   let(:vm_manager_azure_stack) do
     Bosh::AzureCloud::VMManager.new(
@@ -151,8 +149,6 @@ shared_context 'shared stuff for vm managers' do
     allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
       .and_return(name: storage_account_name)
     allow(vm_manager2).to receive(:get_storage_account_from_vm_properties)
-      .and_return(name: storage_account_name)
-    allow(vm_manager_config_disk).to receive(:get_storage_account_from_vm_properties)
       .and_return(name: storage_account_name)
     allow(vm_manager_azure_stack).to receive(:get_storage_account_from_vm_properties)
       .and_return(name: storage_account_name)

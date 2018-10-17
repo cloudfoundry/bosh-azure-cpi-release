@@ -89,11 +89,8 @@ properties:
       -----END CERTIFICATE-----
   azure.isv_tracking_guid:
     description: ISV tracking GUID for usage association
-  azure.config_disk.enabled:
-    description: will use one config disk to pass the meta data into the vm, only works in Linux stemcell now.
-    default: false
   azure.vmss.enabled:
-    description: Whether the vmss will be used when creating vm. The config_disk.enabled should be true to use this.
+    description: Whether the vmss will be used when creating vm.
     default: false
 
   registry.username:
