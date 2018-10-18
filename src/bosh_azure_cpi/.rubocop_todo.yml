@@ -94,10 +94,10 @@ Metrics/ClassLength:
 Metrics/CyclomaticComplexity:
   Max: 25
 
-# Offense count: 131
+# Offense count: 200
 # Configuration parameters: CountComments.
 Metrics/MethodLength:
-  Max: 131
+  Max: 200
   Exclude:
     - 'lib/cloud/azure/vms/vm_manager.rb'
 
@@ -193,6 +193,7 @@ Style/GuardClause:
     - 'lib/cloud/azure/utils/helpers.rb'
     - 'lib/cloud/azure/models/disk_id.rb'
     - 'lib/cloud/azure/models/instance_id.rb'
+    - 'lib/cloud/azure/models/managed_identity.rb'
     - 'lib/cloud/azure/network/network_configurator.rb'
     - 'lib/cloud/azure/stemcell/stemcell_manager.rb'
     - 'lib/cloud/azure/stemcell/stemcell_manager2.rb'

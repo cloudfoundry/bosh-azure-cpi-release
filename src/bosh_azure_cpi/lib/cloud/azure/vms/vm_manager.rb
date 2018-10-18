@@ -21,7 +21,7 @@ module Bosh::AzureCloud
 
     def create(bosh_vm_meta, location, vm_props, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
-      @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props}, ..., ...)")
+      @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props.inspect}, ..., ...)")
 
       instance_id = _build_instance_id(bosh_vm_meta, location, vm_props)
 
@@ -95,6 +95,12 @@ module Bosh::AzureCloud
         managed: @use_managed_disks
       }
 
+      unless vm_props.managed_identity.nil?
+        vm_params[:identity] = {
+          type: vm_props.managed_identity.type,
+          identity_name: vm_props.managed_identity.user_assigned_identity_name
+        }
+      end
       vm_params[:zone] = zone.to_s unless zone.nil?
       vm_params[:os_disk], vm_params[:ephemeral_disk] = _build_disks(instance_id, stemcell_info, vm_props)
       vm_params[:os_type] = stemcell_info.os_type

@@ -67,7 +67,7 @@ module Bosh::AzureCloud
       HTTP_CODE_NETWORK_AUTHENTICATION_REQUIRED
     ].freeze
     # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token#retry-guidance
-    AZURE_MSI_TOKEN_RETRYABLE_ERROR_CODES = AZURE_GENERAL_RETRYABLE_ERROR_CODES + [
+    AZURE_MANAGED_IDENTITY_TOKEN_RETRYABLE_ERROR_CODES = AZURE_GENERAL_RETRYABLE_ERROR_CODES + [
       HTTP_CODE_NOT_FOUND,
       HTTP_CODE_NOT_IMPLEMENTED,
       HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED,
@@ -98,6 +98,9 @@ module Bosh::AzureCloud
 
     REST_API_PROVIDER_STORAGE            = 'Microsoft.Storage'
     REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
+
+    REST_API_PROVIDER_MANAGED_IDENTITY   = 'Microsoft.ManagedIdentity'
+    REST_API_USER_ASSIGNED_IDENTITIES    = 'userAssignedIdentities'
 
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret customData].freeze
@@ -244,6 +247,11 @@ module Bosh::AzureCloud
     #  When virtual machine is in an availability zone
     # * +:zone+                 - String. Zone number in string. Possible values: "1", "2" or "3".
     #
+    #  When virtual machine is associated to an identity
+    # * +:identity+             - Hash. The identity associated with the VM.
+    # *   +:type+               - String. The identity type used for the VM. Possible values: "SystemAssigned" and "UserAssigned".
+    # *   +:identity_name+      - String. The user identity associated with the VM.
+    #
     # @return [Boolean]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
@@ -278,6 +286,21 @@ module Bosh::AzureCloud
           }
         }
       }
+
+      unless vm_params[:identity].nil?
+        identity_type = vm_params[:identity][:type]
+        if identity_type == MANAGED_IDENTITY_TYPE_USER_ASSIGNED
+          identity_id = rest_api_url(REST_API_PROVIDER_MANAGED_IDENTITY, REST_API_USER_ASSIGNED_IDENTITIES, resource_group_name: resource_group_name, name: vm_params[:identity][:identity_name])
+          vm['identity'] = {
+            'type' => MANAGED_IDENTITY_TYPE_USER_ASSIGNED,
+            'identityIds' => [identity_id]
+          }
+        else
+          vm['identity'] = {
+            'type' => MANAGED_IDENTITY_TYPE_SYSTEM_ASSIGNED
+          }
+        end
+      end
 
       vm['zones'] = [vm_params[:zone]] unless vm_params[:zone].nil?
 
@@ -2088,10 +2111,10 @@ module Bosh::AzureCloud
     def get_token(force_refresh = false)
       if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.new) <= 0 || force_refresh
         @logger.info('get_token - trying to get/refresh Azure authentication token')
-        use_msi = @azure_config.enable_managed_service_identity
-        use_ssl = !use_msi
-        request, uri = use_msi ? request_from_managed_service_identity_endpoint : request_from_azure_active_directory_endpoint
-        retryable_error_codes = use_msi ? AZURE_MSI_TOKEN_RETRYABLE_ERROR_CODES : AZURE_AD_TOKEN_RETRYABLE_ERROR_CODES
+        use_managed_identity = @azure_config.managed_identity_enabled?
+        use_ssl = !use_managed_identity
+        request, uri = use_managed_identity ? request_from_managed_identity_endpoint : request_from_azure_active_directory_endpoint
+        retryable_error_codes = use_managed_identity ? AZURE_MANAGED_IDENTITY_TOKEN_RETRYABLE_ERROR_CODES : AZURE_AD_TOKEN_RETRYABLE_ERROR_CODES
         retry_count = 0
         max_retry_count = 5
         delay = 0
@@ -2166,10 +2189,10 @@ module Bosh::AzureCloud
       [request, uri]
     end
 
-    # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token#get-a-token-using-http
-    def request_from_managed_service_identity_endpoint
+    # https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http
+    def request_from_managed_identity_endpoint
       @logger.debug('Getting token from Azure VM Managed Service Identity')
-      endpoint, api_version = get_msi_endpoint_and_version
+      endpoint, api_version = get_managed_identity_endpoint_and_version
       uri = URI(endpoint)
       params = {
         'resource' => get_token_resource(@azure_config),

@@ -222,22 +222,20 @@ describe Bosh::AzureCloud::AzureClient do
       end
     end
 
-    context 'when managed service identity endpoint is used' do
+    context 'when managed identity endpoint is used' do
       let(:authentication_endpoint) { 'http://169.254.169.254/metadata/identity/oauth2/token' }
       let(:token_uri) { "#{authentication_endpoint}?api-version=2018-02-01&resource=https://management.azure.com/" }
 
       let(:azure_client) do
         Bosh::AzureCloud::AzureClient.new(
           mock_azure_config_merge(
-            'managed_service_identity' => {
-              'enabled' => true
-            }
+            'credentials_source' => 'managed_identity'
           ),
           logger
         )
       end
 
-      it 'should use the msi endpoint to get the token' do
+      it 'should use the managed identity endpoint to get the token' do
         stub_request(:get, token_uri).with(headers: { 'Metadata' => 'true' }).to_return(
           status: 200,
           body: {

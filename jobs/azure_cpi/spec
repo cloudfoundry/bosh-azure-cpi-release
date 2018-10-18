@@ -19,19 +19,18 @@ properties:
     description: Azure region name
     example: eastus
   azure.subscription_id:
-    description: Azure Subscription Id
-  azure.resource_group_name:
-    description: Resource group name to use when spinning up new vms
-  azure.storage_account_name:
-    description: Azure storage account name. This property is required when use_managed_disks is false or upgrading from an existing deployment whose use_managed_disks is false.
+    description: Azure Subscription ID
+  azure.credentials_source:
+    description: Where to get Azure credentials for the azure cpi. This can be set to `static` to use `tenant_id`, `client_id` and `client_secret`/`certificate`, or set to `managed_identity` to get the credentials from Azure managed service identity.
+    default: static
   azure.tenant_id:
-    description: The tenant id for your service principal
+    description: The tenant ID for the azure cpi (Required when azure.credentials_source is set to `static`)
   azure.client_id:
-    description: The client id for your service principal
+    description: The client ID for the azure cpi (Required when azure.credentials_source is set to `static`)
   azure.client_secret:
-    description: The client secret for your service principal
+    description: The client secret for the azure cpi (One of `client_id` or `certificate` is required when azure.credentials_source is set to `static`)
   azure.certificate:
-    description: The certificate for your service principal
+    description: The certificate for the azure cpi (One of `client_id` or `certificate` is required when azure.credentials_source is set to `static`)
     example:
       -----BEGIN PRIVATE KEY-----
       MII...
@@ -39,25 +38,35 @@ properties:
       -----BEGIN CERTIFICATE-----
       MII...
       -----END CERTIFICATE-----
+  azure.default_managed_identity.type:
+    description: The type of managed identity used for the VM. The type `SystemAssigned` includes an implicitly created identity and the type `UserAssigned` includes a set of user assigned identities. For the type specified here to be used, azure.credentials_source has to be set to `managed_identity`.
+    default: null
+  azure.default_managed_identity.user_assigned_identity_name:
+    description: The user-assigned identity name associated with the VM. For the user-assigned identity specified here to be used, azure.credentials_source has to be set to `managed_identity`.
+    default: null
   azure.ssh_user:
-    description: Default ssh user to use when spinning up new vms
+    description: Default ssh user for new vms
     default: vcap
   azure.ssh_public_key:
-    description: The content of the SSH public key to use when spinning up new vms
-  azure.parallel_upload_thread_num:
-    description: The number of threads to upload stemcells in parallel
-    default: 16
-  azure.default_security_group:
-    description: The name of the default security group that will be applied to all created VMs
-  azure.debug_mode:
-    description: Enable debug mode to log all raw HTTP requests/responses
-    default: false
+    description: The content of the SSH public key for new vms
+  azure.resource_group_name:
+    description: Resource group name to use when spinning up new vms
+  azure.storage_account_name:
+    description: Azure storage account name. This property is required when use_managed_disks is false or upgrading from an existing deployment whose use_managed_disks is false.
   azure.use_managed_disks:
     description: Enable managed disks
     default: false
+  azure.default_security_group:
+    description: The name of the default security group that will be applied to all created VMs
   azure.pip_idle_timeout_in_minutes:
     description: Idle timeouts in minutes for dynamic public IPs
     default: 4
+  azure.parallel_upload_thread_num:
+    description: The number of threads to upload stemcells in parallel
+    default: 16
+  azure.debug_mode:
+    description: Enable debug mode to log all raw HTTP requests/responses
+    default: false
   azure.keep_failed_vms:
     description: Enable keeping the VM which failed in provisioning for troubleshooting
     default: false
@@ -67,9 +76,8 @@ properties:
   azure.enable_vm_boot_diagnostics:
     description: Enable VM boot diagnostics
     default: false
-  azure.managed_service_identity.enabled:
-    description: "Use managed service identity (MSI) to get tokens"
-    default: false
+  azure.isv_tracking_guid:
+    description: ISV tracking GUID for usage association
   azure.azure_stack.domain:
     description: The domain for your AzureStack deployment
     default: local.azurestack.external
@@ -87,8 +95,6 @@ properties:
       -----BEGIN CERTIFICATE-----
       MII...
       -----END CERTIFICATE-----
-  azure.isv_tracking_guid:
-    description: ISV tracking GUID for usage association
 
   registry.username:
     description: User to access the Registry

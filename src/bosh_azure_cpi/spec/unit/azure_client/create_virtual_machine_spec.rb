@@ -70,11 +70,14 @@ describe Bosh::AzureCloud::AzureClient do
     end
 
     context 'parse the parameters' do
-      context 'common vm_params are provided' do
-        context 'when managed is false' do
-          let(:vm_params_magaged_false) do
+      context 'when identity is not nil' do
+        context 'when identity is system assigned identity' do
+          let(:vm_params_system_assigned_identity) do
             vm_params_dupped = vm_params.dup
             vm_params_dupped[:managed] = false
+            vm_params_dupped[:identity] = {
+              type: 'SystemAssigned'
+            }
             vm_params_dupped
           end
 
@@ -85,6 +88,9 @@ describe Bosh::AzureCloud::AzureClient do
               type: 'Microsoft.Compute/virtualMachines',
               tags: {
                 foo: 'bar'
+              },
+              identity: {
+                type: 'SystemAssigned'
               },
               properties: {
                 hardwareProfile: {
@@ -176,20 +182,19 @@ describe Bosh::AzureCloud::AzureClient do
             )
 
             expect do
-              azure_client.create_virtual_machine(resource_group, vm_params_magaged_false, network_interfaces)
+              azure_client.create_virtual_machine(resource_group, vm_params_system_assigned_identity, network_interfaces)
             end.not_to raise_error
           end
         end
 
-        context 'when managed is true' do
-          let(:vm_params_managed) do
+        context 'when identity is user assigned identity' do
+          let(:vm_params_user_assigned_identity) do
             vm_params_dupped = vm_params.dup
-            vm_params_dupped.delete(:image_uri)
-            vm_params_dupped[:image_id] = 'g'
-            vm_params_dupped[:managed] = true
-            vm_params_dupped[:os_disk].delete(:disk_uri)
-            vm_params_dupped[:ephemeral_disk].delete(:disk_uri)
-            vm_params_dupped[:ephemeral_disk][:disk_type] = 'p'
+            vm_params_dupped[:managed] = false
+            vm_params_dupped[:identity] = {
+              type: 'UserAssigned',
+              identity_name: 'fake-identity-name'
+            }
             vm_params_dupped
           end
 
@@ -200,6 +205,10 @@ describe Bosh::AzureCloud::AzureClient do
               type: 'Microsoft.Compute/virtualMachines',
               tags: {
                 foo: 'bar'
+              },
+              identity: {
+                type: 'UserAssigned',
+                identityIds: ["/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/fake-identity-name"]
               },
               properties: {
                 hardwareProfile: {
@@ -238,13 +247,17 @@ describe Bosh::AzureCloud::AzureClient do
                   ]
                 },
                 storageProfile: {
-                  imageReference: {
-                    id: 'g'
-                  },
                   osDisk: {
                     name: 'h',
+                    osType: 'linux',
                     createOption: 'FromImage',
                     caching: 'j',
+                    image: {
+                      uri: 'g'
+                    },
+                    vhd: {
+                      uri: 'i'
+                    },
                     diskSizeGB: 'k'
                   },
                   dataDisks: [
@@ -253,10 +266,10 @@ describe Bosh::AzureCloud::AzureClient do
                       lun: 0,
                       createOption: 'Empty',
                       diskSizeGB: 'o',
-                      caching: 'n',
-                      managedDisk: {
-                        storageAccountType: 'p'
-                      }
+                      vhd: {
+                        uri: 'm'
+                      },
+                      caching: 'n'
                     }
                   ]
                 }
@@ -287,9 +300,230 @@ describe Bosh::AzureCloud::AzureClient do
             )
 
             expect do
-              azure_client.create_virtual_machine(resource_group, vm_params_managed, network_interfaces)
+              azure_client.create_virtual_machine(resource_group, vm_params_user_assigned_identity, network_interfaces)
             end.not_to raise_error
           end
+        end
+      end
+
+      context 'when managed is false' do
+        let(:vm_params_magaged_false) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped[:managed] = false
+          vm_params_dupped
+        end
+
+        let(:request_body) do
+          {
+            name: vm_name,
+            location: 'b',
+            type: 'Microsoft.Compute/virtualMachines',
+            tags: {
+              foo: 'bar'
+            },
+            properties: {
+              hardwareProfile: {
+                vmSize: 'c'
+              },
+              osProfile: {
+                customData: 'f',
+                computerName: vm_name,
+                adminUsername: 'd',
+                linuxConfiguration: {
+                  disablePasswordAuthentication: 'true',
+                  ssh: {
+                    publicKeys: [
+                      {
+                        path: '/home/d/.ssh/authorized_keys',
+                        keyData: 'e'
+                      }
+                    ]
+                  }
+                }
+              },
+              networkProfile: {
+                networkInterfaces: [
+                  {
+                    id: 'a',
+                    properties: {
+                      primary: true
+                    }
+                  },
+                  {
+                    id: 'b',
+                    properties: {
+                      primary: false
+                    }
+                  }
+                ]
+              },
+              storageProfile: {
+                osDisk: {
+                  name: 'h',
+                  osType: 'linux',
+                  createOption: 'FromImage',
+                  caching: 'j',
+                  image: {
+                    uri: 'g'
+                  },
+                  vhd: {
+                    uri: 'i'
+                  },
+                  diskSizeGB: 'k'
+                },
+                dataDisks: [
+                  {
+                    name: 'l',
+                    lun: 0,
+                    createOption: 'Empty',
+                    diskSizeGB: 'o',
+                    vhd: {
+                      uri: 'm'
+                    },
+                    caching: 'n'
+                  }
+                ]
+              }
+            }
+          }
+        end
+
+        it 'should raise no error' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            status: 200,
+            body: '',
+            headers: {
+              'azure-asyncoperation' => operation_status_link
+            }
+          )
+          stub_request(:get, operation_status_link).to_return(
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
+
+          expect do
+            azure_client.create_virtual_machine(resource_group, vm_params_magaged_false, network_interfaces)
+          end.not_to raise_error
+        end
+      end
+
+      context 'when managed is true' do
+        let(:vm_params_managed) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped.delete(:image_uri)
+          vm_params_dupped[:image_id] = 'g'
+          vm_params_dupped[:managed] = true
+          vm_params_dupped[:os_disk].delete(:disk_uri)
+          vm_params_dupped[:ephemeral_disk].delete(:disk_uri)
+          vm_params_dupped[:ephemeral_disk][:disk_type] = 'p'
+          vm_params_dupped
+        end
+
+        let(:request_body) do
+          {
+            name: vm_name,
+            location: 'b',
+            type: 'Microsoft.Compute/virtualMachines',
+            tags: {
+              foo: 'bar'
+            },
+            properties: {
+              hardwareProfile: {
+                vmSize: 'c'
+              },
+              osProfile: {
+                customData: 'f',
+                computerName: vm_name,
+                adminUsername: 'd',
+                linuxConfiguration: {
+                  disablePasswordAuthentication: 'true',
+                  ssh: {
+                    publicKeys: [
+                      {
+                        path: '/home/d/.ssh/authorized_keys',
+                        keyData: 'e'
+                      }
+                    ]
+                  }
+                }
+              },
+              networkProfile: {
+                networkInterfaces: [
+                  {
+                    id: 'a',
+                    properties: {
+                      primary: true
+                    }
+                  },
+                  {
+                    id: 'b',
+                    properties: {
+                      primary: false
+                    }
+                  }
+                ]
+              },
+              storageProfile: {
+                imageReference: {
+                  id: 'g'
+                },
+                osDisk: {
+                  name: 'h',
+                  createOption: 'FromImage',
+                  caching: 'j',
+                  diskSizeGB: 'k'
+                },
+                dataDisks: [
+                  {
+                    name: 'l',
+                    lun: 0,
+                    createOption: 'Empty',
+                    diskSizeGB: 'o',
+                    caching: 'n',
+                    managedDisk: {
+                      storageAccountType: 'p'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        end
+
+        it 'should raise no error' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            status: 200,
+            body: '',
+            headers: {
+              'azure-asyncoperation' => operation_status_link
+            }
+          )
+          stub_request(:get, operation_status_link).to_return(
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
+
+          expect do
+            azure_client.create_virtual_machine(resource_group, vm_params_managed, network_interfaces)
+          end.not_to raise_error
         end
       end
 

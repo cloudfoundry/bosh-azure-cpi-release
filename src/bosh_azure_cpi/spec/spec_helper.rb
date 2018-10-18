@@ -65,9 +65,6 @@ def mock_cloud_options
         'tenant_id' => MOCK_AZURE_TENANT_ID,
         'client_id' => MOCK_AZURE_CLIENT_ID,
         'client_secret' => MOCK_AZURE_CLIENT_SECRET,
-        'managed_service_identity' => {
-          'enabled' => false
-        },
         'ssh_user' => 'vcap',
         'ssh_public_key' => MOCK_SSH_PUBLIC_KEY,
         'parallel_upload_thread_num' => 16,
@@ -119,7 +116,7 @@ def mock_cloud_options_merge(override_options, base_hash = mock_cloud_options)
   override_options ||= {}
 
   override_options.each do |key, value|
-    merged_options[key] = if value.is_a? Hash
+    merged_options[key] = if !base_hash[key].nil? && value.is_a?(Hash)
                             mock_cloud_options_merge(override_options[key], base_hash[key])
                           else
                             value

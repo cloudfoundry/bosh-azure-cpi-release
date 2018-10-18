@@ -72,5 +72,83 @@ describe Bosh::AzureCloud::VMCloudProps do
         end
       end
     end
+
+    context '#managed_identity' do
+      context 'when default_managed_identity is not specified in global configurations' do
+        context 'when managed_identity is not specified in vm_extensions' do
+          let(:vm_cloud_props) do
+            Bosh::AzureCloud::VMCloudProps.new(
+              {
+                'instance_type' => 'Standard_D1'
+              }, azure_config_managed
+            )
+          end
+
+          it 'should return nil' do
+            expect(vm_cloud_props.managed_identity).to be_nil
+          end
+        end
+
+        context 'when managed_identity is specified in vm_extensions' do
+          let(:vm_cloud_props) do
+            Bosh::AzureCloud::VMCloudProps.new(
+              {
+                'instance_type' => 'Standard_D1',
+                'managed_identity' => {
+                  'type' => 'SystemAssigned'
+                }
+              }, azure_config_managed
+            )
+          end
+
+          it 'should return managed identity' do
+            expect(vm_cloud_props.managed_identity).not_to be_nil
+          end
+        end
+      end
+
+      context 'when default_managed_identity is specified in global configurations' do
+        let(:azure_config) do
+          mock_azure_config_merge(
+            'default_managed_identity' => {
+              'type' => 'SystemAssigned'
+            }
+          )
+        end
+
+        context 'when managed_identity is not specified in vm_extensions' do
+          let(:vm_cloud_props) do
+            Bosh::AzureCloud::VMCloudProps.new(
+              {
+                'instance_type' => 'Standard_D1'
+              }, azure_config
+            )
+          end
+
+          it 'should return default_managed_identity' do
+            expect(vm_cloud_props.managed_identity.type).to eq('SystemAssigned')
+          end
+        end
+
+        context 'when managed_identity is specified in vm_extensions' do
+          let(:vm_cloud_props) do
+            Bosh::AzureCloud::VMCloudProps.new(
+              {
+                'instance_type' => 'Standard_D1',
+                'managed_identity' => {
+                  'type' => 'UserAssigned',
+                  'user_assigned_identity_name' => 'fake-identity-name'
+                }
+              }, azure_config
+            )
+          end
+
+          it 'should return managed_identity' do
+            expect(vm_cloud_props.managed_identity.type).to eq('UserAssigned')
+            expect(vm_cloud_props.managed_identity.user_assigned_identity_name).to eq('fake-identity-name')
+          end
+        end
+      end
+    end
   end
 end

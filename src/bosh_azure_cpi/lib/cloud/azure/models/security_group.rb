@@ -6,6 +6,7 @@ module Bosh::AzureCloud
 
     RESOURCE_GROUP_NAME_KEY = 'resource_group_name'
     NAME_KEY = 'name'
+
     def initialize(resource_group_name, name)
       @resource_group_name = resource_group_name
       @name = name
