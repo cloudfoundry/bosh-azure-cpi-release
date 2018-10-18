@@ -49,7 +49,7 @@ module Bosh::AzureCloud
     include Helpers
     attr_reader :environment, :subscription_id, :location, :resource_group_name
     attr_reader :azure_stack
-    attr_reader :tenant_id, :client_id, :client_secret, :enable_managed_service_identity
+    attr_reader :credentials_source, :tenant_id, :client_id, :client_secret, :default_managed_identity
     attr_reader :use_managed_disks, :storage_account_name
     attr_reader :default_security_group
     attr_reader :enable_vm_boot_diagnostics, :is_debug_mode, :keep_failed_vms
@@ -69,11 +69,11 @@ module Bosh::AzureCloud
       @resource_group_name = azure_config_hash['resource_group_name']
 
       # Identity
+      @credentials_source = azure_config_hash['credentials_source']
       @tenant_id = azure_config_hash['tenant_id']
       @client_id = azure_config_hash['client_id']
       @client_secret = azure_config_hash['client_secret']
-      @enable_managed_service_identity = false
-      @enable_managed_service_identity = azure_config_hash['managed_service_identity'].fetch('enabled', @enable_managed_service_identity) unless azure_config_hash['managed_service_identity'].nil?
+      @default_managed_identity = Bosh::AzureCloud::ManagedIdentity.new(azure_config_hash['default_managed_identity']) unless azure_config_hash['default_managed_identity'].nil?
 
       @use_managed_disks = azure_config_hash['use_managed_disks']
       @storage_account_name = azure_config_hash['storage_account_name']
@@ -101,6 +101,10 @@ module Bosh::AzureCloud
       @ssh_public_key = azure_config_hash['ssh_public_key']
 
       @config_disk = ConfigDisk.new(azure_config_hash.fetch('config_disk', 'enabled' => false))
+    end
+
+    def managed_identity_enabled?
+      @credentials_source == CREDENTIALS_SOURCE_MANAGED_IDENTITY
     end
   end
 
