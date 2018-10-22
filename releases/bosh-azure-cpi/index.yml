@@ -75,6 +75,8 @@ builds:
     version: "21"
   edd1f234-ef0d-4dcd-a9fb-b6c4aaf495bc:
     version: "20"
+  f8f60c8c-f6ec-41b7-72df-0623b36c6001:
+    version: 34.0.1
   fd2e5357-23f2-471b-b034-4464dd68dffc:
     version: "11"
 format-version: "2"
