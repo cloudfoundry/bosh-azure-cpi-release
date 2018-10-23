@@ -10,7 +10,7 @@ module Bosh::AzureCloud
 
     def initialize(azure_config)
       @azure_config = azure_config
-      @logger = Bosh::Cpi::Logger.new(CPI_TELEMETRY_LOG_FILE)
+      @logger = CPILogger.instance.get_logger(CPI_TELEMETRY_LOG_FILE)
     end
 
     # Monitor the status of a block

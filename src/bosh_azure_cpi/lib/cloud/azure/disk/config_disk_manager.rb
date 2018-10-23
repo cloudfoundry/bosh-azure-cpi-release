@@ -15,12 +15,11 @@ module Bosh::AzureCloud
       @blob_manager = blob_manager
       @disk_manager2 = disk_manager2
       @storage_account_manager = storage_account_manager
-      @logger = Bosh::Clouds::Config.logger
     end
 
     # Returns the config disk uri.
     def prepare_config_disk(resource_group_name, vm_name, location, zone, meta_data_obj, user_data_obj)
-      @logger.info("prepare_config_disk(#{resource_group_name}, #{vm_name}, #{location}, #{zone}, ..., ...)")
+      CPILogger.instance.logger.info("prepare_config_disk(#{resource_group_name}, #{vm_name}, #{location}, #{zone}, ..., ...)")
       mounted_dir = nil
       config_disk_file_path = nil
       disk_name = nil
@@ -79,7 +78,7 @@ module Bosh::AzureCloud
         @disk_manager2.create_disk_from_blob(disk_id, config_disk_file_uri, location, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, zone)
 
         disk = @disk_manager2.get_data_disk(disk_id)
-        @logger.info("disk created: #{disk}")
+        CPILogger.instance.logger.info("disk created: #{disk}")
         # TODO: defer one task to clean up the config disk.
         #       we need to acquire the lock for the resources we are operating too.
         [disk_id, disk]

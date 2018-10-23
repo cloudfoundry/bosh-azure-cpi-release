@@ -58,6 +58,7 @@ module Bosh::AzureCloud
     attr_reader :parallel_upload_thread_num
     attr_reader :ssh_user, :ssh_public_key
     attr_reader :vmss
+    attr_reader :request_id
     attr_writer :storage_account_name
 
     def initialize(azure_config_hash)
@@ -66,7 +67,7 @@ module Bosh::AzureCloud
       @subscription_id = azure_config_hash['subscription_id']
       @location = azure_config_hash['location']
       @resource_group_name = azure_config_hash['resource_group_name']
-
+      @request_id = azure_config_hash['request_id']
       # Identity
       @tenant_id = azure_config_hash['tenant_id']
       @client_id = azure_config_hash['client_id']
@@ -106,31 +107,47 @@ module Bosh::AzureCloud
     attr_reader :endpoint, :user, :password
 
     def initialize(registry_config_hash)
-      @config = registry_config_hash
-
-      @endpoint = @config['endpoint']
-      @user = @config['user']
-      @password = @config['password']
+      @endpoint = registry_config_hash['endpoint']
+      @user = registry_config_hash['user']
+      @password = registry_config_hash['password']
     end
   end
 
   class AgentConfig
     def initialize(agent_config_hash)
-      @config = agent_config_hash
+      @config_hash = agent_config_hash
     end
 
     def to_h
-      @config
+      @config_hash
     end
   end
 
   class Config
+    include Singleton
     attr_reader :azure, :registry, :agent
-    def initialize(config_hash)
-      @config = config_hash
-      @azure = AzureConfig.new(config_hash['azure'] || {})
-      @registry = RegistryConfig.new(config_hash['registry'] || {})
-      @agent = AgentConfig.new(config_hash['agent'] || {})
+    def initialize
+      @config_mutex = Mutex.new
+    end
+
+    def update(config_hash)
+      @config_mutex.synchronize do
+        _validate_options(config_hash)
+        @azure = AzureConfig.new(config_hash['azure'] || {}).freeze
+        @registry = RegistryConfig.new(config_hash['registry'] || {}).freeze
+        @agent = AgentConfig.new(config_hash['agent'] || {}).freeze
+      end
+    end
+
+    private
+
+    def _validate_options(options)
+      azure_config_hash = options['azure']
+      invalid_azure_stack_config = !azure_config_hash.nil? &&
+                                   azure_config_hash['environment'] == Bosh::AzureCloud::Helpers::ENVIRONMENT_AZURESTACK &&
+                                   azure_config_hash['azure_stack'].nil?
+
+      raise Bosh::Clouds::CloudError, 'azure_stack should be there if environment is AzureStack.' if invalid_azure_stack_config
     end
   end
 end

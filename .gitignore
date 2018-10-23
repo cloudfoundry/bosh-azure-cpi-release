@@ -10,6 +10,7 @@ config/private.yml
 dev_releases
 releases/*.tgz
 releases/**/*.tgz
+src/bosh_azure_cpi/501
 src/bosh_azure_cpi/vendor/cache
 src/bosh_azure_cpi/coverage
 src/bosh_azure_cpi/spec/manual_tests/performance/stemcell_to_test.tgz

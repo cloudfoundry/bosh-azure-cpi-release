@@ -147,7 +147,8 @@ def mock_registry
 end
 
 def mock_cloud(options = nil)
-  Bosh::AzureCloud::Cloud.new(options || mock_cloud_options['properties'])
+  Bosh::AzureCloud::Config.instance.update(options || mock_cloud_options['properties'])
+  Bosh::AzureCloud::Cloud.new
 end
 
 def time_measure
@@ -171,7 +172,8 @@ end
 RSpec.configure do |config|
   config.before do
     logger = Logger.new('/dev/null')
-    allow(Bosh::Clouds::Config).to receive(:logger).and_return(logger)
+
+    Bosh::AzureCloud::CPILogger.instance.logger = logger
     allow(logger).to receive(:set_request_id).with(MOCK_REQUEST_ID)
     RSpec::Support::ObjectFormatter.default_instance.max_formatted_output_length = 500
   end

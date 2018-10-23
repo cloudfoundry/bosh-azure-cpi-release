@@ -13,7 +13,10 @@ require 'cloud/azure'
 
 cpi_config = YAML.load_file(ARGV.shift)
 
-cloud_config = OpenStruct.new(logger: Bosh::AzureCloud::CPILogger.get_logger(STDERR))
+std_err_logger = Bosh::AzureCloud::CPILogger.instance.get_logger(STDERR)
+Bosh::AzureCloud::CPILogger.instance.logger = std_err_logger
+
+cloud_config = OpenStruct.new(logger: std_err_logger)
 
 Bosh::Clouds::Config.configure(cloud_config)
 
@@ -23,12 +26,12 @@ cpi_lambda = lambda do |context|
   raise 'Could not find cloud properties in the configuration' unless cpi_config.key?('cloud') && cpi_config['cloud'].key?('properties')
 
   cloud_properties = cpi_config['cloud']['properties']
-  cloud_properties['cpi_log'] = cpi_log
 
   # allow azure config to be overwritten dynamically by context
   cloud_properties['azure'].merge!(context)
 
-  Bosh::Clouds::Azure.new(cloud_properties)
+  Bosh::AzureCloud::Config.instance.update(cloud_properties)
+  Bosh::Clouds::Azure.new
 end
 
 # Redefine $stdout because azure libraries use print for info logging

@@ -2,11 +2,9 @@
 
 # The following default configurations are shared. If one case needs a specific configuration, it should overwrite it.
 shared_context 'shared stuff for azure client' do
-  let(:logger) { Bosh::Clouds::Config.logger }
   let(:azure_client) do
     Bosh::AzureCloud::AzureClient.new(
-      mock_azure_config,
-      logger
+      mock_azure_config
     )
   end
 

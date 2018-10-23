@@ -37,10 +37,9 @@ shared_context 'shared stuff for vm managers' do
     )
   end
   let(:props_factory) do
+    Bosh::AzureCloud::Config.instance.update(mock_cloud_options['properties'])
     Bosh::AzureCloud::PropsFactory.new(
-      Bosh::AzureCloud::ConfigFactory.build(
-        mock_cloud_options['properties']
-      )
+      Bosh::AzureCloud::Config.instance.azure
     )
   end
   let(:azure_config_use_config_disk) do

@@ -15,7 +15,7 @@ module Bosh::AzureCloud
         # network.resource_group_name may return the default resource group name in global configurations. See network.rb.
         default_resource_group_name = @azure_config.resource_group_name
         if application_security_group.nil? && resource_group_name != default_resource_group_name
-          @logger.info("Cannot find the application security group '#{application_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
+          CPILogger.instance.logger.info("Cannot find the application security group '#{application_security_group_name}' in the resource group '#{resource_group_name}', trying to search it in the default resource group '#{default_resource_group_name}'")
           application_security_group = @azure_client.get_application_security_group_by_name(default_resource_group_name, application_security_group_name)
         end
         cloud_error("Cannot find the application security group '#{application_security_group_name}'") if application_security_group.nil?

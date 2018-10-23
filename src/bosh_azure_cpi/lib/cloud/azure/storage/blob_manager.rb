@@ -12,25 +12,25 @@ module Bosh::AzureCloud
       @azure_config = azure_config
       @azure_client = azure_client
       @empty_chunk_content = Array.new(MAX_CHUNK_SIZE, 0).pack('c*')
-      @logger = Bosh::Clouds::Config.logger
+
       @blob_client_mutex = Mutex.new
       @storage_accounts = {}
     end
 
     def delete_blob(storage_account_name, container_name, blob_name)
-      @logger.info("delete_blob(#{storage_account_name}, #{container_name}, #{blob_name})")
+      CPILogger.instance.logger.info("delete_blob(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do
         options = {
           delete_snapshots: :include
         }
         options = merge_storage_common_options(options)
-        @logger.info("delete_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
+        CPILogger.instance.logger.info("delete_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
         @blob_service_client.delete_blob(container_name, blob_name, options)
       end
     end
 
     def get_sas_blob_uri(storage_account_name, container_name, blob_name)
-      @logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
+      CPILogger.instance.logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do
         storage_account = @storage_accounts[storage_account_name]
         generator = Azure::Storage::Common::Core::Auth::SharedAccessSignature.new(storage_account_name, storage_account[:key])
@@ -44,33 +44,33 @@ module Bosh::AzureCloud
     end
 
     def get_blob_uri(storage_account_name, container_name, blob_name)
-      @logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
+      CPILogger.instance.logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do
         "#{@azure_storage_client.storage_blob_host}/#{container_name}/#{blob_name}"
       end
     end
 
     def get_blob_size_in_bytes(storage_account_name, container_name, blob_name)
-      @logger.info("get_blob_size_in_bytes(#{storage_account_name}, #{container_name}, #{blob_name})")
+      CPILogger.instance.logger.info("get_blob_size_in_bytes(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do
         @blob_service_client.get_blob_properties(container_name, blob_name).properties[:content_length]
       end
     end
 
     def delete_blob_snapshot(storage_account_name, container_name, blob_name, snapshot_time)
-      @logger.info("delete_blob_snapshot(#{storage_account_name}, #{container_name}, #{blob_name}, #{snapshot_time})")
+      CPILogger.instance.logger.info("delete_blob_snapshot(#{storage_account_name}, #{container_name}, #{blob_name}, #{snapshot_time})")
       _initialize_blob_client(storage_account_name) do
         options = {
           snapshot: snapshot_time
         }
         options = merge_storage_common_options(options)
-        @logger.info("delete_blob_snapshot: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
+        CPILogger.instance.logger.info("delete_blob_snapshot: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
         @blob_service_client.delete_blob(container_name, blob_name, options)
       end
     end
 
     def create_page_blob(storage_account_name, container_name, file_path, blob_name, metadata)
-      @logger.info("create_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name}, #{metadata})")
+      CPILogger.instance.logger.info("create_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name}, #{metadata})")
       # Disable debug_mode because we never want to print the content of VHD in the logs
       _initialize_blob_client(storage_account_name, true) do
         blob_created = false
@@ -92,7 +92,7 @@ module Bosh::AzureCloud
     end
 
     def create_empty_page_blob(storage_account_name, container_name, blob_name, blob_size_in_kb, metadata)
-      @logger.info("create_empty_page_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{blob_size_in_kb}, #{metadata})")
+      CPILogger.instance.logger.info("create_empty_page_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{blob_size_in_kb}, #{metadata})")
       _initialize_blob_client(storage_account_name) do
         begin
           options = {
@@ -100,7 +100,7 @@ module Bosh::AzureCloud
             metadata: encode_metadata(metadata)
           }
           blob_size = blob_size_in_kb * 1024
-          @logger.info("create_empty_page_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
+          CPILogger.instance.logger.info("create_empty_page_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
           _create_page_blob(container_name, blob_name, blob_size, options)
         rescue StandardError => e
           cloud_error("Failed to create empty page blob: inspect:#{e.inspect}\n backtrace:#{e.backtrace.join("\n")}")
@@ -109,7 +109,7 @@ module Bosh::AzureCloud
     end
 
     def create_vhd_page_blob(storage_account_name, container_name, file_path, blob_name, metadata)
-      @logger.info("create_vhd_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name}, #{metadata})")
+      CPILogger.instance.logger.info("create_vhd_page_blob(#{storage_account_name}, #{container_name}, #{file_path}, #{blob_name}, #{metadata})")
       _initialize_blob_client(storage_account_name, true) do
         blob_created = false
         begin
@@ -121,7 +121,7 @@ module Bosh::AzureCloud
             metadata: encode_metadata(metadata)
           }
           blob_size = vhd_size + 512
-          @logger.info("create_vhd_page_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
+          CPILogger.instance.logger.info("create_vhd_page_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
           _create_page_blob(container_name, blob_name, blob_size, options)
 
           blob_created = true
@@ -130,13 +130,13 @@ module Bosh::AzureCloud
 
           options = merge_storage_common_options
           # write the vhd footer.
-          @logger.info("create_vhd_page_blob: Calling put_blob_pages(#{container_name}, #{blob_name}, #{vhd_size}, #{blob_size - 1}, [VHD-FOOTER], #{options})")
+          CPILogger.instance.logger.info("create_vhd_page_blob: Calling put_blob_pages(#{container_name}, #{blob_name}, #{vhd_size}, #{blob_size - 1}, [VHD-FOOTER], #{options})")
           vhd_footer = VHDUtils.generate_footer(vhd_size).values.join
           @blob_service_client.put_blob_pages(container_name, blob_name, vhd_size, blob_size - 1, vhd_footer, options)
         rescue StandardError => e
           if blob_created
             options = merge_storage_common_options
-            @logger.info("create_vhd_page_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
+            CPILogger.instance.logger.info("create_vhd_page_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
             @blob_service_client.delete_blob(container_name, blob_name, options)
           end
           cloud_error("Failed to upload page blob: inspect:#{e.inspect}\n backtrace:#{e.backtrace.join("\n")}")
@@ -153,11 +153,11 @@ module Bosh::AzureCloud
     # @param [Boolean] storage_account_name Is premium or not.
     # @return [void]
     def create_empty_vhd_blob(storage_account_name, container_name, blob_name, blob_size_in_gb)
-      @logger.info("create_empty_vhd_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{blob_size_in_gb})")
+      CPILogger.instance.logger.info("create_empty_vhd_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{blob_size_in_gb})")
       blob_created = false
       _initialize_blob_client(storage_account_name) do
         begin
-          @logger.info('create_empty_vhd_blob: Start to generate vhd footer')
+          CPILogger.instance.logger.info('create_empty_vhd_blob: Start to generate vhd footer')
           vhd_size = blob_size_in_gb * 1024 * 1024 * 1024
 
           vhd_footer = VHDUtils.generate_footer(vhd_size).values.join
@@ -165,20 +165,20 @@ module Bosh::AzureCloud
           options = {
             timeout: TIMEOUT_FOR_BLOB_OPERATIONS
           }
-          @logger.info("create_empty_vhd_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
+          CPILogger.instance.logger.info("create_empty_vhd_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
           _create_page_blob(container_name, blob_name, blob_size, options)
           blob_created = true
 
-          @logger.info('create_empty_vhd_blob: Start to upload vhd footer')
+          CPILogger.instance.logger.info('create_empty_vhd_blob: Start to upload vhd footer')
 
           options = merge_storage_common_options(options)
           # Do not log vhd_footer because its size is 512 bytes.
-          @logger.info("create_empty_vhd_blob: Calling put_blob_pages(#{container_name}, #{blob_name}, #{vhd_size}, #{blob_size - 1}, [VHD-FOOTER], #{options})")
+          CPILogger.instance.logger.info("create_empty_vhd_blob: Calling put_blob_pages(#{container_name}, #{blob_name}, #{vhd_size}, #{blob_size - 1}, [VHD-FOOTER], #{options})")
           @blob_service_client.put_blob_pages(container_name, blob_name, vhd_size, blob_size - 1, vhd_footer, options)
         rescue StandardError => e
           if blob_created
             options = merge_storage_common_options
-            @logger.info("create_empty_vhd_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
+            CPILogger.instance.logger.info("create_empty_vhd_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
             @blob_service_client.delete_blob(container_name, blob_name, options)
           end
           cloud_error("create_empty_vhd_blob: Failed to create empty vhd blob: inspect:#{e.inspect}\nbacktrace:#{e.backtrace.join("\n")}")
@@ -187,11 +187,11 @@ module Bosh::AzureCloud
     end
 
     def get_blob_properties(storage_account_name, container_name, blob_name)
-      @logger.info("get_blob_properties(#{storage_account_name}, #{container_name}, #{blob_name})")
+      CPILogger.instance.logger.info("get_blob_properties(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options
-          @logger.info("get_blob_properties: Calling get_blob_properties(#{container_name}, #{blob_name}, #{options})")
+          CPILogger.instance.logger.info("get_blob_properties: Calling get_blob_properties(#{container_name}, #{blob_name}, #{options})")
           blob = @blob_service_client.get_blob_properties(container_name, blob_name, options)
           blob.properties
         rescue StandardError => e
@@ -202,11 +202,11 @@ module Bosh::AzureCloud
     end
 
     def get_blob_metadata(storage_account_name, container_name, blob_name)
-      @logger.info("get_blob_metadata(#{storage_account_name}, #{container_name}, #{blob_name})")
+      CPILogger.instance.logger.info("get_blob_metadata(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options
-          @logger.info("get_blob_metadata: Calling get_blob_metadata(#{container_name}, #{blob_name}, #{options})")
+          CPILogger.instance.logger.info("get_blob_metadata: Calling get_blob_metadata(#{container_name}, #{blob_name}, #{options})")
           blob = @blob_service_client.get_blob_metadata(container_name, blob_name, options)
           blob.metadata
         rescue StandardError => e
@@ -218,11 +218,11 @@ module Bosh::AzureCloud
 
     # metadata names must adhere to the naming rules for C# identifiers (http://msdn.microsoft.com/library/aa664670%28VS.71%29.aspx)
     def set_blob_metadata(storage_account_name, container_name, blob_name, metadata)
-      @logger.info("set_blob_metadata(#{storage_account_name}, #{container_name}, #{blob_name}, #{metadata})")
+      CPILogger.instance.logger.info("set_blob_metadata(#{storage_account_name}, #{container_name}, #{blob_name}, #{metadata})")
       _initialize_blob_client(storage_account_name) do
         begin
           options = merge_storage_common_options
-          @logger.info("set_blob_metadata: Calling set_blob_metadata(#{container_name}, #{blob_name}, #{metadata}, #{options})")
+          CPILogger.instance.logger.info("set_blob_metadata: Calling set_blob_metadata(#{container_name}, #{blob_name}, #{metadata}, #{options})")
           @blob_service_client.set_blob_metadata(container_name, blob_name, encode_metadata(metadata), options)
         rescue StandardError => e
           cloud_error("set_blob_metadata: Failed to set the metadata for the blob: inspect:#{e.inspect}\nbacktrace:#{e.backtrace.join("\n")}")
@@ -231,14 +231,14 @@ module Bosh::AzureCloud
     end
 
     def list_blobs(storage_account_name, container_name, prefix = nil)
-      @logger.info("list_blobs(#{storage_account_name}, #{container_name})")
+      CPILogger.instance.logger.info("list_blobs(#{storage_account_name}, #{container_name})")
       blobs = []
       _initialize_blob_client(storage_account_name) do
         options = {}
         options[:prefix] = prefix unless prefix.nil?
         loop do
           options = merge_storage_common_options(options)
-          @logger.info("list_blobs: Calling list_blobs(#{container_name}, #{options})")
+          CPILogger.instance.logger.info("list_blobs: Calling list_blobs(#{container_name}, #{options})")
           temp = @blob_service_client.list_blobs(container_name, options)
           # Workaround for the issue https://github.com/Azure/azure-storage-ruby/issues/37
           raise temp unless temp.instance_of?(Azure::Storage::Common::Service::EnumerationResults)
@@ -253,33 +253,33 @@ module Bosh::AzureCloud
     end
 
     def snapshot_blob(storage_account_name, container_name, blob_name, metadata)
-      @logger.info("snapshot_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{metadata})")
+      CPILogger.instance.logger.info("snapshot_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{metadata})")
       _initialize_blob_client(storage_account_name) do
         options = {
           metadata: metadata
         }
         options = merge_storage_common_options(options)
-        @logger.info("snapshot_blob: Calling create_blob_snapshot(#{container_name}, #{blob_name}, #{options})")
+        CPILogger.instance.logger.info("snapshot_blob: Calling create_blob_snapshot(#{container_name}, #{blob_name}, #{options})")
         snapshot_time = @blob_service_client.create_blob_snapshot(container_name, blob_name, options)
-        @logger.debug("snapshot_blob: Snapshot time: #{snapshot_time}")
+        CPILogger.instance.logger.debug("snapshot_blob: Snapshot time: #{snapshot_time}")
         snapshot_time
       end
     end
 
     def copy_blob(storage_account_name, container_name, blob_name, source_blob_uri)
-      @logger.info("copy_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{source_blob_uri})")
+      CPILogger.instance.logger.info("copy_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{source_blob_uri})")
       _initialize_blob_client(storage_account_name) do
         begin
           start_time = Time.new
           options = merge_storage_common_options
-          @logger.info("copy_blob: Calling _copy_blob_from_uri(#{container_name}, #{blob_name}, #{source_blob_uri}, #{options})")
+          CPILogger.instance.logger.info("copy_blob: Calling _copy_blob_from_uri(#{container_name}, #{blob_name}, #{source_blob_uri}, #{options})")
           copy_id, copy_status = _copy_blob_from_uri(container_name, blob_name, source_blob_uri, options)
-          @logger.info("copy_blob: x-ms-copy-id: #{copy_id}, x-ms-copy-status: #{copy_status}")
+          CPILogger.instance.logger.info("copy_blob: x-ms-copy-id: #{copy_id}, x-ms-copy-status: #{copy_status}")
 
           copy_status_description = ''
           while copy_status == 'pending'
             options = merge_storage_common_options
-            @logger.info("copy_blob: Calling get_blob_properties(#{container_name}, #{blob_name}, #{options})")
+            CPILogger.instance.logger.info("copy_blob: Calling get_blob_properties(#{container_name}, #{blob_name}, #{options})")
             blob = @blob_service_client.get_blob_properties(container_name, blob_name, options)
             blob_props = blob.properties
             cloud_error("copy_blob: The progress of copying the blob #{source_blob_uri} to #{container_name}/#{blob_name} was interrupted by other copy operations.") if !copy_id.nil? && blob_props[:copy_id] != copy_id
@@ -288,7 +288,7 @@ module Bosh::AzureCloud
             copy_status = blob_props[:copy_status]
             break if copy_status != 'pending'
 
-            @logger.debug("copy_blob: Copying progress: #{blob_props[:copy_progress]}")
+            CPILogger.instance.logger.debug("copy_blob: Copying progress: #{blob_props[:copy_progress]}")
             elapse_time = Time.new - start_time
             copied_bytes, total_bytes = blob_props[:copy_progress].split('/').map(&:to_i)
             interval = copied_bytes.zero? ? 5 : (total_bytes - copied_bytes).to_f / copied_bytes * elapse_time
@@ -299,16 +299,16 @@ module Bosh::AzureCloud
 
           if copy_status == 'success'
             duration = Time.new - start_time
-            @logger.info("copy_blob: Copy the blob #{source_blob_uri} successfully. Duration: #{duration.inspect}")
+            CPILogger.instance.logger.info("copy_blob: Copy the blob #{source_blob_uri} successfully. Duration: #{duration.inspect}")
           else
             cloud_error("copy_blob: Failed to copy the blob #{source_blob_uri}: \n\tcopy status: #{copy_status}\n\tcopy description: #{copy_status_description}")
           end
         rescue StandardError => e
           ignore_exception do
             options = merge_storage_common_options
-            @logger.info("copy_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
+            CPILogger.instance.logger.info("copy_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
             @blob_service_client.delete_blob(container_name, blob_name, options)
-            @logger.info("copy_blob: Delete the blob #{container_name}/#{blob_name}")
+            CPILogger.instance.logger.info("copy_blob: Delete the blob #{container_name}/#{blob_name}")
           end
           raise e
         end
@@ -318,12 +318,12 @@ module Bosh::AzureCloud
     private
 
     def _upload_page_blob(container_name, blob_name, file_path, thread_num)
-      @logger.info("_upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num})")
+      CPILogger.instance.logger.info("_upload_page_blob(#{container_name}, #{blob_name}, #{file_path}, #{thread_num})")
       start_time = Time.new
       file_size = File.lstat(file_path).size
       _upload_page_blob_in_threads(file_path, file_size, container_name, blob_name, thread_num)
       duration = Time.new - start_time
-      @logger.info("_upload_page_blob_in_threads Duration: #{duration.inspect}")
+      CPILogger.instance.logger.info("_upload_page_blob_in_threads Duration: #{duration.inspect}")
     end
 
     def _initialize_blob_client(storage_account_name, disable_debug_mode = false)
@@ -367,7 +367,7 @@ module Bosh::AzureCloud
             while chunk = chunks.shift
               content = chunk.read(file)
               if content == @empty_chunk_content
-                @logger.debug("_upload_page_blob_in_threads: Thread #{id}: Skip empty chunk: #{chunk}")
+                CPILogger.instance.logger.debug("_upload_page_blob_in_threads: Thread #{id}: Skip empty chunk: #{chunk}")
                 next
               end
 
@@ -375,10 +375,10 @@ module Bosh::AzureCloud
               begin
                 options = merge_storage_common_options(options)
                 # Do not log content because it is too large.
-                @logger.debug("_upload_page_blob_in_threads: Thread #{id}, retry: #{retry_count}, chunk id: #{chunk.id}: Calling put_blob_pages(#{container_name}, #{blob_name}, #{chunk.start_range}, #{chunk.end_range}, [CONTENT], #{options})")
+                CPILogger.instance.logger.debug("_upload_page_blob_in_threads: Thread #{id}, retry: #{retry_count}, chunk id: #{chunk.id}: Calling put_blob_pages(#{container_name}, #{blob_name}, #{chunk.start_range}, #{chunk.end_range}, [CONTENT], #{options})")
                 @blob_service_client.put_blob_pages(container_name, blob_name, chunk.start_range, chunk.end_range, content, options)
               rescue StandardError => e
-                @logger.warn("_upload_page_blob_in_threads: Thread #{id}: Failed to put_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+                CPILogger.instance.logger.warn("_upload_page_blob_in_threads: Thread #{id}: Failed to put_blob_pages, error: #{e.inspect}\n#{e.backtrace.join("\n")}")
                 retry_count += 1
                 if retry_count > AZURE_MAX_RETRY_COUNT
                   # make sure that other threads exit after they finish current job.

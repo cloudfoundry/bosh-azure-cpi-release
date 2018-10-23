@@ -103,9 +103,7 @@ module Bosh::AzureCloud
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret customData].freeze
 
-    def initialize(azure_config, logger)
-      @logger = logger
-
+    def initialize(azure_config)
       @azure_config = azure_config
     end
 
@@ -508,7 +506,7 @@ module Bosh::AzureCloud
       end
 
       vm['properties']['storageProfile']['dataDisks'].push(new_disk)
-      @logger.info("attach_disk_to_virtual_machine - attach disk '#{disk_name}' to lun '#{lun}' of the virtual machine '#{vm_name}', managed: '#{managed}'")
+      CPILogger.instance.logger.info("attach_disk_to_virtual_machine - attach disk '#{disk_name}' to lun '#{lun}' of the virtual machine '#{vm_name}', managed: '#{managed}'")
       http_put(url, vm)
 
       lun
@@ -533,7 +531,7 @@ module Bosh::AzureCloud
 
       vm = remove_resources_from_vm(vm)
 
-      @logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(vm)}")
+      CPILogger.instance.logger.debug("detach_disk_from_virtual_machine - virtual machine:\n#{JSON.pretty_generate(vm)}")
       disk = vm['properties']['storageProfile']['dataDisks'].find { |disk| disk['name'] == disk_name }
       if disk.nil?
         raise Bosh::Clouds::DiskNotAttached.new(true),
@@ -542,7 +540,7 @@ module Bosh::AzureCloud
 
       vm['properties']['storageProfile']['dataDisks'].delete_if { |disk| disk['name'] == disk_name }
 
-      @logger.info("detach_disk_from_virtual_machine - detach disk #{disk_name} from lun #{disk['lun']}")
+      CPILogger.instance.logger.info("detach_disk_from_virtual_machine - detach disk #{disk_name} from lun #{disk['lun']}")
       http_put(url, vm)
     end
 
@@ -639,7 +637,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-delete
     #
     def delete_virtual_machine(resource_group_name, name)
-      @logger.debug("delete_virtual_machine - trying to delete '#{name}' from resource group '#{resource_group_name}'")
+      CPILogger.instance.logger.debug("delete_virtual_machine - trying to delete '#{name}' from resource group '#{resource_group_name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -745,7 +743,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/availabilitysets-delete
     #
     def delete_availability_set(resource_group_name, name)
-      @logger.debug("delete_availability_set - trying to delete '#{name}' from resource group '#{resource_group_name}'")
+      CPILogger.instance.logger.debug("delete_availability_set - trying to delete '#{name}' from resource group '#{resource_group_name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -885,7 +883,7 @@ module Bosh::AzureCloud
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
     #
     def delete_managed_disk(resource_group_name, name)
-      @logger.debug("delete_managed_disk - trying to delete #{name} from resource group #{resource_group_name}")
+      CPILogger.instance.logger.debug("delete_managed_disk - trying to delete #{name} from resource group #{resource_group_name}")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -940,7 +938,7 @@ module Bosh::AzureCloud
     #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAnImageFromABlob.json
     #
     def create_user_image(params)
-      @logger.debug("create_user_image - trying to create a user image '#{params[:name]}'")
+      CPILogger.instance.logger.debug("create_user_image - trying to create a user image '#{params[:name]}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: params[:name])
       user_image = {
         'location'   => params[:location],
@@ -969,7 +967,7 @@ module Bosh::AzureCloud
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
     #
     def delete_user_image(name)
-      @logger.debug("delete_user_image - trying to delete '#{name}'")
+      CPILogger.instance.logger.debug("delete_user_image - trying to delete '#{name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: name)
       http_delete(url)
     end
@@ -1039,7 +1037,7 @@ module Bosh::AzureCloud
     def create_managed_snapshot(resource_group_name, params)
       snapshot_name = params[:name]
       disk_name = params[:disk_name]
-      @logger.debug("create_managed_snapshot - trying to create a snapshot '#{snapshot_name}' for the managed disk '#{disk_name}'")
+      CPILogger.instance.logger.debug("create_managed_snapshot - trying to create a snapshot '#{snapshot_name}' for the managed disk '#{disk_name}'")
       disk = get_managed_disk_by_name(resource_group_name, disk_name)
       raise AzureNotFoundError, "The disk '#{disk_name}' cannot be found" if disk.nil?
 
@@ -1107,7 +1105,7 @@ module Bosh::AzureCloud
     #
     #
     def delete_managed_snapshot(resource_group_name, name)
-      @logger.debug("delete_managed_snapshot - trying to delete '#{name}' from resource group '#{resource_group_name}'")
+      CPILogger.instance.logger.debug("delete_managed_snapshot - trying to delete '#{name}' from resource group '#{resource_group_name}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -1230,7 +1228,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/network/delete-a-public-ip-address
     #
     def delete_public_ip(resource_group_name, name)
-      @logger.debug("delete_public_ip - trying to delete #{name} from resource group #{resource_group_name}")
+      CPILogger.instance.logger.debug("delete_public_ip - trying to delete #{name} from resource group #{resource_group_name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -1443,7 +1441,7 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/network/delete-a-network-interface-card
     #
     def delete_network_interface(resource_group_name, name)
-      @logger.debug("delete_network_interface - trying to delete #{name} from resource group #{resource_group_name}")
+      CPILogger.instance.logger.debug("delete_network_interface - trying to delete #{name} from resource group #{resource_group_name}")
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, resource_group_name: resource_group_name, name: name)
       http_delete(url)
     end
@@ -1664,13 +1662,13 @@ module Bosh::AzureCloud
       }
 
       uri = http_url(url)
-      @logger.info("create_storage_account - trying to put '#{uri}'")
+      CPILogger.instance.logger.info("create_storage_account - trying to put '#{uri}'")
 
       request = Net::HTTP::Put.new(uri.request_uri)
       request_body = storage_account.to_json
       request.body = request_body
       request['Content-Length'] = request_body.size
-      @logger.debug("create_storage_account - request body:\n#{redact_credentials_in_request_body(storage_account)}")
+      CPILogger.instance.logger.debug("create_storage_account - request body:\n#{redact_credentials_in_request_body(storage_account)}")
 
       retry_count = 0
       begin
@@ -1689,7 +1687,7 @@ module Bosh::AzureCloud
         loop do
           retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
           sleep(retry_after)
-          @logger.debug("create_storage_account - Checking the status of the asynchronous operation using '#{uri}' after '#{retry_after}' seconds.")
+          CPILogger.instance.logger.debug("create_storage_account - Checking the status of the asynchronous operation using '#{uri}' after '#{retry_after}' seconds.")
           response = http_get_response(uri, check_status_request, retry_after)
 
           status_code = response.code.to_i
@@ -1704,7 +1702,7 @@ module Bosh::AzureCloud
               error += "Error message: #{response.body}"
               if response.key?('Retry-After')
                 retry_after = response['Retry-After'].to_i
-                @logger.warn("create_storage_account - Fail for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
+                CPILogger.instance.logger.warn("create_storage_account - Fail for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
                 sleep(retry_after)
                 raise AzureAsynInternalError, error
               end
@@ -1713,7 +1711,7 @@ module Bosh::AzureCloud
             return true
           elsif status_code != HTTP_CODE_ACCEPTED
             error = "create_storage_account - http code: #{response.code}. Error message: #{response.body}"
-            @logger.error(error)
+            CPILogger.instance.logger.error(error)
             raise AzureAsynchronousError.new, error
           end
         end
@@ -2083,7 +2081,7 @@ module Bosh::AzureCloud
 
     def get_token(force_refresh = false)
       if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.new) <= 0 || force_refresh
-        @logger.info('get_token - trying to get/refresh Azure authentication token')
+        CPILogger.instance.logger.info('get_token - trying to get/refresh Azure authentication token')
         use_msi = @azure_config.enable_managed_service_identity
         use_ssl = !use_msi
         request, uri = use_msi ? request_from_managed_service_identity_endpoint : request_from_azure_active_directory_endpoint
@@ -2095,7 +2093,7 @@ module Bosh::AzureCloud
         while retry_count < max_retry_count
           response = http_get_response_with_network_retry(http(uri, use_ssl), request)
           message = get_http_common_headers(response)
-          @logger.debug("get_token - #{retry_count}: #{message}")
+          CPILogger.instance.logger.debug("get_token - #{retry_count}: #{message}")
           status_code = response.code.to_i
           break unless retryable_error_codes.include?(status_code)
 
@@ -2108,7 +2106,7 @@ module Bosh::AzureCloud
             # the base value of 2 is the "delta backoff" as specified in the guidance doc.
             delay += 2**retry_count
             delay = max_delay if delay > max_delay
-            @logger.debug("get_token - sleep #{delay} seconds before retrying")
+            CPILogger.instance.logger.debug("get_token - sleep #{delay} seconds before retrying")
             sleep(delay)
           end
         end
@@ -2128,20 +2126,20 @@ module Bosh::AzureCloud
 
     # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-protocols-oauth-service-to-service
     def request_from_azure_active_directory_endpoint
-      @logger.debug('Getting token from Azure Active Directory Endpoint')
+      CPILogger.instance.logger.debug('Getting token from Azure Active Directory Endpoint')
       endpoint, api_version = get_azure_authentication_endpoint_and_api_version(@azure_config)
       uri = URI(endpoint)
       params = {
         'api-version' => api_version
       }
       uri.query = URI.encode_www_form(params)
-      @logger.debug("authentication_endpoint: #{uri}")
+      CPILogger.instance.logger.debug("authentication_endpoint: #{uri}")
 
       request = Net::HTTP::Post.new(uri.request_uri)
       request['Content-Type'] = 'application/x-www-form-urlencoded'
       request = merge_http_common_headers(request)
-      @logger.debug('request.header:')
-      request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
+      CPILogger.instance.logger.debug('request.header:')
+      request.each_header { |k, v| CPILogger.instance.logger.debug("\t#{k} = #{v}") }
 
       client_id = @azure_config.client_id
       request_body = {
@@ -2157,14 +2155,14 @@ module Bosh::AzureCloud
         request_body['client_assertion']      = get_jwt_assertion(endpoint, client_id)
       end
       request.body = URI.encode_www_form(request_body)
-      @logger.debug("request body:\n#{redact_credentials_in_request_body(request_body)}")
+      CPILogger.instance.logger.debug("request body:\n#{redact_credentials_in_request_body(request_body)}")
 
       [request, uri]
     end
 
     # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token#get-a-token-using-http
     def request_from_managed_service_identity_endpoint
-      @logger.debug('Getting token from Azure VM Managed Service Identity')
+      CPILogger.instance.logger.debug('Getting token from Azure VM Managed Service Identity')
       endpoint, api_version = get_msi_endpoint_and_version
       uri = URI(endpoint)
       params = {
@@ -2172,13 +2170,13 @@ module Bosh::AzureCloud
         'api-version' => api_version
       }
       uri.query = URI.encode_www_form(params)
-      @logger.debug("authentication_endpoint: #{uri}")
+      CPILogger.instance.logger.debug("authentication_endpoint: #{uri}")
 
       request = Net::HTTP::Get.new(uri.request_uri)
       request['Metadata'] = true
       request = merge_http_common_headers(request)
-      @logger.debug('request.header:')
-      request.each_header { |k, v| @logger.debug("\t#{k} = #{v}") }
+      CPILogger.instance.logger.debug('request.header:')
+      request.each_header { |k, v| CPILogger.instance.logger.debug("\t#{k} = #{v}") }
 
       [request, uri]
     end
@@ -2211,7 +2209,7 @@ module Bosh::AzureCloud
         request['Content-Type']  = 'application/json'
         request['Authorization'] = 'Bearer ' + get_token(refresh_token)
         request = merge_http_common_headers(request)
-        @logger.debug("http_get_response - #{retry_count}: #{request.method}, x-ms-client-request-id: #{request['x-ms-client-request-id']}, URI: #{uri}")
+        CPILogger.instance.logger.debug("http_get_response - #{retry_count}: #{request.method}, x-ms-client-request-id: #{request['x-ms-client-request-id']}, URI: #{uri}")
         response = http_get_response_with_network_retry(http(uri), request)
 
         status_code = response.code.to_i
@@ -2223,14 +2221,14 @@ module Bosh::AzureCloud
                    else
                      "response.body: #{redact_credentials_in_response_body(response_body)}"
                    end
-        @logger.debug(message)
+        CPILogger.instance.logger.debug(message)
 
         if status_code == HTTP_CODE_UNAUTHORIZED
           message = "http_get_response - Azure authentication failed: Token is invalid. Error message: #{response_body}"
           if refresh_token
             cloud_error(message)
           else
-            @logger.debug(message)
+            CPILogger.instance.logger.debug(message)
             refresh_token = true
             next
           end
@@ -2245,7 +2243,7 @@ module Bosh::AzureCloud
         else
           retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
           message += "http_get_response - Will retry after #{retry_after} seconds"
-          @logger.debug(message)
+          CPILogger.instance.logger.debug(message)
           sleep(retry_after)
           refresh_token = false
         end
@@ -2264,7 +2262,7 @@ module Bosh::AzureCloud
       rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, EOFError => e
         if retry_count < AZURE_MAX_RETRY_COUNT
           retry_count += 1
-          @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: e.class.name))
+          CPILogger.instance.logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: e.class.name))
           sleep(retry_after)
           retry
         end
@@ -2272,7 +2270,7 @@ module Bosh::AzureCloud
       rescue OpenSSL::SSL::SSLError, OpenSSL::X509::StoreError => e
         if retry_count < AZURE_MAX_RETRY_COUNT && e.inspect.include?(ERROR_OPENSSL_RESET)
           retry_count += 1
-          @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: e.class.name))
+          CPILogger.instance.logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: e.class.name))
           sleep(retry_after)
           retry
         end
@@ -2282,12 +2280,12 @@ module Bosh::AzureCloud
         if retry_count < AZURE_MAX_RETRY_COUNT
           if e.inspect.include?(ERROR_SOCKET_UNKNOWN_HOSTNAME)
             retry_count += 1
-            @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: 'DNS resolve error'))
+            CPILogger.instance.logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: 'DNS resolve error'))
             sleep(retry_after)
             retry
           elsif e.inspect.include?(ERROR_CONNECTION_REFUSED)
             retry_count += 1
-            @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: 'connection refused error'))
+            CPILogger.instance.logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: 'connection refused error'))
             sleep(retry_after)
             retry
           end
@@ -2298,7 +2296,7 @@ module Bosh::AzureCloud
 
     def check_completion(response, options)
       operation_status_link = response['azure-asyncoperation']
-      @logger.debug("check_completion - checking the status of the asynchronous operation using '#{operation_status_link}'")
+      CPILogger.instance.logger.debug("check_completion - checking the status of the asynchronous operation using '#{operation_status_link}'")
       if options[:return_code].include?(response.code.to_i)
         if operation_status_link.nil?
           result = true
@@ -2327,7 +2325,7 @@ module Bosh::AzureCloud
         retry_after = response['Retry-After'].to_i if response.key?('Retry-After')
         sleep(retry_after)
 
-        @logger.debug("check_completion - trying to get the status of asynchronous operation: #{uri}")
+        CPILogger.instance.logger.debug("check_completion - trying to get the status of asynchronous operation: #{uri}")
         response = http_get_response(uri, request, retry_after)
         status_code = response.code.to_i
         raise AzureAsynchronousError.new, "check_completion - http code: #{response.code}. Error message: #{response.body}" if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
@@ -2341,7 +2339,7 @@ module Bosh::AzureCloud
         if status == PROVISIONING_STATE_SUCCEEDED
           return true
         elsif status == PROVISIONING_STATE_INPROGRESS
-          @logger.debug('check_completion - InProgress...')
+          CPILogger.instance.logger.debug('check_completion - InProgress...')
         else
           error = "check_completion - http code: #{response.code}\n"
           error += get_http_common_headers(response)
@@ -2349,7 +2347,7 @@ module Bosh::AzureCloud
 
           if status == PROVISIONING_STATE_FAILED && status_code == HTTP_CODE_OK && response.key?('Retry-After')
             retry_after = response['Retry-After'].to_i
-            @logger.warn("check_completion - #{options[:operation]} fails for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
+            CPILogger.instance.logger.warn("check_completion - #{options[:operation]} fails for an AzureAsynInternalError. Will retry after #{retry_after} seconds.")
             sleep(retry_after)
             raise AzureAsynInternalError, error
           end
@@ -2361,7 +2359,7 @@ module Bosh::AzureCloud
 
     def http_get(url, params = {}, retry_after = 5)
       uri = http_url(url, params)
-      @logger.info("http_get - trying to get #{uri}")
+      CPILogger.instance.logger.info("http_get - trying to get #{uri}")
       request = Net::HTTP::Get.new(uri.request_uri)
       response = http_get_response(uri, request, retry_after)
       status_code = response.code.to_i
@@ -2383,13 +2381,13 @@ module Bosh::AzureCloud
       retry_count = 0
 
       begin
-        @logger.info("http_put - #{retry_count}: trying to put #{uri}")
+        CPILogger.instance.logger.info("http_put - #{retry_count}: trying to put #{uri}")
         request = Net::HTTP::Put.new(uri.request_uri)
         unless body.nil?
           request_body = body.to_json
           request.body = request_body
           request['Content-Length'] = request_body.size
-          @logger.debug("http_put - request body:\n#{redact_credentials_in_request_body(body)}")
+          CPILogger.instance.logger.debug("http_put - request body:\n#{redact_credentials_in_request_body(body)}")
         end
 
         response = http_get_response(uri, request, retry_after)
@@ -2415,14 +2413,14 @@ module Bosh::AzureCloud
       retry_count = 0
 
       begin
-        @logger.info("http_patch - #{retry_count}: trying to patch #{uri}")
+        CPILogger.instance.logger.info("http_patch - #{retry_count}: trying to patch #{uri}")
 
         request = Net::HTTP::Patch.new(uri.request_uri)
         unless body.nil?
           request_body = body.to_json
           request.body = request_body
           request['Content-Length'] = request_body.size
-          @logger.debug("http_patch - request body:\n#{redact_credentials_in_request_body(body)}")
+          CPILogger.instance.logger.debug("http_patch - request body:\n#{redact_credentials_in_request_body(body)}")
         end
 
         response = http_get_response(uri, request, retry_after)
@@ -2448,7 +2446,7 @@ module Bosh::AzureCloud
       retry_count = 0
 
       begin
-        @logger.info("http_delete - #{retry_count}: trying to delete #{uri}")
+        CPILogger.instance.logger.info("http_delete - #{retry_count}: trying to delete #{uri}")
 
         request = Net::HTTP::Delete.new(uri.request_uri)
         response = http_get_response(uri, request, retry_after)
@@ -2474,14 +2472,14 @@ module Bosh::AzureCloud
       retry_count = 0
 
       begin
-        @logger.info("http_post - #{retry_count}: trying to post #{uri}")
+        CPILogger.instance.logger.info("http_post - #{retry_count}: trying to post #{uri}")
         request = Net::HTTP::Post.new(uri.request_uri)
         request['Content-Length'] = 0
         unless body.nil?
           request_body = body.to_json
           request.body = request_body
           request['Content-Length'] = request_body.size
-          @logger.debug("http_put - request body:\n#{redact_credentials_in_request_body(body)}")
+          CPILogger.instance.logger.debug("http_put - request body:\n#{redact_credentials_in_request_body(body)}")
         end
         response = http_get_response(uri, request, retry_after)
         options = {

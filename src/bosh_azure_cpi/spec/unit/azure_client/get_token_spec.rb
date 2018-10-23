@@ -6,7 +6,6 @@ require 'webmock/rspec'
 WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient do
-  let(:logger) { Bosh::Clouds::Config.logger }
   let(:subscription_id) { mock_azure_config.subscription_id }
   let(:tenant_id) { mock_azure_config.tenant_id }
   let(:client_id) { mock_azure_config.client_id }
@@ -32,8 +31,7 @@ describe Bosh::AzureCloud::AzureClient do
       context 'when the client_secret is provided' do
         let(:azure_client) do
           Bosh::AzureCloud::AzureClient.new(
-            mock_azure_config,
-            logger
+            mock_azure_config
           )
         end
         let(:token_params) do
@@ -74,8 +72,7 @@ describe Bosh::AzureCloud::AzureClient do
         end
         let(:azure_client) do
           Bosh::AzureCloud::AzureClient.new(
-            azure_config_without_client_secret,
-            logger
+            azure_config_without_client_secret
           )
         end
 
@@ -150,8 +147,7 @@ describe Bosh::AzureCloud::AzureClient do
       context 'when it responses a retryable error' do
         let(:azure_client) do
           Bosh::AzureCloud::AzureClient.new(
-            mock_azure_config,
-            logger
+            mock_azure_config
           )
         end
         let(:token_params) do
@@ -232,8 +228,7 @@ describe Bosh::AzureCloud::AzureClient do
             'managed_service_identity' => {
               'enabled' => true
             }
-          ),
-          logger
+          )
         )
       end
 

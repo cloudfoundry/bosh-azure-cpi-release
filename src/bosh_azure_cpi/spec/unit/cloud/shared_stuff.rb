@@ -3,7 +3,7 @@
 shared_context 'shared stuff' do
   let(:cloud) { mock_cloud }
   let(:registry_client) { mock_registry }
-  let(:azure_config) { cloud.config.azure }
+  let(:azure_config) { Bosh::AzureCloud::Config.instance.azure }
   let(:managed_cloud) { mock_cloud(mock_cloud_properties_merge('azure' => { 'use_managed_disks' => true })) }
   let(:use_vmss_cloud) do
     mock_cloud(
@@ -20,7 +20,7 @@ shared_context 'shared stuff' do
       )
     )
   end
-  let(:azure_config_managed) { managed_cloud.config.azure }
+  let(:azure_config_managed) { Bosh::AzureCloud::Config.instance.azure }
   let(:azure_client) { instance_double('Bosh::AzureCloud::AzureClient') }
   let(:blob_manager) { instance_double('Bosh::AzureCloud::BlobManager') }
   let(:disk_manager) { instance_double('Bosh::AzureCloud::DiskManager') }

@@ -5,7 +5,6 @@ module Bosh::AzureCloud
     include Helpers
 
     def initialize(table_manager)
-      @logger = Bosh::Clouds::Config.logger
       @table_manager = table_manager
     end
 
@@ -55,7 +54,7 @@ module Bosh::AzureCloud
       if storage_account_name.nil?
         entities = _query_table(name, nil)
         entities.each do |entity|
-          @logger.info("Delete records '#{entity['RowKey']}' whose PartitionKey is '#{entity['PartitionKey']}'")
+          CPILogger.instance.logger.info("Delete records '#{entity['RowKey']}' whose PartitionKey is '#{entity['PartitionKey']}'")
           @table_manager.delete_entity(STEMCELL_TABLE, entity['PartitionKey'], entity['RowKey'])
         end
       else

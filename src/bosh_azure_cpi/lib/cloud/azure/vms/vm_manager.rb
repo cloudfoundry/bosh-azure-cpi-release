@@ -15,12 +15,11 @@ module Bosh::AzureCloud
       @stemcell_manager2 = stemcell_manager2
       @light_stemcell_manager = light_stemcell_manager
       @use_managed_disks = azure_config.use_managed_disks
-      @logger = Bosh::Clouds::Config.logger
     end
 
     def create(bosh_vm_meta, location, vm_props, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
-      @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props}, ..., ...)")
+      CPILogger.instance.logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props}, ..., ...)")
 
       instance_id = _build_instance_id(bosh_vm_meta, location, vm_props)
 
@@ -220,7 +219,7 @@ module Bosh::AzureCloud
     end
 
     def delete(instance_id)
-      @logger.info("delete(#{instance_id})")
+      CPILogger.instance.logger.info("delete(#{instance_id})")
 
       resource_group_name = instance_id.resource_group_name
       vm_name = instance_id.vm_name
@@ -321,7 +320,7 @@ module Bosh::AzureCloud
     end
 
     def reboot(instance_id)
-      @logger.info("reboot(#{instance_id})")
+      CPILogger.instance.logger.info("reboot(#{instance_id})")
       @azure_client.restart_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name
@@ -329,7 +328,7 @@ module Bosh::AzureCloud
     end
 
     def set_metadata(instance_id, metadata)
-      @logger.info("set_metadata(#{instance_id}, #{metadata})")
+      CPILogger.instance.logger.info("set_metadata(#{instance_id}, #{metadata})")
       @azure_client.update_tags_of_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name,
@@ -344,7 +343,7 @@ module Bosh::AzureCloud
     # @param [DiskId] disk_id disk id
     # @return [String] lun
     def attach_disk(instance_id, disk_id)
-      @logger.info("attach_disk(#{instance_id}, #{disk_id})")
+      CPILogger.instance.logger.info("attach_disk(#{instance_id}, #{disk_id})")
       disk_name = disk_id.disk_name
       disk_params = _get_disk_params(disk_id, instance_id.use_managed_disks?)
       lun = @azure_client.attach_disk_to_virtual_machine(
@@ -356,7 +355,7 @@ module Bosh::AzureCloud
     end
 
     def detach_disk(instance_id, disk_id)
-      @logger.info("detach_disk(#{instance_id}, #{disk_id})")
+      CPILogger.instance.logger.info("detach_disk(#{instance_id}, #{disk_id})")
       @azure_client.detach_disk_from_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name,
@@ -405,7 +404,7 @@ module Bosh::AzureCloud
         retry_create = false
         if e.instance_of?(AzureAsynchronousError) && e.status == PROVISIONING_STATE_FAILED
           if (retry_create_count += 1) <= max_retries
-            @logger.info("create_virtual_machine - Retry #{retry_create_count}: will retry to create the virtual machine #{vm_name} which failed in provisioning")
+            CPILogger.instance.logger.info("create_virtual_machine - Retry #{retry_create_count}: will retry to create the virtual machine #{vm_name} which failed in provisioning")
             retry_create = true
           else
             # Keep the VM which fails in provisioning after multiple retries if "keep_failed_vms" is true in global configuration
@@ -416,7 +415,7 @@ module Bosh::AzureCloud
         unless @keep_failed_vms
           retry_delete_count = 0
           begin
-            @logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{vm_name} from resource group #{resource_group_name}. Retry #{retry_delete_count}.")
+            CPILogger.instance.logger.info("create_virtual_machine - cleanup resources of the failed virtual machine #{vm_name} from resource group #{resource_group_name}. Retry #{retry_delete_count}.")
 
             if availability_set
               flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set[:name]}", File::LOCK_SH) do

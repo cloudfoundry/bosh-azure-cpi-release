@@ -8,23 +8,22 @@ module Bosh::AzureCloud
     def initialize(azure_config, blob_manager)
       @azure_config = azure_config
       @blob_manager = blob_manager
-      @logger = Bosh::Clouds::Config.logger
     end
 
     def delete_disk(storage_account_name, disk_name)
-      @logger.info("delete_disk(#{storage_account_name}, #{disk_name})")
+      CPILogger.instance.logger.info("delete_disk(#{storage_account_name}, #{disk_name})")
       @blob_manager.delete_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd") if _has_disk?(storage_account_name, disk_name)
     end
 
     def delete_data_disk(disk_id)
-      @logger.info("delete_data_disk(#{disk_id})")
+      CPILogger.instance.logger.info("delete_data_disk(#{disk_id})")
       storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
       delete_disk(storage_account_name, disk_name)
     end
 
     def delete_vm_status_files(storage_account_name, prefix)
-      @logger.info("delete_vm_status_files(#{storage_account_name}, #{prefix})")
+      CPILogger.instance.logger.info("delete_vm_status_files(#{storage_account_name}, #{prefix})")
       blobs = @blob_manager.list_blobs(storage_account_name, DISK_CONTAINER, prefix).select do |blob|
         blob.name =~ /status$/
       end
@@ -32,18 +31,18 @@ module Bosh::AzureCloud
         @blob_manager.delete_blob(storage_account_name, DISK_CONTAINER, blob.name)
       end
     rescue StandardError => e
-      @logger.debug("delete_vm_status_files - error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+      CPILogger.instance.logger.debug("delete_vm_status_files - error: #{e.inspect}\n#{e.backtrace.join("\n")}")
     end
 
     def snapshot_disk(storage_account_name, disk_name, metadata)
-      @logger.info("snapshot_disk(#{storage_account_name}, #{disk_name}, #{metadata})")
+      CPILogger.instance.logger.info("snapshot_disk(#{storage_account_name}, #{disk_name}, #{metadata})")
       snapshot_time = @blob_manager.snapshot_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", metadata)
 
       _generate_snapshot_name(disk_name, snapshot_time)
     end
 
     def delete_snapshot(snapshot_id)
-      @logger.info("delete_snapshot(#{snapshot_id})")
+      CPILogger.instance.logger.info("delete_snapshot(#{snapshot_id})")
       storage_account_name = snapshot_id.storage_account_name
       snapshot_name = snapshot_id.disk_name
       disk_name, snapshot_time = _parse_snapshot_name(snapshot_name)
@@ -58,22 +57,22 @@ module Bosh::AzureCloud
     #
     # @return [void]
     def create_disk(disk_id, size)
-      @logger.info("create_disk(#{disk_id}, #{size})")
+      CPILogger.instance.logger.info("create_disk(#{disk_id}, #{size})")
       storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
-      @logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
+      CPILogger.instance.logger.info("Start to create an empty vhd blob: blob_name: #{disk_name}.vhd")
       @blob_manager.create_empty_vhd_blob(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", size)
     end
 
     def has_data_disk?(disk_id)
-      @logger.info("has_data_disk?(#{disk_id})")
+      CPILogger.instance.logger.info("has_data_disk?(#{disk_id})")
       storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
       _has_disk?(storage_account_name, disk_name)
     end
 
     def is_migrated?(disk_id)
-      @logger.info("is_migrated?(#{disk_id})")
+      CPILogger.instance.logger.info("is_migrated?(#{disk_id})")
       storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
       return false unless _has_disk?(storage_account_name, disk_name)
@@ -83,19 +82,19 @@ module Bosh::AzureCloud
     end
 
     def get_disk_uri(storage_account_name, disk_name)
-      @logger.info("get_disk_uri(#{storage_account_name}, #{disk_name})")
+      CPILogger.instance.logger.info("get_disk_uri(#{storage_account_name}, #{disk_name})")
       @blob_manager.get_blob_uri(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
     end
 
     def get_data_disk_uri(disk_id)
-      @logger.info("get_data_disk_uri(#{disk_id})")
+      CPILogger.instance.logger.info("get_data_disk_uri(#{disk_id})")
       storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
       get_disk_uri(storage_account_name, disk_name)
     end
 
     def get_disk_size_in_gb(disk_id)
-      @logger.info("get_disk_size_in_gb(#{disk_id})")
+      CPILogger.instance.logger.info("get_disk_size_in_gb(#{disk_id})")
       storage_account_name = disk_id.storage_account_name
       disk_name = disk_id.disk_name
       @blob_manager.get_blob_size_in_bytes(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd") / 1024 / 1024 / 1024
@@ -145,7 +144,7 @@ module Bosh::AzureCloud
     end
 
     def list_disks(storage_account_name)
-      @logger.info("list_disks(#{storage_account_name})")
+      CPILogger.instance.logger.info("list_disks(#{storage_account_name})")
       disks = []
       blobs = @blob_manager.list_blobs(storage_account_name, DISK_CONTAINER).select do |blob|
         blob.name =~ /vhd$/
@@ -162,7 +161,7 @@ module Bosh::AzureCloud
     private
 
     def _has_disk?(storage_account_name, disk_name)
-      @logger.info("_has_disk?(#{storage_account_name}, #{disk_name})")
+      CPILogger.instance.logger.info("_has_disk?(#{storage_account_name}, #{disk_name})")
       blob_properties = @blob_manager.get_blob_properties(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd")
       !blob_properties.nil?
     end

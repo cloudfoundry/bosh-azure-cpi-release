@@ -2,15 +2,15 @@
 
 module Bosh::AzureCloud
   class PropsFactory
-    attr_reader :config
+    attr_reader :azure_config
 
-    def initialize(config)
-      @config = config
+    def initialize(azure_config)
+      @azure_config = azure_config
     end
 
     def parse_vm_props(vm_properties)
       # TODO: add some validation logic here or in the VMCloudProps class.
-      Bosh::AzureCloud::VMCloudProps.new(vm_properties, @config.azure)
+      Bosh::AzureCloud::VMCloudProps.new(vm_properties, @azure_config)
     end
   end
 end

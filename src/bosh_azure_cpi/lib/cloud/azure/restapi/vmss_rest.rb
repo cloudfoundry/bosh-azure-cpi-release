@@ -350,7 +350,7 @@ module Bosh::AzureCloud
     def _get_vmss_by_name(resource_group_name, vmss_name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
       result = get_resource_by_id(url)
-      @logger.info("_get_vmss_by_name result is: #{result}")
+      CPILogger.instance.logger.info("_get_vmss_by_name result is: #{result}")
       result
     end
 
@@ -358,7 +358,7 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
       url += "/virtualMachines/#{vmss_instance_id}"
       result = get_resource_by_id(url)
-      @logger.info("_get_vmss_instance result is: #{result}")
+      CPILogger.instance.logger.info("_get_vmss_instance result is: #{result}")
       result
     end
   end

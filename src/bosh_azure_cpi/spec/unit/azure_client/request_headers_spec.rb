@@ -64,11 +64,9 @@ describe Bosh::AzureCloud::AzureClient do
 
     context 'parse http headers' do
       context 'when isv_tracking_guid is not provided' do
-        let(:logger) { Bosh::Clouds::Config.logger }
         let(:azure_client) do
           Bosh::AzureCloud::AzureClient.new(
-            mock_azure_config,
-            logger
+            mock_azure_config
           )
         end
         let(:default_isv_tracking_guid) { 'pid-563bbbca-7944-4791-b9c6-8af0928114ac' }
@@ -109,12 +107,10 @@ describe Bosh::AzureCloud::AzureClient do
       end
 
       context 'when isv_tracking_guid is provided' do
-        let(:logger) { Bosh::Clouds::Config.logger }
         let(:isv_tracking_guid) { 'fake-isv-tracking-guid' }
         let(:azure_client) do
           Bosh::AzureCloud::AzureClient.new(
-            mock_azure_config_merge('isv_tracking_guid' => isv_tracking_guid),
-            logger
+            mock_azure_config_merge('isv_tracking_guid' => isv_tracking_guid)
           )
         end
 

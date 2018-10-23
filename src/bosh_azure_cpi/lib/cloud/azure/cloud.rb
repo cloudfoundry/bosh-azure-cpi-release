@@ -3,7 +3,6 @@
 module Bosh::AzureCloud
   class Cloud < Bosh::Cloud
     attr_reader   :registry
-    attr_reader   :config
     # Below defines are for test purpose
     attr_reader   :azure_client, :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper
     attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
@@ -14,27 +13,25 @@ module Bosh::AzureCloud
     # Cloud initialization
     #
     # @param [Hash] options cloud options
-    def initialize(options)
-      options_dup = options.dup.freeze
-
-      @logger = Bosh::Clouds::Config.logger
-
-      @config = Bosh::AzureCloud::ConfigFactory.build(options_dup)
-
-      request_id = options_dup['azure']['request_id']
-      Bosh::AzureCloud::CPILogger.set_request_id(request_id) if request_id
+    def initialize
+      request_id = config.azure.request_id
+      CPILogger.instance.set_request_id(request_id) if request_id
 
       @use_managed_disks = _azure_config.use_managed_disks
 
       _init_cpi_lock_dir
 
-      @props_factory = Bosh::AzureCloud::PropsFactory.new(@config)
+      @props_factory = Bosh::AzureCloud::PropsFactory.new(_azure_config)
 
       @telemetry_manager = Bosh::AzureCloud::TelemetryManager.new(_azure_config)
       @telemetry_manager.monitor('initialize') do
         _init_registry
         _init_azure
       end
+    end
+
+    def config
+      Bosh::AzureCloud::Config.instance
     end
 
     ##
@@ -126,7 +123,7 @@ module Bosh::AzureCloud
     #
     def create_vm(agent_id, stemcell_cid, cloud_properties, networks, disk_cids = nil, environment = nil)
       # environment may contain credentials so we must not log it
-      @logger.info("create_vm(#{agent_id}, #{stemcell_cid}, #{cloud_properties}, #{networks}, #{disk_cids}, ...)")
+      CPILogger.instance.logger.info("create_vm(#{agent_id}, #{stemcell_cid}, #{cloud_properties}, #{networks}, #{disk_cids}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
         bosh_vm_meta = Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_cid)
         vm_props = @props_factory.parse_vm_props(cloud_properties)
@@ -154,7 +151,7 @@ module Bosh::AzureCloud
             environment
           )
 
-          @logger.info("Created new vm '#{instance_id}'")
+          CPILogger.instance.logger.info("Created new vm '#{instance_id}'")
 
           begin
             registry_settings = _initial_agent_settings(
@@ -166,7 +163,7 @@ module Bosh::AzureCloud
             registry.update_settings(instance_id.to_s, registry_settings)
             instance_id.to_s
           rescue StandardError => e
-            @logger.error(%(Failed to update registry after new vm was created: #{e.inspect}\n#{e.backtrace.join("\n")}))
+            CPILogger.instance.logger.error(%(Failed to update registry after new vm was created: #{e.inspect}\n#{e.backtrace.join("\n")}))
             @vm_manager.delete(instance_id)
             raise e
           end
@@ -189,7 +186,7 @@ module Bosh::AzureCloud
     def delete_vm(vm_cid)
       with_thread_name("delete_vm(#{vm_cid})") do
         @telemetry_manager.monitor('delete_vm', id: vm_cid) do
-          @logger.info("Deleting instance '#{vm_cid}'")
+          CPILogger.instance.logger.info("Deleting instance '#{vm_cid}'")
           @vm_manager.delete(CloudIdParser.parse(vm_cid, _azure_config.resource_group_name))
         end
       end
@@ -245,7 +242,7 @@ module Bosh::AzureCloud
     def set_vm_metadata(vm_cid, metadata)
       with_thread_name("set_vm_metadata(#{vm_cid})") do
         @telemetry_manager.monitor('set_vm_metadata', id: vm_cid) do
-          @logger.info("set_vm_metadata(#{vm_cid}, #{metadata})")
+          CPILogger.instance.logger.info("set_vm_metadata(#{vm_cid}, #{metadata})")
           @vm_manager.set_metadata(CloudIdParser.parse(vm_cid, _azure_config.resource_group_name), encode_metadata(metadata))
         end
       end
@@ -266,7 +263,7 @@ module Bosh::AzureCloud
     def calculate_vm_cloud_properties(desired_instance_size)
       with_thread_name("calculate_vm_cloud_properties(#{desired_instance_size})") do
         @telemetry_manager.monitor('calculate_vm_cloud_properties') do
-          @logger.info("calculate_vm_cloud_properties(#{desired_instance_size})")
+          CPILogger.instance.logger.info("calculate_vm_cloud_properties(#{desired_instance_size})")
           location = _azure_config.location
           cloud_error("Missing the property 'location' in the global configuration") if location.nil?
 
@@ -312,7 +309,7 @@ module Bosh::AzureCloud
           if @use_managed_disks
             zone = nil
             if vm_cid.nil?
-              @logger.info('vm_cid is nil')
+              CPILogger.instance.logger.info('vm_cid is nil')
               # If instance_id is nil, the managed disk will be created in the resource group location.
               resource_group_name = _azure_config.resource_group_name
               resource_group = @azure_client.get_resource_group(resource_group_name)
@@ -320,7 +317,7 @@ module Bosh::AzureCloud
               default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
               zone = nil
             else
-              @logger.info("vm_cid is not nil, #{vm_cid}")
+              CPILogger.instance.logger.info("vm_cid is not nil, #{vm_cid}")
               instance_id_obj = CloudIdParser.parse(vm_cid, _azure_config.resource_group_name)
               cloud_error('Cannot create a managed disk for a VM with unmanaged disks') unless instance_id_obj.use_managed_disks?
               resource_group_name = instance_id_obj.resource_group_name
@@ -349,7 +346,7 @@ module Bosh::AzureCloud
             validate_disk_caching(caching)
             unless vm_cid.nil?
               instance_id = CloudIdParser.parse(vm_cid, _azure_config.resource_group_name)
-              @logger.info("Create disk for vm '#{instance_id.vm_name}'")
+              CPILogger.instance.logger.info("Create disk for vm '#{instance_id.vm_name}'")
               storage_account_name = instance_id.storage_account_name
             end
             disk_id = DiskId.create(caching, false, storage_account_name: storage_account_name)
@@ -405,7 +402,7 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/resize-disk/
     #
     def resize_disk(disk_cid, new_size)
-      @logger.info("resize_disk(#{disk_cid}, #{new_size})")
+      CPILogger.instance.logger.info("resize_disk(#{disk_cid}, #{new_size})")
       raise Bosh::Clouds::NotSupported
     end
 
@@ -481,7 +478,7 @@ module Bosh::AzureCloud
             has_ephemeral_disk = true if is_ephemeral_disk?(disk[:name])
           end
           unless has_ephemeral_disk
-            @logger.debug('Sleep 30 seconds before attaching data disk - workaround for issue #280')
+            CPILogger.instance.logger.debug('Sleep 30 seconds before attaching data disk - workaround for issue #280')
             sleep(30)
           end
 
@@ -500,7 +497,7 @@ module Bosh::AzureCloud
                     location = storage_account[:location]
                     # Can not use the type of the default storage account because only Standard_LRS and Premium_LRS are supported for managed disk.
                     account_type = storage_account[:account_type] == STORAGE_ACCOUNT_TYPE_PREMIUM_LRS ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
-                    @logger.debug("attach_disk - Migrating the unmanaged disk '#{disk_name}' to a managed disk")
+                    CPILogger.instance.logger.debug("attach_disk - Migrating the unmanaged disk '#{disk_name}' to a managed disk")
                     @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type, vm_zone)
 
                     # Set below metadata but not delete it.
@@ -511,7 +508,7 @@ module Bosh::AzureCloud
                       begin
                         @disk_manager2.delete_data_disk(disk_id)
                       rescue StandardError => err
-                        @logger.error("attach_disk - Failed to delete the created managed disk #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
+                        CPILogger.instance.logger.error("attach_disk - Failed to delete the created managed disk #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
                       end
                     end
                     cloud_error("attach_disk - Failed to create the managed disk for #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
@@ -526,7 +523,7 @@ module Bosh::AzureCloud
               end
             else
               cloud_error('Cannot attach a managed disk to a VM with unmanaged disks') unless disk.nil?
-              @logger.debug("attach_disk - although use_managed_disks is enabled, will still attach the unmanaged disk '#{disk_name}' to the VM '#{instance_id.vm_name}' with unmanaged disks")
+              CPILogger.instance.logger.debug("attach_disk - although use_managed_disks is enabled, will still attach the unmanaged disk '#{disk_name}' to the VM '#{instance_id.vm_name}' with unmanaged disks")
             end
           end
 
@@ -541,7 +538,7 @@ module Bosh::AzureCloud
             }
           end
 
-          @logger.info("Attached the disk '#{disk_id}' to the instance '#{instance_id}', lun '#{lun}'")
+          CPILogger.instance.logger.info("Attached the disk '#{disk_id}' to the instance '#{instance_id}', lun '#{lun}'")
         end
       end
     end
@@ -574,7 +571,7 @@ module Bosh::AzureCloud
             CloudIdParser.parse(disk_cid, _azure_config.resource_group_name)
           )
 
-          @logger.info("Detached '#{disk_cid}' from '#{vm_cid}'")
+          CPILogger.instance.logger.info("Detached '#{disk_cid}' from '#{vm_cid}'")
         end
       end
     end
@@ -591,7 +588,7 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/set-disk-metadata/
     #
     def set_disk_metadata(disk_cid, metadata)
-      @logger.info("set_disk_metadata(#{disk_cid}, #{metadata})")
+      CPILogger.instance.logger.info("set_disk_metadata(#{disk_cid}, #{metadata})")
       raise Bosh::Clouds::NotImplemented
     end
 
@@ -652,7 +649,7 @@ module Bosh::AzureCloud
             end
           end
 
-          @logger.info("Take a snapshot '#{snapshot_id}' for the disk '#{disk_id}'")
+          CPILogger.instance.logger.info("Take a snapshot '#{snapshot_id}' for the disk '#{disk_id}'")
           snapshot_id.to_s
         end
       end
@@ -677,7 +674,7 @@ module Bosh::AzureCloud
           else
             @disk_manager.delete_snapshot(snapshot_id)
           end
-          @logger.info("The snapshot '#{snapshot_id}' is deleted")
+          CPILogger.instance.logger.info("The snapshot '#{snapshot_id}' is deleted")
         end
       end
     end
@@ -694,7 +691,7 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/configure-networks/
     #
     def configure_networks(vm_cid, networks)
-      @logger.info("configure_networks(#{vm_cid}, #{networks})")
+      CPILogger.instance.logger.info("configure_networks(#{vm_cid}, #{networks})")
       # Azure does not support to configure the network of an existing VM,
       # so we need to notify the InstanceUpdater to recreate it
       raise Bosh::Clouds::NotSupported
@@ -709,25 +706,37 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/current-vm-id/
     #
     def current_vm_id
-      @logger.info('current_vm_id')
+      CPILogger.instance.logger.info('current_vm_id')
       raise Bosh::Clouds::NotSupported
     end
 
     private
 
     def _azure_config
-      @config.azure
+      Bosh::AzureCloud::Config.instance.azure
+    end
+
+    def _agent_config
+      Bosh::AzureCloud::Config.instance.agent
+    end
+
+    def _registry_config
+      Bosh::AzureCloud::Config.instance.registry
     end
 
     def _init_registry
       # Registry updates are not really atomic in relation to
       # Azure API calls, so they might get out of sync.
-      @registry = Bosh::Cpi::RegistryClient.new(@config.registry.endpoint, @config.registry.user, @config.registry.password)
+      @registry = Bosh::Cpi::RegistryClient.new(
+        _registry_config.endpoint,
+        _registry_config.user,
+        _registry_config.password
+      )
     end
 
     def _init_azure
       # get the default storage account.
-      @azure_client            = Bosh::AzureCloud::AzureClient.new(_azure_config, @logger)
+      @azure_client            = Bosh::AzureCloud::AzureClient.new(_azure_config)
       @blob_manager            = Bosh::AzureCloud::BlobManager.new(_azure_config, @azure_client)
       @disk_manager            = Bosh::AzureCloud::DiskManager.new(_azure_config, @blob_manager)
       @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(_azure_config, @blob_manager, @azure_client)
@@ -748,7 +757,7 @@ module Bosh::AzureCloud
     end
 
     def _init_cpi_lock_dir
-      @logger.info('_init_cpi_lock_dir: Initializing the CPI lock directory')
+      CPILogger.instance.logger.info('_init_cpi_lock_dir: Initializing the CPI lock directory')
       FileUtils.mkdir_p(CPI_LOCK_DIR)
     end
 
@@ -786,7 +795,7 @@ module Bosh::AzureCloud
       end
 
       settings['env'] = environment if environment
-      settings.merge(@config.agent.to_h)
+      settings.merge(_agent_config.to_h)
     end
 
     def _update_agent_settings(instance_id)
