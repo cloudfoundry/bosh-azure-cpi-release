@@ -180,7 +180,7 @@ module Bosh::AzureCloud
         instance_id.resource_group_name,
         instance_id.vmss_name,
         instance_id.vmss_instance_id,
-        disk_id
+        disk_id.disk_name
       )
     end
 
