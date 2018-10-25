@@ -27,4 +27,5 @@ shared_context 'shared stuff for azure client' do
   let(:vmss_name) { 'fake_vmss_name' }
   let(:vmss_instance_id) { '0' }
   let(:disk_id) { 'fake-disk-id' }
+  let(:disk_name) { 'fake-disk-name' }
 end
