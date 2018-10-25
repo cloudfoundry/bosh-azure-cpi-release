@@ -231,9 +231,10 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
-  describe '#scale_vmss_up' do
+  describe '#update_vmss_sku' do
     context 'when everything ok' do
       let(:number) { 1 }
+      let(:sku_name) { "fake_sku_name" }
       let(:vmss_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets/#{vmss_name}?api-version=#{api_version_compute}" }
       let(:vmss_uri_put) { "#{vmss_uri}&validating=true" }
       let(:vmss_result) do
@@ -263,7 +264,7 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect do
-          azure_client.scale_vmss_up(resource_group, vmss_name, number)
+          azure_client.update_vmss_sku(resource_group, vmss_name, sku_name, number)
         end.not_to raise_error
       end
     end

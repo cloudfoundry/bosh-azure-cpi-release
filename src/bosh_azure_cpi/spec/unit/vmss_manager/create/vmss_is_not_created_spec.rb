@@ -25,7 +25,7 @@ describe Bosh::AzureCloud::VMSSManager do
             .and_return('linux')
           allow(azure_client).to receive(:get_vmss_by_name)
             .and_return({})
-          allow(azure_client).to receive(:scale_vmss_up)
+          allow(azure_client).to receive(:update_vmss_sku)
           allow(azure_client).to receive(:get_vmss_instances)
             .and_return(
               [

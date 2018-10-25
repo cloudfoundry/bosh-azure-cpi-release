@@ -151,10 +151,11 @@ module Bosh::AzureCloud
 
     # Will call the update api of the vmss
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesets/createorupdate
-    def scale_vmss_up(resource_group_name, vmss_name, number)
+    def update_vmss_sku(resource_group_name, vmss_name, sku_name, number)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
       vmss = _get_vmss_by_name(resource_group_name, vmss_name)
       vmss['sku']['capacity'] = vmss['sku']['capacity'].to_i + number
+      vmss['sku']['name'] = sku_name
       params = {
         'validating' => 'true'
       }
