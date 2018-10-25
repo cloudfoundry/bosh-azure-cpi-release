@@ -328,9 +328,7 @@ describe Bosh::AzureCloud::AzureClient do
           storageProfile: {
             dataDisks: [
               {
-                managedDisk: {
-                  id: disk_id
-                }
+                name: disk_name
               }
             ]
           },
@@ -360,7 +358,7 @@ describe Bosh::AzureCloud::AzureClient do
         headers: {}
       )
       expect do
-        azure_client.detach_disk_from_vmss_instance(resource_group, vmss_name, vmss_instance_id, disk_id)
+        azure_client.detach_disk_from_vmss_instance(resource_group, vmss_name, vmss_instance_id, disk_name)
       end.not_to raise_error
     end
   end

@@ -279,18 +279,18 @@ module Bosh::AzureCloud
     # @param [String] resource_group_name  - Name of resource group.
     # @param [String] vmss_name  - Name of the vmss.
     # @param [String] vmss_instance_id  - Id of the instance.
-    # @param [String] disk_id  - id of the disk to be detached.
+    # @param [String] disk_name  - name of the disk to be detached.
     # @return [Boolean]
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesetvms/update
-    def detach_disk_from_vmss_instance(resource_group_name, vmss_name, vmss_instance_id, disk_id)
+    def detach_disk_from_vmss_instance(resource_group_name, vmss_name, vmss_instance_id, disk_name)
       vmss_instance = _get_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
       found = false
       vmss_instance['properties']['storageProfile']['dataDisks'].delete_if do |i|
-        result = i['managedDisk']['id'] == disk_id
+        result = i['name'] == disk_name
         found = true if result
         found
       end
-      raise Bosh::Clouds::CloudError, "disk id: #{disk_id} not found in vmss: #{vmss_name} instance_id: #{vmss_instance_id}." unless found
+      raise Bosh::Clouds::CloudError, "disk id: #{disk_name} not found in vmss: #{vmss_name} instance_id: #{vmss_instance_id}." unless found
 
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name)
       url += "/virtualMachines/#{vmss_instance_id}"
