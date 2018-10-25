@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::VMSSManager do
           .and_return(config_disk_resource)
         expect(azure_client).to receive(:attach_disk_to_vmss_instance)
         expect do
-          vmss_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env_with_group)
+          vmss_manager.create(bosh_vm_meta, vm_props, network_configurator, env_with_group)
         end.not_to raise_error
       end
     end
@@ -63,7 +63,7 @@ describe Bosh::AzureCloud::VMSSManager do
           .and_return(config_disk_resource)
         expect(azure_client).to receive(:attach_disk_to_vmss_instance)
         expect do
-          vmss_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env_with_long_name_group)
+          vmss_manager.create(bosh_vm_meta, vm_props, network_configurator, env_with_long_name_group)
         end.not_to raise_error
       end
     end

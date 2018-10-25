@@ -14,6 +14,7 @@ describe Bosh::AzureCloud::VMManager do
       before do
         allow(azure_client).to receive(:create_virtual_machine)
         allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
+        allow(vm_props).to receive(:location).and_return(location)
       end
 
       # Stemcell
@@ -24,7 +25,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect(azure_client).to receive(:create_network_interface).exactly(2).times
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:image_uri]).to eq(stemcell_uri)
             expect(vm_params[:os_type]).to eq(os_type)
@@ -53,7 +54,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect(azure_client).to receive(:create_network_interface).twice
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:os_type]).to eq(os_type)
           end
@@ -63,6 +64,10 @@ describe Bosh::AzureCloud::VMManager do
   end
 
   describe '#get_stemcell_info' do
+    before do
+      allow(vm_props).to receive(:location).and_return(location)
+    end
+
     context 'when managed disks are used' do
       let(:storage_account_name) { nil }
 
@@ -76,7 +81,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should raise an error' do
             expect do
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, storage_account_name)
             end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
           end
         end
@@ -91,7 +96,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, storage_account_name)
             ).to be(stemcell_info)
           end
         end
@@ -111,7 +116,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, storage_account_name)
             ).to be(stemcell_info)
           end
         end
@@ -127,7 +132,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return the stemcell info' do
             expect do
-              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager2.send(:_get_stemcell_info, stemcell_id, vm_props, storage_account_name)
             end.to raise_error(/Failed to get the user image information for the stemcell '#{stemcell_id}'/)
           end
         end
@@ -143,7 +148,7 @@ describe Bosh::AzureCloud::VMManager do
 
       before do
         allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
-          .with(vm_props, location)
+          .with(vm_props)
           .and_return(storage_account)
       end
 
@@ -158,7 +163,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should raise an error' do
             expect do
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, storage_account_name)
             end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
           end
         end
@@ -173,7 +178,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return the stemcell info' do
             expect(
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, storage_account_name)
             ).to be(stemcell_info)
           end
         end
@@ -192,7 +197,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should raise an error' do
             expect do
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, storage_account_name)
             end.to raise_error("Given stemcell '#{stemcell_id}' does not exist")
           end
         end
@@ -211,7 +216,7 @@ describe Bosh::AzureCloud::VMManager do
 
           it 'should return stemcell info' do
             expect(
-              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, location, storage_account_name)
+              vm_manager.send(:_get_stemcell_info, stemcell_id, vm_props, storage_account_name)
             ).to be(stemcell_info)
           end
         end

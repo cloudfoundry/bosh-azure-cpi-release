@@ -29,6 +29,7 @@ describe Bosh::AzureCloud::VMManager do
     end
     before do
       allow(azure_client).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
+      allow(vm_props).to receive(:location).and_return(location)
     end
 
     let(:storage_account_name) { 'fake-storage-account-name-in-resource-pool' }
@@ -47,7 +48,7 @@ describe Bosh::AzureCloud::VMManager do
 
       it 'should return the default storage account' do
         expect(
-          vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+          vm_manager.get_storage_account_from_vm_properties(vm_props)
         ).to be(default_storage_account)
       end
     end
@@ -68,7 +69,7 @@ describe Bosh::AzureCloud::VMManager do
             .with(storage_account_name, {}, 'fake-storage_account_type', 'StorageV2', location, %w[bosh stemcell], false)
             .and_return(storage_account)
           expect(
-            vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+            vm_manager.get_storage_account_from_vm_properties(vm_props)
           ).to be(storage_account)
         end
       end
@@ -137,7 +138,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(disk_manager).not_to receive(:list_disks).with('patten')
                 expect(disk_manager).not_to receive(:list_disks).with('foo')
 
-                vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                vm_manager.get_storage_account_from_vm_properties(vm_props)
               end
             end
 
@@ -162,7 +163,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(disk_manager).not_to receive(:list_disks).with('foo')
 
                 expect(
-                  vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                  vm_manager.get_storage_account_from_vm_properties(vm_props)
                 ).to eq(
                   name: '4pattern4',
                   location: 'fake-location'
@@ -184,7 +185,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect do
-                  vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                  vm_manager.get_storage_account_from_vm_properties(vm_props)
                 end.to raise_error(/get_storage_account_from_vm_properties - Cannot find an available storage account./)
               end
             end
@@ -201,7 +202,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).not_to receive(:create_storage_account)
 
                 expect do
-                  vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                  vm_manager.get_storage_account_from_vm_properties(vm_props)
                 end.to raise_error(/get_storage_account_from_vm_properties - Cannot find an available storage account./)
               end
             end
@@ -224,7 +225,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect do
-                  vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                  vm_manager.get_storage_account_from_vm_properties(vm_props)
                 end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
               end
             end
@@ -244,7 +245,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(disk_manager).not_to receive(:list_disks)
 
                 expect do
-                  vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                  vm_manager.get_storage_account_from_vm_properties(vm_props)
                 end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
               end
             end
@@ -265,7 +266,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect do
-                vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                vm_manager.get_storage_account_from_vm_properties(vm_props)
               end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
             end
           end
@@ -285,7 +286,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect do
-                vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                vm_manager.get_storage_account_from_vm_properties(vm_props)
               end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
             end
           end
@@ -305,7 +306,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(disk_manager).not_to receive(:list_disks)
 
               expect do
-                vm_manager.get_storage_account_from_vm_properties(vm_props, location)
+                vm_manager.get_storage_account_from_vm_properties(vm_props)
               end.to raise_error(/get_storage_account_from_vm_properties - storage_account_name in vm_types or vm_extensions is invalid./)
             end
           end

@@ -17,11 +17,11 @@ module Bosh::AzureCloud
       @use_managed_disks = azure_config.use_managed_disks
     end
 
-    def create(bosh_vm_meta, location, vm_props, network_configurator, env)
+    def create(bosh_vm_meta, vm_props, network_configurator, env)
       # network_configurator contains service principal in azure_config so we must not log it.
-      CPILogger.instance.logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props}, ..., ...)")
+      CPILogger.instance.logger.info("create(#{bosh_vm_meta}, #{vm_props}, ..., ...)")
 
-      instance_id = _build_instance_id(bosh_vm_meta, location, vm_props)
+      instance_id = _build_instance_id(bosh_vm_meta, vm_props)
 
       resource_group_name = vm_props.resource_group_name
       vm_name = instance_id.vm_name
@@ -33,7 +33,7 @@ module Bosh::AzureCloud
         cloud_error("'#{zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(zone.to_s)
       end
 
-      _ensure_resource_group_exists(resource_group_name, location)
+      _ensure_resource_group_exists(resource_group_name, vm_props.location)
 
       # tasks to prepare resources for VM
       #   * prepare stemcell
@@ -44,7 +44,7 @@ module Bosh::AzureCloud
 
       tasks.push(
         task_get_stemcell_info = Concurrent::Future.execute do
-          _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location, instance_id.storage_account_name)
+          _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, instance_id.storage_account_name)
         end
       )
 
@@ -57,19 +57,19 @@ module Bosh::AzureCloud
       primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
       tasks.push(
         task_create_network_interfaces = Concurrent::Future.execute do
-          _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
+          _create_network_interfaces(resource_group_name, vm_name, vm_props, network_configurator, primary_nic_tags)
         end
       )
 
       tasks.push(
         task_get_or_create_availability_set = Concurrent::Future.execute do
-          availability_set = _get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
+          availability_set = _get_or_create_availability_set(resource_group_name, availability_set_name, vm_props)
         end
       )
 
       tasks.push(
         task_get_diagnostics_storage_account = Concurrent::Future.execute do
-          diagnostics_storage_account = _get_diagnostics_storage_account(location)
+          diagnostics_storage_account = _get_diagnostics_storage_account(vm_props.location)
         end
       )
 
@@ -87,7 +87,7 @@ module Bosh::AzureCloud
       # create vm params
       vm_params = {
         name: vm_name,
-        location: location,
+        location: vm_props.location,
         tags: _get_tags(vm_props),
         vm_size: vm_props.instance_type,
         managed: @use_managed_disks
@@ -365,11 +365,11 @@ module Bosh::AzureCloud
 
     private
 
-    def _build_instance_id(bosh_vm_meta, location, vm_props)
+    def _build_instance_id(bosh_vm_meta, vm_props)
       if @use_managed_disks
         instance_id = VMInstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id)
       else
-        storage_account = get_storage_account_from_vm_properties(vm_props, location)
+        storage_account = get_storage_account_from_vm_properties(vm_props)
         instance_id = VMInstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id, storage_account[:name])
       end
       instance_id

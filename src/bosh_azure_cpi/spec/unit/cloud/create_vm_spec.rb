@@ -132,7 +132,7 @@ describe Bosh::AzureCloud::Cloud do
       end
       before do
         allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
-          .with(vm_props, location)
+          .with(vm_props)
           .and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?)
           .with(storage_account_name, stemcell_cid)
@@ -151,7 +151,7 @@ describe Bosh::AzureCloud::Cloud do
 
       it 'should create the VM in the specified resource group' do
         expect(vm_manager).to receive(:create)
-          .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+          .with(bosh_vm_meta, vm_props, network_configurator, environment)
           .and_return([instance_id, vm_params])
         expect(registry_client).to receive(:update_settings)
 
@@ -219,7 +219,7 @@ describe Bosh::AzureCloud::Cloud do
 
       before do
         allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
-          .with(vm_props, location)
+          .with(vm_props)
           .and_return(storage_account)
         allow(stemcell_manager).to receive(:has_stemcell?)
           .with(storage_account_name, stemcell_cid)
@@ -257,7 +257,7 @@ describe Bosh::AzureCloud::Cloud do
 
           it 'should create the VM in the specified resource group' do
             expect(vm_manager).to receive(:create)
-              .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+              .with(bosh_vm_meta, vm_props, network_configurator, environment)
               .and_return([instance_id, vm_params])
             expect(registry_client).to receive(:update_settings)
 
@@ -392,7 +392,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should create the VM in the specified resource group' do
           expect(vm_manager).to receive(:create)
-            .with(bosh_vm_meta, location, vm_props, network_configurator, environment)
+            .with(bosh_vm_meta, vm_props, network_configurator, environment)
             .and_return([instance_id, vm_params])
           expect(registry_client).to receive(:update_settings)
 

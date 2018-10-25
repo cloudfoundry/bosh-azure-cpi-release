@@ -66,7 +66,7 @@ module Bosh::AzureCloud
       application_gateway
     end
 
-    def _get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
+    def _get_or_create_public_ip(resource_group_name, vm_name, vm_props, network_configurator)
       public_ip = _get_public_ip(network_configurator.vip_network)
       if public_ip.nil? && vm_props.assign_dynamic_public_ip == true
         # create dynamic public ip
@@ -74,7 +74,7 @@ module Bosh::AzureCloud
         validate_idle_timeout(idle_timeout_in_minutes)
         public_ip_params = {
           name: vm_name,
-          location: location,
+          location: vm_props.location,
           is_static: false,
           idle_timeout_in_minutes: idle_timeout_in_minutes
         }
@@ -85,7 +85,7 @@ module Bosh::AzureCloud
       public_ip
     end
 
-    def _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
+    def _create_network_interfaces(resource_group_name, vm_name, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
       # Tasks to prepare before creating NICs:
       #   * preapre public ip
       #   * prepare load balancer
@@ -94,7 +94,7 @@ module Bosh::AzureCloud
 
       tasks_preparing.push(
         task_get_or_create_public_ip = Concurrent::Future.execute do
-          _get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
+          _get_or_create_public_ip(resource_group_name, vm_name, vm_props, network_configurator)
         end
       )
       tasks_preparing.push(
@@ -127,7 +127,7 @@ module Bosh::AzureCloud
         nic_name = "#{vm_name}-#{index}"
         nic_params = {
           name: nic_name,
-          location: location,
+          location: vm_props.location,
           private_ip: network.is_a?(ManualNetwork) ? network.private_ip : nil,
           network_security_group: network_security_group,
           application_security_groups: application_security_groups,

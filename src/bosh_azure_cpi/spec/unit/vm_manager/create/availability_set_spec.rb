@@ -12,6 +12,7 @@ describe Bosh::AzureCloud::VMManager do
         allow(azure_client).to receive(:create_virtual_machine)
         allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
         allow(vm_manager2).to receive(:_get_stemcell_info).and_return(stemcell_info)
+        allow(vm_props).to receive(:location).and_return(location)
       end
 
       # Availability Set
@@ -44,7 +45,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).to receive(:delete_network_interface).exactly(2).times
 
             expect do
-              vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
             end.to raise_error /availability set is not created/
           end
         end
@@ -94,7 +95,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(MOCK_RESOURCE_GROUP_NAME, avset_params)
             expect(azure_client).to receive(:create_network_interface).twice
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -150,7 +151,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:create_availability_set)
                 .with(MOCK_RESOURCE_GROUP_NAME, avset_params)
 
-              _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
               expect(vm_params[:name]).to eq(vm_name)
             end
           end
@@ -201,7 +202,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_availability_set)
                   .with(MOCK_RESOURCE_GROUP_NAME, avset_params)
 
-                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -237,7 +238,7 @@ describe Bosh::AzureCloud::VMManager do
 
                 expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
 
-                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -293,7 +294,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                 expect(azure_client).to receive(:create_network_interface).twice
 
-                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -324,7 +325,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                 expect(azure_client).to receive(:create_network_interface).twice
 
-                _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager2.create(bosh_vm_meta, vm_props, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -372,7 +373,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                   expect(azure_client).to receive(:create_network_interface).twice
 
-                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -403,7 +404,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                   expect(azure_client).to receive(:create_network_interface).twice
 
-                  _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  _, vm_params = vm_manager2.create(bosh_vm_meta, vm_props, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -446,7 +447,7 @@ describe Bosh::AzureCloud::VMManager do
                   expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                   expect(azure_client).to receive(:create_network_interface).twice
 
-                  _, vm_params = vm_manager_azure_stack.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  _, vm_params = vm_manager_azure_stack.create(bosh_vm_meta, vm_props, network_configurator, env)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -481,6 +482,7 @@ describe Bosh::AzureCloud::VMManager do
               allow(azure_client).to receive(:get_availability_set_by_name)
                 .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
                 .and_return(availability_set)
+              allow(vm_props).to receive(:location).and_return(location)
             end
 
             it 'should not create the availability set and then raise an error' do
@@ -488,7 +490,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).to receive(:delete_network_interface).exactly(2).times
 
               expect do
-                vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
               end.to raise_error /create_availability_set - the availability set '#{availability_set_name}' already exists, but in a different location/
             end
           end
@@ -524,7 +526,7 @@ describe Bosh::AzureCloud::VMManager do
             it 'should not create availability set' do
               expect(azure_client).not_to receive(:create_availability_set)
 
-              _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+              _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
               expect(vm_params[:name]).to eq(vm_name)
             end
           end
@@ -569,6 +571,10 @@ describe Bosh::AzureCloud::VMManager do
               }
             end
 
+            before do
+              allow(vm_props).to receive(:location).and_return(location)
+            end
+
             context 'existing avset is unmanaged' do
               before do
                 allow(azure_client).to receive(:get_availability_set_by_name)
@@ -587,7 +593,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
                 expect(azure_client).to receive(:create_network_interface).twice
 
-                _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                _, vm_params = vm_manager2.create(bosh_vm_meta, vm_props, network_configurator, env)
                 expect(vm_params[:name]).to eq(vm_name)
               end
             end
@@ -604,7 +610,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).to receive(:create_network_interface).twice
 
                 expect do
-                  vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+                  vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
                 end.to raise_error /create_availability_set - the availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./
               end
             end

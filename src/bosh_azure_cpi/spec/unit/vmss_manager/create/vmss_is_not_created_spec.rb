@@ -9,7 +9,7 @@ describe Bosh::AzureCloud::VMSSManager do
     context 'when bosh group not exists' do
       it 'should raise error' do
         expect do
-          vmss_manager.create(bosh_vm_meta, location, vm_props, network_configurator, empty_env)
+          vmss_manager.create(bosh_vm_meta, vm_props, network_configurator, empty_env)
         end.to raise_error(Bosh::Clouds::VMCreationFailed, /Instance not created./)
       end
     end
@@ -51,7 +51,7 @@ describe Bosh::AzureCloud::VMSSManager do
           expect(azure_client).to receive(:attach_disk_to_vmss_instance)
             .and_raise 'failed to attach disk'
           expect do
-            vmss_manager_to_keep_failed_vms.create(bosh_vm_meta, location, vm_props, network_configurator, env_with_long_name_group)
+            vmss_manager_to_keep_failed_vms.create(bosh_vm_meta, vm_props, network_configurator, env_with_long_name_group)
           end.to raise_error(Bosh::Clouds::VMCreationFailed, /New instance in VMSS created, but probably config disk failed to attach./)
         end
       end

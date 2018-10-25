@@ -138,14 +138,17 @@ module Bosh::AzureCloud
           network_configurator = NetworkConfigurator.new(_azure_config, networks)
           network = network_configurator.networks[0]
           vnet = @azure_client.get_virtual_network_by_name(network.resource_group_name, network.virtual_network_name)
+
+          # Check and set location
           cloud_error("Cannot find the virtual network '#{network.virtual_network_name}' under resource group '#{network.resource_group_name}'") if vnet.nil?
-          location = vnet[:location]
-          location_in_global_configuration = _azure_config.location
-          cloud_error("The location in the global configuration '#{location_in_global_configuration}' is different from the location of the virtual network '#{location}'") if !location_in_global_configuration.nil? && location_in_global_configuration != location
+          if vm_props.location.nil?
+            vm_props.location = vnet[:location]
+          elsif vm_props.location != vnet[:location]
+            cloud_error("The location in the global configuration '#{vm_props.location}' is different from the location of the virtual network '#{vnet[:location]}'")
+          end
 
           instance_id, vm_params = @vm_manager.create(
             bosh_vm_meta,
-            location,
             vm_props,
             network_configurator,
             environment
