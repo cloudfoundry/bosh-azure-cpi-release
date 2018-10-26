@@ -50,7 +50,7 @@ Until [this issue #508](https://github.com/cloudfoundry/bosh-azure-cpi-release/i
 is solved, make sure the `use_managed_disks` property is set to `false`.
 
 This means you'll have to create a storage account [as advised](https://bosh.io/docs/azure-resources/#storage-account)
-and setup the `storage_account` property.
+and set the `storage_account_name` property.
 
 ### Azure Stack Properties
 
