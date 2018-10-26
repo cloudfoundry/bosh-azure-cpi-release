@@ -35,7 +35,7 @@ The script will collect error logs including:
 Run belowing commands in your jumpbox to collect error logs
 
 ```bash
-wget https://raw.githubusercontent.com/gossion/bosh-azure-cpi-release/diagnostic/docs/additional-information/collect-deployment-err-logs.sh
+wget https://raw.githubusercontent.com/cloudfoundry/bosh-azure-cpi-release/master/docs/additional-information/collect-deployment-err-logs.sh
 bash collect-deployment-err-logs.sh
 ```
 

@@ -81,7 +81,7 @@ function check_version_and_auth() {
   if [[ ${output} == "BOSH 1"* ]]; then
     echo "Found version 1"
     bosh_version="v1"
-  elif [[ ${output} == "version 2"* ]]; then
+  elif [[ ${output} == "version "* ]]; then
     echo "Found version 2"
     bosh_version="v2"
   else
