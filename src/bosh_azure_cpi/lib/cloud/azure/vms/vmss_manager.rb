@@ -77,8 +77,9 @@ module Bosh::AzureCloud
         vmss_params[:os_disk], vmss_params[:ephemeral_disk] = _build_vmss_disks(vmss_name, stemcell_info, vm_props)
         # TODO: create one task to batch the scale up.
         flock(vmss_name.to_s, File::LOCK_EX) do
+          # check whether we need to resize the vm.
           existing_instances = @azure_client.get_vmss_instances(resource_group_name, vmss_name)
-          @azure_client.scale_vmss_up(resource_group_name, vmss_name, 1)
+          @azure_client.update_vmss_sku(resource_group_name, vmss_name, vm_props.instance_type, 1)
           updated_instances = @azure_client.get_vmss_instances(resource_group_name, vmss_name)
           vmss_instance_id, vm_name, vmss_instance_zone = _get_newly_created_instance(existing_instances, updated_instances)
         end
