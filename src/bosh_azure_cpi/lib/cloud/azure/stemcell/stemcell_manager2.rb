@@ -97,10 +97,9 @@ module Bosh::AzureCloud
       }
 
       flock("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX) do
-        @azure_client.delete_user_image(user_image_name_deprecated) # CPI will cleanup the user image with the old format name
-
         user_image = @azure_client.get_user_image_by_name(user_image_name)
         if user_image.nil?
+          @azure_client.delete_user_image(user_image_name_deprecated) # CPI will cleanup the user image with the old format name
           @azure_client.create_user_image(user_image_params)
           user_image = @azure_client.get_user_image_by_name(user_image_name)
           cloud_error("get_user_image: Can not find a user image with the name '#{user_image_name}'") if user_image.nil?

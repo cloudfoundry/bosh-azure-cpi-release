@@ -44,6 +44,14 @@ azure:
   environment: AzureStack
 ```
 
+### Storage Account
+
+Until [this issue #508](https://github.com/cloudfoundry/bosh-azure-cpi-release/issues/508)
+is solved, make sure the `use_managed_disks` property is set to `false`.
+
+This means you'll have to create a storage account [as advised](https://bosh.io/docs/azure-resources/#storage-account)
+and set the `storage_account_name` property.
+
 ### Azure Stack Properties
 
 * Domain
