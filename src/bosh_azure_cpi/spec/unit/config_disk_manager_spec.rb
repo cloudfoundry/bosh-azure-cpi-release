@@ -13,6 +13,7 @@ describe Bosh::AzureCloud::VMManager do
     let(:command_runner) { Bosh::AzureCloud::CommandRunner.new }
     let(:resource_group_name) { 'fake_resource_group_name' }
     let(:vm_name) { 'fake_vm_name' }
+    let(:long_vm_name) { 'long_name_' * 8 + 'e' }
     let(:location) { 'fake_location' }
     let(:zone) { 'fake_zone' }
     let(:meta_data_obj) { 'fake_meta_obj' }
@@ -41,7 +42,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(disk_manager2).to receive(:create_disk_from_blob)
           expect(disk_manager2).to receive(:get_data_disk)
           expect do
-            config_disk_manager.prepare_config_disk(resource_group_name, vm_name, location, zone, meta_data_obj, user_data_obj)
+            config_disk_manager.prepare_config_disk(resource_group_name, long_vm_name, location, zone, meta_data_obj, user_data_obj)
           end.not_to raise_error
         end
       end

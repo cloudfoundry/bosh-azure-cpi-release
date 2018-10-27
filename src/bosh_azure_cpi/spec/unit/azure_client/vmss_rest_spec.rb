@@ -92,7 +92,7 @@ describe Bosh::AzureCloud::AzureClient do
               dataDisks: [
                 {
                   managedDisk: {
-
+                    id: '/subscriptions/fake_sub_id/resourceGroups/fake_resource_group/providers/Microsoft.Compute/disks/bosh-cfg-disk-fake_disk'
                   }
                 }
               ]
