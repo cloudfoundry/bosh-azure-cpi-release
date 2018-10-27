@@ -225,7 +225,10 @@ module Bosh::AzureCloud
           disk[:uri]     = data_disk['vhd']['uri'] if data_disk.key?('vhd')
           if data_disk.key?('managedDisk')
             disk[:managed_disk] = {}
-            disk[:managed_disk][:id]                   = data_disk['managedDisk']['id']
+            disk_resource_id = data_disk['managedDisk']['id']
+            disk[:managed_disk][:id] = disk_resource_id
+            resource_meta = _parse_name_from_id(disk_resource_id)
+            disk[:managed_disk][:resource_group_name] = resource_meta[:resource_group_name]
             disk[:managed_disk][:storage_account_type] = data_disk['managedDisk']['storageAccountType']
           end
 

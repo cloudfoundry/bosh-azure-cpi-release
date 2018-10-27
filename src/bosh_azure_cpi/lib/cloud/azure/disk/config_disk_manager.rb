@@ -17,6 +17,10 @@ module Bosh::AzureCloud
       @storage_account_manager = storage_account_manager
     end
 
+    def config_disk?(name)
+      name.start_with?(MANAGED_CONFIG_DISK_PREFIX)
+    end
+
     # Returns the config disk uri.
     def prepare_config_disk(resource_group_name, vm_name, location, zone, meta_data_obj, user_data_obj)
       CPILogger.instance.logger.info("prepare_config_disk(#{resource_group_name}, #{vm_name}, #{location}, #{zone}, ..., ...)")
@@ -63,7 +67,7 @@ module Bosh::AzureCloud
         command_runner.run_command(unmount_cmd)
         umounted = true
 
-        disk_name = "#{MANAGED_CONFIG_DISK_PREFIX}-#{vm_name}.vhd"
+        disk_name = _generate_disk_name(vm_name)
         @blob_manager.create_vhd_page_blob(
           @storage_account_manager.default_storage_account_name,
           CONFIG_DISK_CONTAINER,
@@ -98,6 +102,19 @@ module Bosh::AzureCloud
           @blob_manager.delete_blob(@storage_account_manager.default_storage_account_name, CONFIG_DISK_CONTAINER, disk_name) if page_blob_created
         end
       end
+    end
+
+    private
+
+    def _generate_disk_name(vm_name)
+      # name longer than expected, calculate the hash for it.
+      config_disk_name = "#{MANAGED_CONFIG_DISK_PREFIX}-#{vm_name}.vhd"
+      if config_disk_name.size > MAX_MANAGED_DISK_NAME_LENGTH
+        md = Digest::MD5.hexdigest(config_disk_name)
+        room_left = MAX_MANAGED_DISK_NAME_LENGTH - md.length - MANAGED_CONFIG_DISK_PREFIX.length - 2
+        config_disk_name = "#{MANAGED_CONFIG_DISK_PREFIX}-#{md}-#{vm_name[-room_left..-1]}"
+      end
+      config_disk_name
     end
   end
 end

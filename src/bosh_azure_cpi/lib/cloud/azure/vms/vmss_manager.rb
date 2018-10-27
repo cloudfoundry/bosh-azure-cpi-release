@@ -140,6 +140,14 @@ module Bosh::AzureCloud
       vmss_instance_id = instance_id.vmss_instance_id
       vmss_instance = @azure_client.get_vmss_instance(resource_group_name, vmss_name, vmss_instance_id)
       @azure_client.delete_vmss_instance(resource_group_name, vmss_name, vmss_instance_id) if vmss_instance
+
+      vmss_instance[:data_disks]&.each do |data_disk|
+        if @config_disk_manager.config_disk?(data_disk[:name])
+          CPILogger.instance.logger.info("deleting disk: #{data_disk[:managed_disk][:id]}")
+          @disk_manager2.delete_disk(data_disk[:managed_disk][:resource_group_name], data_disk[:name])
+          CPILogger.instance.logger.info("deleted disk: #{data_disk[:managed_disk][:id]}")
+        end
+      end
     end
 
     def reboot(instance_id)
