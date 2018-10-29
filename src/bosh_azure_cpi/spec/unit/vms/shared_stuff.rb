@@ -22,7 +22,7 @@ shared_context 'shared stuff for vm managers' do
   let(:azure_config_managed_to_keep_failed_vms) do
     mock_azure_config_merge(
       'use_managed_disks' => true,
-      'keep_failed_vms'   => true
+      'keep_failed_vms' => true
     )
   end
   let(:azure_config_vmss) do
@@ -95,11 +95,11 @@ shared_context 'shared stuff for vm managers' do
 
   let(:vm_properties) do
     {
-      'instance_type'         => 'Standard_D1',
-      'storage_account_name'  => 'dfe03ad623f34d42999e93ca',
-      'caching'               => 'ReadWrite',
-      'load_balancer'         => 'fake-lb-name',
-      'application_gateway'   => 'fake-ag-name'
+      'instance_type' => 'Standard_D1',
+      'storage_account_name' => 'dfe03ad623f34d42999e93ca',
+      'caching' => 'ReadWrite',
+      'load_balancer' => 'fake-lb-name',
+      'application_gateway' => 'fake-ag-name'
     }
   end
   let(:vm_props) do

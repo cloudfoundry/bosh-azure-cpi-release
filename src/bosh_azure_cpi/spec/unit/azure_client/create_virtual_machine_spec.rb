@@ -599,10 +599,10 @@ describe Bosh::AzureCloud::AzureClient do
       context 'when image_reference is not nil' do
         let(:image_reference) do
           {
-            'publisher'    => 'p',
-            'offer'        => 'q',
-            'sku'          => 'r',
-            'version'      => 's'
+            'publisher' => 'p',
+            'offer' => 'q',
+            'sku' => 'r',
+            'version' => 's'
           }
         end
         let(:vm_params_with_image_reference) do

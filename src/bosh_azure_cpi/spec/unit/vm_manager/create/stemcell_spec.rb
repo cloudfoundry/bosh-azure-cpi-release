@@ -35,9 +35,9 @@ describe Bosh::AzureCloud::VMManager do
           let(:platform_image) do
             {
               'publisher' => 'fake-publisher',
-              'offer'     => 'fake-offer',
-              'sku'       => 'fake-sku',
-              'version'   => 'fake-version'
+              'offer' => 'fake-offer',
+              'sku' => 'fake-sku',
+              'version' => 'fake-version'
             }
           end
 

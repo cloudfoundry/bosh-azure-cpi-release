@@ -17,13 +17,13 @@ describe Bosh::AzureCloud::DynamicNetwork do
         'default' => %w[dns gateway],
         'dns' => dns,
         'cloud_properties' => {
-          'virtual_network_name'        => vnet_name,
-          'subnet_name'                 => subnet_name,
-          'resource_group_name'         => rg_name,
-          'security_group'              => nsg_name,
+          'virtual_network_name' => vnet_name,
+          'subnet_name' => subnet_name,
+          'resource_group_name' => rg_name,
+          'security_group' => nsg_name,
           'application_security_groups' => asg_names,
-          'ip_forwarding'               => true,
-          'accelerated_networking'      => true
+          'ip_forwarding' => true,
+          'accelerated_networking' => true
         }
       }
     end

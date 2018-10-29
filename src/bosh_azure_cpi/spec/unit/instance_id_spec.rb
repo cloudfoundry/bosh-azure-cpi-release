@@ -11,7 +11,7 @@ describe Bosh::AzureCloud::VMInstanceId do
       let(:id) do
         {
           'resource_group_name' => resource_group_name,
-          'agent_id'            => agent_id
+          'agent_id' => agent_id
         }
       end
 
@@ -26,8 +26,8 @@ describe Bosh::AzureCloud::VMInstanceId do
       let(:storage_account_name) { 'fakestorageaccountname' }
       let(:id) do
         {
-          'resource_group_name'  => resource_group_name,
-          'agent_id'             => agent_id,
+          'resource_group_name' => resource_group_name,
+          'agent_id' => agent_id,
           'storage_account_name' => storage_account_name
         }
       end

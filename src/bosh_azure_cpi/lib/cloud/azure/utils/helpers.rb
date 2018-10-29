@@ -19,53 +19,53 @@ module Bosh::AzureCloud
         'resourceManagerEndpointUrl' => 'https://management.azure.com/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2018-04-01',
-          AZURE_RESOURCE_PROVIDER_NETWORK          => '2017-09-01',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
-          AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
+          AZURE_RESOURCE_PROVIDER_COMPUTE => '2018-04-01',
+          AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
+          AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
+          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
         }
       },
       ENVIRONMENT_AZURECHINACLOUD => {
         'resourceManagerEndpointUrl' => 'https://management.chinacloudapi.cn/',
         'activeDirectoryEndpointUrl' => 'https://login.chinacloudapi.cn',
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2018-04-01',
-          AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
-          AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
+          AZURE_RESOURCE_PROVIDER_COMPUTE => '2018-04-01',
+          AZURE_RESOURCE_PROVIDER_NETWORK => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
+          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
         }
       },
       ENVIRONMENT_AZUREUSGOVERNMENT => {
         'resourceManagerEndpointUrl' => 'https://management.usgovcloudapi.net/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.us',
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2018-04-01',
-          AZURE_RESOURCE_PROVIDER_NETWORK          => '2017-09-01',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
-          AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
+          AZURE_RESOURCE_PROVIDER_COMPUTE => '2018-04-01',
+          AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
+          AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
+          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
         }
       },
       ENVIRONMENT_AZURESTACK => {
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_NETWORK          => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2016-01-01',
-          AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
+          AZURE_RESOURCE_PROVIDER_COMPUTE => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_NETWORK => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE => '2016-01-01',
+          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
         }
       },
       ENVIRONMENT_AZUREGERMANCLOUD => {
         'resourceManagerEndpointUrl' => 'https://management.microsoftazure.de/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.de',
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE          => '2018-04-01',
-          AZURE_RESOURCE_PROVIDER_NETWORK          => '2017-09-01',
-          AZURE_RESOURCE_PROVIDER_STORAGE          => '2017-10-01',
-          AZURE_RESOURCE_PROVIDER_GROUP            => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY  => '2015-06-15'
+          AZURE_RESOURCE_PROVIDER_COMPUTE => '2018-04-01',
+          AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
+          AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
+          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
+          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
         }
       }
     }.freeze
@@ -333,44 +333,44 @@ module Bosh::AzureCloud
     class DiskInfo
       INSTANCE_TYPE_DISK_MAPPING = {
         # A-series
-        'STANDARD_A0'  => [30, 1], # 20 GiB
-        'STANDARD_A1'  => [70, 2],
-        'STANDARD_A2'  => [135, 4],
-        'STANDARD_A3'  => [285, 8],
-        'STANDARD_A4'  => [605, 16],
-        'STANDARD_A5'  => [135, 4],
-        'STANDARD_A6'  => [285, 8],
-        'STANDARD_A7'  => [605, 16],
-        'STANDARD_A8'  => [382, 32],
-        'STANDARD_A9'  => [382, 64],
+        'STANDARD_A0' => [30, 1], # 20 GiB
+        'STANDARD_A1' => [70, 2],
+        'STANDARD_A2' => [135, 4],
+        'STANDARD_A3' => [285, 8],
+        'STANDARD_A4' => [605, 16],
+        'STANDARD_A5' => [135, 4],
+        'STANDARD_A6' => [285, 8],
+        'STANDARD_A7' => [605, 16],
+        'STANDARD_A8' => [382, 32],
+        'STANDARD_A9' => [382, 64],
         'STANDARD_A10' => [382, 32],
         'STANDARD_A11' => [382, 64],
 
         # Av2-series
-        'STANDARD_A1_V2'   => [30, 2], # 10 GiB
-        'STANDARD_A2_V2'   => [30, 4], # 20 GiB
-        'STANDARD_A4_V2'   => [40, 8],
-        'STANDARD_A8_V2'   => [80, 16],
-        'STANDARD_A2M_V2'  => [30, 4], # 20 GiB
-        'STANDARD_A4M_V2'  => [40, 8],
-        'STANDARD_A8M_V2'  => [80, 16],
+        'STANDARD_A1_V2' => [30, 2], # 10 GiB
+        'STANDARD_A2_V2' => [30, 4], # 20 GiB
+        'STANDARD_A4_V2' => [40, 8],
+        'STANDARD_A8_V2' => [80, 16],
+        'STANDARD_A2M_V2' => [30, 4], # 20 GiB
+        'STANDARD_A4M_V2' => [40, 8],
+        'STANDARD_A8M_V2' => [80, 16],
 
         # D-series
-        'STANDARD_D1'  => [50, 4],
-        'STANDARD_D2'  => [100, 8],
-        'STANDARD_D3'  => [200, 16],
-        'STANDARD_D4'  => [400, 32],
+        'STANDARD_D1' => [50, 4],
+        'STANDARD_D2' => [100, 8],
+        'STANDARD_D3' => [200, 16],
+        'STANDARD_D4' => [400, 32],
         'STANDARD_D11' => [100, 8],
         'STANDARD_D12' => [200, 16],
         'STANDARD_D13' => [400, 32],
         'STANDARD_D14' => [800, 64],
 
         # Dv2-series
-        'STANDARD_D1_V2'  => [50, 4],
-        'STANDARD_D2_V2'  => [100, 8],
-        'STANDARD_D3_V2'  => [200, 16],
-        'STANDARD_D4_V2'  => [400, 32],
-        'STANDARD_D5_V2'  => [800, 64],
+        'STANDARD_D1_V2' => [50, 4],
+        'STANDARD_D2_V2' => [100, 8],
+        'STANDARD_D3_V2' => [200, 16],
+        'STANDARD_D4_V2' => [400, 32],
+        'STANDARD_D5_V2' => [800, 64],
         'STANDARD_D11_V2' => [100, 8],
         'STANDARD_D12_V2' => [200, 16],
         'STANDARD_D13_V2' => [400, 32],
@@ -378,21 +378,21 @@ module Bosh::AzureCloud
         'STANDARD_D15_V2' => [1000, 64],
 
         # DS-series
-        'STANDARD_DS1'  => [30, 4], # 7 GiB
-        'STANDARD_DS2'  => [30, 8], # 14 GiB
-        'STANDARD_DS3'  => [30, 16], # 28 GiB
-        'STANDARD_DS4'  => [56, 32],
+        'STANDARD_DS1' => [30, 4], # 7 GiB
+        'STANDARD_DS2' => [30, 8], # 14 GiB
+        'STANDARD_DS3' => [30, 16], # 28 GiB
+        'STANDARD_DS4' => [56, 32],
         'STANDARD_DS11' => [28, 8],
         'STANDARD_DS12' => [56, 16],
         'STANDARD_DS13' => [112, 32],
         'STANDARD_DS14' => [224, 64],
 
         # DSv2-series
-        'STANDARD_DS1_V2'  => [30, 4], # 7 GiB
-        'STANDARD_DS2_V2'  => [30, 8], # 14 GiB
-        'STANDARD_DS3_V2'  => [30, 16], # 28 GiB
-        'STANDARD_DS4_V2'  => [56, 32],
-        'STANDARD_DS5_V2'  => [112, 64],
+        'STANDARD_DS1_V2' => [30, 4], # 7 GiB
+        'STANDARD_DS2_V2' => [30, 8], # 14 GiB
+        'STANDARD_DS3_V2' => [30, 16], # 28 GiB
+        'STANDARD_DS4_V2' => [56, 32],
+        'STANDARD_DS5_V2' => [112, 64],
         'STANDARD_DS11_V2' => [28, 8],
         'STANDARD_DS12_V2' => [56, 16],
         'STANDARD_DS13_V2' => [112, 32],
@@ -400,36 +400,36 @@ module Bosh::AzureCloud
         'STANDARD_DS15_V2' => [280, 64],
 
         # F-series
-        'STANDARD_F1'  => [30, 4], # 16 GiB
-        'STANDARD_F2'  => [32, 8],
-        'STANDARD_F4'  => [64, 16],
-        'STANDARD_F8'  => [128, 32],
+        'STANDARD_F1' => [30, 4], # 16 GiB
+        'STANDARD_F2' => [32, 8],
+        'STANDARD_F4' => [64, 16],
+        'STANDARD_F8' => [128, 32],
         'STANDARD_F16' => [256, 64],
 
         # Fs-series
-        'STANDARD_F1S'  => [30, 4], # 4 GiB
-        'STANDARD_F2S'  => [30, 8], # 8 GiB
-        'STANDARD_F4S'  => [30, 16], # 16 GiB
-        'STANDARD_F8S'  => [32, 32],
+        'STANDARD_F1S' => [30, 4], # 4 GiB
+        'STANDARD_F2S' => [30, 8], # 8 GiB
+        'STANDARD_F4S' => [30, 16], # 16 GiB
+        'STANDARD_F8S' => [32, 32],
         'STANDARD_F16S' => [64, 64],
 
         # G-series
-        'STANDARD_G1'  => [384, 8],
-        'STANDARD_G2'  => [768, 16],
-        'STANDARD_G3'  => [1000, 32], # 1536 GiB
-        'STANDARD_G4'  => [1000, 64], # 3072 GiB
-        'STANDARD_G5'  => [1000, 64], # 6144 GiB
+        'STANDARD_G1' => [384, 8],
+        'STANDARD_G2' => [768, 16],
+        'STANDARD_G3' => [1000, 32], # 1536 GiB
+        'STANDARD_G4' => [1000, 64], # 3072 GiB
+        'STANDARD_G5' => [1000, 64], # 6144 GiB
 
         # Gs-series
-        'STANDARD_GS1'  => [56, 8],
-        'STANDARD_GS2'  => [112, 16],
-        'STANDARD_GS3'  => [224, 32],
-        'STANDARD_GS4'  => [448, 64],
-        'STANDARD_GS5'  => [896, 64],
+        'STANDARD_GS1' => [56, 8],
+        'STANDARD_GS2' => [112, 16],
+        'STANDARD_GS3' => [224, 32],
+        'STANDARD_GS4' => [448, 64],
+        'STANDARD_GS5' => [896, 64],
 
         # Ls-series
-        'STANDARD_L4S'  => [678, 16],
-        'STANDARD_L8S'  => [1000, 32], # 1388 GiB
+        'STANDARD_L4S' => [678, 16],
+        'STANDARD_L8S' => [1000, 32], # 1388 GiB
         'STANDARD_L16S' => [1000, 64], # 2807 GiB
         'STANDARD_L32S' => [1000, 64], # 5630 GiB
 
@@ -438,23 +438,23 @@ module Bosh::AzureCloud
         'STANDARD_M128S' => [1000, 64], # 4096 GiB
 
         # NV-series
-        'STANDARD_NV6'  => [380, 8],
+        'STANDARD_NV6' => [380, 8],
         'STANDARD_NV12' => [680, 16],
         'STANDARD_NV24' => [1000, 32], # 1440 GiB
 
         # NC-series
-        'STANDARD_NC6'   => [380, 24],
-        'STANDARD_NC12'  => [680, 48],
-        'STANDARD_NC24'  => [1000, 64], # 1440 GiB
+        'STANDARD_NC6' => [380, 24],
+        'STANDARD_NC12' => [680, 48],
+        'STANDARD_NC24' => [1000, 64], # 1440 GiB
         'STANDARD_NC24R' => [1000, 64], # 1440 GiB
 
         # H-series
-        'STANDARD_H8'    => [1000, 32],
-        'STANDARD_H16'   => [1000, 64], # 2000 GiB
-        'STANDARD_H8M'   => [1000, 32],
-        'STANDARD_H16M'  => [1000, 64], # 2000 GiB
-        'STANDARD_H16R'  => [1000, 64], # 2000 GiB
-        'STANDARD_H16MR' => [1000, 64]  # 2000 GiB
+        'STANDARD_H8' => [1000, 32],
+        'STANDARD_H16' => [1000, 64], # 2000 GiB
+        'STANDARD_H8M' => [1000, 32],
+        'STANDARD_H16M' => [1000, 64], # 2000 GiB
+        'STANDARD_H16R' => [1000, 64], # 2000 GiB
+        'STANDARD_H16MR' => [1000, 64] # 2000 GiB
       }.freeze
 
       attr_reader :size, :count
@@ -521,9 +521,9 @@ module Bosh::AzureCloud
 
         {
           'publisher' => @image['publisher'],
-          'offer'     => @image['offer'],
-          'sku'       => @image['sku'],
-          'version'   => @image['version']
+          'offer' => @image['offer'],
+          'sku' => @image['sku'],
+          'version' => @image['version']
         }
       end
 

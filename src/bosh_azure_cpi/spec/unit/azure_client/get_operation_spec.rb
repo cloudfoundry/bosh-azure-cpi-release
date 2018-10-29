@@ -281,13 +281,13 @@ describe Bosh::AzureCloud::AzureClient do
             'properties' => {
               'provisioningState' => 'Succeeded',
               'description' => 'description-of-this-rule',
-              'protocol' =>  '*',
+              'protocol' => '*',
               'sourcePortRange' => 'source-port-range',
               'destinationPortRange' => 'destination-port-range',
               'sourceAddressPrefix' => '*',
               'destinationAddressPrefix' => '*',
               'access' => 'Allow',
-              'priority' =>  200,
+              'priority' => 200,
               'direction' => 'Inbound'
             }
           }
@@ -300,7 +300,7 @@ describe Bosh::AzureCloud::AzureClient do
             'properties' => {
               'provisioningState' => 'Succeeded',
               'description' => 'description-of-this-rule',
-              'protocol' =>  '*',
+              'protocol' => '*',
               'sourcePortRange' => '*',
               'destinationPortRange' => '*',
               'sourceAddressPrefix' => 'VirtualNetwork',
@@ -1345,11 +1345,11 @@ describe Bosh::AzureCloud::AzureClient do
       context 'when the vm is using the unmanaged disks' do
         let(:response_body) do
           {
-            'id'          => 'fake-id',
-            'name'        => 'fake-name',
-            'location'    => 'fake-location',
-            'tags'        => {},
-            'properties'  => {
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'properties' => {
               'provisioningState' => 'foo',
               'hardwareProfile' => { 'vmSize' => 'bar' },
               'storageProfile' => {
@@ -1362,7 +1362,7 @@ describe Bosh::AzureCloud::AzureClient do
                 'dataDisks' => [
                   {
                     'name' => 'foo',
-                    'lun'  => 0,
+                    'lun' => 0,
                     'vhd' => { 'uri' => 'foo' },
                     'caching' => 'bar',
                     'diskSizeGb' => 1024
@@ -1441,11 +1441,11 @@ describe Bosh::AzureCloud::AzureClient do
       context 'when the vm is using the managed disks' do
         let(:response_body) do
           {
-            'id'          => 'fake-id',
-            'name'        => 'fake-name',
-            'location'    => 'fake-location',
-            'tags'        => {},
-            'properties'  => {
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'properties' => {
               'provisioningState' => 'foo',
               'hardwareProfile' => { 'vmSize' => 'bar' },
               'storageProfile' => {
@@ -1461,7 +1461,7 @@ describe Bosh::AzureCloud::AzureClient do
                 'dataDisks' => [
                   {
                     'name' => 'foo',
-                    'lun'  => 0,
+                    'lun' => 0,
                     'caching' => 'bar',
                     'diskSizeGb' => 1024,
                     'managedDisk' => {
@@ -1549,10 +1549,10 @@ describe Bosh::AzureCloud::AzureClient do
       context 'when the vm has tags for bosh_disk_id' do
         let(:response_body) do
           {
-            'id'          => 'fake-id',
-            'name'        => 'fake-name',
-            'location'    => 'fake-location',
-            'tags'        => {
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {
               'disk-id-foo' => 'fake-disk-bosh-id'
             },
             'properties' => {
@@ -1571,7 +1571,7 @@ describe Bosh::AzureCloud::AzureClient do
                 'dataDisks' => [
                   {
                     'name' => 'foo',
-                    'lun'  => 0,
+                    'lun' => 0,
                     'caching' => 'bar',
                     'diskSizeGb' => 1024,
                     'managedDisk' => {
@@ -1662,11 +1662,11 @@ describe Bosh::AzureCloud::AzureClient do
         context 'when boot diagnostics is not enabled' do
           let(:response_body) do
             {
-              'id'          => 'fake-id',
-              'name'        => 'fake-name',
-              'location'    => 'fake-location',
-              'tags'        => {},
-              'properties'  => {
+              'id' => 'fake-id',
+              'name' => 'fake-name',
+              'location' => 'fake-location',
+              'tags' => {},
+              'properties' => {
                 'provisioningState' => 'foo',
                 'hardwareProfile' => { 'vmSize' => 'bar' },
                 'storageProfile' => {
@@ -1754,11 +1754,11 @@ describe Bosh::AzureCloud::AzureClient do
         context 'when boot diagnostics is enabled' do
           let(:response_body) do
             {
-              'id'          => 'fake-id',
-              'name'        => 'fake-name',
-              'location'    => 'fake-location',
-              'tags'        => {},
-              'properties'  => {
+              'id' => 'fake-id',
+              'name' => 'fake-name',
+              'location' => 'fake-location',
+              'tags' => {},
+              'properties' => {
                 'provisioningState' => 'foo',
                 'hardwareProfile' => { 'vmSize' => 'bar' },
                 'storageProfile' => {
@@ -1849,12 +1849,12 @@ describe Bosh::AzureCloud::AzureClient do
       context 'when the vm is in a zone' do
         let(:response_body) do
           {
-            'id'          => 'fake-id',
-            'name'        => 'fake-name',
-            'location'    => 'fake-location',
-            'tags'        => {},
-            'zones'       => ['fake-zone'],
-            'properties'  => {
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'zones' => ['fake-zone'],
+            'properties' => {
               'provisioningState' => 'foo',
               'hardwareProfile' => { 'vmSize' => 'bar' },
               'storageProfile' => {

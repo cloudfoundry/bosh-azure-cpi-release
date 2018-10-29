@@ -46,7 +46,7 @@ module Bosh::AzureCloud
           'ssh' => {
             'publicKeys' => [
               {
-                'path'    => "/home/#{vm_params[:ssh_username]}/.ssh/authorized_keys",
+                'path' => "/home/#{vm_params[:ssh_username]}/.ssh/authorized_keys",
                 'keyData' => vm_params[:ssh_cert_data]
               }
             ]
@@ -98,7 +98,7 @@ module Bosh::AzureCloud
 
       os_disk = {
         'createOption' => 'FromImage',
-        'caching'      => vm_params[:os_disk][:disk_caching],
+        'caching' => vm_params[:os_disk][:disk_caching],
         # Comment this out, use the default in the image,
         # will handle this when resolving https://github.com/cloudfoundry-incubator/bosh-azure-cpi-release/issues/533
         # 'managedDisk' => {
@@ -110,8 +110,8 @@ module Bosh::AzureCloud
       unless vm_params[:ephemeral_disk].nil?
         data_disks.push(
           'createOption' => 'Empty',
-          'diskSizeGB'   => vm_params[:ephemeral_disk][:disk_size],
-          'lun'          => EPHEMERAL_DISK_LUN
+          'diskSizeGB' => vm_params[:ephemeral_disk][:disk_size],
+          'lun' => EPHEMERAL_DISK_LUN
         )
       end
       storage_profile = {

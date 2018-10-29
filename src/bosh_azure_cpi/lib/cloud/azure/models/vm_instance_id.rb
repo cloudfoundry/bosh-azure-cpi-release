@@ -19,8 +19,8 @@ module Bosh::AzureCloud
     #   instance_id = CloudIdParser.parse(id, resource_group_name)
     def self.create(resource_group_name, agent_id, storage_account_name = nil)
       id_hash = {
-        RESOURCE_GROUP_NAME_KEY  => resource_group_name,
-        AGENT_ID_KEY             => agent_id
+        RESOURCE_GROUP_NAME_KEY => resource_group_name,
+        AGENT_ID_KEY => agent_id
       }
       id_hash[STORAGE_ACCOUNT_NAME_KEY] = storage_account_name unless storage_account_name.nil?
       new(id_hash)

@@ -15,10 +15,10 @@ module Bosh::AzureCloud
 
     def self.create(resource_group_name, agent_id, vmss_name, vmss_instance_id)
       id_hash = {
-        RESOURCE_GROUP_NAME_KEY  => resource_group_name,
-        AGENT_ID_KEY             => agent_id,
-        VMSS_NAME_KEY            => vmss_name,
-        VMSS_INSTANCE_ID_KEY     => vmss_instance_id
+        RESOURCE_GROUP_NAME_KEY => resource_group_name,
+        AGENT_ID_KEY => agent_id,
+        VMSS_NAME_KEY => vmss_name,
+        VMSS_INSTANCE_ID_KEY => vmss_instance_id
       }
       new(id_hash)
     end

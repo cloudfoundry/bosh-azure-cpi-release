@@ -17,10 +17,10 @@ describe Bosh::AzureCloud::AzureClient do
           mock_cloud_options['properties']['azure'].merge!(
             'environment' => 'AzureStack',
             'azure_stack' => {
-              'domain'              => azure_stack_domain,
-              'resource'            => 'fake-resource',
+              'domain' => azure_stack_domain,
+              'resource' => 'fake-resource',
               'skip_ssl_validation' => false,
-              'ca_cert'             => 'fake-ca-cert-content'
+              'ca_cert' => 'fake-ca-cert-content'
             }
           )
         )

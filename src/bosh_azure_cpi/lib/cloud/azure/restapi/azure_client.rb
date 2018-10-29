@@ -145,7 +145,7 @@ module Bosh::AzureCloud
       url += "/resourceGroups/#{URI.escape(resource_group_name)}"
 
       resource_group = {
-        'name'     => resource_group_name,
+        'name' => resource_group_name,
         'location' => location
       }
 
@@ -263,10 +263,10 @@ module Bosh::AzureCloud
       end
 
       vm = {
-        'name'       => vm_params[:name],
-        'location'   => vm_params[:location],
-        'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_VIRTUAL_MACHINES}",
-        'tags'       => vm_params[:tags],
+        'name' => vm_params[:name],
+        'location' => vm_params[:location],
+        'type' => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_VIRTUAL_MACHINES}",
+        'tags' => vm_params[:tags],
         'properties' => {
           'hardwareProfile' => {
             'vmSize' => vm_params[:vm_size]
@@ -281,9 +281,9 @@ module Bosh::AzureCloud
       vm['zones'] = [vm_params[:zone]] unless vm_params[:zone].nil?
 
       os_disk = {
-        'name'         => vm_params[:os_disk][:disk_name],
+        'name' => vm_params[:os_disk][:disk_name],
         'createOption' => 'FromImage',
-        'caching'      => vm_params[:os_disk][:disk_caching]
+        'caching' => vm_params[:os_disk][:disk_caching]
       }
       os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
 
@@ -297,8 +297,8 @@ module Bosh::AzureCloud
           }
         else
           os_disk.merge!(
-            'osType'       => vm_params[:os_type],
-            'image'        => {
+            'osType' => vm_params[:os_type],
+            'image' => {
               'uri' => vm_params[:image_uri]
             },
             'vhd' => {
@@ -319,7 +319,7 @@ module Bosh::AzureCloud
 
         vm['properties']['storageProfile'] = {
           'imageReference' => vm_params[:image_reference],
-          'osDisk'         => os_disk
+          'osDisk' => os_disk
         }
 
         vm['plan'] = {
@@ -330,11 +330,11 @@ module Bosh::AzureCloud
       end
       unless vm_params[:ephemeral_disk].nil?
         vm['properties']['storageProfile']['dataDisks'] = [{
-          'name'         => vm_params[:ephemeral_disk][:disk_name],
-          'lun'          => 0,
+          'name' => vm_params[:ephemeral_disk][:disk_name],
+          'lun' => 0,
           'createOption' => 'Empty',
-          'diskSizeGB'   => vm_params[:ephemeral_disk][:disk_size],
-          'caching'      => vm_params[:ephemeral_disk][:disk_caching]
+          'diskSizeGB' => vm_params[:ephemeral_disk][:disk_size],
+          'caching' => vm_params[:ephemeral_disk][:disk_caching]
         }]
         if vm_params[:managed]
           if vm_params[:ephemeral_disk][:disk_type]
@@ -493,10 +493,10 @@ module Bosh::AzureCloud
       disk_size = disk_params[:disk_size]
 
       new_disk = {
-        'name'         => disk_name,
-        'lun'          => lun,
+        'name' => disk_name,
+        'lun' => lun,
         'createOption' => 'Attach',
-        'caching'      => caching
+        'caching' => caching
       }
       if managed
         new_disk['managedDisk'] = { 'id' => disk_id }
@@ -668,13 +668,13 @@ module Bosh::AzureCloud
     def create_availability_set(resource_group_name, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: params[:name])
       availability_set = {
-        'name'       => params[:name],
-        'type'       => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_AVAILABILITY_SETS}",
-        'location'   => params[:location],
-        'tags'       => params[:tags],
+        'name' => params[:name],
+        'type' => "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_AVAILABILITY_SETS}",
+        'location' => params[:location],
+        'tags' => params[:tags],
         'properties' => {
           'platformUpdateDomainCount' => params[:platform_update_domain_count],
-          'platformFaultDomainCount'  => params[:platform_fault_domain_count]
+          'platformFaultDomainCount' => params[:platform_fault_domain_count]
         }
       }
 
@@ -775,8 +775,8 @@ module Bosh::AzureCloud
     def create_empty_managed_disk(resource_group_name, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
       disk = {
-        'location'   => params[:location],
-        'tags'       => params[:tags],
+        'location' => params[:location],
+        'tags' => params[:tags],
         'sku' => {
           'name' => params[:account_type]
         },
@@ -816,8 +816,8 @@ module Bosh::AzureCloud
     def create_managed_disk_from_blob(resource_group_name, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
       disk = {
-        'location'   => params[:location],
-        'tags'       => params[:tags],
+        'location' => params[:location],
+        'tags' => params[:tags],
         'sku' => {
           'name' => params[:account_type]
         },
@@ -941,8 +941,8 @@ module Bosh::AzureCloud
       CPILogger.instance.logger.debug("create_user_image - trying to create a user image '#{params[:name]}'")
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: params[:name])
       user_image = {
-        'location'   => params[:location],
-        'tags'       => params[:tags],
+        'location' => params[:location],
+        'tags' => params[:tags],
         'properties' => {
           'storageProfile' => {
             'osDisk' => {
@@ -1044,8 +1044,8 @@ module Bosh::AzureCloud
       snapshot_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
       # By default, the snapshot sku is Standard_LRS. TODO: should the snapshot use the disk sku?
       snapshot = {
-        'location'   => disk[:location],
-        'tags'       => params[:tags],
+        'location' => disk[:location],
+        'tags' => params[:tags],
         'properties' => {
           'creationData' => {
             'createOption' => 'Copy',
@@ -1162,11 +1162,11 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_PUBLIC_IP_ADDRESSES, resource_group_name: resource_group_name, name: params[:name])
 
       public_ip = {
-        'name'       => params[:name],
-        'location'   => params[:location],
+        'name' => params[:name],
+        'location' => params[:location],
         'properties' => {
           'publicIPAllocationMethod' => params[:is_static] ? 'Static' : 'Dynamic',
-          'idleTimeoutInMinutes'     => params[:idle_timeout_in_minutes]
+          'idleTimeoutInMinutes' => params[:idle_timeout_in_minutes]
         }
       }
       public_ip['zones'] = [params[:zone]] unless params[:zone].nil?
@@ -1331,20 +1331,20 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, resource_group_name: resource_group_name, name: nic_params[:name])
 
       interface = {
-        'name'       => nic_params[:name],
-        'location'   => nic_params[:location],
-        'tags'       => nic_params[:tags],
+        'name' => nic_params[:name],
+        'location' => nic_params[:location],
+        'tags' => nic_params[:tags],
         'properties' => {
           'networkSecurityGroup' => nic_params[:network_security_group].nil? ? nil : { 'id' => nic_params[:network_security_group][:id] },
           'enableIPForwarding' => nic_params[:enable_ip_forwarding],
           'enableAcceleratedNetworking' => nic_params[:enable_accelerated_networking],
           'ipConfigurations' => [
             {
-              'name'        => nic_params[:ipconfig_name],
-              'properties'  => {
-                'privateIPAddress'          => nic_params[:private_ip],
+              'name' => nic_params[:ipconfig_name],
+              'properties' => {
+                'privateIPAddress' => nic_params[:private_ip],
                 'privateIPAllocationMethod' => nic_params[:private_ip].nil? ? 'Dynamic' : 'Static',
-                'publicIPAddress'           => nic_params[:public_ip].nil? ? nil : { 'id' => nic_params[:public_ip][:id] },
+                'publicIPAddress' => nic_params[:public_ip].nil? ? nil : { 'id' => nic_params[:public_ip][:id] },
                 'subnet' => {
                   'id' => nic_params[:subnet][:id]
                 }
@@ -1654,11 +1654,11 @@ module Bosh::AzureCloud
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
       storage_account = {
         'location' => location,
-        'sku'      => {
+        'sku' => {
           'name' => sku
         },
-        'kind'     => kind,
-        'tags'     => tags
+        'kind' => kind,
+        'tags' => tags
       }
 
       uri = http_url(url)
@@ -2144,9 +2144,9 @@ module Bosh::AzureCloud
       client_id = @azure_config.client_id
       request_body = {
         'grant_type' => 'client_credentials',
-        'client_id'  => client_id,
-        'resource'   => get_token_resource(@azure_config),
-        'scope'      => 'user_impersonation'
+        'client_id' => client_id,
+        'resource' => get_token_resource(@azure_config),
+        'scope' => 'user_impersonation'
       }
       if !@azure_config.client_secret.nil?
         request_body['client_secret'] = @azure_config.client_secret
