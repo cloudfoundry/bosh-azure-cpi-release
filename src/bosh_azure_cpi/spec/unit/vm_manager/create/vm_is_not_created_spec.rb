@@ -330,7 +330,7 @@ describe Bosh::AzureCloud::VMManager do
             let(:azure_config_managed_to_keep_failed_vms) do
               mock_azure_config_merge(
                 'use_managed_disks' => true,
-                'keep_failed_vms'   => true
+                'keep_failed_vms' => true
               )
             end
             let(:vm_manager2_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_managed_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }

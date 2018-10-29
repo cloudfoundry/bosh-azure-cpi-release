@@ -38,10 +38,10 @@ describe Bosh::AzureCloud::AzureClient do
         end
         let(:token_params) do
           {
-            'grant_type'    => 'client_credentials',
-            'client_id'     => client_id,
-            'resource'      => 'https://management.azure.com/',
-            'scope'         => 'user_impersonation',
+            'grant_type' => 'client_credentials',
+            'client_id' => client_id,
+            'resource' => 'https://management.azure.com/',
+            'scope' => 'user_impersonation',
             'client_secret' => mock_azure_config.client_secret
           }
         end
@@ -118,12 +118,12 @@ describe Bosh::AzureCloud::AzureClient do
 
         let(:token_params) do
           {
-            'grant_type'            => 'client_credentials',
-            'client_id'             => client_id,
-            'resource'              => 'https://management.azure.com/',
-            'scope'                 => 'user_impersonation',
+            'grant_type' => 'client_credentials',
+            'client_id' => client_id,
+            'resource' => 'https://management.azure.com/',
+            'scope' => 'user_impersonation',
             'client_assertion_type' => 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-            'client_assertion'      => jwt_assertion
+            'client_assertion' => jwt_assertion
           }
         end
 
@@ -156,10 +156,10 @@ describe Bosh::AzureCloud::AzureClient do
         end
         let(:token_params) do
           {
-            'grant_type'    => 'client_credentials',
-            'client_id'     => client_id,
-            'resource'      => 'https://management.azure.com/',
-            'scope'         => 'user_impersonation',
+            'grant_type' => 'client_credentials',
+            'client_id' => client_id,
+            'resource' => 'https://management.azure.com/',
+            'scope' => 'user_impersonation',
             'client_secret' => mock_azure_config.client_secret
           }
         end

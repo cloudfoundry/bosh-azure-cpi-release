@@ -29,12 +29,12 @@ describe Bosh::AzureCloud::Cloud do
         'foo' => 'bar',
         'disks' => {
           'persistent' => {
-            disk_cid =>  {
+            disk_cid => {
               'lun' => '1',
               'host_device_id' => host_device_id
             },
-            'v-deadbeef' =>  {
-              'lun'      => '2',
+            'v-deadbeef' => {
+              'lun' => '2',
               'host_device_id' => host_device_id
             }
           }

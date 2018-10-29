@@ -13,7 +13,7 @@ describe Bosh::AzureCloud::DiskId do
       let(:id) do
         {
           'disk_name' => disk_name,
-          'caching'   => caching
+          'caching' => caching
         }
       end
 
@@ -51,7 +51,7 @@ describe Bosh::AzureCloud::DiskId do
       let(:id) do
         {
           'disk_name' => disk_name,
-          'caching'   => caching
+          'caching' => caching
         }
       end
 
@@ -66,8 +66,8 @@ describe Bosh::AzureCloud::DiskId do
       let(:resource_group_name) { 'fake-resource-group-name' }
       let(:id) do
         {
-          'disk_name'           => disk_name,
-          'caching'             => caching,
+          'disk_name' => disk_name,
+          'caching' => caching,
           'resource_group_name' => resource_group_name
         }
       end
@@ -85,8 +85,8 @@ describe Bosh::AzureCloud::DiskId do
       let(:storage_account_name) { 'fake-storage-account-name' }
       let(:id) do
         {
-          'disk_name'           => disk_name,
-          'caching'             => caching,
+          'disk_name' => disk_name,
+          'caching' => caching,
           'storage_account_name' => storage_account_name
         }
       end

@@ -6,8 +6,8 @@ module Bosh::AzureCloud
 
     def _build_os_profile(vm_params)
       os_profile = {
-        'customData'         => vm_params[:custom_data],
-        'computerName'       => vm_params[:computer_name].nil? ? vm_params[:name] : vm_params[:computer_name]
+        'customData' => vm_params[:custom_data],
+        'computerName' => vm_params[:computer_name].nil? ? vm_params[:name] : vm_params[:computer_name]
       }
 
       case vm_params[:os_type]
@@ -18,7 +18,7 @@ module Bosh::AzureCloud
           'ssh' => {
             'publicKeys' => [
               {
-                'path'    => "/home/#{vm_params[:ssh_username]}/.ssh/authorized_keys",
+                'path' => "/home/#{vm_params[:ssh_username]}/.ssh/authorized_keys",
                 'keyData' => vm_params[:ssh_cert_data]
               }
             ]

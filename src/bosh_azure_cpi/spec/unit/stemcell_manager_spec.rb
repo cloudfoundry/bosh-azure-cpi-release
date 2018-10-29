@@ -40,9 +40,9 @@ describe Bosh::AzureCloud::StemcellManager do
         [
           {
             'PartitionKey' => stemcell_name,
-            'RowKey'       => storage_account_name,
-            'Status'       => 'success',
-            'Timestamp'    => Time.new
+            'RowKey' => storage_account_name,
+            'Status' => 'success',
+            'Timestamp' => Time.new
           }
         ]
       end
@@ -104,8 +104,8 @@ describe Bosh::AzureCloud::StemcellManager do
             [
               {
                 'PartitionKey' => stemcell_name,
-                'RowKey'       => storage_account_name,
-                'Status'       => 'success'
+                'RowKey' => storage_account_name,
+                'Status' => 'success'
               }
             ]
           end
@@ -129,8 +129,8 @@ describe Bosh::AzureCloud::StemcellManager do
             [
               {
                 'PartitionKey' => stemcell_name,
-                'RowKey'       => storage_account_name,
-                'Status'       => 'unknown'
+                'RowKey' => storage_account_name,
+                'Status' => 'unknown'
               }
             ]
           end
@@ -155,8 +155,8 @@ describe Bosh::AzureCloud::StemcellManager do
               [
                 {
                   'PartitionKey' => stemcell_name,
-                  'RowKey'       => storage_account_name,
-                  'Status'       => 'pending'
+                  'RowKey' => storage_account_name,
+                  'Status' => 'pending'
                 }
               ]
             end
@@ -164,8 +164,8 @@ describe Bosh::AzureCloud::StemcellManager do
               [
                 {
                   'PartitionKey' => stemcell_name,
-                  'RowKey'       => storage_account_name,
-                  'Status'       => 'success'
+                  'RowKey' => storage_account_name,
+                  'Status' => 'success'
                 }
               ]
             end
@@ -195,9 +195,9 @@ describe Bosh::AzureCloud::StemcellManager do
                 [
                   {
                     'PartitionKey' => stemcell_name,
-                    'RowKey'       => storage_account_name,
-                    'Status'       => 'pending',
-                    'Timestamp'    => timestamp_str
+                    'RowKey' => storage_account_name,
+                    'Status' => 'pending',
+                    'Timestamp' => timestamp_str
                   }
                 ]
               end
@@ -229,9 +229,9 @@ describe Bosh::AzureCloud::StemcellManager do
                 [
                   {
                     'PartitionKey' => stemcell_name,
-                    'RowKey'       => storage_account_name,
-                    'Status'       => 'pending',
-                    'Timestamp'    => timestamp
+                    'RowKey' => storage_account_name,
+                    'Status' => 'pending',
+                    'Timestamp' => timestamp
                   }
                 ]
               end
@@ -282,8 +282,8 @@ describe Bosh::AzureCloud::StemcellManager do
           [
             {
               'PartitionKey' => stemcell_name,
-              'RowKey'       => storage_account_name,
-              'Status'       => 'pending'
+              'RowKey' => storage_account_name,
+              'Status' => 'pending'
             }
           ]
         end

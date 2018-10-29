@@ -133,7 +133,7 @@ describe Bosh::AzureCloud::VMManager do
                 end
                 let(:vm_props) do
                   props_factory.parse_vm_props(
-                    'instance_type'  => 'Standard_D1',
+                    'instance_type' => 'Standard_D1',
                     'security_group' => nsg_name_in_vm_properties
                   )
                 end
@@ -172,7 +172,7 @@ describe Bosh::AzureCloud::VMManager do
           end
           let(:vm_props) do
             props_factory.parse_vm_props(
-              'instance_type'  => 'Standard_D1',
+              'instance_type' => 'Standard_D1',
               'security_group' => nsg_name
             )
           end
@@ -215,7 +215,7 @@ describe Bosh::AzureCloud::VMManager do
             context 'when network security group is found in the specified resource group' do
               let(:vm_props) do
                 props_factory.parse_vm_props(
-                  'instance_type'  => 'Standard_D1',
+                  'instance_type' => 'Standard_D1',
                   'security_group' => nsg_name,
                   'resource_group_name' => rg_name_for_nsg
                 )

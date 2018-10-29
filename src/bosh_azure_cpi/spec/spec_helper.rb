@@ -55,34 +55,34 @@ CPI_LOCK_EVENT_HANDLER                  = "#{CPI_LOCK_PREFIX}-event-handler"
 
 def mock_cloud_options
   {
-    'plugin'     => 'azure',
+    'plugin' => 'azure',
     'properties' => {
       'azure' => {
-        'environment'                => 'AzureCloud',
-        'subscription_id'            => MOCK_AZURE_SUBSCRIPTION_ID,
-        'storage_account_name'       => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-        'resource_group_name'        => MOCK_RESOURCE_GROUP_NAME,
-        'tenant_id'                  => MOCK_AZURE_TENANT_ID,
-        'client_id'                  => MOCK_AZURE_CLIENT_ID,
-        'client_secret'              => MOCK_AZURE_CLIENT_SECRET,
-        'managed_service_identity'   => {
+        'environment' => 'AzureCloud',
+        'subscription_id' => MOCK_AZURE_SUBSCRIPTION_ID,
+        'storage_account_name' => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+        'resource_group_name' => MOCK_RESOURCE_GROUP_NAME,
+        'tenant_id' => MOCK_AZURE_TENANT_ID,
+        'client_id' => MOCK_AZURE_CLIENT_ID,
+        'client_secret' => MOCK_AZURE_CLIENT_SECRET,
+        'managed_service_identity' => {
           'enabled' => false
         },
-        'ssh_user'                   => 'vcap',
-        'ssh_public_key'             => MOCK_SSH_PUBLIC_KEY,
+        'ssh_user' => 'vcap',
+        'ssh_public_key' => MOCK_SSH_PUBLIC_KEY,
         'parallel_upload_thread_num' => 16,
-        'default_security_group'     => MOCK_DEFAULT_SECURITY_GROUP,
-        'debug_mode'                 => false,
-        'use_managed_disks'          => false,
-        'request_id'                 => MOCK_REQUEST_ID,
+        'default_security_group' => MOCK_DEFAULT_SECURITY_GROUP,
+        'debug_mode' => false,
+        'use_managed_disks' => false,
+        'request_id' => MOCK_REQUEST_ID,
         'config_disk' => {
           'enabled' => false
         }
       },
       'registry' => {
-        'endpoint'  => 'localhost:42288',
-        'user'      => 'admin',
-        'password'  => 'admin'
+        'endpoint' => 'localhost:42288',
+        'user' => 'admin',
+        'password' => 'admin'
       },
       'agent' => {
         'blobstore' => {

@@ -74,16 +74,16 @@ describe Bosh::AzureCloud::Helpers do
     let(:metadata) do
       {
         'user-agent' => 'bosh',
-        'foo'        => 1,
-        'bar'        => true
+        'foo' => 1,
+        'bar' => true
       }
     end
 
     it 'should return an encoded metadata' do
       expect(helpers_tester.encode_metadata(metadata)).to include(
         'user-agent' => 'bosh',
-        'foo'        => '1',
-        'bar'        => 'true'
+        'foo' => '1',
+        'bar' => 'true'
       )
     end
   end
@@ -184,8 +184,8 @@ describe Bosh::AzureCloud::Helpers do
         Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureStack',
           'azure_stack' => {
-            'domain'          => 'fake-domain',
-            'authentication'  => 'fake-authentication',
+            'domain' => 'fake-domain',
+            'authentication' => 'fake-authentication',
             'endpoint_prefix' => 'api'
           }
         )
@@ -273,7 +273,7 @@ describe Bosh::AzureCloud::Helpers do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureCloud',
-          'tenant_id'   => 'fake-tenant-id'
+          'tenant_id' => 'fake-tenant-id'
         )
       end
 
@@ -288,7 +288,7 @@ describe Bosh::AzureCloud::Helpers do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureChinaCloud',
-          'tenant_id'   => 'fake-tenant-id'
+          'tenant_id' => 'fake-tenant-id'
         )
       end
 
@@ -303,7 +303,7 @@ describe Bosh::AzureCloud::Helpers do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureUSGovernment',
-          'tenant_id'   => 'fake-tenant-id'
+          'tenant_id' => 'fake-tenant-id'
         )
       end
 
@@ -319,7 +319,7 @@ describe Bosh::AzureCloud::Helpers do
         Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureStack',
           'azure_stack' => {
-            'domain'          => 'fake-domain',
+            'domain' => 'fake-domain',
             'endpoint_prefix' => 'api'
           },
           'tenant_id' => 'fake-tenant-id'
@@ -379,7 +379,7 @@ describe Bosh::AzureCloud::Helpers do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
           'environment' => 'AzureGermanCloud',
-          'tenant_id'   => 'fake-tenant-id'
+          'tenant_id' => 'fake-tenant-id'
         )
       end
 
