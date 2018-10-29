@@ -30,7 +30,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(azure_client).to receive(:delete_public_ip).with(MOCK_RESOURCE_GROUP_NAME, vm_name)
 
         expect do
-          vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
         end.to raise_error /Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both/
       end
     end
@@ -56,7 +56,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(azure_client).to receive(:delete_public_ip).with(MOCK_RESOURCE_GROUP_NAME, vm_name)
 
         expect do
-          vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
         end.to raise_error /'#{zone}' is not a valid zone/
       end
     end
@@ -84,7 +84,7 @@ describe Bosh::AzureCloud::VMManager do
 
         it 'should raise an error' do
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error %r{Cannot find the subnet 'fake-virtual-network-name\/fake-subnet-name' in the resource group '#{MOCK_RESOURCE_GROUP_NAME}'}
         end
       end
@@ -111,7 +111,7 @@ describe Bosh::AzureCloud::VMManager do
 
         it 'should raise an error' do
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error /Cannot find the network security group 'fake-default-nsg-name'/
         end
       end
@@ -145,7 +145,7 @@ describe Bosh::AzureCloud::VMManager do
             .with('fake-resource-group-name', 'fake-virtual-network-name', 'fake-subnet-name')
             .and_return(nil)
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error %r{Cannot find the subnet 'fake-virtual-network-name\/fake-subnet-name' in the resource group 'fake-resource-group-name'}
         end
       end
@@ -165,7 +165,7 @@ describe Bosh::AzureCloud::VMManager do
 
         it 'should raise an error' do
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error /Cannot find the network security group 'fake-default-nsg-name'/
         end
       end
@@ -192,7 +192,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(azure_client).not_to receive(:delete_virtual_machine)
           expect(azure_client).not_to receive(:delete_network_interface)
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error /Cannot find the public IP address/
         end
       end
@@ -221,7 +221,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(azure_client).not_to receive(:delete_virtual_machine)
           expect(azure_client).not_to receive(:delete_network_interface)
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error /Cannot find the public IP address/
         end
       end
@@ -243,7 +243,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(azure_client).not_to receive(:delete_network_interface)
 
         expect do
-          vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
         end.to raise_error /Cannot find the load balancer/
       end
     end
@@ -267,7 +267,7 @@ describe Bosh::AzureCloud::VMManager do
         expect(azure_client).not_to receive(:delete_network_interface)
 
         expect do
-          vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
         end.to raise_error /Cannot find the application gateway/
       end
     end
@@ -301,7 +301,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(azure_client).not_to receive(:delete_virtual_machine)
           expect(azure_client).not_to receive(:delete_network_interface)
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error /network interface is not created/
         end
       end
@@ -335,7 +335,7 @@ describe Bosh::AzureCloud::VMManager do
         it 'should delete the (possible) existing network interface and raise an error' do
           expect(azure_client).to receive(:delete_network_interface).once
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error /network interface is not created/
         end
       end
@@ -356,7 +356,7 @@ describe Bosh::AzureCloud::VMManager do
         it 'should delete the dynamic public IP' do
           expect(azure_client).to receive(:delete_public_ip).with(MOCK_RESOURCE_GROUP_NAME, vm_name)
           expect do
-            vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+            vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           end.to raise_error /network interface is not created/
         end
       end

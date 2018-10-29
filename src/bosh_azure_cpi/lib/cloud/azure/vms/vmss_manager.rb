@@ -19,19 +19,19 @@ module Bosh::AzureCloud
       @config_disk_manager = config_disk_manager
     end
 
-    def create(bosh_vm_meta, location, vm_props, network_configurator, env)
+    def create(bosh_vm_meta, vm_props, network_configurator, env)
       # steps:
       # 1. get or create the vmss.
       # 2. scale the vmss one node up or create it.
       # 3. prepare one config disk and then attach it.
-      CPILogger.instance.logger.info("vmss_create(#{bosh_vm_meta}, #{location}, #{vm_props}, ..., ...)")
+      CPILogger.instance.logger.info("vmss_create(#{bosh_vm_meta}, #{vm_props}, ..., ...)")
       resource_group_name = vm_props.resource_group_name
       vmss_name = _get_vmss_name(vm_props, env)
-      _ensure_resource_group_exists(resource_group_name, location)
+      _ensure_resource_group_exists(resource_group_name, vm_props.location)
 
       existing_vmss = @azure_client.get_vmss_by_name(resource_group_name, vmss_name)
       vmss_params = {}
-      stemcell_info = _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location, nil)
+      stemcell_info = _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, nil)
       vmss_instance_id = nil # this is the instance id like '1', '2', concept in vmss.
       vm_name = nil
       vmss_instance_zone = nil
@@ -39,7 +39,7 @@ module Bosh::AzureCloud
         vmss_params = {
           availability_zones: vm_props.vmss.availability_zones,
           vmss_name: vmss_name,
-          location: location,
+          location: vm_props.location,
           instance_type: vm_props.instance_type
         }
         vmss_params[:image_id] = stemcell_info.uri
@@ -96,7 +96,7 @@ module Bosh::AzureCloud
       config_disk_id, = @config_disk_manager.prepare_config_disk(
         resource_group_name,
         vm_name,
-        location,
+        vm_props.location,
         vmss_instance_zone.nil? ? nil : vmss_instance_zone[0],
         meta_data_obj,
         user_data_obj

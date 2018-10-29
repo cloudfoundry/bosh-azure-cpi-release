@@ -20,6 +20,8 @@ module Bosh::AzureCloud
     attr_writer :availability_set
     attr_writer :assign_dynamic_public_ip
 
+    attr_accessor :location
+
     AVAILABILITY_SET_KEY = 'availability_set'
     LOAD_BALANCER_KEY = 'load_balancer'
     RESOURCE_GROUP_NAME_KEY = 'resource_group_name'
@@ -61,6 +63,8 @@ module Bosh::AzureCloud
 
       vmss_hash = vm_properties.fetch('vmss', {})
       @vmss = Bosh::AzureCloud::VMSSConfig.new(vmss_hash['name'], vmss_hash['availability_zones'])
+
+      @location = global_azure_config.location
     end
 
     private

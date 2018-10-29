@@ -4,8 +4,8 @@ module Bosh::AzureCloud
   class VMManagerBase
     include Helpers
 
-    def get_storage_account_from_vm_properties(vm_properties, location)
-      CPILogger.instance.logger.debug("get_storage_account_from_vm_properties(#{vm_properties}, #{location})")
+    def get_storage_account_from_vm_properties(vm_properties)
+      CPILogger.instance.logger.debug("get_storage_account_from_vm_properties(#{vm_properties})")
 
       # If storage_account_name is not specified in vm_types or vm_extensions, use the default storage account in global configurations
       storage_account_name = nil
@@ -50,7 +50,7 @@ module Bosh::AzureCloud
           storage_account_type = vm_properties.storage_account_type
           storage_account_kind = vm_properties.storage_account_kind
           # Create the storage account automatically if the storage account in vm_types or vm_extensions does not exist
-          storage_account = @storage_account_manager.get_or_create_storage_account(storage_account_name, {}, storage_account_type, storage_account_kind, location, [DISK_CONTAINER, STEMCELL_CONTAINER], false)
+          storage_account = @storage_account_manager.get_or_create_storage_account(storage_account_name, {}, storage_account_type, storage_account_kind, vm_properties.location, [DISK_CONTAINER, STEMCELL_CONTAINER], false)
         end
       else
         storage_account_name = @storage_account_manager.default_storage_account_name
@@ -115,24 +115,24 @@ module Bosh::AzureCloud
       @azure_client.create_resource_group(resource_group_name, location)
     end
 
-    def _get_stemcell_info(stemcell_cid, vm_props, location, storage_account_name)
+    def _get_stemcell_info(stemcell_cid, vm_props, storage_account_name)
       stemcell_info = nil
       if @use_managed_disks
         if is_light_stemcell_cid?(stemcell_cid)
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
+          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(vm_props.location, stemcell_cid)
 
           stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
         else
           begin
             storage_account_type = _get_root_disk_type(vm_props)
             # Treat user_image_info as stemcell_info
-            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_cid, storage_account_type, location)
+            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_cid, storage_account_type, vm_props.location)
           rescue StandardError => e
             raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell '#{stemcell_cid}': #{e.inspect}\n#{e.backtrace.join("\n")}"
           end
         end
       elsif is_light_stemcell_cid?(stemcell_cid)
-        raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
+        raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(vm_props.location, stemcell_cid)
 
         stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
       else

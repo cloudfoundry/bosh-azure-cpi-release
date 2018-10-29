@@ -12,6 +12,7 @@ describe Bosh::AzureCloud::VMManager do
   describe '#create' do
     before do
       allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
+      allow(vm_props).to receive(:location).and_return(location)
     end
 
     context 'when VM is created' do
@@ -32,7 +33,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(azure_client).to receive(:create_resource_group)
             .with(MOCK_RESOURCE_GROUP_NAME, location)
 
-          _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, network_configurator, env)
+          _, vm_params = vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
           expect(vm_params[:name]).to eq(vm_name)
         end
       end

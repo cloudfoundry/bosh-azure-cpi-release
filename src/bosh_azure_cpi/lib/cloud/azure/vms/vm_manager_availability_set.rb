@@ -25,12 +25,12 @@ module Bosh::AzureCloud
       availability_set_name
     end
 
-    def _get_or_create_availability_set(resource_group_name, availability_set_name, vm_props, location)
+    def _get_or_create_availability_set(resource_group_name, availability_set_name, vm_props)
       return nil if availability_set_name.nil?
 
       availability_set_params = {
         name: availability_set_name,
-        location: location,
+        location: vm_props.location,
         tags: AZURE_TAGS,
         platform_update_domain_count: vm_props.availability_set.platform_update_domain_count,
         platform_fault_domain_count: vm_props.availability_set.platform_fault_domain_count,
