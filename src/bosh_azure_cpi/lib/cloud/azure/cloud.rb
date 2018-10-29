@@ -524,7 +524,7 @@ module Bosh::AzureCloud
             settings['disks'] ||= {}
             settings['disks']['persistent'] ||= {}
             settings['disks']['persistent'][disk_id.to_s] = {
-              'lun'            => lun,
+              'lun' => lun,
               'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID
             }
           end
@@ -767,7 +767,7 @@ module Bosh::AzureCloud
       unless vm_params[:ephemeral_disk].nil?
         # Azure uses a data disk as the ephermeral disk and the lun is 0
         settings['disks']['ephemeral'] = {
-          'lun'            => '0',
+          'lun' => '0',
           'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID
         }
       end

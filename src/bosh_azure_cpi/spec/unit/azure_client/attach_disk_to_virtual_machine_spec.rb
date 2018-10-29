@@ -88,10 +88,10 @@ describe Bosh::AzureCloud::AzureClient do
                 { 'lun' => 1 },
                 {
                   'name' => disk_name,
-                  'lun'  => lun,
+                  'lun' => lun,
                   'createOption' => 'Attach',
-                  'caching'      => caching,
-                  'managedDisk'  => { 'id' => disk_id }
+                  'caching' => caching,
+                  'managedDisk' => { 'id' => disk_id }
                 }
               ]
             },
@@ -165,11 +165,11 @@ describe Bosh::AzureCloud::AzureClient do
                 { 'lun' => 1 },
                 {
                   'name' => disk_name,
-                  'lun'  => lun,
+                  'lun' => lun,
                   'createOption' => 'Attach',
-                  'caching'      => caching,
-                  'diskSizeGb'   => disk_size,
-                  'vhd'          => { 'uri' => disk_uri }
+                  'caching' => caching,
+                  'diskSizeGb' => disk_size,
+                  'vhd' => { 'uri' => disk_uri }
                 }
               ]
             },

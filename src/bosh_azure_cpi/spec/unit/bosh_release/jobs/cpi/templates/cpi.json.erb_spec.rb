@@ -11,15 +11,15 @@ describe 'cpi.json.erb' do
     {
       'properties' => {
         'azure' => {
-          'environment'            => 'AzureCloud',
-          'subscription_id'        => 'fake-subscription-id',
-          'tenant_id'              => 'fake-tenant-id',
-          'client_id'              => 'fake-client-id',
-          'client_secret'          => 'fake-client-secret',
-          'resource_group_name'    => 'fake-resource-group-name',
-          'storage_account_name'   => 'fake-storage-account-name',
-          'ssh_user'               => 'vcap',
-          'ssh_public_key'         => 'ssh-rsa ABCDEFGHIJKLMN',
+          'environment' => 'AzureCloud',
+          'subscription_id' => 'fake-subscription-id',
+          'tenant_id' => 'fake-tenant-id',
+          'client_id' => 'fake-client-id',
+          'client_secret' => 'fake-client-secret',
+          'resource_group_name' => 'fake-resource-group-name',
+          'storage_account_name' => 'fake-storage-account-name',
+          'ssh_user' => 'vcap',
+          'ssh_public_key' => 'ssh-rsa ABCDEFGHIJKLMN',
           'default_security_group' => 'fake-default-security-group'
         },
         'registry' => {
@@ -58,26 +58,26 @@ describe 'cpi.json.erb' do
         'plugin' => 'azure',
         'properties' => {
           'azure' => {
-            'environment'                 => 'AzureCloud',
-            'subscription_id'             => 'fake-subscription-id',
-            'tenant_id'                   => 'fake-tenant-id',
-            'client_id'                   => 'fake-client-id',
-            'client_secret'               => 'fake-client-secret',
-            'managed_service_identity'    => {
+            'environment' => 'AzureCloud',
+            'subscription_id' => 'fake-subscription-id',
+            'tenant_id' => 'fake-tenant-id',
+            'client_id' => 'fake-client-id',
+            'client_secret' => 'fake-client-secret',
+            'managed_service_identity' => {
               'enabled' => false
             },
-            'resource_group_name'         => 'fake-resource-group-name',
-            'storage_account_name'        => 'fake-storage-account-name',
-            'ssh_user'                    => 'vcap',
-            'ssh_public_key'              => 'ssh-rsa ABCDEFGHIJKLMN',
-            'default_security_group'      => 'fake-default-security-group',
-            'parallel_upload_thread_num'  => 16,
-            'debug_mode'                  => false,
-            'keep_failed_vms'             => false,
-            'enable_telemetry'            => false,
-            'use_managed_disks'           => false,
+            'resource_group_name' => 'fake-resource-group-name',
+            'storage_account_name' => 'fake-storage-account-name',
+            'ssh_user' => 'vcap',
+            'ssh_public_key' => 'ssh-rsa ABCDEFGHIJKLMN',
+            'default_security_group' => 'fake-default-security-group',
+            'parallel_upload_thread_num' => 16,
+            'debug_mode' => false,
+            'keep_failed_vms' => false,
+            'enable_telemetry' => false,
+            'use_managed_disks' => false,
             'pip_idle_timeout_in_minutes' => 4,
-            'enable_vm_boot_diagnostics'  => false
+            'enable_vm_boot_diagnostics' => false
           },
           'registry' => {
             'address' => 'registry-host.example.com',
@@ -302,10 +302,10 @@ describe 'cpi.json.erb' do
 
         it 'parses the AzureStack properties' do
           expect(subject['cloud']['properties']['azure']['azure_stack']).to eq(
-            'domain'                             => 'local.azurestack.external',
-            'authentication'                     => 'AzureAD',
-            'resource'                           => 'fake-token-resource',
-            'endpoint_prefix'                    => 'management'
+            'domain' => 'local.azurestack.external',
+            'authentication' => 'AzureAD',
+            'resource' => 'fake-token-resource',
+            'endpoint_prefix' => 'management'
           )
         end
       end
@@ -320,10 +320,10 @@ describe 'cpi.json.erb' do
 
         it 'parses the AzureStack properties' do
           expect(subject['cloud']['properties']['azure']['azure_stack']).to eq(
-            'domain'                             => 'fake-domain',
-            'authentication'                     => 'fake-authentication',
-            'resource'                           => 'fake-token-resource',
-            'endpoint_prefix'                    => 'fake-endpoint-prefix'
+            'domain' => 'fake-domain',
+            'authentication' => 'fake-authentication',
+            'resource' => 'fake-token-resource',
+            'endpoint_prefix' => 'fake-endpoint-prefix'
           )
         end
       end

@@ -49,11 +49,11 @@ shared_context 'shared stuff for vm manager' do
   let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
   let(:vm_properties) do
     {
-      'instance_type'         => 'Standard_D1',
-      'storage_account_name'  => 'dfe03ad623f34d42999e93ca',
-      'caching'               => 'ReadWrite',
-      'load_balancer'         => 'fake-lb-name',
-      'application_gateway'   => 'fake-ag-name'
+      'instance_type' => 'Standard_D1',
+      'storage_account_name' => 'dfe03ad623f34d42999e93ca',
+      'caching' => 'ReadWrite',
+      'load_balancer' => 'fake-lb-name',
+      'application_gateway' => 'fake-ag-name'
     }
   end
   let(:vm_props) do

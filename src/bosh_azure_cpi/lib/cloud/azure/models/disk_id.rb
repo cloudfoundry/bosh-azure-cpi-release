@@ -36,7 +36,7 @@ module Bosh::AzureCloud
     def self.create(caching, use_managed_disks, disk_name: nil, resource_group_name: nil, storage_account_name: nil)
       id_hash = {
         DISK_NAME_KEY => disk_name.nil? ? _generate_data_disk_name(use_managed_disks) : disk_name,
-        CACHING_KEY   => caching
+        CACHING_KEY => caching
       }
       id_hash[RESOURCE_GROUP_NAME_KEY] = resource_group_name unless resource_group_name.nil?
       id_hash[STORAGE_ACCOUNT_NAME_KEY] = storage_account_name unless storage_account_name.nil?

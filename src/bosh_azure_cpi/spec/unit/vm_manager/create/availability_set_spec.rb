@@ -54,10 +54,10 @@ describe Bosh::AzureCloud::VMManager do
           let(:availability_set_name) { SecureRandom.uuid.to_s }
           let(:vm_props) do
             props_factory.parse_vm_props(
-              'instance_type'                => 'Standard_D1',
-              'availability_set'             => availability_set_name,
+              'instance_type' => 'Standard_D1',
+              'availability_set' => availability_set_name,
               'platform_update_domain_count' => 5,
-              'platform_fault_domain_count'  => 3
+              'platform_fault_domain_count' => 3
             )
           end
           let(:avset_params) do
