@@ -63,7 +63,7 @@
         accelerated_networking: true
     ```
 
-1. Get the current resource config of the instance group which you want to enable accelerated networking.
+1. Get the current resource config of the instance group which you want to enable accelerated networking. Replace `<JOB-NAME>` with the instance group name (e.g. `diego_cell`).
 
     ```
     PRODUCT_GUID=$(om -k curl \
@@ -74,7 +74,7 @@
     JOB_GUID=$(om -k curl \
       --path "/api/v0/staged/products/${PRODUCT_GUID}/jobs" \
       --request "GET" \
-      | jq -r '.jobs | .[] | select(."name" == "diego_cell") | .guid')
+      | jq -r '.jobs | .[] | select(."name" == "<JOB-NAME>") | .guid')
 
     om -k curl \
       --path "/api/v0/staged/products/${PRODUCT_GUID}/jobs/${JOB_GUID}/resource_config" \
