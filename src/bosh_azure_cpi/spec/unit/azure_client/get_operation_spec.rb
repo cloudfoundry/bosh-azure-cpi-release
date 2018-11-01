@@ -1423,6 +1423,110 @@ describe Bosh::AzureCloud::AzureClient do
     end
 
     context 'when the response body is not null' do
+      context 'when the vm is using managed identity' do
+        let(:response_body) do
+          {
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'identity' => {
+              'type' => 'UserAssigned',
+              'identityIds' => ['fake-id-1']
+            },
+            'properties' => {
+              'provisioningState' => 'foo',
+              'hardwareProfile' => { 'vmSize' => 'bar' },
+              'storageProfile' => {
+                'osDisk' => {
+                  'name' => 'foo',
+                  'vhd' => { 'uri' => 'foo' },
+                  'caching' => 'bar',
+                  'diskSizeGb' => 1024
+                },
+                'dataDisks' => [
+                  {
+                    'name' => 'foo',
+                    'lun' => 0,
+                    'vhd' => { 'uri' => 'foo' },
+                    'caching' => 'bar',
+                    'diskSizeGb' => 1024
+                  }
+                ]
+              },
+              'networkProfile' => {
+                'networkInterfaces' => [
+                  {
+                    'id' => nic_id
+                  }
+                ]
+              }
+            }
+          }.to_json
+        end
+
+        let(:fake_vm) do
+          {
+            id: 'fake-id',
+            name: 'fake-name',
+            location: 'fake-location',
+            tags: {},
+            identity: {
+              type: 'UserAssigned',
+              identity_ids: ['fake-id-1']
+            },
+            provisioning_state: 'foo',
+            vm_size: 'bar',
+            os_disk: {
+              name: 'foo',
+              uri: 'foo',
+              caching: 'bar',
+              size: 1024
+            },
+            data_disks: [{
+              name: 'foo',
+              lun: 0,
+              uri: 'foo',
+              caching: 'bar',
+              size: 1024,
+              disk_bosh_id: 'foo'
+            }],
+            network_interfaces: [fake_nic]
+          }
+        end
+
+        it 'should return the resource with the unmanaged disk' do
+          stub_request(:get, public_ip_uri).to_return(
+            status: 200,
+            body: public_ip_response_body.to_json,
+            headers: {}
+          )
+          stub_request(:get, load_balancer_uri).to_return(
+            status: 200,
+            body: load_balancer_response_body,
+            headers: {}
+          )
+          stub_request(:get, application_gateway_uri).to_return(
+            status: 200,
+            body: application_gateway_response_body,
+            headers: {}
+          )
+          stub_request(:get, nic_uri).to_return(
+            status: 200,
+            body: nic_response_body,
+            headers: {}
+          )
+          stub_request(:get, vm_uri).to_return(
+            status: 200,
+            body: response_body,
+            headers: {}
+          )
+          expect(
+            azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+          ).to eq(fake_vm)
+        end
+      end
+
       context 'when the vm is using the unmanaged disks' do
         let(:response_body) do
           {
