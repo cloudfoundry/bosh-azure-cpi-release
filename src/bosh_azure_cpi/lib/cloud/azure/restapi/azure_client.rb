@@ -627,6 +627,12 @@ module Bosh::AzureCloud
         vm[:location] = result['location']
         vm[:tags]     = result['tags']
 
+        if result.key?('identity')
+          vm[:identity] = {}
+          vm[:identity][:type] = result['identity']['type']
+          vm[:identity][:identity_ids] = result['identity']['identityIds']
+        end
+
         vm[:zone]  = result['zones'][0] unless result['zones'].nil?
 
         properties = result['properties']
