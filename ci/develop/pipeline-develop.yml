@@ -133,7 +133,6 @@ jobs:
     serial: true
     plan:
       - aggregate:
-        - {trigger: true,  get: trigger-every-week}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in}
         - {trigger: false, get: version-semver, params: {bump: patch}}
         - {trigger: false, get: bosh-cli}
@@ -328,6 +327,7 @@ resources:
       ignore_paths:
         - .final_builds/**/*.yml
         - releases/**/*.yml
+    check_every: 4h
   - name: version-semver
     type: semver
     source:
@@ -387,10 +387,3 @@ resources:
     source:
       uri: https://github.com/cloudfoundry/bosh-deployment
       branch: master
-  - name: trigger-every-week
-    type: time
-    source:
-      start: 12:00 AM
-      stop: 1:00 AM
-      days: [Sunday]
-      location: Asia/Shanghai

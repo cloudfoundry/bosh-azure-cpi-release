@@ -50,5 +50,5 @@ pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   else
     tags+=" --tag ~availability_zone"
   fi
-  bundle exec rspec spec/integration/ ${tags}
+  bundle exec rspec spec/integration/ ${tags} --format documentation
 popd > /dev/null

@@ -53,19 +53,19 @@ pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   else
     tags+=" --tag ~availability_zone"
   fi
-  bundle exec rspec spec/integration/ ${tags}
+  bundle exec rspec spec/integration/ ${tags} --format documentation
 
   # migration: unmanged disk -> managed disk
   # Only run migration test when AZURE_USE_MANAGED_DISKS is set to false initially
   if [ "${AZURE_USE_MANAGED_DISKS}" == "false" ]; then
     unset BOSH_AZURE_USE_MANAGED_DISKS
-    bundle exec rspec spec/integration/migrations/managed_disks_migration_spec.rb
+    bundle exec rspec spec/integration/migrations/managed_disks_migration_spec.rb --format documentation
   fi
 
   # migration: regional resource -> zonal resource
   # Only run migration test when AZURE_USE_MANAGED_DISKS is set to true initially
   if [ "${AZURE_USE_MANAGED_DISKS}" == "true" ]; then
     export BOSH_AZURE_USE_MANAGED_DISKS=true
-    bundle exec rspec spec/integration/migrations/availability_zone_migration_spec.rb
+    bundle exec rspec spec/integration/migrations/availability_zone_migration_spec.rb --format documentation
   fi
 popd > /dev/null
