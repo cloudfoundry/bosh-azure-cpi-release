@@ -13,13 +13,11 @@ describe Bosh::AzureCloud::Cloud do
         'ephemeral_disk_size' => 32 * 1024
       }
     end
+
     it 'should return Azure specific cloud properties' do
-      expect(@cpi.calculate_vm_cloud_properties(vm_resources)).to eq(
-        'instance_type' => 'Standard_F2',
-        'ephemeral_disk' => {
-          'size' => 32 * 1024
-        }
-      )
+      expect(@cpi.calculate_vm_cloud_properties(vm_resources)['instance_type']).to be_nil
+      expect(@cpi.calculate_vm_cloud_properties(vm_resources)['instance_types']).not_to be_empty
+      expect(@cpi.calculate_vm_cloud_properties(vm_resources)['ephemeral_disk']['size']).to eq(32 * 1024)
     end
   end
 
