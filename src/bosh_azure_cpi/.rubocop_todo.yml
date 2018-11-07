@@ -74,6 +74,8 @@ Lint/UselessAssignment:
 # Offense count: 79
 Metrics/AbcSize:
   Max: 160
+  Exclude:
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
 # Offense count: 625
 # Configuration parameters: CountComments, ExcludedMethods.
@@ -88,16 +90,18 @@ Metrics/BlockNesting:
 # Offense count: 11
 # Configuration parameters: CountComments.
 Metrics/ClassLength:
-  Max: 1600
+  Max: 2000
 
 # Offense count: 30
 Metrics/CyclomaticComplexity:
   Max: 25
+  Exclude:
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
-# Offense count: 131
+# Offense count: 200
 # Configuration parameters: CountComments.
 Metrics/MethodLength:
-  Max: 131
+  Max: 200
   Exclude:
     - 'lib/cloud/azure/vms/vm_manager.rb'
 
@@ -118,6 +122,8 @@ Metrics/ParameterLists:
 # Offense count: 28
 Metrics/PerceivedComplexity:
   Max: 30
+  Exclude:
+    - 'lib/cloud/azure/vms/vm_manager.rb'
 
 # Offense count: 7
 Naming/AccessorMethodName:
@@ -195,6 +201,7 @@ Style/GuardClause:
     - 'lib/cloud/azure/utils/helpers.rb'
     - 'lib/cloud/azure/models/disk_id.rb'
     - 'lib/cloud/azure/models/instance_id.rb'
+    - 'lib/cloud/azure/models/managed_identity.rb'
     - 'lib/cloud/azure/network/network_configurator.rb'
     - 'lib/cloud/azure/stemcell/stemcell_manager.rb'
     - 'lib/cloud/azure/stemcell/stemcell_manager2.rb'

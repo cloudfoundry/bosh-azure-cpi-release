@@ -4,14 +4,15 @@
       'plugin' => 'azure',
       'properties' => {
         'azure' => {
+          'credentials_source' => p('azure.credentials_source'),
           'environment' => p('azure.environment'),
           'subscription_id' => p('azure.subscription_id'),
           'resource_group_name' => p('azure.resource_group_name'),
+          'use_managed_disks' => p('azure.use_managed_disks'),
           'ssh_user' => p('azure.ssh_user'),
           'parallel_upload_thread_num' => p('azure.parallel_upload_thread_num'),
-          'debug_mode' => p('azure.debug_mode'),
-          'use_managed_disks' => p('azure.use_managed_disks'),
           'pip_idle_timeout_in_minutes' => p('azure.pip_idle_timeout_in_minutes'),
+          'debug_mode' => p('azure.debug_mode'),
           'keep_failed_vms' => p('azure.keep_failed_vms'),
           'enable_telemetry' => p('azure.enable_telemetry'),
           'enable_vm_boot_diagnostics' => p('azure.enable_vm_boot_diagnostics')
@@ -37,14 +38,9 @@
     params['cloud']['properties']['azure']['location'] = location
   end
 
-  if p('azure.managed_service_identity.enabled')
-    params['cloud']['properties']['azure']['managed_service_identity'] = {
-      "enabled" => true
-    }
-  else
-    params['cloud']['properties']['azure']['managed_service_identity'] = {
-      "enabled" => false
-    }
+  if p('azure.credentials_source') != "static" && p('azure.credentials_source') != "managed_identity"
+    raise 'The value of "credentials_source" is invalid. Possible values: "static" and "managed_identity".'
+  elsif p('azure.credentials_source') == "static"
     params['cloud']['properties']['azure']['tenant_id'] = p('azure.tenant_id')
     params['cloud']['properties']['azure']['client_id'] = p('azure.client_id')
     if_p('azure.client_secret') do |client_secret|
@@ -52,6 +48,21 @@
     end.else do
       certificate = p('azure.certificate', '')
       raise 'both "client_secret" and "certificate" are not provided. Please specify at least one of them.' if certificate.empty?
+    end
+  end
+
+  if_p('azure.default_managed_identity.type') do |identity_type|
+    if identity_type == 'SystemAssigned'
+      params['cloud']['properties']['azure']['default_managed_identity'] = {
+        "type" => identity_type
+      }
+    elsif identity_type == 'UserAssigned'
+      params['cloud']['properties']['azure']['default_managed_identity'] = {
+        "type" => identity_type,
+        "user_assigned_identity_name" => p('azure.default_managed_identity.user_assigned_identity_name')
+      }
+    else
+      raise 'The value of "azure.default_managed_identity.type" is invalid. Possible values: "SystemAssigned" and "UserAssigned".' 
     end
   end
 

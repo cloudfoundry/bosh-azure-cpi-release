@@ -365,10 +365,10 @@ describe Bosh::AzureCloud::AzureClient do
     )
   end
 
-  describe '#list_available_virtual_machine_sizes' do
+  describe '#list_available_virtual_machine_sizes_by_location' do
     let(:location) { 'fake-location' }
-    let(:list_available_virtual_machine_sizes_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/providers/Microsoft.Compute/locations/#{location}/vmSizes?api-version=#{AZURE_RESOURCE_PROVIDER_COMPUTE}" }
-    let(:list_available_virtual_machine_sizes_response_body) do
+    let(:list_available_virtual_machine_sizes_by_location_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/providers/Microsoft.Compute/locations/#{location}/vmSizes?api-version=#{AZURE_RESOURCE_PROVIDER_COMPUTE}" }
+    let(:list_available_virtual_machine_sizes_by_location_response_body) do
       {
         'value' => [
           {
@@ -404,26 +404,93 @@ describe Bosh::AzureCloud::AzureClient do
         }
       ]
     end
+
     context 'when token is valid, getting response succeeds' do
       it 'should return null if response body is null' do
-        stub_request(:get, list_available_virtual_machine_sizes_uri).to_return(
+        stub_request(:get, list_available_virtual_machine_sizes_by_location_uri).to_return(
           status: 200,
           body: '',
           headers: {}
         )
         expect(
-          azure_client.list_available_virtual_machine_sizes(location)
+          azure_client.list_available_virtual_machine_sizes_by_location(location)
         ).to eq([])
       end
 
       it 'should return the resource if response body is not null' do
-        stub_request(:get, list_available_virtual_machine_sizes_uri).to_return(
+        stub_request(:get, list_available_virtual_machine_sizes_by_location_uri).to_return(
           status: 200,
-          body: list_available_virtual_machine_sizes_response_body.to_json,
+          body: list_available_virtual_machine_sizes_by_location_response_body.to_json,
           headers: {}
         )
         expect(
-          azure_client.list_available_virtual_machine_sizes(location)
+          azure_client.list_available_virtual_machine_sizes_by_location(location)
+        ).to eq(fake_vm_size_list)
+      end
+    end
+  end
+
+  describe '#list_available_virtual_machine_sizes_by_availability_set' do
+    let(:resource_group_name) { 'fake-resource-group-name' }
+    let(:availability_set_name) { 'fake-availability-set-name' }
+    let(:list_available_virtual_machine_sizes_by_availability_set_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group_name}/providers/Microsoft.Compute/availabilitySets/#{availability_set_name}/vmSizes?api-version=#{AZURE_RESOURCE_PROVIDER_COMPUTE}" }
+    let(:list_available_virtual_machine_sizes_by_availability_set_response_body) do
+      {
+        'value' => [
+          {
+            "name": 'Standard_A0',
+            "numberOfCores": 1,
+            "osDiskSizeInMB": 130_048,
+            "resourceDiskSizeInMB": 20_480,
+            "memoryInMB": 768,
+            "maxDataDiskCount": 1
+          },
+          {
+            "name": 'Standard_A1',
+            "numberOfCores": 1,
+            "osDiskSizeInMB": 130_048,
+            "resourceDiskSizeInMB": 71_680,
+            "memoryInMB": 1792,
+            "maxDataDiskCount": 2
+          }
+        ]
+      }
+    end
+    let(:fake_vm_size_list) do
+      [
+        {
+          "name": 'Standard_A0',
+          "number_of_cores": 1,
+          "memory_in_mb": 768
+        },
+        {
+          "name": 'Standard_A1',
+          "number_of_cores": 1,
+          "memory_in_mb": 1792
+        }
+      ]
+    end
+
+    context 'when token is valid, getting response succeeds' do
+      it 'should return null if response body is null' do
+        stub_request(:get, list_available_virtual_machine_sizes_by_availability_set_uri).to_return(
+          status: 200,
+          body: '',
+          headers: {}
+        )
+        expect(
+          azure_client.list_available_virtual_machine_sizes_by_availability_set(resource_group_name, availability_set_name)
+        ).to eq([])
+      end
+
+      it 'should return the resource if response body is not null' do
+        stub_request(:get, list_available_virtual_machine_sizes_by_availability_set_uri).to_return(
+          status: 200,
+          body: list_available_virtual_machine_sizes_by_availability_set_response_body.to_json,
+          headers: {}
+        )
+        expect(
+          azure_client.list_available_virtual_machine_sizes_by_availability_set(resource_group_name, availability_set_name)
         ).to eq(fake_vm_size_list)
       end
     end
@@ -1342,6 +1409,110 @@ describe Bosh::AzureCloud::AzureClient do
     end
 
     context 'when the response body is not null' do
+      context 'when the vm is using managed identity' do
+        let(:response_body) do
+          {
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => {},
+            'identity' => {
+              'type' => 'UserAssigned',
+              'identityIds' => ['fake-id-1']
+            },
+            'properties' => {
+              'provisioningState' => 'foo',
+              'hardwareProfile' => { 'vmSize' => 'bar' },
+              'storageProfile' => {
+                'osDisk' => {
+                  'name' => 'foo',
+                  'vhd' => { 'uri' => 'foo' },
+                  'caching' => 'bar',
+                  'diskSizeGb' => 1024
+                },
+                'dataDisks' => [
+                  {
+                    'name' => 'foo',
+                    'lun' => 0,
+                    'vhd' => { 'uri' => 'foo' },
+                    'caching' => 'bar',
+                    'diskSizeGb' => 1024
+                  }
+                ]
+              },
+              'networkProfile' => {
+                'networkInterfaces' => [
+                  {
+                    'id' => nic_id
+                  }
+                ]
+              }
+            }
+          }.to_json
+        end
+
+        let(:fake_vm) do
+          {
+            id: 'fake-id',
+            name: 'fake-name',
+            location: 'fake-location',
+            tags: {},
+            identity: {
+              type: 'UserAssigned',
+              identity_ids: ['fake-id-1']
+            },
+            provisioning_state: 'foo',
+            vm_size: 'bar',
+            os_disk: {
+              name: 'foo',
+              uri: 'foo',
+              caching: 'bar',
+              size: 1024
+            },
+            data_disks: [{
+              name: 'foo',
+              lun: 0,
+              uri: 'foo',
+              caching: 'bar',
+              size: 1024,
+              disk_bosh_id: 'foo'
+            }],
+            network_interfaces: [fake_nic]
+          }
+        end
+
+        it 'should return the resource with the unmanaged disk' do
+          stub_request(:get, public_ip_uri).to_return(
+            status: 200,
+            body: public_ip_response_body.to_json,
+            headers: {}
+          )
+          stub_request(:get, load_balancer_uri).to_return(
+            status: 200,
+            body: load_balancer_response_body,
+            headers: {}
+          )
+          stub_request(:get, application_gateway_uri).to_return(
+            status: 200,
+            body: application_gateway_response_body,
+            headers: {}
+          )
+          stub_request(:get, nic_uri).to_return(
+            status: 200,
+            body: nic_response_body,
+            headers: {}
+          )
+          stub_request(:get, vm_uri).to_return(
+            status: 200,
+            body: response_body,
+            headers: {}
+          )
+          expect(
+            azure_client.get_virtual_machine_by_name(resource_group, vm_name)
+          ).to eq(fake_vm)
+        end
+      end
+
       context 'when the vm is using the unmanaged disks' do
         let(:response_body) do
           {

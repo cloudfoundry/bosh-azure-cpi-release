@@ -127,11 +127,11 @@ module Bosh::AzureCloud
       with_thread_name("create_vm(#{agent_id}, ...)") do
         bosh_vm_meta = Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_cid)
         vm_props = @props_factory.parse_vm_props(cloud_properties)
-
-        # TODO: move the validation into the factory's methods
-        cloud_error("missing required cloud property 'instance_type'.") if vm_props.instance_type.nil?
-        cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') if !@use_managed_disks && !vm_props.availability_zone.nil?
-        extras = { 'instance_type' => vm_props.instance_type.nil? ? 'unknown_instance_type' : vm_props.instance_type }
+        if vm_props.instance_type.nil?
+          extras = { 'instance_types' => vm_props.instance_types } unless vm_props.instance_types.nil?
+        else
+          extras = { 'instance_type' => vm_props.instance_type }
+        end
         @telemetry_manager.monitor('create_vm', id: bosh_vm_meta.agent_id, extras: extras) do
           # These resources should be in the same location for a VM: VM, NIC, disk(storage account or managed disk).
           # And NIC must be in the same location with VNET, so CPI will use VNET's location as default location for the resources related to the VM.
@@ -150,6 +150,7 @@ module Bosh::AzureCloud
           instance_id, vm_params = @vm_manager.create(
             bosh_vm_meta,
             vm_props,
+            disk_cids,
             network_configurator,
             environment
           )
@@ -277,10 +278,10 @@ module Bosh::AzureCloud
             raise "Missing VM cloud properties: #{missing_keys.join(', ')}"
           end
 
-          available_vm_sizes = @azure_client.list_available_virtual_machine_sizes(location)
-          instance_type = @instance_type_mapper.map(desired_instance_size, available_vm_sizes)
+          available_vm_sizes = @azure_client.list_available_virtual_machine_sizes_by_location(location)
+          instance_types = @instance_type_mapper.map(desired_instance_size, available_vm_sizes)
           {
-            'instance_type' => instance_type,
+            'instance_types' => instance_types,
             'ephemeral_disk' => {
               'size' => (desired_instance_size['ephemeral_disk_size'] / 1024.0).ceil * 1024
             }
@@ -468,21 +469,20 @@ module Bosh::AzureCloud
           disk_id = CloudIdParser.parse(disk_cid, _azure_config.resource_group_name)
           disk_name = disk_id.disk_name
           vm = @vm_manager.find(instance_id)
-          disk_name = disk_id.disk_name
           if @use_managed_disks
             disk = @disk_manager2.get_data_disk(disk_id)
             vm_zone = vm[:zone]
             if instance_id.use_managed_disks?
               if disk.nil?
-                # migrate only if the disk is an unmanaged disk
                 if disk_name.start_with?(DATA_DISK_PREFIX)
+                  CPILogger.instance.logger.info("attach_disk - migrate the disk '#{disk_name}' from unmanaged to managed")
                   begin
                     storage_account_name = disk_id.storage_account_name
                     blob_uri = @disk_manager.get_data_disk_uri(disk_id)
                     storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
                     location = storage_account[:location]
                     # Can not use the type of the default storage account because only Standard_LRS and Premium_LRS are supported for managed disk.
-                    account_type = storage_account[:account_type] == STORAGE_ACCOUNT_TYPE_PREMIUM_LRS ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
+                    account_type = storage_account[:sku_tier] == SKU_TIER_PREMIUM ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
                     CPILogger.instance.logger.debug("attach_disk - Migrating the unmanaged disk '#{disk_name}' to a managed disk")
                     @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type, vm_zone)
 
@@ -500,7 +500,8 @@ module Bosh::AzureCloud
                     cloud_error("attach_disk - Failed to create the managed disk for #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
                   end
                 end
-              elsif disk[:zone].nil? && !vm_zone.nil? # Only for migration scenario: VM is recreated in a zone while its data disk is still a regional resource.
+              elsif disk[:zone].nil? && !vm_zone.nil?
+                CPILogger.instance.logger.info("attach_disk - migrate the managed disk '#{disk_name}' from regional to zonal")
                 begin
                   @disk_manager2.migrate_to_zone(disk_id, disk, vm_zone)
                 rescue StandardError => e

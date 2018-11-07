@@ -13,6 +13,7 @@ describe 'cpi.json.erb' do
         'azure' => {
           'environment' => 'AzureCloud',
           'subscription_id' => 'fake-subscription-id',
+          'credentials_source' => 'static',
           'tenant_id' => 'fake-tenant-id',
           'client_id' => 'fake-client-id',
           'client_secret' => 'fake-client-secret',
@@ -60,12 +61,10 @@ describe 'cpi.json.erb' do
           'azure' => {
             'environment' => 'AzureCloud',
             'subscription_id' => 'fake-subscription-id',
+            'credentials_source' => 'static',
             'tenant_id' => 'fake-tenant-id',
             'client_id' => 'fake-client-id',
             'client_secret' => 'fake-client-secret',
-            'managed_service_identity' => {
-              'enabled' => false
-            },
             'resource_group_name' => 'fake-resource-group-name',
             'storage_account_name' => 'fake-storage-account-name',
             'ssh_user' => 'vcap',
@@ -124,29 +123,93 @@ describe 'cpi.json.erb' do
       end
     end
 
-    context 'when managed service identity is used' do
+    context 'when credentials_source is invalid' do
       before do
-        manifest['properties']['azure']['managed_service_identity'] = { 'enabled' => true }
+        manifest['properties']['azure']['credentials_source'] = 'invalid-value'
+      end
+
+      it 'should raise an error' do
+        expect { subject }.to raise_error(/The value of "credentials_source" is invalid. Possible values: "static" and "managed_identity"/)
+      end
+    end
+
+    context 'when credentials_source is managed_identity' do
+      before do
+        manifest['properties']['azure']['credentials_source'] = 'managed_identity'
         manifest['properties']['azure']['tenant_id'] = nil
         manifest['properties']['azure']['client_id'] = nil
         manifest['properties']['azure']['client_secret'] = nil
       end
 
-      it 'should use MSI and allow tenant_id/client_id/client_secret to be nil' do
-        expect(subject['cloud']['properties']['azure']['managed_service_identity']['enabled']).to be(true)
-        expect(subject['cloud']['properties']['azure']['tenant_id']).to be_nil
-        expect(subject['cloud']['properties']['azure']['client_id']).to be_nil
-        expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+      context 'when default managed identity is system assigned' do
+        before do
+          manifest['properties']['azure']['default_managed_identity'] = {
+            'type' => 'SystemAssigned'
+          }
+        end
+
+        it 'should use system assigned managed identity and allow tenant_id/client_id/client_secret to be nil' do
+          expect(subject['cloud']['properties']['azure']['default_managed_identity']['type']).to eq('SystemAssigned')
+          expect(subject['cloud']['properties']['azure']['default_managed_identity']['user_assigned_identity_name']).to be_nil
+          expect(subject['cloud']['properties']['azure']['tenant_id']).to be_nil
+          expect(subject['cloud']['properties']['azure']['client_id']).to be_nil
+          expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+        end
+
+        context 'when user_assigned_identity_name is specified' do
+          before do
+            manifest['properties']['azure']['default_managed_identity'] = {
+              'type' => 'SystemAssigned'
+            }
+          end
+
+          it 'should ignore user_assigned_identity_name' do
+            expect(subject['cloud']['properties']['azure']['default_managed_identity']['type']).to eq('SystemAssigned')
+            expect(subject['cloud']['properties']['azure']['default_managed_identity']['user_assigned_identity_name']).to be_nil
+            expect(subject['cloud']['properties']['azure']['tenant_id']).to be_nil
+            expect(subject['cloud']['properties']['azure']['client_id']).to be_nil
+            expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+          end
+        end
+      end
+
+      context 'when default managed identity is user assigned' do
+        before do
+          manifest['properties']['azure']['default_managed_identity'] = {
+            'type' => 'UserAssigned',
+            'user_assigned_identity_name' => 'fake-identity-name'
+          }
+        end
+
+        it 'should use user assigned managed identity and allow tenant_id/client_id/client_secret to be nil' do
+          expect(subject['cloud']['properties']['azure']['default_managed_identity']['type']).to eq('UserAssigned')
+          expect(subject['cloud']['properties']['azure']['default_managed_identity']['user_assigned_identity_name']).to eq('fake-identity-name')
+          expect(subject['cloud']['properties']['azure']['tenant_id']).to be_nil
+          expect(subject['cloud']['properties']['azure']['client_id']).to be_nil
+          expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+        end
+      end
+
+      context 'when default managed identity type is invalid' do
+        before do
+          manifest['properties']['azure']['default_managed_identity'] = {
+            'type' => 'Invalid'
+          }
+        end
+
+        it 'should raise an error' do
+          expect { subject }.to raise_error(/The value of "azure.default_managed_identity.type" is invalid. Possible values: "SystemAssigned" and "UserAssigned"/)
+        end
       end
     end
 
-    context 'when managed service identity is not used' do
+    context 'when credentials_source is static' do
       context 'when client_secret is provided' do
         it 'is able to render client_secret' do
-          expect(subject['cloud']['properties']['azure']['managed_service_identity']['enabled']).to be(false)
           expect(subject['cloud']['properties']['azure']['tenant_id']).to eq('fake-tenant-id')
           expect(subject['cloud']['properties']['azure']['client_id']).to eq('fake-client-id')
           expect(subject['cloud']['properties']['azure']['client_secret']).to eq('fake-client-secret')
+          expect(subject['cloud']['properties']['azure']['default_managed_identity']).to be_nil
         end
       end
 
@@ -171,10 +234,10 @@ describe 'cpi.json.erb' do
           end
 
           it 'allows client_secret to be nil' do
-            expect(subject['cloud']['properties']['azure']['managed_service_identity']['enabled']).to be(false)
             expect(subject['cloud']['properties']['azure']['tenant_id']).to eq('fake-tenant-id')
             expect(subject['cloud']['properties']['azure']['client_id']).to eq('fake-client-id')
             expect(subject['cloud']['properties']['azure']['client_secret']).to be_nil
+            expect(subject['cloud']['properties']['azure']['default_managed_identity']).to be_nil
           end
         end
       end

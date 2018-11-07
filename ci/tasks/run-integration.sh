@@ -33,6 +33,8 @@ export BOSH_AZURE_PRIMARY_PUBLIC_IP=$(echo ${metadata} | jq -e --raw-output ".pu
 export BOSH_AZURE_SECONDARY_PUBLIC_IP=$(echo ${metadata} | jq -e --raw-output ".public_ip_in_additional_rg")
 export BOSH_AZURE_APPLICATION_SECURITY_GROUP=$(echo ${metadata} | jq -e --raw-output ".asg_name")
 export BOSH_AZURE_APPLICATION_GATEWAY_NAME=$(echo ${metadata} | jq -e --raw-output ".application_gateway_name")
+export BOSH_AZURE_DEFAULT_USER_ASSIGNED_IDENTITY_NAME=$(echo ${metadata} | jq -e --raw-output ".default_user_assigned_identity_name")
+export BOSH_AZURE_USER_ASSIGNED_IDENTITY_NAME=$(echo ${metadata} | jq -e --raw-output ".user_assigned_identity_name")
 export BOSH_AZURE_SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
 
 export BOSH_AZURE_STEMCELL_PATH=$(realpath stemcell/*.tgz)
@@ -51,19 +53,19 @@ pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   else
     tags+=" --tag ~availability_zone"
   fi
-  bundle exec rspec spec/integration/ ${tags}
+  bundle exec rspec spec/integration/ ${tags} --format documentation
 
   # migration: unmanged disk -> managed disk
   # Only run migration test when AZURE_USE_MANAGED_DISKS is set to false initially
   if [ "${AZURE_USE_MANAGED_DISKS}" == "false" ]; then
     unset BOSH_AZURE_USE_MANAGED_DISKS
-    bundle exec rspec spec/integration/migrations/managed_disks_migration_spec.rb
+    bundle exec rspec spec/integration/migrations/managed_disks_migration_spec.rb --format documentation
   fi
 
   # migration: regional resource -> zonal resource
   # Only run migration test when AZURE_USE_MANAGED_DISKS is set to true initially
   if [ "${AZURE_USE_MANAGED_DISKS}" == "true" ]; then
     export BOSH_AZURE_USE_MANAGED_DISKS=true
-    bundle exec rspec spec/integration/migrations/availability_zone_migration_spec.rb
+    bundle exec rspec spec/integration/migrations/availability_zone_migration_spec.rb --format documentation
   fi
 popd > /dev/null

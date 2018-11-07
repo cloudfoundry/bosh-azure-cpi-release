@@ -67,7 +67,7 @@ module Bosh::AzureCloud
       HTTP_CODE_NETWORK_AUTHENTICATION_REQUIRED
     ].freeze
     # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token#retry-guidance
-    AZURE_MSI_TOKEN_RETRYABLE_ERROR_CODES = AZURE_GENERAL_RETRYABLE_ERROR_CODES + [
+    AZURE_MANAGED_IDENTITY_TOKEN_RETRYABLE_ERROR_CODES = AZURE_GENERAL_RETRYABLE_ERROR_CODES + [
       HTTP_CODE_NOT_FOUND,
       HTTP_CODE_NOT_IMPLEMENTED,
       HTTP_CODE_HTTP_VERSION_NOT_SUPPORTED,
@@ -99,6 +99,9 @@ module Bosh::AzureCloud
 
     REST_API_PROVIDER_STORAGE            = 'Microsoft.Storage'
     REST_API_STORAGE_ACCOUNTS            = 'storageAccounts'
+
+    REST_API_PROVIDER_MANAGED_IDENTITY   = 'Microsoft.ManagedIdentity'
+    REST_API_USER_ASSIGNED_IDENTITIES    = 'userAssignedIdentities'
 
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret customData].freeze
@@ -243,6 +246,11 @@ module Bosh::AzureCloud
     #  When virtual machine is in an availability zone
     # * +:zone+                 - String. Zone number in string. Possible values: "1", "2" or "3".
     #
+    #  When virtual machine is associated to an identity
+    # * +:identity+             - Hash. The identity associated with the VM.
+    # *   +:type+               - String. The identity type used for the VM. Possible values: "SystemAssigned" and "UserAssigned".
+    # *   +:identity_name+      - String. The user identity associated with the VM.
+    #
     # @return [Boolean]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
@@ -277,6 +285,21 @@ module Bosh::AzureCloud
           }
         }
       }
+
+      unless vm_params[:identity].nil?
+        identity_type = vm_params[:identity][:type]
+        if identity_type == MANAGED_IDENTITY_TYPE_USER_ASSIGNED
+          identity_id = rest_api_url(REST_API_PROVIDER_MANAGED_IDENTITY, REST_API_USER_ASSIGNED_IDENTITIES, resource_group_name: resource_group_name, name: vm_params[:identity][:identity_name])
+          vm['identity'] = {
+            'type' => MANAGED_IDENTITY_TYPE_USER_ASSIGNED,
+            'identityIds' => [identity_id]
+          }
+        else
+          vm['identity'] = {
+            'type' => MANAGED_IDENTITY_TYPE_SYSTEM_ASSIGNED
+          }
+        end
+      end
 
       vm['zones'] = [vm_params[:zone]] unless vm_params[:zone].nil?
 
@@ -382,14 +405,15 @@ module Bosh::AzureCloud
       http_put(url, vm, params)
     end
 
-    # List the available virtual machine sizes
+    # List the available virtual machine sizes by location
     # @param [String] location - Location of virtual machine.
     #
     # @return [Array]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-list-sizes-region
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinesizes/list
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
     #
-    def list_available_virtual_machine_sizes(location)
+    def list_available_virtual_machine_sizes_by_location(location)
       vm_sizes = []
       url =  "/subscriptions/#{URI.escape(@azure_config.subscription_id)}"
       url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
@@ -399,8 +423,28 @@ module Bosh::AzureCloud
 
       unless result.nil? || result['value'].nil?
         result['value'].each do |value|
-          vm_size = parse_vm_size(value)
-          vm_sizes << vm_size
+          vm_sizes << parse_vm_size(value)
+        end
+      end
+      vm_sizes
+    end
+
+    # List the available virtual machine sizes by availability set
+    # @param [String] availability_set_name - Name of availability set.
+    #
+    # @return [Array]
+    #
+    # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/listavailablesizes
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    #
+    def list_available_virtual_machine_sizes_by_availability_set(resource_group_name, availability_set_name)
+      vm_sizes = []
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_AVAILABILITY_SETS, resource_group_name: resource_group_name, name: availability_set_name, others: REST_API_VM_SIZES)
+      result = get_resource_by_id(url)
+
+      unless result.nil? || result['value'].nil?
+        result['value'].each do |value|
+          vm_sizes << parse_vm_size(value)
         end
       end
       vm_sizes
@@ -574,6 +618,12 @@ module Bosh::AzureCloud
         vm[:name]     = result['name']
         vm[:location] = result['location']
         vm[:tags]     = result['tags']
+
+        if result.key?('identity')
+          vm[:identity] = {}
+          vm[:identity][:type] = result['identity']['type']
+          vm[:identity][:identity_ids] = result['identity']['identityIds']
+        end
 
         vm[:zone]  = result['zones'][0] unless result['zones'].nil?
 
@@ -1240,7 +1290,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
+    # @See https://docs.microsoft.com/en-us/rest/api/load-balancer/loadbalancers/get
     #
 
     def get_load_balancer_by_name(resource_group_name, name)
@@ -1253,7 +1303,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://docs.microsoft.com/en-us/rest/api/loadbalancer/get-information-about-a-load-balancer
+    # @See https://docs.microsoft.com/en-us/rest/api/load-balancer/loadbalancers/get
     #
     def _get_load_balancer(url)
       load_balancer = nil
@@ -1264,7 +1314,6 @@ module Bosh::AzureCloud
         load_balancer[:name] = result['name']
         load_balancer[:location] = result['location']
         load_balancer[:tags] = result['tags']
-
         properties = result['properties']
         load_balancer[:provisioning_state] = properties['provisioningState']
 
@@ -1875,6 +1924,7 @@ module Bosh::AzureCloud
         managed_disk[:location]  = result['location']
         managed_disk[:tags]      = result['tags']
         managed_disk[:sku_name]  = result['sku']['name']
+        managed_disk[:sku_tier]  = result['sku']['tier']
         managed_disk[:zone]      = result['zones'][0] unless result['zones'].nil?
         properties = result['properties']
         managed_disk[:provisioning_state] = properties['provisioningState']
@@ -2082,10 +2132,10 @@ module Bosh::AzureCloud
     def get_token(force_refresh = false)
       if @token.nil? || (Time.at(@token['expires_on'].to_i) - Time.new) <= 0 || force_refresh
         CPILogger.instance.logger.info('get_token - trying to get/refresh Azure authentication token')
-        use_msi = @azure_config.enable_managed_service_identity
-        use_ssl = !use_msi
-        request, uri = use_msi ? request_from_managed_service_identity_endpoint : request_from_azure_active_directory_endpoint
-        retryable_error_codes = use_msi ? AZURE_MSI_TOKEN_RETRYABLE_ERROR_CODES : AZURE_AD_TOKEN_RETRYABLE_ERROR_CODES
+        use_managed_identity = @azure_config.managed_identity_enabled?
+        use_ssl = !use_managed_identity
+        request, uri = use_managed_identity ? request_from_managed_identity_endpoint : request_from_azure_active_directory_endpoint
+        retryable_error_codes = use_managed_identity ? AZURE_MANAGED_IDENTITY_TOKEN_RETRYABLE_ERROR_CODES : AZURE_AD_TOKEN_RETRYABLE_ERROR_CODES
         retry_count = 0
         max_retry_count = 5
         delay = 0
@@ -2160,10 +2210,10 @@ module Bosh::AzureCloud
       [request, uri]
     end
 
-    # https://docs.microsoft.com/en-us/azure/active-directory/managed-service-identity/how-to-use-vm-token#get-a-token-using-http
-    def request_from_managed_service_identity_endpoint
+    # https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http
+    def request_from_managed_identity_endpoint
       CPILogger.instance.logger.debug('Getting token from Azure VM Managed Service Identity')
-      endpoint, api_version = get_msi_endpoint_and_version
+      endpoint, api_version = get_managed_identity_endpoint_and_version
       uri = URI(endpoint)
       params = {
         'resource' => get_token_resource(@azure_config),

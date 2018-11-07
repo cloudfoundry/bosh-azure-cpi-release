@@ -18,7 +18,7 @@ module Bosh::AzureCloud
       @vm_manager = VMManager.new(@azure_config, @registry_endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
     end
 
-    def create(bosh_vm_meta, vm_props, network_configurator, env)
+    def create(bosh_vm_meta, vm_props, disk_cids, network_configurator, env)
       # choose the normal vm manager or vmss manager according to the parameters
       use_vmss = @azure_config.vmss.enabled
       # vmss does not support static private ip.
@@ -31,7 +31,7 @@ module Bosh::AzureCloud
       if use_vmss
         @vmss_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
       else
-        @vm_manager.create(bosh_vm_meta, vm_props, network_configurator, env)
+        @vm_manager.create(bosh_vm_meta, vm_props, disk_cids, network_configurator, env)
       end
     end
 

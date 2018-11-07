@@ -16,7 +16,7 @@ describe Bosh::AzureCloud::VMManagerAdaptive do
         .and_return([dynamic_network])
       expect(vmss_manager).to receive(:create)
       expect do
-        vm_manager_adaptive.create(bosh_vm_meta, vm_props, network_configurator, env_with_group)
+        vm_manager_adaptive.create(bosh_vm_meta, vm_props, nil, network_configurator, env_with_group)
       end.not_to raise_error
     end
 
@@ -52,7 +52,7 @@ describe Bosh::AzureCloud::VMManagerAdaptive do
       allow(Bosh::AzureCloud::VMManager).to receive(:new).and_return(vm_manager)
       allow(Bosh::AzureCloud::VMSSManager).to receive(:new).and_return(vmss_manager)
       expect(vm_manager).to receive(:create)
-      vm_manager_adaptive_vmss_disabled.create(bosh_vm_meta, vm_props, network_configurator, env_with_group)
+      vm_manager_adaptive_vmss_disabled.create(bosh_vm_meta, vm_props, nil, network_configurator, env_with_group)
     end
   end
 end
