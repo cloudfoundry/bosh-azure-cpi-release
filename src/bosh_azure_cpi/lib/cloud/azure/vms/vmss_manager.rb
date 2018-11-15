@@ -29,61 +29,59 @@ module Bosh::AzureCloud
       vmss_name = _get_vmss_name(vm_props, env)
       _ensure_resource_group_exists(resource_group_name, vm_props.location)
 
-      existing_vmss = @azure_client.get_vmss_by_name(resource_group_name, vmss_name)
-      vmss_params = {}
       stemcell_info = _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, nil)
       vmss_instance_id = nil # this is the instance id like '1', '2', concept in vmss.
-      vm_name = nil
-      vmss_instance_zone = nil
-      if existing_vmss.nil?
-        vmss_params = {
-          availability_zones: vm_props.vmss.availability_zones,
-          vmss_name: vmss_name,
-          location: vm_props.location,
-          instance_type: vm_props.instance_type
-        }
-        vmss_params[:image_id] = stemcell_info.uri
-        vmss_params[:os_type] = stemcell_info.os_type
+      vmss_params = {
+        resource_group_name: resource_group_name,
+        availability_zones: vm_props.vmss.availability_zones,
+        vmss_name: vmss_name,
+        location: vm_props.location,
+        instance_type: vm_props.instance_type
+      }
+      vmss_params[:image_id] = stemcell_info.uri
+      vmss_params[:os_type] = stemcell_info.os_type
 
-        raise ArgumentError, "Unsupported os type: #{vmss_params[:os_type]}" if stemcell_info.os_type != 'linux'
+      raise ArgumentError, "Unsupported os type: #{vmss_params[:os_type]}" if stemcell_info.os_type != 'linux'
 
-        vmss_params[:ssh_username]  = @azure_config.ssh_user
-        vmss_params[:ssh_cert_data] = @azure_config.ssh_public_key
-        # there's extra name field in os_disk and ephemeral_disk, will ignore it when creating vmss.
-        vmss_params[:os_disk], vmss_params[:ephemeral_disk] = _build_vmss_disks(vmss_name, stemcell_info, vm_props)
+      vmss_params[:ssh_username]  = @azure_config.ssh_user
+      vmss_params[:ssh_cert_data] = @azure_config.ssh_public_key
+      # there's extra name field in os_disk and ephemeral_disk, will ignore it when creating vmss.
+      vmss_params[:os_disk], vmss_params[:ephemeral_disk] = _build_vmss_disks(vmss_name, stemcell_info, vm_props)
 
-        network_interfaces = []
-        vmss_params[:initial_capacity] = 1
-        networks = network_configurator.networks
-        networks.each_with_index do |network, _|
-          subnet = _get_network_subnet(network)
-          network_security_group = _get_network_security_group(vm_props, network)
-          network_interfaces.push(subnet: subnet, network_security_group: network_security_group)
-        end
-        # TODO: handle the application gateway, public ip too.
-        unless vm_props.load_balancer.name.nil?
-          load_balancer = @azure_client.get_load_balancer_by_name(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
-          vmss_params[:load_balancer] = load_balancer
-        end
-        flock(vmss_name.to_s, File::LOCK_EX) do
-          @azure_client.create_vmss(resource_group_name, vmss_params, network_interfaces)
-          vmss_instances_result = @azure_client.get_vmss_instances(resource_group_name, vmss_name)
-          first_instance = vmss_instances_result[0]
-          vmss_instance_id = first_instance[:instanceId]
-          vm_name = first_instance[:name]
-          vmss_instance_zone = first_instance[:zones]
-        end
-      else
-        vmss_params[:os_disk], vmss_params[:ephemeral_disk] = _build_vmss_disks(vmss_name, stemcell_info, vm_props)
-        # TODO: create one task to batch the scale up.
-        flock(vmss_name.to_s, File::LOCK_EX) do
-          # check whether we need to resize the vm.
-          existing_instances = @azure_client.get_vmss_instances(resource_group_name, vmss_name)
-          @azure_client.update_vmss_sku(resource_group_name, vmss_name, vm_props.instance_type, 1)
-          updated_instances = @azure_client.get_vmss_instances(resource_group_name, vmss_name)
-          vmss_instance_id, vm_name, vmss_instance_zone = _get_newly_created_instance(existing_instances, updated_instances)
-        end
+      network_interfaces = []
+      networks = network_configurator.networks
+      networks.each_with_index do |network, _|
+        subnet = _get_network_subnet(network)
+        network_security_group = _get_network_security_group(vm_props, network)
+        network_interfaces.push(subnet: subnet, network_security_group: network_security_group)
       end
+      # TODO: handle the application gateway, public ip too.
+      unless vm_props.load_balancer.name.nil?
+        load_balancer = @azure_client.get_load_balancer_by_name(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+        vmss_params[:load_balancer] = load_balancer
+      end
+      batching_request = {
+        grouping_key: vmss_name,
+        params: vmss_params
+      }
+      executor = lambda do |request, count|
+        CPILogger.instance.logger.info("executing with request:#{request.to_json}, count: #{count}")
+        rg_name = request[:resource_group_name]
+        existing_vmss = @azure_client.get_vmss_by_name(rg_name, vmss_name)
+        request[:capacity] = if existing_vmss.nil?
+                               1
+                             else
+                               existing_vmss[:sku][:capacity].to_i + count
+                             end
+        existing_instances = @azure_client.get_vmss_instances(rg_name, vmss_name)
+        @azure_client.create_or_update_vmss(request, network_interfaces)
+        updated_instances = @azure_client.get_vmss_instances(rg_name, vmss_name)
+        return _get_newly_created_instance(existing_instances, updated_instances)
+      end
+      instance = Bosh::AzureCloud::Batching.instance.execute(batching_request, executor)
+      CPILogger.instance.logger.info("got instance #{JSON.dump(instance)}")
+      vmss_instance_id = instance[:instanceId]
+      vm_name = instance[:name]
       instance_id = _build_instance_id(bosh_vm_meta, vm_props, vmss_name, vmss_instance_id)
       meta_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_meta_data_obj(
         instance_id.to_s,
@@ -97,7 +95,7 @@ module Bosh::AzureCloud
         resource_group_name,
         vm_name,
         vm_props.location,
-        vmss_instance_zone.nil? ? nil : vmss_instance_zone[0],
+        instance[:zones].nil? ? nil : instance[:zones][0],
         meta_data_obj,
         user_data_obj
       )
@@ -202,17 +200,19 @@ module Bosh::AzureCloud
       [os_disk, ephemeral_disk]
     end
 
-    # returns instance_id, name
+    # returns instance_id, name, zones list
     def _get_newly_created_instance(old, newly)
       old_instance_ids = old.map { |row| row[:instanceId] }
       new_instance_ids = newly.map { |row| row[:instanceId] }
       created_instance_ids = new_instance_ids - old_instance_ids
       CPILogger.instance.logger.info("old_instance_ids: #{old_instance_ids} new_instance_ids #{new_instance_ids}")
-      raise Bosh::Clouds::CloudError, 'more instance found.' if created_instance_ids.length != 1
-
-      insatnce_id = created_instance_ids[0]
-      instance = newly.find { |i| i[:instanceId] == insatnce_id }
-      [instance[:instanceId], instance[:name], instance[:zones]]
+      # raise Bosh::Clouds::CloudError, 'more instance found.' if created_instance_ids.length != 1
+      created_instances = []
+      created_instance_ids.each do |instance_id|
+        instance = newly.find { |i| i[:instanceId] == instance_id }
+        created_instances.push(instance)
+      end
+      created_instances
     end
 
     def _build_instance_id(bosh_vm_meta, vm_props, vmss_name, vmss_instance_id)

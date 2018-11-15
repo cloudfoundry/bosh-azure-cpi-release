@@ -136,9 +136,10 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
-  describe '#create_vmss' do
+  describe '#create_or_update_vmss' do
     let(:vm_params) do
       {
+        resource_group_name: resource_group,
         location: 'b',
         tags: { 'foo' => 'bar' },
         vm_size: 'c',
@@ -193,7 +194,7 @@ describe Bosh::AzureCloud::AzureClient do
     end
     context 'when everything ok' do
       let(:vmss_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/virtualMachineScaleSets?api-version=#{api_version_compute}&validating=true" }
-      let(:create_vmss_request_body) do
+      let(:create_or_update_vmss_request_body) do
         {}
       end
       it 'should not raise error' do
@@ -211,21 +212,21 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect do
-          azure_client.create_vmss(resource_group, vm_params, network_interfaces)
+          azure_client.create_or_update_vmss(vm_params, network_interfaces)
         end.not_to raise_error
       end
     end
     context 'when windows os' do
       it 'should raise error' do
         expect do
-          azure_client.create_vmss(resource_group, vm_params_windows, network_interfaces)
+          azure_client.create_or_update_vmss(vm_params_windows, network_interfaces)
         end.to raise_error /Unsupported os type/
       end
     end
     context 'when other os' do
       it 'should raise error' do
         expect do
-          azure_client.create_vmss(resource_group, vm_params_bsd, network_interfaces)
+          azure_client.create_or_update_vmss(vm_params_bsd, network_interfaces)
         end.to raise_error /Unsupported os type/
       end
     end

@@ -5,6 +5,9 @@ require 'unit/vms/shared_stuff.rb'
 
 describe Bosh::AzureCloud::VMSSManager do
   include_context 'shared stuff for vm managers'
+  before do
+    allow(Bosh::AzureCloud::Batching.instance).to receive(:sleep)
+  end
   describe '#create' do
     context 'when bosh group not exists' do
       it 'should raise error' do
@@ -24,8 +27,12 @@ describe Bosh::AzureCloud::VMSSManager do
           allow(stemcell_info).to receive(:os_type)
             .and_return('linux')
           allow(azure_client).to receive(:get_vmss_by_name)
-            .and_return({})
-          allow(azure_client).to receive(:update_vmss_sku)
+            .and_return(
+              sku: {
+                capacity: 1
+              }
+            )
+          allow(azure_client).to receive(:create_or_update_vmss)
           allow(azure_client).to receive(:get_vmss_instances)
             .and_return(
               [

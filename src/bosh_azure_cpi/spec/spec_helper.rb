@@ -45,6 +45,7 @@ STEMCELL_STORAGE_ACCOUNT_TAGS   = {
   'type' => 'stemcell'
 }.freeze
 
+CPI_BATCH_TASK_DIR                      = '/tmp/azure_cpi_batch_task'
 CPI_LOCK_DIR                            = '/tmp/azure_cpi'
 CPI_LOCK_PREFIX                         = 'bosh-lock'
 CPI_LOCK_PREFIX_STORAGE_ACCOUNT         = "#{CPI_LOCK_PREFIX}-storage-account"

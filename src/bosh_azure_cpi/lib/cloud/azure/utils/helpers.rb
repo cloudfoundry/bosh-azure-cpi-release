@@ -134,6 +134,9 @@ module Bosh::AzureCloud
     MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_LINUX   = 30
     MINIMUM_REQUIRED_OS_DISK_SIZE_IN_GB_WINDOWS = 128
 
+    # Batch
+    CPI_BATCH_TASK_DIR                      = '/tmp/azure_cpi_batch_task'
+
     # Lock
     CPI_LOCK_DIR                            = '/tmp/azure_cpi'
     CPI_LOCK_PREFIX                         = 'bosh-lock'
@@ -184,7 +187,7 @@ module Bosh::AzureCloud
     # @param [Exception] exception Exception to be logged (optional)
     def cloud_error(message, exception = nil)
       CPILogger.instance.logger&.error(message)
-      CPILogger.instance.logger.error(exception) if CPILogger.instance.logger && exception
+      CPILogger.instance.logger&.error(exception) if exception
       raise Bosh::Clouds::CloudError, message
     end
 
@@ -573,6 +576,7 @@ module Bosh::AzureCloud
     # @return - return value of the block
     #
     def flock(lock_name, mode)
+      FileUtils.mkdir_p(CPI_LOCK_DIR)
       file_path = "#{CPI_LOCK_DIR}/#{lock_name}"
       file = File.open(file_path, File::RDWR | File::CREAT, 0o644)
       success = file.flock(mode)
