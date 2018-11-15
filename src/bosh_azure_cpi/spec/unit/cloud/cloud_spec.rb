@@ -16,6 +16,7 @@ describe Bosh::AzureCloud::Cloud do
 
       it 'raises an exception with a user friendly message' do
         expect(FileUtils).to receive(:mkdir_p).with(CPI_LOCK_DIR).and_call_original
+        expect(FileUtils).to receive(:mkdir_p).with(CPI_BATCH_TASK_DIR).and_call_original
         expect do
           cloud
         end.to raise_error(Bosh::Clouds::CloudError, 'Please make sure the CPI has proper network access to Azure. #<Net::OpenTimeout: execution expired>')

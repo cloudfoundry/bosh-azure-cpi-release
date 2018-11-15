@@ -20,6 +20,7 @@ module Bosh::AzureCloud
         vmss[:location] = result['location']
         vmss[:sku] = {}
         vmss[:sku][:name] = result['sku']['name']
+        vmss[:sku][:capacity] = result['sku']['capacity']
         vmss[:zones] = result['zones']
       end
       vmss
@@ -34,8 +35,8 @@ module Bosh::AzureCloud
     #
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinescalesets/createorupdate
     #
-    def create_vmss(resource_group_name, vm_params, network_interfaces)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vm_params[:vmss_name])
+    def create_or_update_vmss(vm_params, network_interfaces)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: vm_params[:resource_group_name], name: vm_params[:vmss_name])
       os_profile = {}
       case vm_params[:os_type]
       when 'linux'
@@ -125,7 +126,7 @@ module Bosh::AzureCloud
       vmss = {
         'sku' => {
           'tier' => 'Standard',
-          'capacity' => vm_params[:initial_capacity],
+          'capacity' => vm_params[:capacity],
           'name' => vm_params[:instance_type]
         },
         'location' => vm_params[:location],
@@ -170,9 +171,8 @@ module Bosh::AzureCloud
     def get_vmss_instances(resource_group_name, vmss_name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINE_SCALE_SETS, resource_group_name: resource_group_name, name: vmss_name, others: 'virtualMachines')
       result = get_resource_by_id(url)
-      vmss_instances = nil
+      vmss_instances = []
       unless result.nil?
-        vmss_instances = []
         result['value'].each do |instance|
           vmss_instances.push(
             instanceId: instance['instanceId'],

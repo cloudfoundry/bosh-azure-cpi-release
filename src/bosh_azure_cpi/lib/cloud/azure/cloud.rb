@@ -19,7 +19,7 @@ module Bosh::AzureCloud
 
       @use_managed_disks = _azure_config.use_managed_disks
 
-      _init_cpi_lock_dir
+      _init_cpi_dirs
 
       @props_factory = Bosh::AzureCloud::PropsFactory.new(_azure_config)
 
@@ -743,9 +743,10 @@ module Bosh::AzureCloud
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager
     end
 
-    def _init_cpi_lock_dir
-      CPILogger.instance.logger.info('_init_cpi_lock_dir: Initializing the CPI lock directory')
+    def _init_cpi_dirs
+      CPILogger.instance.logger.info('_init_cpi_dirs: Initializing the CPI directory')
       FileUtils.mkdir_p(CPI_LOCK_DIR)
+      FileUtils.mkdir_p(CPI_BATCH_TASK_DIR)
     end
 
     # Generates initial agent settings. These settings will be read by agent
