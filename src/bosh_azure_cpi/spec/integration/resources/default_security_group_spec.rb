@@ -10,7 +10,7 @@ describe Bosh::AzureCloud::Cloud do
   subject(:cpi_with_default_nsg) do
     cloud_options_with_default_nsg = @cloud_options.dup
     cloud_options_with_default_nsg['azure']['default_security_group'] = @default_security_group
-    described_class.new(cloud_options_with_default_nsg)
+    described_class.new(cloud_options_with_default_nsg, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
   end
 
   context 'when default_security_group is specified' do

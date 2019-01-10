@@ -7,6 +7,10 @@ describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
 
   describe '#create' do
+    let(:agent_util) { instance_double(Bosh::AzureCloud::BoshAgentUtil) }
+    let(:network_spec) { {} }
+    let(:config) { instance_double(Bosh::AzureCloud::Config) }
+
     before do
       allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
     end
@@ -27,7 +31,7 @@ describe Bosh::AzureCloud::VMManager do
           it 'should not enable managed identity' do
             expect(azure_client).not_to receive(:delete_virtual_machine)
             expect(azure_client).not_to receive(:delete_network_interface)
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params.keys).not_to include('identity')
           end
         end
@@ -46,7 +50,7 @@ describe Bosh::AzureCloud::VMManager do
           it 'should not enable managed identity' do
             expect(azure_client).not_to receive(:delete_virtual_machine)
             expect(azure_client).not_to receive(:delete_network_interface)
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:identity][:type]).to eq('UserAssigned')
             expect(vm_params[:identity][:identity_name]).to eq('fake-identity-name')
           end

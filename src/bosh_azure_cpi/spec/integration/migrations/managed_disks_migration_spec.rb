@@ -26,13 +26,13 @@ describe Bosh::AzureCloud::Cloud do
   subject(:cpi_managed) do
     cloud_options_managed = @cloud_options.dup
     cloud_options_managed['azure']['use_managed_disks'] = true
-    described_class.new(cloud_options_managed)
+    described_class.new(cloud_options_managed, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
   end
 
   subject(:cpi_unmanaged) do
     cloud_options_unmanaged = @cloud_options.dup
     cloud_options_unmanaged['azure']['use_managed_disks'] = false
-    described_class.new(cloud_options_unmanaged)
+    described_class.new(cloud_options_unmanaged, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
   end
 
   before { @disk_id_pool = [] }

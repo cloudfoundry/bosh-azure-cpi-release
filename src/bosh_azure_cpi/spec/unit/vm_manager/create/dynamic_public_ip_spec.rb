@@ -10,6 +10,10 @@ describe Bosh::AzureCloud::VMManager do
   #   - resource_group_name
   #   - default_security_group
   describe '#create' do
+    let(:agent_util) { instance_double(Bosh::AzureCloud::BoshAgentUtil) }
+    let(:network_spec) { {} }
+    let(:config) { instance_double(Bosh::AzureCloud::Config) }
+
     context 'when VM is created' do
       before do
         allow(azure_client).to receive(:create_virtual_machine)
@@ -67,7 +71,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 application_gateway: application_gateway
                                               )).once
 
-            _, vm_params = vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -95,7 +99,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 application_gateway: application_gateway
                                               ))
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -138,6 +142,8 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(stemcell_info).to receive(:os_type).and_return('linux')
+            allow(agent_util).to receive(:user_data_obj).and_return(user_data)
+            allow(agent_util).to receive(:encode_user_data).and_return(Base64.strict_encode64(JSON.dump(user_data)))
           end
 
           it 'should succeed' do
@@ -150,7 +156,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
             expect(azure_client).to receive(:create_virtual_machine)
               .with(MOCK_RESOURCE_GROUP_NAME, vm_params, network_interfaces, nil)
-            _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:name]).to eq(vm_name)
           end
         end
@@ -189,6 +195,7 @@ describe Bosh::AzureCloud::VMManager do
             expect_any_instance_of(Array).to receive(:shuffle).and_return(['fake-array'])
             allow(stemcell_info).to receive(:os_type).and_return('windows')
             allow(vm_manager2).to receive(:generate_windows_computer_name).and_return(computer_name)
+            allow(agent_util).to receive(:encoded_user_data).and_return(Base64.strict_encode64(JSON.dump(user_data)))
           end
 
           it 'should succeed' do
@@ -201,7 +208,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(MOCK_RESOURCE_GROUP_NAME, vm_params, network_interfaces, nil)
             expect(SecureRandom).to receive(:uuid).exactly(3).times
             expect do
-              vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+              vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             end.not_to raise_error
           end
         end
@@ -229,7 +236,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+              vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             end.not_to raise_error
           end
         end
@@ -253,7 +260,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect do
-              vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+              vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             end.not_to raise_error
           end
         end

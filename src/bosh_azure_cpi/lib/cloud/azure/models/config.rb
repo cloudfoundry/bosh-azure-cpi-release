@@ -58,6 +58,7 @@ module Bosh::AzureCloud
     attr_reader :parallel_upload_thread_num
     attr_reader :ssh_user, :ssh_public_key
     attr_reader :config_disk
+    attr_reader :stemcell_api_version
 
     attr_writer :storage_account_name
 
@@ -101,6 +102,10 @@ module Bosh::AzureCloud
       @ssh_public_key = azure_config_hash['ssh_public_key']
 
       @config_disk = ConfigDisk.new(azure_config_hash.fetch('config_disk', 'enabled' => false))
+
+      # A compatible director sends vm.stemcell.api_version in the cpi method call context
+      # https://github.com/cloudfoundry/bosh/blob/v268.5.0/src/bosh-director/lib/cloud/external_cpi.rb#L86
+      @stemcell_api_version = azure_config_hash.key?('vm') ? azure_config_hash['vm']['stemcell']['api_version'] : 1
     end
 
     def managed_identity_enabled?
@@ -137,6 +142,10 @@ module Bosh::AzureCloud
       @azure = AzureConfig.new(config_hash['azure'] || {})
       @registry = RegistryConfig.new(config_hash['registry'] || {})
       @agent = AgentConfig.new(config_hash['agent'] || {})
+    end
+
+    def registry_configured?
+      !@registry.user.nil? && !@registry.password.nil? && !@registry.endpoint.nil?
     end
   end
 end

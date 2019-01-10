@@ -79,14 +79,8 @@ describe 'cpi.json.erb' do
             'enable_vm_boot_diagnostics' => false
           },
           'registry' => {
-            'address' => 'registry-host.example.com',
             'user' => 'admin',
             'password' => 'admin',
-            'http' => {
-              'port' => 25_777,
-              'user' => 'admin',
-              'password' => 'admin'
-            },
             'endpoint' => 'http://admin:admin@registry-host.example.com:25777'
           },
           'agent' => {
@@ -474,6 +468,43 @@ describe 'cpi.json.erb' do
       it 'encodes the password with special characters in the registry URL' do
         registry_uri = URI(subject['cloud']['properties']['registry']['endpoint'])
         expect(URI.decode(registry_uri.password)).to eq(special_chars_password)
+      end
+    end
+
+    context 'when registry settings are not specified' do
+      let(:manifest) do
+        {
+          'properties' => {
+            'azure' => {
+              'environment' => 'AzureCloud',
+              'subscription_id' => 'fake-subscription-id',
+              'credentials_source' => 'static',
+              'tenant_id' => 'fake-tenant-id',
+              'client_id' => 'fake-client-id',
+              'client_secret' => 'fake-client-secret',
+              'resource_group_name' => 'fake-resource-group-name',
+              'storage_account_name' => 'fake-storage-account-name',
+              'ssh_user' => 'vcap',
+              'ssh_public_key' => 'ssh-rsa ABCDEFGHIJKLMN',
+              'default_security_group' => 'fake-default-security-group'
+            },
+            'blobstore' => {
+              'address' => 'blobstore-address.example.com',
+              'agent' => {
+                'user' => 'agent',
+                'password' => 'agent-password'
+              }
+            },
+            'nats' => {
+              'address' => 'nats-address.example.com',
+              'password' => 'nats-password'
+            }
+          }
+        }
+      end
+
+      it 'should not include registry settings in json' do
+        expect(subject['cloud']['properties'].key?('registry')).to be_falsy
       end
     end
   end

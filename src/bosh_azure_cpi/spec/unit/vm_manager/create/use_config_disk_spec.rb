@@ -10,7 +10,11 @@ describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
 
   describe '#create' do
+    let(:agent_util) { instance_double(Bosh::AzureCloud::BoshAgentUtil) }
+    let(:network_spec) { {} }
+    let(:config) { instance_double(Bosh::AzureCloud::Config) }
     let(:command_runner) { Bosh::AzureCloud::CommandRunner.new }
+
     before do
       allow(stemcell_info).to receive(:os_type).and_return('linux')
       allow(vm_manager_config_disk).to receive(:_get_stemcell_info).and_return(stemcell_info)
@@ -18,6 +22,9 @@ describe Bosh::AzureCloud::VMManager do
         .and_return(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
       allow(Etc).to receive(:getpwuid)
         .and_return(OpenStruct.new(name: 'vcap'))
+      allow(agent_util).to receive(:user_data_obj).and_return({})
+      allow(agent_util).to receive(:meta_data_obj).and_return({})
+      allow(agent_util).to receive(:encode_user_data).and_return(Base64.strict_encode64(JSON.dump({})))
     end
     context 'when use config disk' do
       context 'when everything ok' do
@@ -37,7 +44,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(disk_manager2).to receive(:create_disk_from_blob)
           expect(disk_manager2).to receive(:get_data_disk)
           expect do
-            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
           end.not_to raise_error
         end
       end
@@ -54,7 +61,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(disk_manager2).not_to receive(:create_disk_from_blob)
           expect(azure_client).to receive(:delete_network_interface).exactly(2).times
           expect do
-            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
           end.to raise_error Bosh::Clouds::CloudError, /Failed to prepare the config disk/
         end
       end
@@ -75,7 +82,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(disk_manager2).to receive(:create_disk_from_blob).and_raise('create disk failed')
           expect(azure_client).to receive(:delete_network_interface).exactly(2).times
           expect do
-            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            vm_manager_config_disk.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
           end.to raise_error Bosh::Clouds::CloudError, /Failed to prepare the config disk/
         end
       end

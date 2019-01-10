@@ -10,6 +10,10 @@ describe Bosh::AzureCloud::VMManager do
   #   - resource_group_name
   #   - default_security_group
   describe '#create' do
+    let(:agent_util) { instance_double(Bosh::AzureCloud::BoshAgentUtil) }
+    let(:network_spec) { {} }
+    let(:config) { instance_double(Bosh::AzureCloud::Config) }
+
     before do
       allow(vm_manager).to receive(:_get_stemcell_info).and_return(stemcell_info)
     end
@@ -32,7 +36,7 @@ describe Bosh::AzureCloud::VMManager do
           expect(azure_client).to receive(:create_resource_group)
             .with(MOCK_RESOURCE_GROUP_NAME, location)
 
-          _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+          _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
           expect(vm_params[:name]).to eq(vm_name)
         end
       end

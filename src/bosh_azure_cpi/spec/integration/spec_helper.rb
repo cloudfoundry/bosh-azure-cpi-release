@@ -60,19 +60,31 @@ RSpec.configure do |rspec_config|
         'password' => 'fake'
       }
     }
-    @cpi = Bosh::AzureCloud::Cloud.new(@cloud_options)
+    @cpi = Bosh::AzureCloud::Cloud.new(@cloud_options, 1)
+    @cpi2 = Bosh::AzureCloud::Cloud.new(@cloud_options, 2)
 
     @vm_metadata = { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' }
   end
 end
 
 def vm_lifecycle(stemcell_id: @stemcell_id, cpi: @cpi)
-  instance_id = cpi.create_vm(
+  result = cpi.create_vm(
     SecureRandom.uuid,
     stemcell_id,
     vm_properties,
     network_spec
   )
+
+  if cpi.api_version == Bosh::AzureCloud::Cloud::CURRENT_API_VERSION
+    expect(result).to be_a(Array)
+    instance_id = result[0]
+    networks = result[1]
+    expect(networks).to be_a(Hash)
+  else
+    expect(result).to be_a(String)
+    instance_id = result
+  end
+
   expect(instance_id).not_to be_nil
 
   expect(cpi.has_vm?(instance_id)).to be(true)

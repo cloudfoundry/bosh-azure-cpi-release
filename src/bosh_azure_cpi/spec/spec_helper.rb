@@ -140,8 +140,8 @@ def mock_registry
   registry
 end
 
-def mock_cloud(options = nil)
-  Bosh::AzureCloud::Cloud.new(options || mock_cloud_options['properties'])
+def mock_cloud(options = nil, api_version = 1)
+  Bosh::AzureCloud::Cloud.new(options || mock_cloud_options['properties'], api_version)
 end
 
 def time_measure

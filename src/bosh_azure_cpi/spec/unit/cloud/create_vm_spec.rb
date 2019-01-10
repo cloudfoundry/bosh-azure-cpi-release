@@ -24,6 +24,7 @@ describe Bosh::AzureCloud::Cloud do
     let(:network_configurator) { instance_double(Bosh::AzureCloud::NetworkConfigurator) }
     let(:network) { instance_double(Bosh::AzureCloud::ManualNetwork) }
     let(:network_configurator) { double('network configurator') }
+    let(:agent_util) { instance_double(Bosh::AzureCloud::BoshAgentUtil) }
 
     before do
       allow(network_configurator).to receive(:networks)
@@ -42,6 +43,12 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(vm_props)
       allow(managed_cloud.props_factory).to receive(:parse_vm_props)
         .and_return(vm_props)
+      allow(cloud_v2.props_factory).to receive(:parse_vm_props)
+        .and_return(vm_props)
+      allow(cloud_sc_v2.props_factory).to receive(:parse_vm_props)
+        .and_return(vm_props)
+      allow(Bosh::AzureCloud::BoshAgentUtil).to receive(:new).and_return(agent_util)
+      allow(agent_util).to receive(:initial_agent_settings)
     end
 
     context 'when vnet is not found' do
@@ -131,7 +138,7 @@ describe Bosh::AzureCloud::Cloud do
 
       it 'should create the VM in the specified resource group' do
         expect(vm_manager).to receive(:create)
-          .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment)
+          .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud.config)
           .and_return([instance_id, vm_params])
         expect(registry_client).to receive(:update_settings)
 
@@ -237,7 +244,7 @@ describe Bosh::AzureCloud::Cloud do
 
           it 'should create the VM in the specified resource group' do
             expect(vm_manager).to receive(:create)
-              .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment)
+              .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud.config)
               .and_return([instance_id, vm_params])
             expect(registry_client).to receive(:update_settings)
 
@@ -350,7 +357,7 @@ describe Bosh::AzureCloud::Cloud do
             .with('create_vm', id: agent_id, extras: { 'instance_types' => instance_types })
             .and_call_original
           expect(vm_manager).to receive(:create)
-            .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment)
+            .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, managed_cloud.config)
             .and_return([instance_id, vm_params])
           expect(registry_client).to receive(:update_settings)
 
@@ -379,7 +386,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should create the VM in the specified resource group' do
           expect(vm_manager).to receive(:create)
-            .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment)
+            .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, managed_cloud.config)
             .and_return([instance_id, vm_params])
           expect(registry_client).to receive(:update_settings)
 
@@ -393,6 +400,74 @@ describe Bosh::AzureCloud::Cloud do
               environment
             )
           ).to eq(instance_id_string)
+        end
+      end
+    end
+
+    context 'when cpi api version 2' do
+      let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
+      let(:instance_id_string) { 'fake-instance-id' }
+
+      before do
+        allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
+                                           .with(agent_id, stemcell_cid)
+                                           .and_return(bosh_vm_meta)
+        allow(instance_id).to receive(:to_s)
+                          .and_return(instance_id_string)
+        allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
+                                                    .with(anything, networks)
+                                                    .and_return(network_configurator)
+      end
+
+      it 'returns an array of instance id and networks' do
+        expect(registry_client).to receive(:update_settings)
+        expect(vm_manager).to receive(:create)
+                          .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud_v2.config)
+                          .and_return([instance_id_string, {}])
+
+        expect(
+            cloud_v2.create_vm(
+              agent_id,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
+              environment
+            )
+        ).to eq([instance_id_string, networks])
+      end
+
+      context 'and stemcell api version is 1' do
+        it 'continues to write to the registry' do
+          expect(registry_client).to receive(:update_settings)
+          expect(vm_manager).to receive(:create)
+
+          cloud_v2.create_vm(
+              agent_id,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
+              environment
+          )
+        end
+
+        context 'and stemcell api version is 2' do
+          it 'does not write to the registry' do
+            expect(registry_client).to_not receive(:update_settings)
+            expect(vm_manager).to receive(:create).and_return([instance_id_string, networks])
+
+            expect(
+                cloud_sc_v2.create_vm(
+                    agent_id,
+                    stemcell_cid,
+                    cloud_properties,
+                    networks,
+                    disk_cids,
+                    environment
+                )
+            ).to eq([instance_id_string, networks])
+          end
         end
       end
     end

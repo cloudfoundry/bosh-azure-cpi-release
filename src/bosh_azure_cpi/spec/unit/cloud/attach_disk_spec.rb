@@ -338,5 +338,31 @@ describe Bosh::AzureCloud::Cloud do
         end.not_to raise_error
       end
     end
+
+    context 'when api version is 2' do
+      before do
+        allow(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
+                                 .and_return(lun)
+      end
+
+      it 'returns the disk hints' do
+        expect(registry_client).to receive(:read_settings).with(vm_cid)
+                                       .and_return(old_settings)
+        expect(registry_client).to receive(:update_settings)
+                                       .with(vm_cid, new_settings).and_return(true)
+
+        result = cloud_v2.attach_disk(vm_cid, disk_cid)
+        expect(result).to eq({'lun' => lun, 'host_device_id' => host_device_id})
+      end
+
+      context 'when stemcell api version is 2' do
+        it 'should not write to the registry' do
+          expect(registry_client).to_not receive(:read_settings)
+          expect(registry_client).to_not receive(:update_settings)
+
+          expect(cloud_sc_v2.attach_disk(vm_cid, disk_cid)).to_not be_nil
+        end
+      end
+    end
   end
 end

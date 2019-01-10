@@ -10,6 +10,10 @@ describe Bosh::AzureCloud::VMManager do
   #   - resource_group_name
   #   - default_security_group
   describe '#create' do
+    let(:agent_util) { instance_double(Bosh::AzureCloud::BoshAgentUtil) }
+    let(:network_spec) { {} }
+    let(:config) { instance_double(Bosh::AzureCloud::Config) }
+
     context 'when VM is created' do
       before do
         allow(azure_client).to receive(:create_virtual_machine)
@@ -24,7 +28,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect(azure_client).to receive(:create_network_interface).exactly(2).times
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:image_uri]).to eq(stemcell_uri)
             expect(vm_params[:os_type]).to eq(os_type)
@@ -53,7 +57,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).not_to receive(:delete_network_interface)
 
             expect(azure_client).to receive(:create_network_interface).twice
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:os_type]).to eq(os_type)
           end

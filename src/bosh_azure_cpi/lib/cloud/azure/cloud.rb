@@ -8,18 +8,30 @@ module Bosh::AzureCloud
     attr_reader   :azure_client, :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper
     attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
     attr_reader   :props_factory
+    attr_reader   :api_version, :stemcell_api_version
     include Helpers
+
+    # CPI API Version
+    CURRENT_API_VERSION = 2
+
+    # First stemcell API version and CPI API version that supports registry-less operation
+    STEMCELL_API_VERSION_REGISTRYLESS = 2
+    API_VERSION_REGISTRYLESS = 2
 
     ##
     # Cloud initialization
     #
     # @param [Hash] options cloud options
-    def initialize(options)
+    def initialize(options, api_version)
       options_dup = options.dup.freeze
+
+      @api_version = api_version || 1
 
       @logger = Bosh::Clouds::Config.logger
 
       @config = Bosh::AzureCloud::ConfigFactory.build(options_dup)
+
+      @stemcell_api_version = @config.azure.stemcell_api_version
 
       request_id = options_dup['azure']['request_id']
       Bosh::AzureCloud::CPILogger.set_request_id(request_id) if request_id
@@ -49,7 +61,8 @@ module Bosh::AzureCloud
     def info
       @telemetry_manager.monitor('info') do
         {
-          'stemcell_formats' => %w[azure-vhd azure-light]
+          'stemcell_formats' => %w[azure-vhd azure-light],
+          'api_version' => CURRENT_API_VERSION
         }
       end
     end
@@ -146,26 +159,33 @@ module Bosh::AzureCloud
           location_in_global_configuration = _azure_config.location
           cloud_error("The location in the global configuration '#{location_in_global_configuration}' is different from the location of the virtual network '#{location}'") if !location_in_global_configuration.nil? && location_in_global_configuration != location
 
+          agent_settings = Bosh::AzureCloud::BoshAgentUtil.new(_should_write_to_registry?)
+
           instance_id, vm_params = @vm_manager.create(
             bosh_vm_meta,
             location,
             vm_props,
             disk_cids,
             network_configurator,
-            environment
+            environment,
+            agent_settings,
+            networks,
+            @config,
           )
 
           @logger.info("Created new vm '#{instance_id}'")
 
           begin
-            registry_settings = _initial_agent_settings(
-              bosh_vm_meta.agent_id,
-              networks,
-              environment,
-              vm_params
+            settings = agent_settings.initial_agent_settings(
+                bosh_vm_meta.agent_id,
+                networks,
+                environment,
+                vm_params,
+                @config
             )
-            registry.update_settings(instance_id.to_s, registry_settings)
-            instance_id.to_s
+            registry.update_settings(instance_id.to_s, settings) if _should_write_to_registry?
+
+            _create_vm_response(instance_id.to_s, networks)
           rescue StandardError => e
             @logger.error(%(Failed to update registry after new vm was created: #{e.inspect}\n#{e.backtrace.join("\n")}))
             @vm_manager.delete(instance_id)
@@ -523,16 +543,22 @@ module Bosh::AzureCloud
 
           lun = @vm_manager.attach_disk(instance_id, disk_id)
 
-          _update_agent_settings(instance_id.to_s) do |settings|
-            settings['disks'] ||= {}
-            settings['disks']['persistent'] ||= {}
-            settings['disks']['persistent'][disk_id.to_s] = {
-              'lun' => lun,
-              'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID
-            }
+          disk_hints = {
+            'lun' => lun,
+            'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID
+          }
+
+          if _should_write_to_registry?
+            _update_agent_settings(instance_id.to_s) do |settings|
+              settings['disks'] ||= {}
+              settings['disks']['persistent'] ||= {}
+              settings['disks']['persistent'][disk_id.to_s] = disk_hints
+            end
           end
 
           @logger.info("Attached the disk '#{disk_id}' to the instance '#{instance_id}', lun '#{lun}'")
+
+          _attach_disk_response(disk_hints)
         end
       end
     end
@@ -554,10 +580,13 @@ module Bosh::AzureCloud
     def detach_disk(vm_cid, disk_cid)
       with_thread_name("detach_disk(#{vm_cid},#{disk_cid})") do
         @telemetry_manager.monitor('detach_disk', id: vm_cid) do
-          _update_agent_settings(vm_cid) do |settings|
-            settings['disks'] ||= {}
-            settings['disks']['persistent'] ||= {}
-            settings['disks']['persistent'].delete(disk_cid)
+
+          if _should_write_to_registry?
+            _update_agent_settings(vm_cid) do |settings|
+              settings['disks'] ||= {}
+              settings['disks']['persistent'] ||= {}
+              settings['disks']['persistent'].delete(disk_cid)
+            end
           end
 
           @vm_manager.detach_disk(
@@ -713,6 +742,7 @@ module Bosh::AzureCloud
     def _init_registry
       # Registry updates are not really atomic in relation to
       # Azure API calls, so they might get out of sync.
+      # As of CPI API v2, the registry is optional (when stemcell API version is suitable)
       @registry = Bosh::Cpi::RegistryClient.new(@config.registry.endpoint, @config.registry.user, @config.registry.password)
     end
 
@@ -742,43 +772,6 @@ module Bosh::AzureCloud
       FileUtils.mkdir_p(CPI_LOCK_DIR)
     end
 
-    # Generates initial agent settings. These settings will be read by agent
-    # from AZURE registry (also a BOSH component) on a target instance. Disk
-    # conventions for Azure are:
-    # system disk: /dev/sda
-    # ephemeral disk: data disk at lun 0 or nil if use OS disk to store the ephemeral data
-    #
-    # @param [String] agent_id Agent id (will be picked up by agent to
-    #   assume its identity
-    # @param [Hash] network_spec Agent network spec
-    # @param [Hash] environment
-    # @param [Hash] vm_params
-    # @return [Hash]
-    def _initial_agent_settings(agent_id, network_spec, environment, vm_params)
-      settings = {
-        'vm' => {
-          'name' => vm_params[:name]
-        },
-        'agent_id' => agent_id,
-        'networks' => _agent_network_spec(network_spec),
-        'disks' => {
-          'system' => '/dev/sda',
-          'persistent' => {}
-        }
-      }
-
-      unless vm_params[:ephemeral_disk].nil?
-        # Azure uses a data disk as the ephermeral disk and the lun is 0
-        settings['disks']['ephemeral'] = {
-          'lun' => '0',
-          'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID
-        }
-      end
-
-      settings['env'] = environment if environment
-      settings.merge(@config.agent.to_h)
-    end
-
     def _update_agent_settings(instance_id)
       raise ArgumentError, 'block is not provided' unless block_given?
 
@@ -787,11 +780,16 @@ module Bosh::AzureCloud
       registry.update_settings(instance_id, settings)
     end
 
-    def _agent_network_spec(network_spec)
-      Hash[*network_spec.map do |name, settings|
-        settings['use_dhcp'] = true
-        [name, settings]
-      end.flatten]
+    def _create_vm_response(instance_id, networks)
+      @api_version > 1 ? [instance_id, networks] : instance_id
+    end
+
+    def _attach_disk_response(disk_hints)
+      disk_hints if @api_version > 1
+    end
+
+    def _should_write_to_registry?
+      @stemcell_api_version < STEMCELL_API_VERSION_REGISTRYLESS || @api_version < API_VERSION_REGISTRYLESS
     end
   end
 end

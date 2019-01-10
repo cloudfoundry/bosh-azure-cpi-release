@@ -10,6 +10,10 @@ describe Bosh::AzureCloud::VMManager do
   #   - resource_group_name
   #   - default_security_group
   describe '#create' do
+    let(:agent_util) { instance_double(Bosh::AzureCloud::BoshAgentUtil) }
+    let(:network_spec) { {} }
+    let(:config) { instance_double(Bosh::AzureCloud::Config) }
+
     context 'when VM is created' do
       before do
         allow(azure_client).to receive(:create_virtual_machine)
@@ -47,7 +51,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -60,7 +64,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:zone]).to eq(availability_zone)
           end
         end
@@ -77,7 +81,7 @@ describe Bosh::AzureCloud::VMManager do
                     anything,
                     nil)             # Availability set must be nil when availability is specified
 
-            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+            _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:zone]).to eq('1')
           end
         end

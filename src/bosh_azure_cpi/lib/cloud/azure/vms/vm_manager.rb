@@ -19,7 +19,7 @@ module Bosh::AzureCloud
       @logger = Bosh::Clouds::Config.logger
     end
 
-    def create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env)
+    def create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_settings, network_spec, config)
       # network_configurator contains service principal in azure_config so we must not log it.
       @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props.inspect}, #{disk_cids}, ..., ...)")
 
@@ -150,21 +150,21 @@ module Bosh::AzureCloud
       else
         vm_params[:image_uri] = stemcell_info.uri
       end
+
       case stemcell_info.os_type
       when 'linux'
         vm_params[:ssh_username]  = @azure_config.ssh_user
         vm_params[:ssh_cert_data] = @azure_config.ssh_public_key
+        user_data = agent_settings.user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config)
         if @azure_config.config_disk.enabled
-          meta_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_meta_data_obj(
+          meta_data_obj = agent_settings.meta_data_obj(
             instance_id.to_s,
             @azure_config.ssh_public_key
           )
-          user_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
-          config_disk = @config_disk_manager.prepare_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data_obj)
+          config_disk = @config_disk_manager.prepare_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data)
           vm_params[:config_disk] = config_disk
         else
-          user_data = Bosh::AzureCloud::BoshAgentUtil.get_encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
-          vm_params[:custom_data] = user_data
+          vm_params[:custom_data] = agent_settings.encode_user_data(user_data)
         end
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
@@ -187,7 +187,7 @@ module Bosh::AzureCloud
         vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".split('').shuffle.join
         computer_name = generate_windows_computer_name
         vm_params[:computer_name] = computer_name
-        vm_params[:custom_data]   = Bosh::AzureCloud::BoshAgentUtil.get_encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, computer_name)
+        vm_params[:custom_data]   = agent_settings.encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config, computer_name)
       end
 
       vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host] unless diagnostics_storage_account.nil?

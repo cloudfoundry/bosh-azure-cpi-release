@@ -50,7 +50,7 @@ describe Bosh::AzureCloud::Cloud do
         'type' => 'UserAssigned',
         'user_assigned_identity_name' => @default_user_assigned_identity_name
       }
-      described_class.new(cloud_options_with_default_managed_identity)
+      described_class.new(cloud_options_with_default_managed_identity, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
     end
 
     context 'when managed_identity is specified in vm_extensions' do

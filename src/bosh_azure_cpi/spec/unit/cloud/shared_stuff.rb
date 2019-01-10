@@ -18,6 +18,8 @@ shared_context 'shared stuff' do
   let(:vm_manager) { instance_double('Bosh::AzureCloud::VMManager') }
   let(:instance_type_mapper) { instance_double('Bosh::AzureCloud::InstanceTypeMapper') }
   let(:telemetry_manager) { MockTelemetryManager.new }
+  let(:cloud_v2) { mock_cloud(nil, 2) }
+  let(:cloud_sc_v2) { mock_cloud(mock_cloud_properties_merge('azure' => {'vm' => {'stemcell' => {'api_version' => 2}}}), 2) }
 
   before do
     allow(Bosh::Cpi::RegistryClient).to receive(:new)

@@ -19,7 +19,7 @@ Bosh::Clouds::Config.configure(cloud_config)
 
 cpi_log = StringIO.new
 
-cpi_lambda = lambda do |context|
+cpi_lambda = lambda do |context, cpi_api_version|
   raise 'Could not find cloud properties in the configuration' unless cpi_config.key?('cloud') && cpi_config['cloud'].key?('properties')
 
   cloud_properties = cpi_config['cloud']['properties']
@@ -28,7 +28,7 @@ cpi_lambda = lambda do |context|
   # allow azure config to be overwritten dynamically by context
   cloud_properties['azure'].merge!(context)
 
-  Bosh::Clouds::Azure.new(cloud_properties)
+  Bosh::Clouds::Azure.new(cloud_properties, cpi_api_version)
 end
 
 # Redefine $stdout because azure libraries use print for info logging

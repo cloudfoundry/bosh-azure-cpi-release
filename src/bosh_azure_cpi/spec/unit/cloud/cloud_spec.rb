@@ -21,5 +21,25 @@ describe Bosh::AzureCloud::Cloud do
         end.to raise_error(Bosh::Clouds::CloudError, 'Please make sure the CPI has proper network access to Azure. #<Net::OpenTimeout: execution expired>')
       end
     end
+
+    context 'api_version' do
+      it 'defaults to api version 1' do
+        expect(cloud.api_version).to eq(1)
+      end
+
+      it 'can be set' do
+        expect(cloud_v2.api_version).to eq(2)
+      end
+    end
+
+    context 'stemcell api version in context' do
+      it 'defaults to stemcell api version 1' do
+        expect(cloud.stemcell_api_version).to eq(1)
+      end
+
+      it 'reads from context' do
+        expect(cloud_sc_v2.stemcell_api_version).to eq(2)
+      end
+    end
   end
 end
