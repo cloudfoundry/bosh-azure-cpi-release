@@ -22,7 +22,7 @@ Bosh::Clouds::Config.configure(cloud_config)
 
 cpi_log = StringIO.new
 
-cpi_lambda = lambda do |context|
+cpi_lambda = lambda do |context, cpi_api_version|
   raise 'Could not find cloud properties in the configuration' unless cpi_config.key?('cloud') && cpi_config['cloud'].key?('properties')
 
   cloud_properties = cpi_config['cloud']['properties']
@@ -31,6 +31,7 @@ cpi_lambda = lambda do |context|
   cloud_properties['azure'].merge!(context)
 
   Bosh::AzureCloud::Config.instance.update(cloud_properties)
+  Bosh::AzureCloud::Config.instance.api_version = cpi_api_version
   Bosh::Clouds::Azure.new
 end
 

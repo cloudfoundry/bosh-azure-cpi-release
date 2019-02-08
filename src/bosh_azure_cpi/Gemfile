@@ -6,7 +6,7 @@ gem 'azure-storage-blob',    '1.1.0'
 gem 'azure-storage-common',  '1.1.0'
 gem 'azure-storage-table',   '1.0.1'
 gem 'bosh_common',      '1.3262.24.0'
-gem 'bosh_cpi',         '2.4.1'
+gem 'bosh_cpi',         '2.5.0'
 gem 'concurrent-ruby',  '1.0.5'
 gem 'jwt',              '1.5.6'
 

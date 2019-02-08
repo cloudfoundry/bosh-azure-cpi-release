@@ -60,6 +60,7 @@ module Bosh::AzureCloud
     attr_reader :vmss
     attr_reader :request_id
     attr_writer :storage_account_name
+    attr_reader :stemcell_api_version
 
     def initialize(azure_config_hash)
       @environment = azure_config_hash['environment']
@@ -100,6 +101,10 @@ module Bosh::AzureCloud
       @ssh_user = azure_config_hash['ssh_user']
       @ssh_public_key = azure_config_hash['ssh_public_key']
       @vmss = VMSS.new(azure_config_hash.fetch('vmss', 'enabled' => false))
+
+      # A compatible director sends vm.stemcell.api_version in the cpi method call context
+      # https://github.com/cloudfoundry/bosh/blob/v268.5.0/src/bosh-director/lib/cloud/external_cpi.rb#L86
+      @stemcell_api_version = azure_config_hash.key?('vm') ? azure_config_hash['vm']['stemcell']['api_version'] : 1
     end
 
     def managed_identity_enabled?
@@ -129,7 +134,11 @@ module Bosh::AzureCloud
 
   class Config
     include Singleton
+    include Helpers
+
     attr_reader :azure, :registry, :agent
+    attr_accessor :api_version
+
     def initialize
       @config_mutex = Mutex.new
     end
@@ -141,6 +150,10 @@ module Bosh::AzureCloud
         @registry = RegistryConfig.new(config_hash['registry'] || {}).freeze
         @agent = AgentConfig.new(config_hash['agent'] || {}).freeze
       end
+    end
+
+    def use_registry?
+      @azure.stemcell_api_version < STEMCELL_API_VERSION_REGISTRYLESS || @api_version < API_VERSION_REGISTRYLESS
     end
 
     private

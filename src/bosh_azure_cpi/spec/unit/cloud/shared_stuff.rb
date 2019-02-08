@@ -20,6 +20,23 @@ shared_context 'shared stuff' do
       )
     )
   end
+  let(:cloud_v2) do
+    mock_cloud(mock_cloud_options['properties'], 2)
+  end
+  let(:cloud_v2_sc2) do
+    mock_cloud(
+        mock_cloud_properties_merge(
+                   'azure' => {
+                       'vm' => {
+                           'stemcell' => {
+                               'api_version' => 2
+                           }
+                       }
+                   }
+               ),
+        2)
+  end
+
   let(:azure_config_managed) { Bosh::AzureCloud::Config.instance.azure }
   let(:azure_client) { instance_double('Bosh::AzureCloud::AzureClient') }
   let(:blob_manager) { instance_double('Bosh::AzureCloud::BlobManager') }

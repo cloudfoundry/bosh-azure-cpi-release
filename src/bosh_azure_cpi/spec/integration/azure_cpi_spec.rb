@@ -214,6 +214,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
     end
     let(:context) do
       {
+        'request_id' => 'abc123',
         'director_uuid' => 'abc123',
         'environment' => @azure_environment,
         'subscription_id' => @subscription_id,
@@ -225,15 +226,23 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
         'ssh_public_key' => @ssh_public_key,
         'default_security_group' => @default_security_group,
         'parallel_upload_thread_num' => 16,
-        'use_managed_disks' => true
+        'use_managed_disks' => true,
       }
     end
 
     it 'merges the context into the cloud_properties' do
       result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => context)
       expect(result.keys).to eq(%w[result error log])
+      expect(result['result']).to_not be_nil
       expect(result['result']).to be_falsey
       expect(result['error']).to be_nil
+    end
+
+    it 'returns the api version' do
+      result = run_cpi('method' => 'info', 'arguments' => [], 'context' => context)
+      expect(result['result']).to_not be_nil
+      expect(result['error']).to be_nil
+      expect(result['result']['api_version']).to eq(2)
     end
   end
 

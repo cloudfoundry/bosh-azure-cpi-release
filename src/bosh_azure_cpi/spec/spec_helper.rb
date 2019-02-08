@@ -144,8 +144,9 @@ def mock_registry
   registry
 end
 
-def mock_cloud(options = nil)
+def mock_cloud(options = nil, api_version = 1)
   Bosh::AzureCloud::Config.instance.update(options || mock_cloud_options['properties'])
+  Bosh::AzureCloud::Config.instance.api_version = api_version
   Bosh::AzureCloud::Cloud.new
 end
 

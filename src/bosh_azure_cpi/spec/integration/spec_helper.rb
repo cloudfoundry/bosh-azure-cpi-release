@@ -63,6 +63,7 @@ RSpec.configure do |rspec_config|
       }
     }
     Bosh::AzureCloud::Config.instance.update(@cloud_options)
+    Bosh::AzureCloud::Config.instance.api_version = Bosh::AzureCloud::Helpers::CURRENT_API_VERSION
     @cpi = Bosh::AzureCloud::Cloud.new
 
     @vm_metadata = { deployment: 'deployment', job: 'cpi_spec', index: '0', delete_me: 'please' }
@@ -70,12 +71,22 @@ RSpec.configure do |rspec_config|
 end
 
 def vm_lifecycle(stemcell_id: @stemcell_id, cpi: @cpi)
-  instance_id = cpi.create_vm(
+  result = cpi.create_vm(
     SecureRandom.uuid,
     stemcell_id,
     vm_properties,
     network_spec
   )
+
+  if cpi.config.api_version == Bosh::AzureCloud::Cloud::API_VERSION_REGISTRYLESS
+    expect(result).to be_a(Array)
+    instance_id = result.first
+    expect(result[1]).to be_a(Hash)
+  else
+    expect(result).to be_a(String)
+    instance_id = result
+  end
+
   expect(instance_id).not_to be_nil
 
   expect(cpi.has_vm?(instance_id)).to be(true)

@@ -17,22 +17,28 @@
           'enable_telemetry' => p('azure.enable_telemetry'),
           'enable_vm_boot_diagnostics' => p('azure.enable_vm_boot_diagnostics')
         },
-        'registry' => {
-          'user' => p('registry.username'),
-          'password' => p('registry.password'),
-          'address' => p('registry.host'),
-          'http' => {
-            'port' => p('registry.port'),
-            'user' => p('registry.username'),
-            'password' => p('registry.password')
-          }
-        },
         'agent' => {
           'ntp' => p('ntp')
         }
       }
     }
   }
+
+  no_registry = p(['registry.username', 'registry.password', 'registry.host'], nil).nil?
+  if !no_registry
+    registry_settings = {
+      'registry' => {
+        'user' => p('registry.username'),
+        'password' => p('registry.password'),
+      },
+    }
+    params['cloud']['properties'] = params['cloud']['properties'].merge(registry_settings)
+    if_p('registry.endpoint') do |endpoint|
+      params['cloud']['properties']['registry']['endpoint'] = endpoint
+    end.else do
+      params['cloud']['properties']['registry']['endpoint'] = "http://#{p('registry.username')}:#{ERB::Util.url_encode(p('registry.password'))}@#{p('registry.host')}:#{p('registry.port')}"
+    end
+  end
 
   if_p('azure.location') do |location|
     params['cloud']['properties']['azure']['location'] = location
@@ -108,12 +114,6 @@
     params['cloud']['properties']['azure']['vmss'] = {
       "enabled" => false
     }
-  end
-
-  if_p('registry.endpoint') do |endpoint|
-    params['cloud']['properties']['registry']['endpoint'] = endpoint
-  end.else do
-    params['cloud']['properties']['registry']['endpoint'] = "http://#{p('registry.username')}:#{ERB::Util.url_encode(p('registry.password'))}@#{p('registry.host')}:#{p('registry.port')}"
   end
 
   if_p('blobstore') do

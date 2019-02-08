@@ -89,7 +89,9 @@ module Bosh::AzureCloud
       )
 
       vmss_params[:name] = vm_name
-      user_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns)
+      user_data_obj = Bosh::AzureCloud::BoshAgentUtil.get_user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, vmss_params)
+
+      # TODO merge things going into agent settings
 
       config_disk_id, = @config_disk_manager.prepare_config_disk(
         resource_group_name,

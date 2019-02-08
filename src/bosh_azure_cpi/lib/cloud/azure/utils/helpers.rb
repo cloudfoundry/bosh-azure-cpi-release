@@ -180,6 +180,15 @@ module Bosh::AzureCloud
     CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP = '/tmp/azure_cpi_events_last_update'
     CPI_TELEMETRY_LOG_FILE                = '/tmp/azure_cpi_telemetry.log'
 
+    # API Version
+    # See https://bosh.io/docs/v2-migration-guide/
+    CURRENT_API_VERSION = 2
+
+    # First stemcell API version and CPI API version that supports registry-less operation
+    STEMCELL_API_VERSION_REGISTRYLESS = 2
+    API_VERSION_REGISTRYLESS = 2
+
+
     ##
     # Raises CloudError exception
     #

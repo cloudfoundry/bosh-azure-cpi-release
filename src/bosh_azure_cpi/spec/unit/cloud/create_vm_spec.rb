@@ -396,5 +396,71 @@ describe Bosh::AzureCloud::Cloud do
         end
       end
     end
+
+    context 'when cpi api version 2' do
+      let(:instance_id) { instance_double(Bosh::AzureCloud::VMInstanceId) }
+      let(:instance_id_string) { 'fake-instance-id' }
+
+      before do
+        allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
+                                                   .with(agent_id, stemcell_cid)
+                                                   .and_return(bosh_vm_meta)
+        allow(instance_id).to receive(:to_s)
+                                  .and_return(instance_id_string)
+        allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
+                                                            .with(anything, networks)
+                                                            .and_return(network_configurator)
+      end
+
+      it 'returns an array of instance id and network hash' do
+        expect(registry_client).to receive(:update_settings)
+        expect(vm_manager).to receive(:create).and_return([instance_id_string, {}])
+
+        expect(
+            cloud_v2.create_vm(
+                agent_id,
+                stemcell_cid,
+                cloud_properties,
+                networks,
+                disk_cids,
+                environment
+            )
+        ).to eq([instance_id_string, networks])
+      end
+
+      context 'and stemcell api version is 1' do
+        it 'continues to write to the registry' do
+          expect(registry_client).to receive(:update_settings)
+          expect(vm_manager).to receive(:create).and_return([instance_id_string, {}])
+
+          cloud_v2.create_vm(
+              agent_id,
+              stemcell_cid,
+              cloud_properties,
+              networks,
+              disk_cids,
+              environment
+          )
+        end
+
+        context 'and stemcell api version is 2' do
+          it 'does not write to the registry' do
+            expect(registry_client).to_not receive(:update_settings)
+            expect(vm_manager).to receive(:create).and_return([instance_id_string, {}])
+
+            expect(
+                cloud_v2_sc2.create_vm(
+                    agent_id,
+                    stemcell_cid,
+                    cloud_properties,
+                    networks,
+                    disk_cids,
+                    environment
+                )
+            ).to eq([instance_id_string, networks])
+          end
+        end
+      end
+    end
   end
 end
