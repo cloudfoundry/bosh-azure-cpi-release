@@ -43,7 +43,7 @@ base64 domain.name.pfx | tr -d '\n'
 * [Azure CLI](./cli/create-ag.sh)
 * [Powershell](./powershell/)
 
-### 2 Assocaite Application Gateway and Cloud Foundry routers
+### 2 Associate Application Gateway and Cloud Foundry routers
 
 #### Update Cloud Foundry manifest
 
