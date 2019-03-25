@@ -7,6 +7,7 @@ gem 'bosh_common',      '1.3262.24.0'
 gem 'bosh_cpi',         '2.4.1'
 gem 'concurrent-ruby',  '1.0.5'
 gem 'jwt',              '1.5.6'
+gem 'deep_merge',       '~> 1.0', '>= 1.0.1'
 
 group :development, :test do
   gem 'rake',        '~>12.0'
@@ -14,4 +15,5 @@ group :development, :test do
   gem 'rubocop',     '~>0.60.0', require: false
   gem 'simplecov'
   gem 'webmock'
+  gem 'deep_merge',  '~> 1.0', '>= 1.0.1'
 end
