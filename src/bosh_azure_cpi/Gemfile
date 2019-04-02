@@ -15,5 +15,4 @@ group :development, :test do
   gem 'rubocop',     '~>0.60.0', require: false
   gem 'simplecov'
   gem 'webmock'
-  gem 'deep_merge',  '~> 1.0', '>= 1.0.1'
 end

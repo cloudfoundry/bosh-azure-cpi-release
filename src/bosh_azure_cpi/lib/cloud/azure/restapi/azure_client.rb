@@ -153,10 +153,10 @@ module Bosh::AzureCloud
         end
 
 	while next_url != nil
-          @logger.warn("Getting resources from nextLink #{next_url}")
+          @logger.debug("Getting resources from nextLink #{next_url}")
           uri = URI(next_url)
           response = http_get(uri)
-          cloud_error("Got empyt page from nextLink #{next_url}") if response.body.nil?
+          cloud_error("Got empty page from nextLink #{next_url}") if response.body.nil?
 
           body = JSON.parse(response.body)
           result.deep_merge!(body)
