@@ -7,6 +7,7 @@ end
 require 'base64'
 require 'concurrent'
 require 'date'
+require 'deep_merge'
 require 'etc'
 require 'fcntl'
 require 'fileutils'

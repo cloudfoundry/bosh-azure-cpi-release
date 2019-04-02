@@ -123,11 +123,47 @@ module Bosh::AzureCloud
       url
     end
 
+    # get single resource
+    # example: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkInterfaces/{networkInterfaceName}
     def get_resource_by_id(url, params = {})
       result = nil
       begin
-        result = http_get(url, params)
+        uri = http_url(url, params)
+        response = http_get(uri)
+        result = JSON.parse(response.body) unless response.body.nil?
       rescue AzureNotFoundError => e
+        @logger.debug("Resource not found for url #{url} with parms #{params}")
+        result = nil
+      end
+      result
+    end
+
+    # get list of resources
+    # example: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkInterfaces
+    def get_resources_by_url(url, params = {})
+      result = nil
+      next_url = nil
+      begin
+        uri = http_url(url, params)
+        response = http_get(uri)
+        unless response.body.nil?
+          body = JSON.parse(response.body)
+          result = body
+          next_url = body['nextLink']
+        end
+
+	while next_url != nil
+          @logger.debug("Getting resources from nextLink #{next_url}")
+          uri = URI(next_url)
+          response = http_get(uri)
+          cloud_error("Got empty page from nextLink #{next_url}") if response.body.nil?
+
+          body = JSON.parse(response.body)
+          result.deep_merge!(body)
+          next_url = body['nextLink']
+        end
+      rescue AzureNotFoundError => e
+        @logger.debug("Resources not found for url #{url} with parms #{params}")
         result = nil
       end
       result
@@ -1480,12 +1516,13 @@ module Bosh::AzureCloud
     def list_network_interfaces_by_keyword(resource_group_name, keyword)
       network_interfaces = []
       network_interfaces_url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, resource_group_name: resource_group_name)
-      results = get_resource_by_id(network_interfaces_url)
+      results = get_resources_by_url(network_interfaces_url)
       unless results.nil? || results['value'].nil?
         results['value'].each do |network_interface_spec|
           network_interfaces.push(parse_network_interface(network_interface_spec, recursive: false)) if network_interface_spec['name'].include?(keyword)
         end
       end
+      @logger.debug("list_network_interfaces_by_keyword: #{network_interfaces}")
       network_interfaces
     end
 
@@ -2412,10 +2449,8 @@ module Bosh::AzureCloud
       end
     end
 
-    def http_get(url, params = {}, retry_after = 5)
-      uri = http_url(url, params)
+    def http_get(uri, retry_after = 5)
       @logger.info("http_get - trying to get #{uri}")
-
       request = Net::HTTP::Get.new(uri.request_uri)
       response = http_get_response(uri, request, retry_after)
       status_code = response.code.to_i
@@ -2427,9 +2462,7 @@ module Bosh::AzureCloud
           raise AzureError, error
         end
       end
-
-      result = nil
-      result = JSON(response.body) unless response.body.nil?
+      response
     end
 
     def http_put(url, body = nil, params = {}, retry_after = 5)
