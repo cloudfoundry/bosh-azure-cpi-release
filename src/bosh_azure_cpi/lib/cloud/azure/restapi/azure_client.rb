@@ -132,6 +132,7 @@ module Bosh::AzureCloud
         response = http_get(uri)
         result = JSON.parse(response.body) unless response.body.nil?
       rescue AzureNotFoundError => e
+        @logger.debug("Resource not found for url #{url} with parms #{params}")
         result = nil
       end
       result
@@ -162,6 +163,7 @@ module Bosh::AzureCloud
           next_url = body['nextLink']
         end
       rescue AzureNotFoundError => e
+        @logger.debug("Resources not found for url #{url} with parms #{params}")
         result = nil
       end
       result
