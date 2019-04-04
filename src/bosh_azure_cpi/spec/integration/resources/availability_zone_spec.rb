@@ -39,6 +39,7 @@ describe Bosh::AzureCloud::Cloud do
         dynamic_public_ip = @cpi.azure_client.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
         expect(vm[:zone]).to eq(availability_zone)
         expect(dynamic_public_ip[:zone]).to eq(availability_zone)
+        expect(dynamic_public_ip[:sku]).to eq('Standard')
 
         disk_id = @cpi.create_disk(2048, {}, instance_id)
         expect(disk_id).not_to be_nil
