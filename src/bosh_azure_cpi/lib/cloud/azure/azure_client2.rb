@@ -1146,7 +1146,11 @@ module Bosh::AzureCloud
           'idleTimeoutInMinutes'     => params[:idle_timeout_in_minutes]
         }
       }
-      public_ip['zones'] = [params[:zone]] unless params[:zone].nil?
+      if params[:zone]
+        public_ip['zones'] = [params[:zone]]
+        public_ip['sku'] = {'name' => 'Standard'}
+        public_ip['properties']['publicIPAllocationMethod'] = 'Static'
+      end
 
       http_put(url, public_ip)
     end
@@ -1968,6 +1972,7 @@ module Bosh::AzureCloud
         ip_address[:name]     = result['name']
         ip_address[:location] = result['location']
         ip_address[:tags]     = result['tags']
+        ip_address[:sku]     = result['sku']['name']
 
         ip_address[:zone] = result['zones'][0] unless result['zones'].nil?
 

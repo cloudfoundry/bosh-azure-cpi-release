@@ -150,9 +150,10 @@ describe Bosh::AzureCloud::AzureClient2 do
             'location' => location,
             'properties' => {
               'idleTimeoutInMinutes' => 4,
-              'publicIPAllocationMethod' => 'Dynamic'
+              'publicIPAllocationMethod' => 'Static'  # Standard SKUs require Static
             },
-            'zones' => ['fake-zone']
+            'zones' => ['fake-zone'],
+            'sku' => {'name' => 'Standard'}
           }
         end
 
