@@ -37,6 +37,10 @@ describe Bosh::AzureCloud::AzureClient do
           'fqdn' => 'bar',
           'reverseFqdn' => 'ooo'
         }
+      },
+      'sku' => {
+          'name' => 'Basic',
+          'tier' => 'Regional'
       }
     }
   end
@@ -56,7 +60,8 @@ describe Bosh::AzureCloud::AzureClient do
       ip_configuration_id: 'fake-id',
       domain_name_label: 'foo',
       fqdn: 'bar',
-      reverse_fqdn: 'ooo'
+      reverse_fqdn: 'ooo',
+      sku: 'Basic'
     }
   end
 
