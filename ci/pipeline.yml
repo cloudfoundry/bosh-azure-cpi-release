@@ -12,6 +12,16 @@ groups:
       - promote-candidate-major
       - promote-candidate-minor
       - promote-candidate-patch
+  - name: bosh-azure-cpi-35-4
+    jobs:
+      - build-candidate-35-4
+      - integration-unmanaged-disks-35-4
+      - integration-managed-disks-35-4
+      - integration-windows-unmanaged-disks-35-4
+      - integration-windows-managed-disks-35-4
+      - bats-unmanaged-disks-35-4
+      - bats-managed-disks-35-4
+      - promote-candidate-patch-35-4
 
 shared:
   - &azure-environment-params
@@ -132,6 +142,21 @@ shared:
       <<: *azure-environment-params
 
 jobs:
+  - name: build-candidate-35-4
+    serial: true
+    plan:
+      - aggregate:
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in-35-4}
+        - {trigger: false, get: version-semver, resource: version-semver-35-4, params: {bump: patch}}
+        - {trigger: false, get: bosh-cli}
+      - put: version-semver
+        resource: version-semver-35-4
+        params: {file: version-semver/number}
+      - task: build
+        file: bosh-cpi-src/ci/tasks/build-candidate.yml
+      - put: bosh-cpi-dev-artifacts
+        params: {file: candidate/*.tgz}
+
   - name: build-candidate
     serial: true
     plan:
@@ -167,6 +192,26 @@ jobs:
             do:
               - <<: *ensure-cleanup
 
+  - name: integration-unmanaged-disks-35-4
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate-35-4]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in-35-4,   passed: [build-candidate-35-4]}
+        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
+      - <<: *create-integration-environment
+      - do:
+        - <<: *run-integration
+          params:
+            <<: *run-integration-params
+            AZURE_USE_MANAGED_DISKS: false
+        ensure:
+          do:
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
+
   - name: integration-managed-disks
     serial: true
     plan:
@@ -177,6 +222,26 @@ jobs:
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
+        - <<: *run-integration
+          params:
+            <<: *run-integration-params
+            AZURE_USE_MANAGED_DISKS: true
+        ensure:
+          do:
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
+
+  - name: integration-managed-disks-35-4
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate-35-4]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in-35-4,   passed: [build-candidate-35-4]}
+        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
+      - <<: *create-integration-environment
+      - do:
         - <<: *run-integration
           params:
             <<: *run-integration-params
@@ -212,6 +277,26 @@ jobs:
             do:
               - <<: *ensure-cleanup
 
+  - name: integration-windows-unmanaged-disks-35-4
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate-35-4]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in-35-4,   passed: [build-candidate-35-4]}
+        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
+      - <<: *create-integration-environment
+      - do:
+        - <<: *run-integration-windows
+          params:
+            <<: *run-integration-windows-params
+            AZURE_USE_MANAGED_DISKS: false
+        ensure:
+          do:
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
+
   - name: integration-windows-managed-disks
     serial: true
     plan:
@@ -225,6 +310,26 @@ jobs:
           params:
             <<: *azure-environment-params
             IS_HEAVY_STEMCELL: false
+        - <<: *run-integration-windows
+          params:
+            <<: *run-integration-windows-params
+            AZURE_USE_MANAGED_DISKS: true
+        ensure:
+          do:
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
+
+  - name: integration-windows-managed-disks-35-4
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate-35-4]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in-35-4,   passed: [build-candidate-35-4]}
+        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
+      - <<: *create-integration-environment
+      - do:
         - <<: *run-integration-windows
           params:
             <<: *run-integration-windows-params
@@ -269,6 +374,39 @@ jobs:
             do:
               - <<: *ensure-cleanup
 
+  - name: bats-unmanaged-disks-35-4
+    serial: true
+    plan:
+      - aggregate:
+        - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate-35-4]}
+        - {get: bosh-release,    trigger: false, resource: bosh-release}
+        - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in-35-4,   passed: [build-candidate-35-4]}
+        - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell}
+        - {get: bosh-deployment, trigger: false}
+        - {get: pipelines,       trigger: false}
+        - {get: bosh-cli,        trigger: false}
+        - {get: bats,            trigger: false}
+      - <<: *create-bats-environment
+      - do:
+        - <<: *prepare-director
+          params:
+            <<: *prepare-director-params
+            OPTIONAL_OPS_FILE: |
+              -o pipelines/shared/assets/ops/remove-hm.yml
+              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+        - do:
+          - <<: *deploy-director
+          - <<: *run-bats
+          ensure:
+            do:
+              - <<: *teardown
+        ensure:
+          do:
+            - <<: *destroy-bats-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
+
   - name: bats-managed-disks
     serial: true
     plan:
@@ -276,6 +414,40 @@ jobs:
         - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-release,    trigger: false, resource: bosh-release}
         - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell}
+        - {get: bosh-deployment, trigger: false}
+        - {get: pipelines,       trigger: false}
+        - {get: bosh-cli,        trigger: false}
+        - {get: bats,            trigger: false}
+      - <<: *create-az-bats-environment
+      - do:
+        - <<: *prepare-director
+          params:
+            <<: *prepare-director-params
+            OPTIONAL_OPS_FILE: |
+              -o pipelines/shared/assets/ops/remove-hm.yml
+              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+              -o bosh-deployment/azure/use-managed-disks.yml
+        - do:
+          - <<: *deploy-director
+          - <<: *run-az-bats
+          ensure:
+            do:
+              - <<: *teardown
+        ensure:
+          do:
+            - <<: *destroy-az-bats-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
+
+  - name: bats-managed-disks-35-4
+    serial: true
+    plan:
+      - aggregate:
+        - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate-35-4]}
+        - {get: bosh-release,    trigger: false, resource: bosh-release}
+        - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in-35-4,   passed: [build-candidate-35-4]}
         - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell}
         - {get: bosh-deployment, trigger: false}
         - {get: pipelines,       trigger: false}
@@ -357,6 +529,25 @@ jobs:
       - put: release-version-semver
         params: {file: release-version-semver/number}
 
+  - name: promote-candidate-patch-35-4
+    plan:
+      - aggregate:
+        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks-35-4, integration-managed-disks-35-4, integration-windows-unmanaged-disks-35-4, integration-windows-managed-disks-35-4, bats-unmanaged-disks-35-4, bats-managed-disks-35-4]}
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out-35-4}
+        - {trigger: false, get: release-version-semver, resource: release-version-semver-35-4, params: {bump: patch}}
+        - {trigger: false, get: bosh-cli}
+      - task: promote
+        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
+        params:
+          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
+          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
+      - put: bosh-cpi-src
+        resource: bosh-cpi-src-out-35-4
+        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
+      - put: release-version-semver
+        resource: release-version-semver-35-4
+        params: {file: release-version-semver/number}
+
 resource_types:
   - name: terraform_type
     type: docker-image
@@ -380,11 +571,25 @@ resources:
       ignore_paths:
         - .final_builds/**/*.yml
         - releases/**/*.yml
+  - name: bosh-cpi-src-in-35-4
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-azure-cpi-release.git
+      branch: "v35.4.x"
+      ignore_paths:
+        - .final_builds/**/*.yml
+        - releases/**/*.yml
   - name: bosh-cpi-src-out
     type: git
     source:
       uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
       branch: master
+      private_key: {{github_deployment_key__bosh-azure-cpi-release}}
+  - name: bosh-cpi-src-out-35-4
+    type: git
+    source:
+      uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
+      branch: "v35.4.x"
       private_key: {{github_deployment_key__bosh-azure-cpi-release}}
   - name: version-semver
     type: semver
@@ -393,9 +598,25 @@ resources:
       bucket:            {{s3_azure_cpi_pipeline_bucket}}
       access_key_id:     {{s3_access_key__primary}}
       secret_access_key: {{s3_secret_key__primary}}
+  - name: version-semver-35-4
+    type: semver
+    source:
+      initial_version: "35.4.0"
+      key:               current-version-35-4 # dev-release version
+      bucket:            {{s3_azure_cpi_pipeline_bucket}}
+      access_key_id:     {{s3_access_key__primary}}
+      secret_access_key: {{s3_secret_key__primary}}
   - name: release-version-semver
     type: semver
     source:
+      key:               release-current-version
+      bucket:            {{s3_azure_cpi_pipeline_bucket}}
+      access_key_id:     {{s3_access_key__primary}}
+      secret_access_key: {{s3_secret_key__primary}}
+  - name: release-version-semver-35-4
+    type: semver
+    source:
+      initial_version: "35.4.0"
       key:               release-current-version
       bucket:            {{s3_azure_cpi_pipeline_bucket}}
       access_key_id:     {{s3_access_key__primary}}
