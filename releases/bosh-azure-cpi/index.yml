@@ -11,6 +11,8 @@ builds:
     version: "15"
   31fa2d0b-dacf-4eb1-964c-d7b3a8dc3c90:
     version: "10"
+  3c5c339a-168a-4620-5b0d-f211b7114db8:
+    version: 35.5.1
   3cdc811b-f3fa-48c3-bfa1-bb02da886a92:
     version: "14"
   422fc520-f007-4384-87e7-0f819171d529:
