@@ -56,9 +56,10 @@ describe Bosh::AzureCloud::Cloud do
 
   context 'Migrate regional VM to zonal VM', availability_zone: true, migration: true do
     context 'when the regional VM is with unmanaged disks' do
+      let(:disk_id) { cpi_unmanaged.create_disk(2048, {}, nil) }
+
       before do
         # Create an unmanaged disk
-        disk_id = cpi_unmanaged.create_disk(2048, {}, nil)
         expect(disk_id).not_to be_nil
         @disk_id_pool.push(disk_id)
       end
@@ -100,9 +101,9 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'when the regional VM is with managed disks' do
+      let(:disk_id) { cpi_managed.create_disk(2048, {}, nil) }
       before do
         # Create an regional disk
-        disk_id = cpi_managed.create_disk(2048, {}, nil)
         expect(disk_id).not_to be_nil
         @disk_id_pool.push(disk_id)
       end
