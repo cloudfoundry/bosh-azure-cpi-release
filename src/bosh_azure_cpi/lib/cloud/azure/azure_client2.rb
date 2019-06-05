@@ -1972,7 +1972,7 @@ module Bosh::AzureCloud
         ip_address[:name]     = result['name']
         ip_address[:location] = result['location']
         ip_address[:tags]     = result['tags']
-        ip_address[:sku]     = result['sku']['name']
+        ip_address[:sku]     = result['sku']['name'] unless result['sku'].nil?
 
         ip_address[:zone] = result['zones'][0] unless result['zones'].nil?
 

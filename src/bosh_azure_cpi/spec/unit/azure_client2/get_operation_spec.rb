@@ -58,6 +58,29 @@ describe Bosh::AzureCloud::AzureClient2 do
       }
     }
   end
+  let(:public_ip_response_body_without_sku) do
+    {
+      'id' => 'fake-id',
+      'name' => 'fake-name',
+      'location' => 'fake-location',
+      'tags' => 'fake-tags',
+      'zones' => ['fake-zone'],
+      'properties' => {
+        'resourceGuid' => 'fake-guid',
+        'provisioningState' => 'fake-state',
+        'ipAddress' => '123.123.123.123',
+        'publicIPAllocationMethod' => 'Dynamic',
+        'publicIPAddressVersion' => 'fake-version',
+        'idleTimeoutInMinutes' => 4,
+        'ipConfigurations' => { 'id' => 'fake-id' },
+        'dnsSettings' => {
+          'domainNameLabel' => 'foo',
+          'fqdn' => 'bar',
+          'reverseFqdn' => 'ooo'
+        }
+      }
+    }
+  end
   let(:fake_public_ip) do
     {
       id: 'fake-id',
@@ -77,6 +100,11 @@ describe Bosh::AzureCloud::AzureClient2 do
       reverse_fqdn: 'ooo',
       sku: 'Basic'
     }
+  end
+  let(:fake_public_ip_without_sku) do
+    i = fake_public_ip
+    i.delete(:sku)
+    i
   end
 
   # Load Balancer
@@ -470,6 +498,17 @@ describe Bosh::AzureCloud::AzureClient2 do
         expect(
           azure_client2.get_public_ip_by_name(resource_group_name, public_ip_name)
         ).to eq(fake_public_ip)
+      end
+
+      it 'should return the resource even there is no sku' do
+        stub_request(:get, public_ip_uri).to_return(
+          status: 200,
+          body: public_ip_response_body_without_sku.to_json,
+          headers: {}
+        )
+        expect(
+          azure_client.get_public_ip_by_name(resource_group_name, public_ip_name)
+        ).to eq(fake_public_ip_without_sku)
       end
     end
   end
