@@ -507,7 +507,7 @@ describe Bosh::AzureCloud::AzureClient2 do
           headers: {}
         )
         expect(
-          azure_client.get_public_ip_by_name(resource_group_name, public_ip_name)
+          azure_client2.get_public_ip_by_name(resource_group_name, public_ip_name)
         ).to eq(fake_public_ip_without_sku)
       end
     end
