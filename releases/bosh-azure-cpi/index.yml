@@ -81,6 +81,8 @@ builds:
     version: "18"
   e4a97bbc-0682-4887-9579-ab7139973988:
     version: "21"
+  e90b4929-6c71-4dff-7e9e-1cc8bbd4bc02:
+    version: 36.0.1
   edd1f234-ef0d-4dcd-a9fb-b6c4aaf495bc:
     version: "20"
   f8f60c8c-f6ec-41b7-72df-0623b36c6001:
