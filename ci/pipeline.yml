@@ -616,8 +616,8 @@ resources:
   - name: release-version-semver-35-4
     type: semver
     source:
-      initial_version: "35.4.0"
-      key:               release-current-version
+      initial_version: "35.4.2"
+      key:               release-current-version-35-4
       bucket:            {{s3_azure_cpi_pipeline_bucket}}
       access_key_id:     {{s3_access_key__primary}}
       secret_access_key: {{s3_secret_key__primary}}
