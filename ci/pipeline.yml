@@ -9,8 +9,6 @@ groups:
       - integration-windows-managed-disks
       - bats-unmanaged-disks
       - bats-managed-disks
-      - promote-candidate-major
-      - promote-candidate-minor
       - promote-candidate-patch
 
 shared:
@@ -303,42 +301,6 @@ jobs:
             do:
               - <<: *ensure-cleanup
 
-  - name: promote-candidate-major
-    plan:
-      - aggregate:
-        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
-        - {trigger: false, get: release-version-semver, params: {bump: major}}
-        - {trigger: false, get: bosh-cli}
-      - task: promote
-        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
-        params:
-          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
-          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
-      - put: bosh-cpi-src
-        resource: bosh-cpi-src-out
-        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
-      - put: release-version-semver
-        params: {file: release-version-semver/number}
-
-  - name: promote-candidate-minor
-    plan:
-      - aggregate:
-        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
-        - {trigger: false, get: release-version-semver, params: {bump: minor}}
-        - {trigger: false, get: bosh-cli}
-      - task: promote
-        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
-        params:
-          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
-          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
-      - put: bosh-cpi-src
-        resource: bosh-cpi-src-out
-        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
-      - put: release-version-semver
-        params: {file: release-version-semver/number}
-
   - name: promote-candidate-patch
     plan:
       - aggregate:
@@ -376,7 +338,7 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-azure-cpi-release.git
-      branch: master
+      branch: v35.5.x
       ignore_paths:
         - .final_builds/**/*.yml
         - releases/**/*.yml
@@ -384,19 +346,21 @@ resources:
     type: git
     source:
       uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
-      branch: master
+      branch: v35.5.x
       private_key: {{github_deployment_key__bosh-azure-cpi-release}}
   - name: version-semver
     type: semver
     source:
-      key:               current-version # dev-release version
+      initial_version: "35.5.0"  # patch release is the only thing incremented, once for each internal build (doesn't matter how high it goes)
+      key:               current-version-35-5 # dev-release version
       bucket:            {{s3_azure_cpi_pipeline_bucket}}
       access_key_id:     {{s3_access_key__primary}}
       secret_access_key: {{s3_secret_key__primary}}
   - name: release-version-semver
     type: semver
     source:
-      key:               release-current-version
+      initial_version: "35.5.2"
+      key:               release-current-version-35-5
       bucket:            {{s3_azure_cpi_pipeline_bucket}}
       access_key_id:     {{s3_access_key__primary}}
       secret_access_key: {{s3_secret_key__primary}}
