@@ -24,12 +24,18 @@ module Bosh::AzureCloud
         @azure_client.delete_user_image(user_image_name)
       end
 
-      # Delete all stemcells with the given stemcell name in all storage accounts
-      storage_accounts = @azure_client.list_storage_accounts
-      storage_accounts.each do |storage_account|
-        storage_account_name = storage_account[:name]
-        @logger.info("Delete stemcell '#{name}' in the storage '#{storage_account_name}'")
-        @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(storage_account_name, name)
+      if @storage_account_manager.use_default_account_for_cleaning
+        # Delete a stemcell name in defaukt storage accounts
+        @logger.info("Delete stemcell(#{name}) in default storage account #{@default_storage_account_name}")
+        @blob_manager.delete_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(@default_storage_account_name, name)
+      else
+        # Delete all stemcells with the given stemcell name in all storage accounts
+        storage_accounts = @azure_client.list_storage_accounts
+        storage_accounts.each do |storage_account|
+          storage_account_name = storage_account[:name]
+          @logger.info("Delete stemcell '#{name}' in the storage '#{storage_account_name}'")
+          @blob_manager.delete_blob(storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(storage_account_name, name)
+        end
       end
 
       # Delete all records whose PartitionKey is the given stemcell name

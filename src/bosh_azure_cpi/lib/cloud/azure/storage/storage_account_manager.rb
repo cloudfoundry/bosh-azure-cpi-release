@@ -4,6 +4,7 @@ module Bosh::AzureCloud
   class StorageAccountManager
     include Helpers
 
+    attr_reader :use_default_account_for_cleaning
     def initialize(azure_config, blob_manager, azure_client)
       @azure_config = azure_config
       @blob_manager = blob_manager
@@ -13,6 +14,7 @@ module Bosh::AzureCloud
 
       @default_storage_account_name = nil
       @default_storage_account = nil
+      @use_default_account_for_cleaning = @azure_config.use_default_account_for_cleaning
     end
 
     def generate_storage_account_name

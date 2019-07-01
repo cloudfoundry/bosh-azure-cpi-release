@@ -59,6 +59,7 @@ module Bosh::AzureCloud
     attr_reader :ssh_user, :ssh_public_key
     attr_reader :config_disk
     attr_reader :stemcell_api_version
+    attr_reader :use_default_account_for_cleaning
 
     attr_writer :storage_account_name
 
@@ -102,6 +103,10 @@ module Bosh::AzureCloud
       @ssh_public_key = azure_config_hash['ssh_public_key']
 
       @config_disk = ConfigDisk.new(azure_config_hash.fetch('config_disk', 'enabled' => false))
+
+      # Flag to skip looping all storage account in subscription
+      @use_default_account_for_cleaning = false
+      @use_default_account_for_cleaning = azure_config_hash['use_default_account_for_cleaning'] unless azure_config_hash['use_default_account_for_cleaning'].nil?
 
       # A compatible director sends vm.stemcell.api_version in the cpi method call context
       # https://github.com/cloudfoundry/bosh/blob/v268.5.0/src/bosh-director/lib/cloud/external_cpi.rb#L86
