@@ -13,6 +13,9 @@ describe Bosh::AzureCloud::StemcellManager2 do
   before do
     allow(storage_account_manager).to receive(:default_storage_account_name)
       .and_return(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
+
+    allow(storage_account_manager).to receive(:use_default_account_for_cleaning)
+      .and_return(false)
   end
 
   let(:stemcell_uuid) { 'fbb636e9-89b6-432b-b52c-b5cd93654900' }

@@ -71,6 +71,7 @@ describe 'cpi.json.erb' do
             'ssh_public_key' => 'ssh-rsa ABCDEFGHIJKLMN',
             'default_security_group' => 'fake-default-security-group',
             'parallel_upload_thread_num' => 16,
+            'use_default_account_for_cleaning' => false,
             'debug_mode' => false,
             'keep_failed_vms' => false,
             'enable_telemetry' => false,
