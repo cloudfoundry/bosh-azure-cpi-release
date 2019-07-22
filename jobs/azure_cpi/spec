@@ -67,6 +67,9 @@ properties:
   azure.debug_mode:
     description: Enable debug mode to log all raw HTTP requests/responses
     default: false
+  azure.use_default_account_for_cleaning:
+    description: Use the default storage account when cleaning stemcells
+    default: false
   azure.keep_failed_vms:
     description: Enable keeping the VM which failed in provisioning for troubleshooting
     default: false
