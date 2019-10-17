@@ -271,15 +271,30 @@ describe Bosh::AzureCloud::BlobManager do
         end
       end
 
-      it 'should create container and retry one time' do
-        expect(blob_service).to receive(:create_container)
-          .with(container_name, options)
-          .and_return(true)
-        expect(blob_service).to receive(:create_page_blob)
-          .twice
-        expect do
-          blob_manager.create_empty_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1, metadata)
-        end.not_to raise_error
+      context 'when no other one created the container' do
+        it 'should create container and retry one time' do
+          expect(blob_service).to receive(:create_container)
+            .with(container_name, options)
+            .and_return(true)
+          expect(blob_service).to receive(:create_page_blob)
+            .twice
+          expect do
+            blob_manager.create_empty_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1, metadata)
+          end.not_to raise_error
+        end
+      end
+
+      context 'when other one created the container' do
+        it 'should use the created container' do
+          expect(blob_service).to receive(:create_container)
+            .with(container_name, options)
+            .and_raise 'ContainerAlreadyExists'
+          expect(blob_service).to receive(:create_page_blob)
+            .twice
+          expect do
+            blob_manager.create_empty_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1, metadata)
+          end.not_to raise_error
+        end
       end
     end
   end
@@ -690,15 +705,31 @@ describe Bosh::AzureCloud::BlobManager do
             ['fake-copy-id', 'success']
           end
         end
-        it 'succeeds to copy the blob' do
-          expect(blob_service).to receive(:create_container)
-            .with(container_name, options)
-            .and_return(true)
-          expect(blob_service).to receive(:copy_blob_from_uri)
-            .twice
-          expect do
-            blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-          end.not_to raise_error
+
+        context 'when no other one created the container' do
+          it 'succeeds to copy the blob' do
+            expect(blob_service).to receive(:create_container)
+              .with(container_name, options)
+              .and_return(true)
+            expect(blob_service).to receive(:copy_blob_from_uri)
+              .twice
+            expect do
+              blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+            end.not_to raise_error
+          end
+        end
+
+        context 'when other one created the container' do
+          it 'succeeds to copy the blob' do
+            expect(blob_service).to receive(:create_container)
+              .with(container_name, options)
+              .and_raise 'ContainerAlreadyExists'
+            expect(blob_service).to receive(:copy_blob_from_uri)
+              .twice
+            expect do
+              blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
+            end.not_to raise_error
+          end
         end
       end
     end

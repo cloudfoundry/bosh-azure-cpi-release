@@ -405,7 +405,7 @@ module Bosh::AzureCloud
     rescue StandardError => e
       # create the container if it does not exists
       if e.inspect.include?('ContainerNotFound')
-        @blob_service_client.create_container(container_name, merge_storage_common_options)
+        _create_container(container_name)
         @blob_service_client.create_page_blob(container_name, blob_name, file_size, options)
       else
         raise e
@@ -417,11 +417,18 @@ module Bosh::AzureCloud
     rescue StandardError => e
       # create the container if it does not exists
       if e.inspect.include?('ContainerNotFound')
-        @blob_service_client.create_container(container_name, merge_storage_common_options)
+        _create_container(container_name)
         @blob_service_client.copy_blob_from_uri(container_name, blob_name, source_blob_uri, options)
       else
         raise e
       end
+    end
+
+    def _create_container(container_name)
+      @blob_service_client.create_container(container_name, merge_storage_common_options)
+    rescue StandardError => e
+      # ignore the error that the container already exists.
+      raise e unless e.inspect.include?('ContainerAlreadyExists')
     end
   end
 
