@@ -68,7 +68,7 @@ properties:
     description: Enable debug mode to log all raw HTTP requests/responses
     default: false
   azure.use_default_account_for_cleaning:
-    description: Use the default storage account when cleaning stemcells
+    description: Use the default storage account when cleaning stemcells, to get around the issue where all subscription storage accounts cannot be listed or read from. If multiple accounts are being used by BOSH, this will cause stemcells to be not fully deleted and leak storage space.
     default: false
   azure.keep_failed_vms:
     description: Enable keeping the VM which failed in provisioning for troubleshooting
