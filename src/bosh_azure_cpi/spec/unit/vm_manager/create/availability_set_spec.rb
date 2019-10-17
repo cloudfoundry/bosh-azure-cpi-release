@@ -21,7 +21,6 @@ describe Bosh::AzureCloud::VMManager do
       # Availability Set
       context '#availability_set' do
         context 'when availability set is not created' do
-          let(:env) { nil }
           let(:availability_set_name) { SecureRandom.uuid.to_s }
           let(:vm_props) do
             props_factory.parse_vm_props(
@@ -54,7 +53,6 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         context 'when instance_type is nil and instance_types exist' do
-          let(:env) { nil }
           let(:availability_set_name) { SecureRandom.uuid.to_s }
           let(:platform_update_domain_count) { 5 }
           let(:platform_fault_domain_count) { 3 }
@@ -409,8 +407,7 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
-        context 'with env is nil and availability_set is specified in vm_types or vm_extensions' do
-          let(:env) { nil }
+        context 'with env is empty and availability_set is specified in vm_types or vm_extensions' do
           let(:availability_set_name) { SecureRandom.uuid.to_s }
           let(:vm_props) do
             props_factory.parse_vm_props(
@@ -826,7 +823,6 @@ describe Bosh::AzureCloud::VMManager do
 
         context 'when the availability set exists' do
           context 'when the availability set is in a different location' do
-            let(:env) { nil }
             let(:availability_set_name) { SecureRandom.uuid.to_s }
             let(:availability_set) do
               {
@@ -864,7 +860,6 @@ describe Bosh::AzureCloud::VMManager do
           end
 
           context 'when the managed property is aligned with @use_managed_disks' do
-            let(:env) { nil }
             let(:availability_set_name) { SecureRandom.uuid.to_s }
             let(:availability_set) do
               {
