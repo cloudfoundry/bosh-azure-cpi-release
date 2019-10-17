@@ -128,7 +128,7 @@ module Bosh::AzureCloud
       vm_params = {
         name: vm_name,
         location: location,
-        tags: _get_tags(vm_props),
+        tags: _get_tags(vm_props, env),
         vm_size: vm_props.instance_type,
         managed: @use_managed_disks
       }
@@ -485,10 +485,11 @@ module Bosh::AzureCloud
       @azure_config.enable_vm_boot_diagnostics && (@azure_config.environment != ENVIRONMENT_AZURESTACK) ? @storage_account_manager.get_or_create_diagnostics_storage_account(location) : nil
     end
 
-    def _get_tags(vm_props)
+    def _get_tags(vm_props, env)
       tags = AZURE_TAGS.dup
-      custom_tags = vm_props.tags
-      tags.merge!(custom_tags)
+      vm_property_tags = vm_props.tags
+      tags.merge!(env['bosh']['tags']) if env['bosh'] && env['bosh']['tags']
+      tags.merge!(vm_property_tags)
     end
 
     def _create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
