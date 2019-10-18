@@ -79,6 +79,8 @@ builds:
     version: "22"
   d11c6b07-40b8-4c58-7ebb-7dcffe0e7527:
     version: 35.5.2
+  d6cd9c69-95c2-45fb-4ae7-baf0a340ce17:
+    version: 37.0.0
   dc0d10bb-f1fd-48b7-b6b7-8fe598619e1c:
     version: "3"
   df4c9fe2-42ff-44de-8e6a-3a5a65c22f08:
