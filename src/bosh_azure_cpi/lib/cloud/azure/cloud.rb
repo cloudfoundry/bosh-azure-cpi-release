@@ -137,7 +137,7 @@ module Bosh::AzureCloud
     #
     # @See https://www.bosh.io/docs/cpi-api-v1-method/create-vm/
     #
-    def create_vm(agent_id, stemcell_cid, cloud_properties, networks, disk_cids = nil, environment = nil)
+    def create_vm(agent_id, stemcell_cid, cloud_properties, networks, disk_cids = nil, environment = {})
       # environment may contain credentials so we must not log it
       @logger.info("create_vm(#{agent_id}, #{stemcell_cid}, #{cloud_properties}, #{networks}, #{disk_cids}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
