@@ -270,11 +270,15 @@ module Bosh::AzureCloud
 
     def get_storage_account_name_from_cache
       return "" unless File.file?(STORAGE_ACCOUNT_NAME_CACHE)
-      File.open(STORAGE_ACCOUNT_NAME_CACHE, 'r').read
+      File.open(STORAGE_ACCOUNT_NAME_CACHE, 'r').read.strip
     end
 
     def set_storage_account_name_to_cache(storage_account_name)
       File.open(STORAGE_ACCOUNT_NAME_CACHE, 'w') { |file| file.write(storage_account_name) }
+    end
+
+    def remove_storage_account_name_cache
+      File.delete(STORAGE_ACCOUNT_NAME_CACHE) if File.exist?(STORAGE_ACCOUNT_NAME_CACHE)
     end
 
     # https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-certificate-credentials
