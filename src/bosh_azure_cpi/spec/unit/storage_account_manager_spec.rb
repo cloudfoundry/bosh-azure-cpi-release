@@ -442,80 +442,274 @@ describe Bosh::AzureCloud::StorageAccountManager do
     end
 
     context 'When the global configurations do not contain storage_account_name' do
-      let(:resource_group_location) { 'fake-resource-group-location' }
-      let(:resource_group) do
-        {
-          name: 'fake-rg-name',
-          location: resource_group_location
-        }
-      end
-
-      context 'When the storage account with the specified tags is found in the resource group location' do
-        let(:targeted_storage_account) do
-          {
-            name: 'account1',
-            location: resource_group_location,
-            tags: STEMCELL_STORAGE_ACCOUNT_TAGS
-          }
-        end
-        let(:storage_accounts) do
-          [
-            targeted_storage_account,
-            {
-              name: 'account2',
-              location: resource_group_location,
-              tags: {}
-            },
-            {
-              name: 'account3',
-              location: 'different-location',
-              tags: STEMCELL_STORAGE_ACCOUNT_TAGS
-            }
-          ]
-        end
+      context 'When the cache file contains the storage account name' do
+        let(:cached_storage_account_name) { "fo9oasag36otw142bykc" }
         before do
-          allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
-          allow(azure_client).to receive(:get_resource_group)
-            .with(default_resource_group_name)
-            .and_return(resource_group)
+          File.open(STORAGE_ACCOUNT_NAME_CACHE, 'w') { |file| file.write(cached_storage_account_name) }
+        end
+        after do
+          File.delete(STORAGE_ACCOUNT_NAME_CACHE) if File.exist?(STORAGE_ACCOUNT_NAME_CACHE)
         end
 
-        it 'should return the storage account' do
-          azure_config.storage_account_name = nil
-          expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
-
-          expect(storage_account_manager.default_storage_account).to eq(targeted_storage_account)
-        end
-      end
-
-      context 'When the storage account with the specified tags is not found in the resource group location' do
-        let(:request_id) { 'fake-client-request-id' }
-        let(:options) do
-          {
-            request_id: request_id
-          }
-        end
-        let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
-        let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
-        let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
-        let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
-
-        before do
-          allow(azure_storage_client).to receive(:table_client)
-            .and_return(table_service)
-          allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
-            .and_return(exponential_retry)
-          allow(table_service).to receive(:with_filter).with(exponential_retry)
-          allow(SecureRandom).to receive(:uuid).and_return(request_id)
-        end
-
-        context 'When the old storage account with the stemcell table is found in the resource group' do
+        context 'when the storage account exists' do
           before do
-            allow(table_service).to receive(:get_table)
-              .with('stemcells', options)
+            allow(azure_client).to receive(:get_storage_account_by_name).with(cached_storage_account_name).and_return(default_storage_account)
           end
 
-          context 'When the old storage account is in the resource group location' do
+          it 'should return the default storage account, and do not set the tags' do
+            azure_config.storage_account_name = nil
+            expect(azure_client).not_to receive(:update_tags_of_storage_account)
+            expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
+          end
+        end
+
+        context 'when the storage account does not exist' do
+          let(:resource_group_location) { 'fake-resource-group-location' }
+          let(:resource_group) do
+            {
+              name: 'fake-rg-name',
+              location: resource_group_location
+            }
+          end
+          let(:targeted_storage_account) do
+            {
+              name: 'account1',
+              location: resource_group_location,
+              tags: STEMCELL_STORAGE_ACCOUNT_TAGS
+            }
+          end
+          let(:storage_accounts) do
+            [
+              targeted_storage_account,
+            ]
+          end
+          before do
+            allow(azure_client).to receive(:get_storage_account_by_name).with(cached_storage_account_name).and_return(nil)
+            allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
+            allow(azure_client).to receive(:get_resource_group)
+              .with(default_resource_group_name)
+              .and_return(resource_group)
+          end
+
+          it 'should list the storage accounts and select one' do
+            azure_config.storage_account_name = nil 
+            expect(storage_account_manager.default_storage_account).to eq(targeted_storage_account)
+          end
+        end
+      end
+
+      context 'When the cache file does not contain the storage account name' do
+        let(:resource_group_location) { 'fake-resource-group-location' }
+        let(:resource_group) do
+          {
+            name: 'fake-rg-name',
+            location: resource_group_location
+          }
+        end
+
+        before do
+          File.delete(STORAGE_ACCOUNT_NAME_CACHE) if File.exist?(STORAGE_ACCOUNT_NAME_CACHE)
+        end
+
+        context 'When the storage account with the specified tags is found in the resource group location' do
+          let(:targeted_storage_account) do
+            {
+              name: 'account1',
+              location: resource_group_location,
+              tags: STEMCELL_STORAGE_ACCOUNT_TAGS
+            }
+          end
+          let(:storage_accounts) do
+            [
+              targeted_storage_account,
+              {
+                name: 'account2',
+                location: resource_group_location,
+                tags: {}
+              },
+              {
+                name: 'account3',
+                location: 'different-location',
+                tags: STEMCELL_STORAGE_ACCOUNT_TAGS
+              }
+            ]
+          end
+          before do
+            allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
+            allow(azure_client).to receive(:get_resource_group)
+              .with(default_resource_group_name)
+              .and_return(resource_group)
+          end
+
+          it 'should return the storage account' do
+            azure_config.storage_account_name = nil
+            expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
+
+            expect(storage_account_manager.default_storage_account).to eq(targeted_storage_account)
+          end
+        end
+
+        context 'When the storage account with the specified tags is not found in the resource group location' do
+          let(:request_id) { 'fake-client-request-id' }
+          let(:options) do
+            {
+              request_id: request_id
+            }
+          end
+          let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
+          let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
+          let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
+          let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
+
+          before do
+            allow(azure_storage_client).to receive(:table_client)
+              .and_return(table_service)
+            allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
+              .and_return(exponential_retry)
+            allow(table_service).to receive(:with_filter).with(exponential_retry)
+            allow(SecureRandom).to receive(:uuid).and_return(request_id)
+          end
+
+          context 'When the old storage account with the stemcell table is found in the resource group' do
+            before do
+              allow(table_service).to receive(:get_table)
+                .with('stemcells', options)
+            end
+
+            context 'When the old storage account is in the resource group location' do
+              let(:targeted_storage_account) do
+                {
+                  name: 'account1',
+                  location: resource_group_location,
+                  sku_name: 'Standard_LRS',
+                  sku_tier: 'Standard',
+                  storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
+                  storage_table_host: "https://account1.table.#{storage_dns_suffix}"
+                }
+              end
+              let(:storage_accounts) do
+                [
+                  targeted_storage_account
+                ]
+              end
+              let(:keys) { ['fake-key-1', 'fake-key-2'] }
+
+              before do
+                allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
+                allow(azure_client).to receive(:get_resource_group)
+                  .with(default_resource_group_name)
+                  .and_return(resource_group)
+                allow(azure_client).to receive(:get_storage_account_by_name)
+                  .with(targeted_storage_account[:name])
+                  .and_return(targeted_storage_account)
+                allow(azure_client).to receive(:get_storage_account_keys_by_name)
+                  .with(targeted_storage_account[:name])
+                  .and_return(keys)
+              end
+
+              it 'should return the storage account' do
+                azure_config.storage_account_name = nil
+                expect(Azure::Storage::Client).to receive(:create)
+                  .with(
+                    storage_account_name: targeted_storage_account[:name],
+                    storage_access_key: keys[0],
+                    storage_dns_suffix: storage_dns_suffix,
+                    user_agent_prefix: 'BOSH-AZURE-CPI'
+                  ).and_return(azure_storage_client)
+                expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
+                expect(azure_client).to receive(:update_tags_of_storage_account).with(targeted_storage_account[:name], STEMCELL_STORAGE_ACCOUNT_TAGS)
+
+                expect(storage_account_manager.default_storage_account).to eq(targeted_storage_account)
+              end
+            end
+
+            context 'When the old storage account is not in the resource group location' do
+              let(:targeted_storage_account) do
+                {
+                  name: 'account1',
+                  location: 'another-resource-group-location',
+                  sku_name: 'Standard_LRS',
+                  sku_tier: 'Standard',
+                  storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
+                  storage_table_host: "https://account1.table.#{storage_dns_suffix}"
+                }
+              end
+              let(:storage_accounts) do
+                [
+                  targeted_storage_account
+                ]
+              end
+              let(:keys) { ['fake-key-1', 'fake-key-2'] }
+
+              before do
+                allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
+                allow(azure_client).to receive(:get_resource_group)
+                  .with(default_resource_group_name)
+                  .and_return(resource_group)
+                allow(azure_client).to receive(:get_storage_account_by_name)
+                  .with(targeted_storage_account[:name])
+                  .and_return(targeted_storage_account)
+                allow(azure_client).to receive(:get_storage_account_keys_by_name)
+                  .with(targeted_storage_account[:name])
+                  .and_return(keys)
+              end
+
+              it 'should raise an error' do
+                azure_config.storage_account_name = nil
+                expect(Azure::Storage::Client).to receive(:create)
+                  .with(
+                    storage_account_name: targeted_storage_account[:name],
+                    storage_access_key: keys[0],
+                    storage_dns_suffix: storage_dns_suffix,
+                    user_agent_prefix: 'BOSH-AZURE-CPI'
+                  ).and_return(azure_storage_client)
+
+                expect do
+                  storage_account_manager.default_storage_account
+                end.to raise_error(/The existing default storage account '#{targeted_storage_account[:name]}' has a different location other than the resource group location./)
+              end
+            end
+          end
+
+          context 'When no standard storage account is found in the resource group' do
+            let(:targeted_storage_account) do
+              {
+                name: 'account1',
+                location: resource_group_location,
+                sku_name: 'Premium_LRS',
+                sku_tier: 'Premium',
+                storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
+                storage_table_host: "https://account1.table.#{storage_dns_suffix}"
+              }
+            end
+            let(:storage_accounts) do
+              [
+                targeted_storage_account
+              ]
+            end
+
+            before do
+              allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
+              allow(azure_client).to receive(:get_resource_group)
+                .with(default_resource_group_name)
+                .and_return(resource_group)
+              allow(azure_client).to receive(:get_storage_account_by_name)
+                .with(targeted_storage_account[:name])
+                .and_return(targeted_storage_account)
+            end
+
+            it 'should create a new storage account' do
+              azure_config.storage_account_name = nil
+              expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
+              expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
+                .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
+                .and_return(targeted_storage_account)
+
+              storage_account_manager.default_storage_account
+            end
+          end
+
+          context 'When the old storage account with the stemcell table is not found in the resource group' do
             let(:targeted_storage_account) do
               {
                 name: 'account1',
@@ -544,141 +738,28 @@ describe Bosh::AzureCloud::StorageAccountManager do
               allow(azure_client).to receive(:get_storage_account_keys_by_name)
                 .with(targeted_storage_account[:name])
                 .and_return(keys)
+              allow(table_service).to receive(:get_table)
+                .and_raise('(404)') # The table stemcells is not found in the storage account
             end
 
-            it 'should return the storage account' do
+            it 'should create a new storage account' do
               azure_config.storage_account_name = nil
-              expect(Azure::Storage::Client).to receive(:create)
-                .with(
-                  storage_account_name: targeted_storage_account[:name],
-                  storage_access_key: keys[0],
-                  storage_dns_suffix: storage_dns_suffix,
-                  user_agent_prefix: 'BOSH-AZURE-CPI'
-                ).and_return(azure_storage_client)
-              expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
-              expect(azure_client).to receive(:update_tags_of_storage_account).with(targeted_storage_account[:name], STEMCELL_STORAGE_ACCOUNT_TAGS)
-
-              expect(storage_account_manager.default_storage_account).to eq(targeted_storage_account)
-            end
-          end
-
-          context 'When the old storage account is not in the resource group location' do
-            let(:targeted_storage_account) do
-              {
-                name: 'account1',
-                location: 'another-resource-group-location',
-                sku_name: 'Standard_LRS',
-                sku_tier: 'Standard',
-                storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
-                storage_table_host: "https://account1.table.#{storage_dns_suffix}"
-              }
-            end
-            let(:storage_accounts) do
-              [
-                targeted_storage_account
-              ]
-            end
-            let(:keys) { ['fake-key-1', 'fake-key-2'] }
-
-            before do
-              allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
-              allow(azure_client).to receive(:get_resource_group)
-                .with(default_resource_group_name)
-                .and_return(resource_group)
-              allow(azure_client).to receive(:get_storage_account_by_name)
-                .with(targeted_storage_account[:name])
+              expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
+                .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
                 .and_return(targeted_storage_account)
-              allow(azure_client).to receive(:get_storage_account_keys_by_name)
-                .with(targeted_storage_account[:name])
-                .and_return(keys)
-            end
 
-            it 'should raise an error' do
-              azure_config.storage_account_name = nil
-              expect(Azure::Storage::Client).to receive(:create)
-                .with(
-                  storage_account_name: targeted_storage_account[:name],
-                  storage_access_key: keys[0],
-                  storage_dns_suffix: storage_dns_suffix,
-                  user_agent_prefix: 'BOSH-AZURE-CPI'
-                ).and_return(azure_storage_client)
-
-              expect do
-                storage_account_manager.default_storage_account
-              end.to raise_error(/The existing default storage account '#{targeted_storage_account[:name]}' has a different location other than the resource group location./)
+              storage_account_manager.default_storage_account
             end
           end
         end
 
-        context 'When no standard storage account is found in the resource group' do
-          let(:targeted_storage_account) do
-            {
-              name: 'account1',
-              location: resource_group_location,
-              sku_name: 'Premium_LRS',
-              sku_tier: 'Premium',
-              storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
-              storage_table_host: "https://account1.table.#{storage_dns_suffix}"
-            }
-          end
-          let(:storage_accounts) do
-            [
-              targeted_storage_account
-            ]
-          end
-
+        context 'When no storage account is found in the resource group location' do
+          let(:targeted_storage_account) { { name: 'account1' } }
           before do
-            allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
+            allow(azure_client).to receive(:list_storage_accounts).and_return([])
             allow(azure_client).to receive(:get_resource_group)
               .with(default_resource_group_name)
               .and_return(resource_group)
-            allow(azure_client).to receive(:get_storage_account_by_name)
-              .with(targeted_storage_account[:name])
-              .and_return(targeted_storage_account)
-          end
-
-          it 'should create a new storage account' do
-            azure_config.storage_account_name = nil
-            expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
-            expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
-              .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
-              .and_return(targeted_storage_account)
-
-            storage_account_manager.default_storage_account
-          end
-        end
-
-        context 'When the old storage account with the stemcell table is not found in the resource group' do
-          let(:targeted_storage_account) do
-            {
-              name: 'account1',
-              location: resource_group_location,
-              sku_name: 'Standard_LRS',
-              sku_tier: 'Standard',
-              storage_blob_host: "https://account1.blob.#{storage_dns_suffix}",
-              storage_table_host: "https://account1.table.#{storage_dns_suffix}"
-            }
-          end
-          let(:storage_accounts) do
-            [
-              targeted_storage_account
-            ]
-          end
-          let(:keys) { ['fake-key-1', 'fake-key-2'] }
-
-          before do
-            allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
-            allow(azure_client).to receive(:get_resource_group)
-              .with(default_resource_group_name)
-              .and_return(resource_group)
-            allow(azure_client).to receive(:get_storage_account_by_name)
-              .with(targeted_storage_account[:name])
-              .and_return(targeted_storage_account)
-            allow(azure_client).to receive(:get_storage_account_keys_by_name)
-              .with(targeted_storage_account[:name])
-              .and_return(keys)
-            allow(table_service).to receive(:get_table)
-              .and_raise('(404)') # The table stemcells is not found in the storage account
           end
 
           it 'should create a new storage account' do
@@ -689,25 +770,6 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
             storage_account_manager.default_storage_account
           end
-        end
-      end
-
-      context 'When no storage account is found in the resource group location' do
-        let(:targeted_storage_account) { { name: 'account1' } }
-        before do
-          allow(azure_client).to receive(:list_storage_accounts).and_return([])
-          allow(azure_client).to receive(:get_resource_group)
-            .with(default_resource_group_name)
-            .and_return(resource_group)
-        end
-
-        it 'should create a new storage account' do
-          azure_config.storage_account_name = nil
-          expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
-            .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
-            .and_return(targeted_storage_account)
-
-          storage_account_manager.default_storage_account
         end
       end
     end

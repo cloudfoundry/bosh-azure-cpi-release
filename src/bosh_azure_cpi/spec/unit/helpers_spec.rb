@@ -416,6 +416,64 @@ describe Bosh::AzureCloud::Helpers do
     end
   end
 
+  describe '#get_storage_account_name_from_cache' do
+    context 'when the cache file does not exist' do
+      before do
+        File.delete(STORAGE_ACCOUNT_NAME_CACHE) if File.exist?(STORAGE_ACCOUNT_NAME_CACHE)
+      end
+
+      it 'should return empty string' do
+        expect(helpers_tester.get_storage_account_name_from_cache).to eq("")
+      end
+    end
+
+    context 'when the cache file exists' do
+      before do
+        File.open(STORAGE_ACCOUNT_NAME_CACHE, 'w') { |file| file.write(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME) }
+      end
+      after do
+        File.delete(STORAGE_ACCOUNT_NAME_CACHE) if File.exist?(STORAGE_ACCOUNT_NAME_CACHE)
+      end
+
+      it 'should return storage account name' do
+        expect(helpers_tester.get_storage_account_name_from_cache).to eq(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
+      end
+    end
+  end
+
+  describe '#set_storage_account_name_to_cache' do
+    let(:storage_account_name) { "x2qhc0ovyzi6f21dj3oj" }
+
+    it 'should set storage account name' do
+      helpers_tester.set_storage_account_name_to_cache(storage_account_name)
+      expect(File.open(STORAGE_ACCOUNT_NAME_CACHE, 'r').read.strip).to eq(storage_account_name)
+    end
+  end
+
+  describe '#remove_storage_account_name_cache' do
+    context 'when the cache file does not exist' do
+      before do
+        allow(File).to receive(:exist?).and_return(false)
+      end
+
+      it 'should not delete the file' do
+        expect(File).not_to receive(:delete)
+        helpers_tester.remove_storage_account_name_cache
+      end
+    end
+
+    context 'when the cache file exists' do
+      before do
+        allow(File).to receive(:exist?).and_return(true)
+      end
+
+      it 'should delete the file' do
+        expect(File).to receive(:delete)
+        helpers_tester.remove_storage_account_name_cache
+      end
+    end
+  end
+
   describe '#get_jwt_assertion' do
     let(:authentication_endpoint) { 'fake-endpoint' }
     let(:client_id) { '3d343186-e27c-4db1-b59e-50bf7b366f61' }
