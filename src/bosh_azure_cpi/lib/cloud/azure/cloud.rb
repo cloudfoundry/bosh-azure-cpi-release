@@ -692,10 +692,14 @@ module Bosh::AzureCloud
         @telemetry_manager.monitor('delete_snapshot', id: snapshot_cid) do
           snapshot_id = DiskId.parse(snapshot_cid, _azure_config.resource_group_name)
           snapshot_name = snapshot_id.disk_name
-          if snapshot_name.start_with?(MANAGED_DATA_DISK_PREFIX)
-            @disk_manager2.delete_snapshot(snapshot_id)
-          else
-            @disk_manager.delete_snapshot(snapshot_id)
+          begin
+            if snapshot_name.start_with?(MANAGED_DATA_DISK_PREFIX)
+              @disk_manager2.delete_snapshot(snapshot_id)
+            else
+              @disk_manager.delete_snapshot(snapshot_id)
+            end
+          rescue
+            raise Bosh::Clouds::DiskNotFound.new(false), "Snapshot '#{snapshot_time}' not found"
           end
           @logger.info("The snapshot '#{snapshot_id}' is deleted")
         end
