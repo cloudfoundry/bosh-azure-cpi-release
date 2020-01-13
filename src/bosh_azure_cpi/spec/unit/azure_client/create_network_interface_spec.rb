@@ -363,6 +363,30 @@ describe Bosh::AzureCloud::AzureClient do
             azure_client.create_network_interface(resource_group, nic_params)
           end.not_to raise_error
         end
+
+        context 'with no backend address pools' do
+          let(:nic_params) do
+            super().tap { |p| p[:load_balancer][:backend_address_pools] = [] }
+          end
+
+          it 'raises an exception with an appropriate error message' do
+            expect do
+              azure_client.create_network_interface(resource_group, nic_params)
+            end.to raise_error(Bosh::AzureCloud::AzureError, /No backend address pools/)
+          end
+        end
+
+        context 'with no frontend IP configurations' do
+          let(:nic_params) do
+            super().tap { |p| p[:load_balancer][:frontend_ip_configurations] = [] }
+          end
+
+          it 'raises an exception with an appropriate error message' do
+            expect do
+              azure_client.create_network_interface(resource_group, nic_params)
+            end.to raise_error(Bosh::AzureCloud::AzureError, /No frontend IP configurations/)
+          end
+        end
       end
 
       context 'with application security groups' do
@@ -537,6 +561,18 @@ describe Bosh::AzureCloud::AzureClient do
           expect do
             azure_client.create_network_interface(resource_group, nic_params)
           end.not_to raise_error
+        end
+
+        context 'with no backend address pools' do
+          let(:nic_params) do
+            super().tap { |p| p[:application_gateway][:backend_address_pools] = [] }
+          end
+
+          it 'raises an exception with an appropriate error message' do
+            expect do
+              azure_client.create_network_interface(resource_group, nic_params)
+            end.to raise_error(Bosh::AzureCloud::AzureError, /No backend address pools/)
+          end
         end
       end
     end

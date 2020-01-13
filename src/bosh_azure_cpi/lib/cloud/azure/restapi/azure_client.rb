@@ -1463,6 +1463,12 @@ module Bosh::AzureCloud
 
       load_balancer = nic_params[:load_balancer]
       unless load_balancer.nil?
+        if load_balancer[:backend_address_pools].empty?
+          raise AzureError, "No backend address pools are associated with the load balancer"
+        end
+        if load_balancer[:frontend_ip_configurations].empty?
+          raise AzureError, "No frontend IP configurations are associated with the load balancer"
+        end
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = [
           {
             'id' => load_balancer[:backend_address_pools][0][:id]
@@ -1474,6 +1480,9 @@ module Bosh::AzureCloud
 
       application_gateway = nic_params[:application_gateway]
       unless application_gateway.nil?
+        if application_gateway[:backend_address_pools].empty?
+          raise AzureError, "No backend address pools are associated with the application gateway"
+        end
         interface['properties']['ipConfigurations'][0]['properties']['applicationGatewayBackendAddressPools'] = [
           {
             'id' => application_gateway[:backend_address_pools][0][:id]
