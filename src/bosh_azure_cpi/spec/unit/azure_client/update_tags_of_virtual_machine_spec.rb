@@ -67,14 +67,14 @@ describe Bosh::AzureCloud::AzureClient do
             'id' => 'fake-id',
             'name' => 'fake-name',
             'location' => 'fake-location',
-            'tags' => tags.merge(exiting_tags),
+            'tags' => tags,
             'properties' => {
               'provisioningState' => 'fake-state'
             }
           }
         end
 
-        it 'should merge the custom tags with existing tags' do
+        it 'should replace the existing tags with custom tags' do
           stub_request(:post, token_uri).to_return(
             status: 200,
             body: {
