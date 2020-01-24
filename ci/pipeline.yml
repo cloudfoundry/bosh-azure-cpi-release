@@ -5,8 +5,8 @@ groups:
       - build-candidate
       - integration-unmanaged-disks
       - integration-managed-disks
-      # - integration-windows-unmanaged-disks
-      # - integration-windows-managed-disks
+      - integration-windows-unmanaged-disks
+      - integration-windows-managed-disks
       - bats-unmanaged-disks
       - bats-managed-disks
       - promote-candidate-major
@@ -188,53 +188,53 @@ jobs:
             do:
               - <<: *ensure-cleanup
 
-  # - name: integration-windows-unmanaged-disks
-  #   serial: true
-  #   plan:
-  #     - aggregate:
-  #       - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
-  #       - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-  #       - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
-  #     - <<: *create-integration-environment
-  #     - do:
-  #       - <<: *upload-stemcell
-  #         params:
-  #           <<: *azure-environment-params
-  #           IS_HEAVY_STEMCELL: false
-  #       - <<: *run-integration-windows
-  #         params:
-  #           <<: *run-integration-windows-params
-  #           AZURE_USE_MANAGED_DISKS: false
-  #       ensure:
-  #         do:
-  #           - <<: *destroy-integration-environment
-  #         ensure:
-  #           do:
-  #             - <<: *ensure-cleanup
+  - name: integration-windows-unmanaged-disks
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
+      - <<: *create-integration-environment
+      - do:
+        - <<: *upload-stemcell
+          params:
+            <<: *azure-environment-params
+            IS_HEAVY_STEMCELL: false
+        - <<: *run-integration-windows
+          params:
+            <<: *run-integration-windows-params
+            AZURE_USE_MANAGED_DISKS: false
+        ensure:
+          do:
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
-  # - name: integration-windows-managed-disks
-  #   serial: true
-  #   plan:
-  #     - aggregate:
-  #       - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
-  #       - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-  #       - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
-  #     - <<: *create-integration-environment
-  #     - do:
-  #       - <<: *upload-stemcell
-  #         params:
-  #           <<: *azure-environment-params
-  #           IS_HEAVY_STEMCELL: false
-  #       - <<: *run-integration-windows
-  #         params:
-  #           <<: *run-integration-windows-params
-  #           AZURE_USE_MANAGED_DISKS: true
-  #       ensure:
-  #         do:
-  #           - <<: *destroy-integration-environment
-  #         ensure:
-  #           do:
-  #             - <<: *ensure-cleanup
+  - name: integration-windows-managed-disks
+    serial: true
+    plan:
+      - aggregate:
+        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
+      - <<: *create-integration-environment
+      - do:
+        - <<: *upload-stemcell
+          params:
+            <<: *azure-environment-params
+            IS_HEAVY_STEMCELL: false
+        - <<: *run-integration-windows
+          params:
+            <<: *run-integration-windows-params
+            AZURE_USE_MANAGED_DISKS: true
+        ensure:
+          do:
+            - <<: *destroy-integration-environment
+          ensure:
+            do:
+              - <<: *ensure-cleanup
 
   - name: bats-unmanaged-disks
     serial: true
@@ -306,8 +306,7 @@ jobs:
   - name: promote-candidate-major
     plan:
       - aggregate:
-        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        # - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
+        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: major}}
         - {trigger: false, get: bosh-cli}
@@ -325,8 +324,7 @@ jobs:
   - name: promote-candidate-minor
     plan:
       - aggregate:
-        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        # - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
+        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: minor}}
         - {trigger: false, get: bosh-cli}
@@ -344,8 +342,7 @@ jobs:
   - name: promote-candidate-patch
     plan:
       - aggregate:
-        # - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
+        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: patch}}
         - {trigger: false, get: bosh-cli}
@@ -438,10 +435,10 @@ resources:
     type: bosh-io-stemcell
     source:
       name: bosh-azure-hyperv-ubuntu-xenial-go_agent
-  # - name: azure-windows-stemcell
-  #   type: bosh-io-stemcell
-  #   source:
-  #     name: bosh-azure-hyperv-windows2012R2-go_agent
+  - name: azure-windows-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-azure-hyperv-windows2019-go_agent
   - name: bats
     type: git
     source:
