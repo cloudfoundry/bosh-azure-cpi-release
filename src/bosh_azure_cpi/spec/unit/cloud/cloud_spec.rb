@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'raises an exception with a user friendly message' do
         expect(FileUtils).to receive(:mkdir_p).with(CPI_LOCK_DIR).and_call_original
         expect do
-          cloud
+          cloud.has_vm?("fake-vm-cid")
         end.to raise_error(Bosh::Clouds::CloudError, 'Please make sure the CPI has proper network access to Azure. #<Net::OpenTimeout: execution expired>')
       end
     end
