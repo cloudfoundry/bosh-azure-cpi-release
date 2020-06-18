@@ -39,7 +39,10 @@ describe Bosh::AzureCloud::AzureClient do
           name: sku
         },
         kind: kind,
-        tags: tags
+        tags: tags,
+        properties: {
+          supportsHttpsTrafficOnly: true
+        }
       }
     end
 

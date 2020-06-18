@@ -1756,7 +1756,10 @@ module Bosh::AzureCloud
           'name' => sku
         },
         'kind' => kind,
-        'tags' => tags
+        'tags' => tags,
+        'properties': {
+          'supportsHttpsTrafficOnly': true
+        }
       }
 
       uri = http_url(url)
