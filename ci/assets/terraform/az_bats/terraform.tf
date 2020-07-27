@@ -75,6 +75,7 @@ resource "azurerm_storage_account" "azure_bosh_sa" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+  allow_blob_public_access = true
 }
 # Create a Storage Container for the bosh director
 resource "azurerm_storage_container" "azure_bosh_container" {

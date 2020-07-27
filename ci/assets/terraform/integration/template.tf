@@ -71,6 +71,7 @@ resource "azurerm_storage_account" "azure_bosh_sa" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+  allow_blob_public_access = true
 }
 # Create a Storage Container for the disks
 resource "azurerm_storage_container" "azure_bosh_container" {
@@ -97,6 +98,7 @@ resource "azurerm_storage_account" "azure_bosh_sa_extra" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+  allow_blob_public_access = true
 }
 # Create a Storage Container for the disks
 resource "azurerm_storage_container" "azure_bosh_container_extra" {
