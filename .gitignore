@@ -18,6 +18,7 @@ src/bosh_azure_cpi/spec/manual_tests/performance/cpi.cfg
 src/bosh_azure_cpi/spec/manual_tests/performance/registry.cfg
 *.tfstate
 *.tfstate.backup
+*.terraform.tfstate.lock.info
 .terraform
 .DS_Store
 .vagrant
