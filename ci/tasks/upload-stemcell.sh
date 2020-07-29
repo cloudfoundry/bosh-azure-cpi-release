@@ -54,34 +54,16 @@ else
     puts metadata' < /tmp/stemcell.MF)
   dd if=/dev/zero of=/tmp/root.vhd bs=1K count=1
   az storage blob upload --file /tmp/root.vhd --container-name stemcell --name ${stemcell_id}.vhd --type page --metadata ${stemcell_metadata} --account-name ${account_name} --account-key ${account_key}
-  image_sku=$(ruby -r yaml -r json -e '
+
+  image_urn=$(ruby -r yaml -r json -e '
     data = YAML::load(STDIN.read)
     stemcell_properties = data["cloud_properties"]
     stemcell_properties.each do |key, value|
       if key == "image"
-        value.each do |k, v|
-          if k == "sku"
-            puts v
-            break
-          end
-        end
-      end
-    end' < /tmp/stemcell.MF)
-  image_version=$(ruby -r yaml -r json -e '
-    data = YAML::load(STDIN.read)
-    stemcell_properties = data["cloud_properties"]
-    stemcell_properties.each do |key, value|
-      if key == "image"
-        value.each do |k, v|
-          if k == "version"
-            puts v
-            break
-          end
-        end
+        puts "#{value["publisher"]}:#{value["offer"]}:#{value["sku"]}:#{value["version"]}"
       end
     end' < /tmp/stemcell.MF)
   # Accept legal terms
-  image_urn="pivotal:bosh-windows-server:${image_sku}:${image_version}"
   echo "Accepting the legal terms of image ${image_urn}"
   az vm image accept-terms --urn ${image_urn}
   cat > "${output_dir}/stemcell.env" <<EOF
