@@ -45,7 +45,6 @@ module Bosh::AzureCloud
       @telemetry_manager = Bosh::AzureCloud::TelemetryManager.new(_azure_config)
       @telemetry_manager.monitor('initialize') do
         _init_registry
-        _init_azure
       end
     end
 
@@ -78,6 +77,9 @@ module Bosh::AzureCloud
     # @See https://www.bosh.io/docs/cpi-api-v1-method/create-stemcell/
     #
     def create_stemcell(image_path, cloud_properties)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("create_stemcell(#{image_path}, #{cloud_properties})") do
         extras = {
           'stemcell' => "#{cloud_properties.fetch('name', 'unknown_name')}-#{cloud_properties.fetch('version', 'unknown_version')}"
@@ -104,6 +106,9 @@ module Bosh::AzureCloud
     # @See https://www.bosh.io/docs/cpi-api-v1-method/delete-stemcell/
     #
     def delete_stemcell(stemcell_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("delete_stemcell(#{stemcell_cid})") do
         @telemetry_manager.monitor('delete_stemcell', id: stemcell_cid) do
           if is_light_stemcell_cid?(stemcell_cid)
@@ -138,6 +143,9 @@ module Bosh::AzureCloud
     # @See https://www.bosh.io/docs/cpi-api-v1-method/create-vm/
     #
     def create_vm(agent_id, stemcell_cid, cloud_properties, networks, disk_cids = nil, environment = {})
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       # environment may contain credentials so we must not log it
       @logger.info("create_vm(#{agent_id}, #{stemcell_cid}, #{cloud_properties}, #{networks}, #{disk_cids}, ...)")
       with_thread_name("create_vm(#{agent_id}, ...)") do
@@ -208,6 +216,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/delete-vm/
     #
     def delete_vm(vm_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("delete_vm(#{vm_cid})") do
         @telemetry_manager.monitor('delete_vm', id: vm_cid) do
           @logger.info("Deleting instance '#{vm_cid}'")
@@ -227,6 +238,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/has-vm/
     #
     def has_vm?(vm_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("has_vm?(#{vm_cid})") do
         @telemetry_manager.monitor('has_vm?', id: vm_cid) do
           vm = @vm_manager.find(InstanceId.parse(vm_cid, _azure_config.resource_group_name))
@@ -246,6 +260,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/reboot-vm/
     #
     def reboot_vm(vm_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("reboot_vm(#{vm_cid})") do
         @telemetry_manager.monitor('reboot_vm', id: vm_cid) do
           @vm_manager.reboot(InstanceId.parse(vm_cid, _azure_config.resource_group_name))
@@ -264,6 +281,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/set-vm-metadata/
     #
     def set_vm_metadata(vm_cid, metadata)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("set_vm_metadata(#{vm_cid})") do
         @telemetry_manager.monitor('set_vm_metadata', id: vm_cid) do
           @logger.info("set_vm_metadata(#{vm_cid}, #{metadata})")
@@ -285,6 +305,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/calculate-vm-cloud-properties/
     #
     def calculate_vm_cloud_properties(desired_instance_size)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("calculate_vm_cloud_properties(#{desired_instance_size})") do
         @telemetry_manager.monitor('calculate_vm_cloud_properties') do
           @logger.info("calculate_vm_cloud_properties(#{desired_instance_size})")
@@ -324,6 +347,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/create-disk/
     #
     def create_disk(size, cloud_properties, vm_cid = nil)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("create_disk(#{size}, #{cloud_properties})") do
         id = vm_cid.nil? ? '' : vm_cid
         extras = { 'disk_size' => size }
@@ -382,6 +408,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/delete-disk/
     #
     def delete_disk(disk_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("delete_disk(#{disk_cid})") do
         @telemetry_manager.monitor('delete_disk', id: disk_cid) do
           disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
@@ -431,6 +460,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/has-disk/
     #
     def has_disk?(disk_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("has_disk?(#{disk_cid})") do
         @telemetry_manager.monitor('has_disk?', id: disk_cid) do
           disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
@@ -473,6 +505,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/attach-disk/
     #
     def attach_disk(vm_cid, disk_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("attach_disk(#{vm_cid},#{disk_cid})") do
         @telemetry_manager.monitor('attach_disk', id: vm_cid) do
           instance_id = InstanceId.parse(vm_cid, _azure_config.resource_group_name)
@@ -578,6 +613,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/detach-disk/
     #
     def detach_disk(vm_cid, disk_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("detach_disk(#{vm_cid},#{disk_cid})") do
         @telemetry_manager.monitor('detach_disk', id: vm_cid) do
 
@@ -626,6 +664,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/get-disks/
     #
     def get_disks(vm_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("get_disks(#{vm_cid})") do
         @telemetry_manager.monitor('get_disks', id: vm_cid) do
           disks = []
@@ -651,6 +692,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/snapshot-disk/
     #
     def snapshot_disk(disk_cid, metadata = {})
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("snapshot_disk(#{disk_cid},#{metadata})") do
         @telemetry_manager.monitor('snapshot_disk', id: disk_cid) do
           disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
@@ -688,6 +732,9 @@ module Bosh::AzureCloud
     # @See https://bosh.io/docs/cpi-api-v1-method/delete-snapshot/
     #
     def delete_snapshot(snapshot_cid)
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
       with_thread_name("delete_snapshot(#{snapshot_cid})") do
         @telemetry_manager.monitor('delete_snapshot', id: snapshot_cid) do
           snapshot_id = DiskId.parse(snapshot_cid, _azure_config.resource_group_name)
