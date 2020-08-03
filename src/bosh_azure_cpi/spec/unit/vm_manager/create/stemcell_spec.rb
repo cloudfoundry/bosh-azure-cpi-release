@@ -109,7 +109,7 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(stemcell_manager2).to receive(:get_user_image_info)
-              .with(stemcell_cid, 'Standard_LRS', location)
+              .with(stemcell_cid, 'Standard_LRS', location, https_traffic)
               .and_return(stemcell_info)
           end
 
@@ -125,7 +125,7 @@ describe Bosh::AzureCloud::VMManager do
 
           before do
             allow(stemcell_manager2).to receive(:get_user_image_info)
-              .with(stemcell_cid, 'Standard_LRS', location)
+              .with(stemcell_cid, 'Standard_LRS', location, https_traffic)
               .and_raise('fake-error')
           end
 

@@ -26,6 +26,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:sku) { 'Standard_LRS' }
   let(:kind) { 'StorageV2' }
   let(:tags) { { 'foo' => 'bar' } }
+  let(:https_traffic) { true }
 
   let(:request_id) { 'fake-request-id' }
   let(:operation_status_link) { "https://management.azure.com/subscriptions/#{subscription_id}/operations/#{request_id}" }
@@ -41,7 +42,7 @@ describe Bosh::AzureCloud::AzureClient do
         kind: kind,
         tags: tags,
         properties: {
-          supportsHttpsTrafficOnly: true
+          supportsHttpsTrafficOnly: https_traffic
         }
       }
     end
@@ -63,7 +64,7 @@ describe Bosh::AzureCloud::AzureClient do
         )
 
         expect(
-          azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+          azure_client.create_storage_account(storage_account_name, location, sku, kind, tags, https_traffic)
         ).to be(true)
       end
     end
@@ -85,7 +86,7 @@ describe Bosh::AzureCloud::AzureClient do
         )
 
         expect do
-          azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+          azure_client.create_storage_account(storage_account_name, location, sku, kind, tags, https_traffic)
         end.to raise_error(/create_storage_account - Cannot create the storage account '#{storage_account_name}'. http code: 404/)
       end
     end
@@ -119,7 +120,7 @@ describe Bosh::AzureCloud::AzureClient do
 
             expect(azure_client).to receive(:sleep).with(default_retry_after)
             expect(
-              azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+              azure_client.create_storage_account(storage_account_name, location, sku, kind, tags, https_traffic)
             ).to be(true)
           end
         end
@@ -150,7 +151,7 @@ describe Bosh::AzureCloud::AzureClient do
 
               expect(azure_client).to receive(:sleep).with(default_retry_after)
               expect do
-                azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+                azure_client.create_storage_account(storage_account_name, location, sku, kind, tags, https_traffic)
               end.to raise_error(/Error message: {"status":"Failed"}/)
             end
           end
@@ -189,7 +190,7 @@ describe Bosh::AzureCloud::AzureClient do
                 expect(azure_client).to receive(:sleep).with(default_retry_after).exactly(2).times
                 expect(azure_client).to receive(:sleep).with(1).exactly(1).times
                 expect(
-                  azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+                  azure_client.create_storage_account(storage_account_name, location, sku, kind, tags, https_traffic)
                 ).to be(true)
               end
             end
@@ -228,7 +229,7 @@ describe Bosh::AzureCloud::AzureClient do
                 expect(azure_client).to receive(:sleep).with(default_retry_after).exactly(11).times
                 expect(azure_client).to receive(:sleep).with(1).exactly(11).times
                 expect do
-                  azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+                  azure_client.create_storage_account(storage_account_name, location, sku, kind, tags, https_traffic)
                 end.to raise_error(Bosh::AzureCloud::AzureAsynInternalError, /create_storage_account - http code: 200/)
               end
             end
@@ -261,7 +262,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect(azure_client).to receive(:sleep).with(default_retry_after)
           expect do
-            azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+            azure_client.create_storage_account(storage_account_name, location, sku, kind, tags, https_traffic)
           end.to raise_error(/create_storage_account - http code: 404. Error message: fake-response-body/)
         end
       end

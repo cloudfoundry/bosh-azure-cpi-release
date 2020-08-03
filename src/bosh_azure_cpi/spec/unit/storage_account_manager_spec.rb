@@ -64,6 +64,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
     let(:tags) { { 'foo' => 'bar' } }
     let(:containers) { %w[bosh stemcell] }
     let(:is_default_storage_account) { false }
+    let(:https_traffic) { true }
 
     let(:storage_account) { double('storage-account') }
 
@@ -81,7 +82,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       it 'should return the storage account' do
         expect(
-          storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
+          storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
         ).to be(storage_account)
       end
     end
@@ -102,7 +103,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
         it 'should raise an error' do
           expect do
-            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
+            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           end.to raise_error(/The storage account name '#{name}' is invalid./)
         end
       end
@@ -122,7 +123,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
         it 'should raise an error' do
           expect do
-            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
+            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           end.to raise_error(/The storage account with the name '#{name}' is not available/)
         end
       end
@@ -138,7 +139,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
         it 'should raise an error' do
           expect do
-            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
+            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           end.to raise_error(/Require name to create a new storage account/)
         end
       end
@@ -154,7 +155,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
         it 'should raise an error' do
           expect do
-            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
+            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           end.to raise_error(/Require type to create a new storage account/)
         end
       end
@@ -170,7 +171,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
         it 'should raise an error' do
           expect do
-            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
+            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           end.to raise_error(/Require location to create a new storage account/)
         end
       end
@@ -185,9 +186,9 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
         it 'should create the storage account' do
           expect(azure_client).to receive(:create_storage_account)
-            .with(name, location, type, kind, tags)
+            .with(name, location, type, kind, tags, https_traffic)
           expect(
-            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
+            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           ).to be(storage_account)
         end
       end
@@ -199,13 +200,13 @@ describe Bosh::AzureCloud::StorageAccountManager do
           allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil, nil)
           allow(azure_client).to receive(:check_storage_account_name_availability).with(name).and_return(result)
           allow(azure_client).to receive(:create_storage_account)
-            .with(name, location, type, kind, tags)
+            .with(name, location, type, kind, tags, https_traffic)
             .and_return(true)
         end
 
         it 'should raise an error' do
           expect do
-            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account)
+            storage_account_manager.get_or_create_storage_account(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           end.to raise_error(/Storage account '#{name}' is not created/)
         end
       end
@@ -220,6 +221,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
     let(:containers) { ['bosh'] }
     let(:is_default_storage_account) { false }
     let(:storage_account) { { name: 'fake-name' } }
+    let(:https_traffic) { true }
 
     before do
       expect(storage_account_manager).to receive(:flock)
@@ -236,7 +238,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       it 'should return the storage account directly' do
         expect(
-          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account)
+          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account, https_traffic)
         ).to be(storage_account)
       end
     end
@@ -254,28 +256,28 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       it 'should create a new storage account' do
         expect(storage_account_manager).to receive(:get_or_create_storage_account)
-          .with(name, tags, type, kind, location, containers, is_default_storage_account)
+          .with(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           .and_return(storage_account)
         expect(
-          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account)
+          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account, https_traffic)
         ).to be(storage_account)
       end
 
       it 'should raise an error if it fails to get the storage account after creating' do
         expect(storage_account_manager).to receive(:get_or_create_storage_account)
-          .with(name, tags, type, kind, location, containers, is_default_storage_account)
+          .with(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           .and_return(nil)
         expect do
-          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account)
+          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account, https_traffic)
         end.to raise_error(/Storage account for tags '#{tags}' is not created/)
       end
 
       it 'should raise an error if it fails to create a new storage account' do
         expect(storage_account_manager).to receive(:get_or_create_storage_account)
-          .with(name, tags, type, kind, location, containers, is_default_storage_account)
+          .with(name, tags, type, kind, location, containers, is_default_storage_account, https_traffic)
           .and_raise('failed to create storage account')
         expect do
-          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account)
+          storage_account_manager.get_or_create_storage_account_by_tags(tags, type, kind, location, containers, is_default_storage_account, https_traffic)
         end.to raise_error(/failed to create storage account/)
       end
     end

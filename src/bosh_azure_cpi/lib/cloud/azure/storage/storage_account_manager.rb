@@ -39,9 +39,10 @@ module Bosh::AzureCloud
     # @param [String]  location                    - Location where the storage account will be created.
     # @param [Array]   containers                  - Container that will be created in the storage account
     # @param [Boolean] is_default_storage_account  - The storage account will be created as the default storage account
+    # @param [Boolean] https_traffic               - Enable / Disable secure https traffic.
     # @return [Hash]
-    def get_or_create_storage_account(name, tags, sku, kind, location, containers, is_default_storage_account)
-      @logger.debug("get_or_create_storage_account(#{name}, #{tags}, #{sku}, #{kind}, #{location}, #{containers}, #{is_default_storage_account})")
+    def get_or_create_storage_account(name, tags, sku, kind, location, containers, is_default_storage_account, https_traffic)
+      @logger.debug("get_or_create_storage_account(#{name}, #{tags}, #{sku}, #{kind}, #{location}, #{containers}, #{is_default_storage_account}, #{https_traffic})")
       storage_account = nil
       flock("#{CPI_LOCK_PREFIX_STORAGE_ACCOUNT}-#{name}", File::LOCK_EX) do
         storage_account = find_storage_account_by_name(name) # make sure the storage account is not yet created by other process
@@ -62,8 +63,8 @@ module Bosh::AzureCloud
           raise "Require type to create a new storage account. If you specify 'storage_account_name' in resource pool to use & create a new storage account, please also provide 'storage_account_type'" if sku.nil?
           raise 'Require location to create a new storage account' if location.nil?
 
-          @logger.debug("Creating storage account '#{name}' with the tags '#{tags}' in the location '#{location}'")
-          @azure_client.create_storage_account(name, location, sku, kind, tags)
+          @logger.debug("Creating storage account '#{name}' with the tags '#{tags}' in the location '#{location}' with https traffic enabled '#{https_traffic}'")
+          @azure_client.create_storage_account(name, location, sku, kind, tags, https_traffic)
           storage_account = find_storage_account_by_name(name)
           cloud_error("Storage account '#{name}' is not created.") if storage_account.nil?
         end
@@ -78,9 +79,10 @@ module Bosh::AzureCloud
     # @param [String]  location                    - Location where the storage account will be created.
     # @param [Array]   containers                  - Container that will be created in the storage account
     # @param [Boolean] is_default_storage_account  - The storage account will be created as the default storage account
+    # @param [Boolean] https_traffic               - Enable / disable secure https traffic.
     # @return [Hash]
-    def get_or_create_storage_account_by_tags(tags, sku, kind, location, containers, is_default_storage_account)
-      @logger.debug("get_or_create_storage_account_by_tags(#{tags}, #{sku}, #{kind}, #{location}, #{containers}, #{is_default_storage_account})")
+    def get_or_create_storage_account_by_tags(tags, sku, kind, location, containers, is_default_storage_account, https_traffic)
+      @logger.debug("get_or_create_storage_account_by_tags(#{tags}, #{sku}, #{kind}, #{location}, #{containers}, #{is_default_storage_account}, #{https_traffic})")
       storage_account = nil
       lock_file = "#{CPI_LOCK_PREFIX_STORAGE_ACCOUNT}-#{location}-#{Digest::MD5.hexdigest(tags.to_s)}"
       flock(lock_file, File::LOCK_EX) do
@@ -88,7 +90,7 @@ module Bosh::AzureCloud
         if storage_account.nil?
           @logger.debug("Cannot find any storage account in the location '#{location}' with tags '#{tags}', creating a new one...")
           name = generate_storage_account_name
-          storage_account = get_or_create_storage_account(name, tags, sku, kind, location, containers, is_default_storage_account)
+          storage_account = get_or_create_storage_account(name, tags, sku, kind, location, containers, is_default_storage_account, https_traffic)
         end
       end
       cloud_error("Storage account for tags '#{tags}' is not created.") if storage_account.nil?

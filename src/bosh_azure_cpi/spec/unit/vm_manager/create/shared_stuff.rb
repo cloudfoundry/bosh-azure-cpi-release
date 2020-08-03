@@ -43,6 +43,7 @@ shared_context 'shared stuff for vm manager' do
   # Parameters of create
   let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
+  let(:https_traffic) { true }
   let(:agent_id) { 'fake-agent-id' }
   let(:stemcell_cid) { 'fake-stemcell-id' }
   let(:bosh_vm_meta) { Bosh::AzureCloud::BoshVMMeta.new(agent_id, stemcell_cid) }

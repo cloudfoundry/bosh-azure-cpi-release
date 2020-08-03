@@ -48,8 +48,9 @@ module Bosh::AzureCloud
           storage_account_name = vm_properties.storage_account_name
           storage_account_type = vm_properties.storage_account_type
           storage_account_kind = vm_properties.storage_account_kind
+          storage_https_traffic = vm_properties.storage_https_traffic
           # Create the storage account automatically if the storage account in vm_types or vm_extensions does not exist
-          storage_account = @storage_account_manager.get_or_create_storage_account(storage_account_name, {}, storage_account_type, storage_account_kind, location, [DISK_CONTAINER, STEMCELL_CONTAINER], false)
+          storage_account = @storage_account_manager.get_or_create_storage_account(storage_account_name, {}, storage_account_type, storage_account_kind, location, [DISK_CONTAINER, STEMCELL_CONTAINER], false, storage_https_traffic)
         end
       else
         storage_account_name = @storage_account_manager.default_storage_account_name

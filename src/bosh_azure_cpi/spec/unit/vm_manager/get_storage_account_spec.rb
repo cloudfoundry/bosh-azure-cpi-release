@@ -54,13 +54,14 @@ describe Bosh::AzureCloud::VMManager do
             'instance_type' => 'fake-vm-size',
             'storage_account_name' => storage_account_name,
             'storage_account_type' => 'fake-storage_account_type',
-            'storage_account_kind' => 'StorageV2'
+            'storage_account_kind' => 'StorageV2',
+            'storage_https_traffic' => true
           )
         end
 
         it 'should try to get or create the storage account' do
           expect(storage_account_manager).to receive(:get_or_create_storage_account)
-            .with(storage_account_name, {}, 'fake-storage_account_type', 'StorageV2', location, %w[bosh stemcell], false)
+            .with(storage_account_name, {}, 'fake-storage_account_type', 'StorageV2', location, %w[bosh stemcell], false, true)
             .and_return(storage_account)
           expect(
             vm_manager.get_storage_account_from_vm_properties(vm_props, location)

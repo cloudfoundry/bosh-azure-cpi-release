@@ -48,16 +48,16 @@ module Bosh::AzureCloud
       !blob_properties.nil?
     end
 
-    def get_user_image_info(stemcell_name, storage_account_type, location)
-      @logger.info("get_user_image_info(#{stemcell_name}, #{storage_account_type}, #{location})")
-      user_image = _get_user_image(stemcell_name, storage_account_type, location)
+    def get_user_image_info(stemcell_name, storage_account_type, location, https_traffic)
+      @logger.info("get_user_image_info(#{stemcell_name}, #{storage_account_type}, #{location}, #{https_traffic})")
+      user_image = _get_user_image(stemcell_name, storage_account_type, location, https_traffic)
       StemcellInfo.new(user_image[:id], user_image[:tags])
     end
 
     private
 
-    def _get_user_image(stemcell_name, storage_account_type, location)
-      @logger.info("_get_user_image(#{stemcell_name}, #{storage_account_type}, #{location})")
+    def _get_user_image(stemcell_name, storage_account_type, location, https_traffic)
+      @logger.info("_get_user_image(#{stemcell_name}, #{storage_account_type}, #{location}, #{https_traffic})")
 
       # The old user image name's length exceeds 80 in some location, which would cause the creation failure.
       # Old format: bosh-stemcell-<UUID>-Standard_LRS-<LOCATION>, bosh-stemcell-<UUID>-Premium_LRS-<LOCATION>
@@ -80,7 +80,7 @@ module Bosh::AzureCloud
       else
         # The storage account will only be used when preparing a stemcell in the target location for user image, ANY storage account type is ok.
         # To make it consistent, 'Standard_LRS' is used.
-        storage_account = @storage_account_manager.get_or_create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1, location, [STEMCELL_CONTAINER], false)
+        storage_account = @storage_account_manager.get_or_create_storage_account_by_tags(STEMCELL_STORAGE_ACCOUNT_TAGS, STORAGE_ACCOUNT_TYPE_STANDARD_LRS, STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1, location, [STEMCELL_CONTAINER], false, https_traffic)
         storage_account_name = storage_account[:name]
 
         flock("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{storage_account_name}", File::LOCK_EX) do

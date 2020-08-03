@@ -459,8 +459,9 @@ module Bosh::AzureCloud
         else
           begin
             storage_account_type = _get_root_disk_type(vm_props)
+            storage_https_traffic = vm_props.storage_https_traffic
             # Treat user_image_info as stemcell_info
-            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_cid, storage_account_type, location)
+            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_cid, storage_account_type, location, storage_https_traffic)
           rescue StandardError => e
             raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell '#{stemcell_cid}': #{e.inspect}\n#{e.backtrace.join("\n")}"
           end

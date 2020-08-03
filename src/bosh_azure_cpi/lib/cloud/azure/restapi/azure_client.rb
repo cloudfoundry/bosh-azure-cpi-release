@@ -1736,19 +1736,20 @@ module Bosh::AzureCloud
     # Storage/StorageAccounts
 
     # Create a storage account
-    # @param [String] name     - Name of storage account.
-    # @param [String] location - Location where the storage account will be created.
-    # @param [String] sku      - SKU of storage account. In older versions, sku name was called accountType.
-    #                            Options: Standard_LRS, Standard_ZRS, Standard_GRS, Standard_RAGRS or Premium_LRS.
-    # @param [String] kind     - Kind of storage account.
-    # @param [Hash]   tags     - Tags of storage account.
+    # @param [String] name            - Name of storage account.
+    # @param [String] location        - Location where the storage account will be created.
+    # @param [String] sku             - SKU of storage account. In older versions, sku name was called accountType.
+    #                                   Options: Standard_LRS, Standard_ZRS, Standard_GRS, Standard_RAGRS or Premium_LRS.
+    # @param [String] kind            - Kind of storage account.
+    # @param [Hash]   tags            - Tags of storage account.
+    # @param [Boolean] https_traffic  - Enable / Disable secure https traffic.
     #
     # @return [Boolean]
     #
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
     #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
-    def create_storage_account(name, location, sku, kind, tags)
+    def create_storage_account(name, location, sku, kind, tags, https_traffic)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
       storage_account = {
         'location' => location,
@@ -1758,7 +1759,7 @@ module Bosh::AzureCloud
         'kind' => kind,
         'tags' => tags,
         'properties': {
-          'supportsHttpsTrafficOnly': true
+          'supportsHttpsTrafficOnly': https_traffic
         }
       }
 
