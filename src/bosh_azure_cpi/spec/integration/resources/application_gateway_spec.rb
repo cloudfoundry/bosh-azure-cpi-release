@@ -54,7 +54,7 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     it 'should add the VM to the backend pool of application gateway' do
-      ag_url = @cpi.azure_client.rest_api_url(
+      ag_url = get_azure_client.rest_api_url(
         Bosh::AzureCloud::AzureClient::REST_API_PROVIDER_NETWORK,
         Bosh::AzureCloud::AzureClient::REST_API_APPLICATION_GATEWAYS,
         name: @application_gateway_name
@@ -72,14 +72,14 @@ describe Bosh::AzureCloud::Cloud do
               vm_properties,
               network_specs[i]
             )
-            ag = @cpi.azure_client.get_resource_by_id(ag_url)
+            ag = get_azure_client.get_resource_by_id(ag_url)
             expect(ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations']).to include(
               'id' => ip_config_id
             )
           ensure
             @cpi.delete_vm(new_instance_id) if new_instance_id
           end
-          ag = @cpi.azure_client.get_resource_by_id(ag_url)
+          ag = get_azure_client.get_resource_by_id(ag_url)
           unless ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations'].nil?
             expect(ag['properties']['backendAddressPools'][0]['properties']['backendIPConfigurations']).not_to include(
               'id' => ip_config_id

@@ -67,6 +67,10 @@ RSpec.configure do |rspec_config|
   end
 end
 
+def get_azure_client
+  @azure_client ||= Bosh::AzureCloud::AzureClient.new(@cpi.config.azure, @logger)
+end
+
 def vm_lifecycle(stemcell_id: @stemcell_id, cpi: @cpi)
   result = cpi.create_vm(
     SecureRandom.uuid,

@@ -35,15 +35,15 @@ describe Bosh::AzureCloud::Cloud do
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
         instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
-        vm = @cpi.azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name)
-        dynamic_public_ip = @cpi.azure_client.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
+        vm = get_azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name)
+        dynamic_public_ip = get_azure_client.get_public_ip_by_name(@default_resource_group_name, instance_id_obj.vm_name)
         expect(vm[:zone]).to eq(availability_zone)
         expect(dynamic_public_ip[:zone]).to eq(availability_zone)
 
         disk_id = @cpi.create_disk(2048, {}, instance_id)
         expect(disk_id).not_to be_nil
         disk_id_obj = Bosh::AzureCloud::DiskId.parse(disk_id, @azure_config.resource_group_name)
-        disk = @cpi.azure_client.get_managed_disk_by_name(@default_resource_group_name, disk_id_obj.disk_name)
+        disk = get_azure_client.get_managed_disk_by_name(@default_resource_group_name, disk_id_obj.disk_name)
         expect(disk[:zone]).to eq(availability_zone)
         @disk_id_pool.push(disk_id)
 

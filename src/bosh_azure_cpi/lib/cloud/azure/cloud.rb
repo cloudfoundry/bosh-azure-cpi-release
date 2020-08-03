@@ -5,7 +5,7 @@ module Bosh::AzureCloud
     attr_reader   :registry
     attr_reader   :config
     # Below defines are for test purpose
-    attr_reader   :azure_client, :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper
+    attr_reader   :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper
     attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
     attr_reader   :props_factory
     attr_reader   :api_version, :stemcell_api_version

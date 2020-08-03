@@ -35,7 +35,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'should exercise the vm lifecycle with the managed identity' do
         vm_lifecycle do |instance_id|
           instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
-          vm = @cpi.azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
+          vm = get_azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
           expect(vm[:identity][:type]).to eq('UserAssigned')
           expect(vm[:identity][:identity_ids][0]).to include(@user_assigned_identity_name)
         end
@@ -67,7 +67,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'should exercise the vm lifecycle with the managed identity' do
         vm_lifecycle(cpi: cpi_with_default_managed_identity) do |instance_id|
           instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
-          vm = @cpi.azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
+          vm = get_azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
           expect(vm[:identity][:type]).to eq('UserAssigned')
           expect(vm[:identity][:identity_ids][0]).to include(@user_assigned_identity_name)
         end
@@ -84,7 +84,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'should exercise the vm lifecycle with the default managed identity' do
         vm_lifecycle(cpi: cpi_with_default_managed_identity) do |instance_id|
           instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
-          vm = @cpi.azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
+          vm = get_azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
           expect(vm[:identity][:type]).to eq('UserAssigned')
           expect(vm[:identity][:identity_ids][0]).to include(@default_user_assigned_identity_name)
         end

@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::Cloud do
     it 'should exercise the vm lifecycle' do
       vm_lifecycle do |instance_id|
         instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
-        network_interface = @cpi.azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
+        network_interface = get_azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         asgs = network_interface[:application_security_groups]
         asg_names = []
         asgs.each do |asg|
