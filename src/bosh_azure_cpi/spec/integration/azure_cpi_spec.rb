@@ -130,7 +130,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi('method' => 'info', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' })
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
         expect(result['error']['message']).to match(%r{http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret\/certificate})
@@ -169,7 +169,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi('method' => 'info', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' })
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
         expect(result['error']['message']).to match(%r{http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate})
