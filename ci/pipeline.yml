@@ -136,7 +136,7 @@ jobs:
     serial: true
     plan:
       - aggregate:
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in}
+        - {trigger: true, get: bosh-cpi-src, resource: bosh-cpi-src-in}
         - {trigger: false, get: version-semver, params: {bump: patch}}
         - {trigger: false, get: bosh-cli}
       - put: version-semver
