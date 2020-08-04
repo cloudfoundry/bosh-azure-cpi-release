@@ -34,7 +34,8 @@ describe Bosh::AzureCloud::Cloud do
     it 'should exercise the vm lifecycle' do
       vm_lifecycle(cpi: cpi_with_default_nsg) do |instance_id|
         instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
-        network_interface = cpi_with_default_nsg.azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
+        azure_client = Bosh::AzureCloud::AzureClient.new(cpi_with_default_nsg.config.azure, @logger)
+        network_interface = azure_client.get_network_interface_by_name(@default_resource_group_name, "#{instance_id_obj.vm_name}-0")
         nsg = network_interface[:network_security_group]
         expect(nsg).not_to be_nil
       end
