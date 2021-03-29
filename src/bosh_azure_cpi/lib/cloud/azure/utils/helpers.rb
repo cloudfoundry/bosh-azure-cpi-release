@@ -634,5 +634,9 @@ module Bosh::AzureCloud
       cloud_error('Minimum idle_timeout_in_minutes is 4 minutes') if idle_timeout_in_minutes < 4
       cloud_error('Maximum idle_timeout_in_minutes is 30 minutes') if idle_timeout_in_minutes > 30
     end
+
+    def uri_escape(raw_uri)
+      CGI.escape(raw_uri).sub("%2F", "/")
+    end
   end
 end

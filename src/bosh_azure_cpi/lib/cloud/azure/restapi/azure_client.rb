@@ -113,13 +113,13 @@ module Bosh::AzureCloud
 
     # Common
     def rest_api_url(resource_provider, resource_type, resource_group_name: nil, name: nil, others: nil)
-      url = "/subscriptions/#{URI.escape(@azure_config.subscription_id)}"
+      url = "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
       resource_group_name = @azure_config.resource_group_name if resource_group_name.nil?
-      url += "/resourceGroups/#{URI.escape(resource_group_name)}"
+      url += "/resourceGroups/#{uri_escape(resource_group_name)}"
       url += "/providers/#{resource_provider}"
       url += "/#{resource_type}"
-      url += "/#{URI.escape(name)}" unless name.nil?
-      url += "/#{URI.escape(others)}" unless others.nil?
+      url += "/#{uri_escape(name)}" unless name.nil?
+      url += "/#{uri_escape(others)}" unless others.nil?
       url
     end
 
@@ -181,8 +181,8 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/resources/resourcegroups#ResourceGroups_CreateOrUpdate
     #
     def create_resource_group(resource_group_name, location)
-      url =  "/subscriptions/#{URI.escape(@azure_config.subscription_id)}"
-      url += "/resourceGroups/#{URI.escape(resource_group_name)}"
+      url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
+      url += "/resourceGroups/#{uri_escape(resource_group_name)}"
 
       resource_group = {
         'name' => resource_group_name,
@@ -202,8 +202,8 @@ module Bosh::AzureCloud
     def get_resource_group(resource_group_name)
       resource_group = nil
 
-      url =  "/subscriptions/#{URI.escape(@azure_config.subscription_id)}"
-      url += "/resourceGroups/#{URI.escape(resource_group_name)}"
+      url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
+      url += "/resourceGroups/#{uri_escape(resource_group_name)}"
       result = get_resource_by_id(url)
 
       unless result.nil?
@@ -453,7 +453,7 @@ module Bosh::AzureCloud
     #
     def list_available_virtual_machine_sizes_by_location(location)
       vm_sizes = []
-      url =  "/subscriptions/#{URI.escape(@azure_config.subscription_id)}"
+      url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
       url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
       url += "/locations/#{location}"
       url += "/#{REST_API_VM_SIZES}"
@@ -1217,7 +1217,7 @@ module Bosh::AzureCloud
     #
     def list_platform_image_versions(location, publisher, offer, sku)
       images = []
-      url =  "/subscriptions/#{URI.escape(@azure_config.subscription_id)}"
+      url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
       url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
       url += "/locations/#{location}"
       url += "/publishers/#{publisher}"
@@ -1831,7 +1831,7 @@ module Bosh::AzureCloud
     #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def check_storage_account_name_availability(name)
-      url =  "/subscriptions/#{URI.escape(@azure_config.subscription_id)}"
+      url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
       url += "/providers/#{REST_API_PROVIDER_STORAGE}"
       url += '/checkNameAvailability'
       storage_account = {
