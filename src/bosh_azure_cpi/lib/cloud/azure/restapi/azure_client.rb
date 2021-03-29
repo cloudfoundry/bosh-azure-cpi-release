@@ -130,7 +130,7 @@ module Bosh::AzureCloud
       begin
         uri = http_url(url, params)
         response = http_get(uri)
-        result = JSON.parse(response.body) unless response.body.nil?
+        result = JSON.parse(response.body) unless response.body.nil? || response.body == ''
       rescue AzureNotFoundError => e
         @logger.debug("Resource not found for url #{url} with parms #{params}")
         result = nil
@@ -2427,7 +2427,7 @@ module Bosh::AzureCloud
         status_code = response.code.to_i
         raise AzureAsynchronousError.new, "check_completion - http code: #{response.code}. Error message: #{response.body}" if status_code != HTTP_CODE_OK && status_code != HTTP_CODE_ACCEPTED
 
-        raise AzureAsynchronousError.new, 'The body of the asynchronous response is empty' if response.body.nil?
+        raise AzureAsynchronousError.new, 'The body of the asynchronous response is empty' if response.body.nil? || response.body == ''
 
         result = JSON(response.body)
         raise AzureAsynchronousError.new, "The body of the asynchronous response does not contain 'status'. Response: #{response.body}" if result['status'].nil?
