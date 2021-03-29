@@ -468,7 +468,7 @@ describe 'cpi.json.erb' do
 
       it 'encodes the password with special characters in the registry URL' do
         registry_uri = URI(subject['cloud']['properties']['registry']['endpoint'])
-        expect(URI.decode(registry_uri.password)).to eq(special_chars_password)
+        expect(URI.decode_www_form_component(registry_uri.password)).to eq(special_chars_password)
       end
     end
 
