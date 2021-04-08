@@ -49,7 +49,7 @@
 
 1. Install ruby
 
-    Please make sure you have installed ruby `2.4.4` before you start.
+    Please make sure you have installed ruby `2.7.3` before you start.
 
     ```bash
     cd ~/workspace
@@ -67,8 +67,8 @@
       sudo make install
     popd
 
-    ruby-install ruby 2.4.4
-    echo 'chruby 2.4.4' >> ~/.profile
+    ruby-install ruby 2.7.3
+    echo 'chruby 2.7.3' >> ~/.profile
     source ~/.profile
     ruby -v
     ```
@@ -142,7 +142,7 @@ You can use `bosh_azure_console` to test your code changes quickly.
   gem install pg --version 0.20.0 --no-ri --no-rdoc
 
   # Workaround for the issue https://github.com/cloudfoundry/bosh/issues/1621
-  sed -i -e '23s/^/#/' ~/.gem/ruby/2.4.4/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
+  sed -i -e '23s/^/#/' ~/.gem/ruby/2.7.3/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
 
   cat > ~/workspace/registry.cfg <<EOS
   ---

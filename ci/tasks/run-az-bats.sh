@@ -11,7 +11,7 @@ set -e
 
 source pipelines/shared/utils.sh
 source /etc/profile.d/chruby.sh
-chruby 2.4.4
+chruby 2.7.3
 
 metadata="$( cat environment/metadata )"
 mkdir -p bats-config
