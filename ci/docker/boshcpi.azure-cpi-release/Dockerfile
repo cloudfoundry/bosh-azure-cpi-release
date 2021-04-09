@@ -39,5 +39,5 @@ RUN ruby-install ruby ${RUBY_VERSION}
 RUN /bin/bash -l -c "                   \
   source /etc/profile.d/chruby.sh ;     \
   chruby ${RUBY_VERSION} ;              \
-  gem install bundler --no-ri --no-rdoc \
+  gem install bundler --no-document \
 "
