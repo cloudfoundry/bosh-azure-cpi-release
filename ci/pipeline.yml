@@ -1,18 +1,4 @@
 ---
-groups:
-  - name: bosh-azure-cpi-release
-    jobs:
-      - build-candidate
-      - integration-unmanaged-disks
-      - integration-managed-disks
-      - integration-windows-unmanaged-disks
-      - integration-windows-managed-disks
-      - bats-unmanaged-disks
-      - bats-managed-disks
-      - promote-candidate-major
-      - promote-candidate-minor
-      - promote-candidate-patch
-
 shared:
   - &azure-environment-params
     AZURE_ENVIRONMENT:                    {{azure_environment}}
@@ -357,6 +343,15 @@ jobs:
       - put: release-version-semver
         params: {file: release-version-semver/number}
 
+  - name: build-docker-image
+    plan:
+      - get: bosh-azure-cpi-release
+        resource: bosh-azure-cpi-release-dockerfile-src
+        trigger: true
+      - put: azure-cpi-docker-image
+        params:
+          build: bosh-azure-cpi-release/ci/docker/boshcpi.azure-cpi-release/
+
 resource_types:
   - name: terraform_type
     type: docker-image
@@ -386,6 +381,12 @@ resources:
       uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
       branch: master
       private_key: {{github_deployment_key__bosh-azure-cpi-release}}
+  - name: bosh-azure-cpi-release-dockerfile-src
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-azure-cpi-release.git
+      paths:
+        - ci/docker/boshcpi.azure-cpi-release/Dockerfile
   - name: version-semver
     type: semver
     source:
@@ -449,3 +450,9 @@ resources:
     source:
       uri: https://github.com/cloudfoundry/bosh-deployment
       branch: master
+  - name: azure-cpi-docker-image
+    type: docker-image
+    source:
+      repository: boshcpi/azure-cpi-release
+      username: ((dockerhub_username))
+      password: ((dockerhub_password))
