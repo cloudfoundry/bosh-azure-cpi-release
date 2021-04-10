@@ -95,10 +95,10 @@ describe Bosh::AzureCloud::AzureClient do
         let(:payload) do
           {
             "aud": authentication_endpoint,
-            "exp": (now + 3600).strftime('%s'),
+            "exp": (now + 3600).strftime('%s').to_i,
             "iss": client_id,
             "jti": jti,
-            "nbf": (now - 90).strftime('%s'),
+            "nbf": (now - 90).strftime('%s').to_i,
             "sub": client_id
           }
         end
