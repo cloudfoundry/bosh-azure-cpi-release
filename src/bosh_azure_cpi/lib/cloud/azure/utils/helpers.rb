@@ -280,10 +280,10 @@ module Bosh::AzureCloud
       }
       payload = {
         "aud": authentication_endpoint,
-        "exp": (Time.new + 3600).strftime('%s'),
+        "exp": (Time.new + 3600).strftime('%s').to_i,
         "iss": client_id,
         "jti": SecureRandom.uuid,
-        "nbf": (Time.new - 90).strftime('%s'),
+        "nbf": (Time.new - 90).strftime('%s').to_i,
         "sub": client_id
       }
       rsa_private = OpenSSL::PKey::RSA.new(certificate_data)
