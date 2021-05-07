@@ -516,7 +516,7 @@ module Bosh::AzureCloud
       raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name '#{name}' in resource group '#{resource_group_name}'" if vm.nil?
 
       vm = remove_resources_from_vm(vm)
-      vm['tags'] = tags
+      vm['tags'].merge!(tags)
       http_put(url, vm)
     end
 
