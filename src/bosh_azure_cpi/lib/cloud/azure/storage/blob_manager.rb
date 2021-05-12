@@ -33,7 +33,7 @@ module Bosh::AzureCloud
       @logger.info("get_blob_uri(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do
         storage_account = @storage_accounts[storage_account_name]
-        generator = Azure::Storage::Core::Auth::SharedAccessSignature.new(storage_account_name, storage_account[:key])
+        generator = Azure::Storage::Common::Core::Auth::SharedAccessSignature.new(storage_account_name, storage_account[:key])
         token = generator.generate_service_sas_token(
           "#{container_name}/#{blob_name}",
           service: 'b', resource: 'b', permissions: 'r', protocol: 'https',
@@ -241,7 +241,7 @@ module Bosh::AzureCloud
           @logger.info("list_blobs: Calling list_blobs(#{container_name}, #{options})")
           temp = @blob_service_client.list_blobs(container_name, options)
           # Workaround for the issue https://github.com/Azure/azure-storage-ruby/issues/37
-          raise temp unless temp.instance_of?(Azure::Service::EnumerationResults)
+          raise temp unless temp.instance_of?(Azure::Storage::Common::Service::EnumerationResults)
 
           blobs += temp unless temp.empty?
           break if temp.continuation_token.nil? || temp.continuation_token.empty?
@@ -336,7 +336,7 @@ module Bosh::AzureCloud
           @storage_accounts[storage_account_name] = storage_account
         end
         @azure_storage_client = initialize_azure_storage_client(@storage_accounts[storage_account_name], @azure_config)
-        @blob_service_client = @azure_storage_client.blob_client
+        @blob_service_client = Azure::Storage::Blob::BlobService.new(client: @azure_storage_client)
         @blob_service_client.with_filter(CustomizedRetryPolicyFilter.new)
         @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_config) && !disable_debug_mode
         yield
@@ -484,7 +484,7 @@ module Bosh::AzureCloud
     end
   end
 
-  class CustomizedRetryPolicyFilter < Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter
+  class CustomizedRetryPolicyFilter < Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter
     def initialize(retry_count = nil, min_retry_interval = nil, max_retry_interval = nil)
       super(retry_count, min_retry_interval, max_retry_interval)
     end

@@ -7,11 +7,11 @@ describe Bosh::AzureCloud::StorageAccountManager do
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
   let(:storage_account_manager) { Bosh::AzureCloud::StorageAccountManager.new(azure_config, blob_manager, azure_client) }
-  let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
+  let(:azure_storage_client) { instance_double(Azure::Storage::Common::Client) }
   let(:default_resource_group_name) { MOCK_RESOURCE_GROUP_NAME }
 
   before do
-    allow(Azure::Storage::Client).to receive(:create)
+    allow(Azure::Storage::Common::Client).to receive(:create)
       .and_return(azure_storage_client)
     allow(azure_storage_client).to receive(:storage_table_host)
   end
@@ -495,15 +495,15 @@ describe Bosh::AzureCloud::StorageAccountManager do
             request_id: request_id
           }
         end
-        let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
+        let(:azure_storage_client) { instance_double(Azure::Storage::Common::Client) }
         let(:table_service) { instance_double(Azure::Storage::Table::TableService) }
-        let(:exponential_retry) { instance_double(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter) }
+        let(:exponential_retry) { instance_double(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter) }
         let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
 
         before do
-          allow(azure_storage_client).to receive(:table_client)
+          allow(Azure::Storage::Table::TableService).to receive(:new).with(client: azure_storage_client)
             .and_return(table_service)
-          allow(Azure::Storage::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
+          allow(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
             .and_return(exponential_retry)
           allow(table_service).to receive(:with_filter).with(exponential_retry)
           allow(SecureRandom).to receive(:uuid).and_return(request_id)
@@ -548,7 +548,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
             it 'should return the storage account' do
               azure_config.storage_account_name = nil
-              expect(Azure::Storage::Client).to receive(:create)
+              expect(Azure::Storage::Common::Client).to receive(:create)
                 .with(
                   storage_account_name: targeted_storage_account[:name],
                   storage_access_key: keys[0],
@@ -595,7 +595,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
             it 'should raise an error' do
               azure_config.storage_account_name = nil
-              expect(Azure::Storage::Client).to receive(:create)
+              expect(Azure::Storage::Common::Client).to receive(:create)
                 .with(
                   storage_account_name: targeted_storage_account[:name],
                   storage_access_key: keys[0],

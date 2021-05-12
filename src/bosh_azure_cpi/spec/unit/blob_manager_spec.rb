@@ -10,7 +10,7 @@ describe Bosh::AzureCloud::BlobManager do
   let(:blob_name) { 'fake-blob-name' }
   let(:keys) { ['fake-key-1', 'fake-key-2'] }
 
-  let(:azure_storage_client) { instance_double(Azure::Storage::Client) }
+  let(:azure_storage_client) { instance_double(Azure::Storage::Common::Client) }
   let(:blob_service) { instance_double(Azure::Storage::Blob::BlobService) }
   let(:customized_retry) { instance_double(Bosh::AzureCloud::CustomizedRetryPolicyFilter) }
   let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
@@ -32,14 +32,14 @@ describe Bosh::AzureCloud::BlobManager do
     }
   end
   let(:metadata) { {} }
-  let(:sas_generator) { instance_double(Azure::Storage::Core::Auth::SharedAccessSignature) }
+  let(:sas_generator) { instance_double(Azure::Storage::Common::Core::Auth::SharedAccessSignature) }
 
   before do
-    allow(Azure::Storage::Client).to receive(:create)
+    allow(Azure::Storage::Common::Client).to receive(:create)
       .and_return(azure_storage_client)
     allow(Bosh::AzureCloud::AzureClient).to receive(:new)
       .and_return(azure_client)
-    allow(Azure::Storage::Core::Auth::SharedAccessSignature).to receive(:new)
+    allow(Azure::Storage::Common::Core::Auth::SharedAccessSignature).to receive(:new)
       .and_return(sas_generator)
     allow(azure_client).to receive(:get_storage_account_keys_by_name)
       .and_return(keys)
@@ -47,7 +47,7 @@ describe Bosh::AzureCloud::BlobManager do
       .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
       .and_return(storage_account)
     allow(azure_storage_client).to receive(:storage_blob_host).and_return(blob_host)
-    allow(azure_storage_client).to receive(:blob_client)
+    allow(Azure::Storage::Blob::BlobService).to receive(:new).with(client: azure_storage_client)
       .and_return(blob_service)
     allow(Bosh::AzureCloud::CustomizedRetryPolicyFilter).to receive(:new)
       .and_return(customized_retry)
@@ -528,7 +528,7 @@ describe Bosh::AzureCloud::BlobManager do
     end
 
     context 'when the container is empty' do
-      let(:tmp_blobs) { Azure::Service::EnumerationResults.new }
+      let(:tmp_blobs) { Azure::Storage::Common::Service::EnumerationResults.new }
 
       before do
         allow(blob_service).to receive(:list_blobs).and_return(tmp_blobs)
@@ -542,7 +542,7 @@ describe Bosh::AzureCloud::BlobManager do
     context 'when the container is not empty' do
       context 'without continuation_token' do
         let(:tmp_blobs) do
-          Azure::Service::EnumerationResults.new(
+          Azure::Storage::Common::Service::EnumerationResults.new(
             [
               'fake-blob'
             ]
@@ -560,14 +560,14 @@ describe Bosh::AzureCloud::BlobManager do
 
       context 'with continuation_token' do
         let(:tmp_blobs_1) do
-          Azure::Service::EnumerationResults.new(
+          Azure::Storage::Common::Service::EnumerationResults.new(
             [
               'fake-blob'
             ]
           )
         end
         let(:tmp_blobs_2) do
-          Azure::Service::EnumerationResults.new(
+          Azure::Storage::Common::Service::EnumerationResults.new(
             [
               'fake-blob'
             ]

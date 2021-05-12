@@ -301,7 +301,7 @@ module Bosh::AzureCloud
       }
       options[:ca_file] = get_ca_cert_path if azure_config.environment == ENVIRONMENT_AZURESTACK
 
-      Azure::Storage::Client.create(options)
+      Azure::Storage::Common::Client.create(options)
     end
 
     def get_ca_cert_path
