@@ -13,7 +13,7 @@ pushd bosh-cpi-src > /dev/null
   pushd src/bosh_azure_cpi > /dev/null
     bundle install
     # AZURE_STORAGE_ACCOUNT and AZURE_STORAGE_ACCESS_KEY are specified fake values as a workaround
-    # to make sure Azure::Storage::Client is mocked successfully in unit tests.
+    # to make sure Azure::Storage::Common::Client is mocked successfully in unit tests.
     # After https://github.com/Azure/azure-storage-ruby/issues/87 is resolved, they can be removed.
     # echo "bar" | base64 => YmFyCg==
     AZURE_STORAGE_ACCOUNT="foo" AZURE_STORAGE_ACCESS_KEY="YmFyCg==" bundle exec rspec spec/unit/* --format documentation

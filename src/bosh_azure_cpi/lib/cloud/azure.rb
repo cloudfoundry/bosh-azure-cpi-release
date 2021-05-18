@@ -34,7 +34,10 @@ require 'digest/md5'
 require 'net/http'
 
 # Load Azure Libs before cloud/azure/* in case they are used by the latter
-require 'azure/storage'
+require 'azure/storage/common'
+require 'azure/storage/blob'
+require 'azure/storage/table'
+
 require 'azure/core/http/debug_filter'
 
 require 'common/exec'
