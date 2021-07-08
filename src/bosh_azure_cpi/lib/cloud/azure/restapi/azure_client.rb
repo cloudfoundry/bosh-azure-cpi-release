@@ -1463,13 +1463,15 @@ module Bosh::AzureCloud
 
       load_balancer = nic_params[:load_balancer]
       unless load_balancer.nil?
-        interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = [
-          {
-            'id' => load_balancer[:backend_address_pools][0][:id]
-          }
-        ]
-        interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] =
-          load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
+        backend_pools = load_balancer.collect { |single_load_balancer| {:id => single_load_balancer[:backend_address_pools][0][:id]} }
+        inbound_nat_rules = Array.new
+        load_balancer.each do |single_load_balancer|
+          unless single_load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules].nil?
+            inbound_nat_rules += single_load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
+          end
+        end
+        interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = backend_pools
+        interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] = inbound_nat_rules
       end
 
       application_gateway = nic_params[:application_gateway]
