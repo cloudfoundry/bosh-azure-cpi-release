@@ -284,7 +284,7 @@ describe Bosh::AzureCloud::AzureClient do
             public_ip: { id: 'fake-public-id' },
             network_security_group: { id: nsg_id },
             application_security_groups: [],
-            load_balancer: {
+            load_balancer: [{
               backend_address_pools: [
                 {
                   id: 'fake-id'
@@ -295,7 +295,7 @@ describe Bosh::AzureCloud::AzureClient do
                   inbound_nat_rules: [{}]
                 }
               ]
-            },
+            }],
             application_gateway: nil
           }
         end
