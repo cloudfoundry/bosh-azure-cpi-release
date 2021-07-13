@@ -1,6 +1,6 @@
 # Standard SKU Load Balancer
 
-Standard SKU Load Balancer is recommended for Cloud Foundry deployment. Please review [Load Balancer SKU comparison](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-overview#skus) before you continue.
+Standard SKU Load Balancer is recommended for Cloud Foundry deployment. Please review [Load Balancer SKU comparison](https://docs.microsoft.com/en-us/azure/load-balancer/skus) before you continue.
 
 ## Pre-requisites
 
