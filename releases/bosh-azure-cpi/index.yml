@@ -77,6 +77,8 @@ builds:
     version: "30"
   ad1c9f60-751f-47f7-7537-bfe50150b346:
     version: 37.4.0
+  b813a1d9-20cd-4587-61c7-251eb527ae48:
+    version: 37.6.0
   bedc2f29-14e6-4952-aee9-d2844ebc374b:
     version: "2"
   c65f8177-9c36-41b7-bafa-e6699590ca31:
