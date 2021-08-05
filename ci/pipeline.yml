@@ -121,7 +121,7 @@ jobs:
   - name: build-candidate
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
         - {trigger: true, get: bosh-cpi-src, resource: bosh-cpi-src-in}
         - {trigger: false, get: version-semver, params: {bump: patch}}
         - {trigger: false, get: bosh-cli}
@@ -135,7 +135,7 @@ jobs:
   - name: integration-unmanaged-disks
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
         - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
@@ -156,7 +156,7 @@ jobs:
   - name: integration-managed-disks
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
         - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
@@ -177,7 +177,7 @@ jobs:
   - name: integration-windows-unmanaged-disks
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
         - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
@@ -201,7 +201,7 @@ jobs:
   - name: integration-windows-managed-disks
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
         - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
@@ -225,7 +225,7 @@ jobs:
   - name: bats-unmanaged-disks
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
         - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-release,    trigger: false, resource: bosh-release}
         - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
@@ -258,7 +258,7 @@ jobs:
   - name: bats-managed-disks
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
         - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-release,    trigger: false, resource: bosh-release}
         - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
@@ -291,7 +291,7 @@ jobs:
 
   - name: promote-candidate-major
     plan:
-      - aggregate:
+      - in_parallel:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: major}}
@@ -309,7 +309,7 @@ jobs:
 
   - name: promote-candidate-minor
     plan:
-      - aggregate:
+      - in_parallel:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: minor}}
@@ -327,7 +327,7 @@ jobs:
 
   - name: promote-candidate-patch
     plan:
-      - aggregate:
+      - in_parallel:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: patch}}
