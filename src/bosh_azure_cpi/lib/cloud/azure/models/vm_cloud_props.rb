@@ -16,6 +16,7 @@ module Bosh::AzureCloud
     attr_reader :application_security_groups
     attr_reader :assign_dynamic_public_ip, :ip_forwarding, :accelerated_networking
     attr_reader :storage_account_name, :storage_account_type, :storage_account_kind, :storage_account_max_disk_number
+    attr_reader :enable_ultra_ssd
     attr_reader :resource_group_name
     attr_reader :tags
 
@@ -74,6 +75,8 @@ module Bosh::AzureCloud
       @storage_account_kind = vm_properties.fetch('storage_account_kind', STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1)
       @storage_account_type = vm_properties['storage_account_type']
       @storage_account_max_disk_number = vm_properties.fetch('storage_account_max_disk_number', 30)
+
+      @enable_ultra_ssd = vm_properties.fetch('enable_ultra_ssd', nil)
 
       @resource_group_name = vm_properties.fetch('resource_group_name', global_azure_config.resource_group_name)
       @tags = vm_properties.fetch('tags', {})

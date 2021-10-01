@@ -323,6 +323,12 @@ module Bosh::AzureCloud
         }
       }
 
+      unless vm_params[:enable_ultra_ssd].nil?
+        vm['properties']['additionalCapabilities'] = {
+          'ultraSSDEnabled' => vm_params[:enable_ultra_ssd]
+        }
+      end
+
       unless vm_params[:identity].nil?
         identity_type = vm_params[:identity][:type]
         if identity_type == MANAGED_IDENTITY_TYPE_USER_ASSIGNED

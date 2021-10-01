@@ -133,6 +133,10 @@ module Bosh::AzureCloud
         managed: @use_managed_disks
       }
 
+      unless vm_props.enable_ultra_ssd.nil?
+        vm_params[:enable_ultra_ssd] = vm_props.enable_ultra_ssd
+      end
+
       unless vm_props.managed_identity.nil?
         vm_params[:identity] = {
           type: vm_props.managed_identity.type,
