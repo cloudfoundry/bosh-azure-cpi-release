@@ -131,10 +131,13 @@
       }
     else
       options_params = {
-        'endpoint' => "http://#{p(['agent.blobstore.address', 'blobstore.address'])}:#{p('blobstore.port')}",
-        'user' => p('blobstore.agent.user'),
-        'password' => p('blobstore.agent.password')
+        'endpoint' => "http://#{p(['agent.blobstore.address', 'blobstore.address'])}:#{p('blobstore.port')}"
       }
+
+      if_p('blobstore.agent.user') do
+        options_params["user"] = p('blobstore.agent.user')
+        options_params["password"] = p('blobstore.agent.password')
+      end
     end
     blobstore_params['options'] = options_params
     params['cloud']['properties']['agent']['blobstore'] = blobstore_params

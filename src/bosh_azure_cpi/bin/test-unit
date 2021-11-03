@@ -18,7 +18,7 @@ case $key in
     ;;
     *)    # unknown option
     echo "Usage: ./test-unit [[-s|--spec] spec/unit/*] [-sb|--skip-ruby-check]"
-    break
+    exit 2
     ;;
 esac
 done

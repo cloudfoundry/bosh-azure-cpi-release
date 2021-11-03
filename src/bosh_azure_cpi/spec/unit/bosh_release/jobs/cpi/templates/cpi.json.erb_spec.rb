@@ -511,9 +511,9 @@ describe 'cpi.json.erb' do
   end
 
   context 'when parsing the agent property' do
-    context 'when using an s3 blobstore' do
-      let(:rendered_blobstore) { subject['cloud']['properties']['agent']['blobstore'] }
+    let(:rendered_blobstore) { subject['cloud']['properties']['agent']['blobstore'] }
 
+    context 'when using an s3 blobstore' do
       context 'when provided a minimal configuration' do
         before do
           manifest['properties']['blobstore'].merge!(
@@ -541,8 +541,6 @@ describe 'cpi.json.erb' do
     end
 
     context 'when using a local blobstore' do
-      let(:rendered_blobstore) { subject['cloud']['properties']['agent']['blobstore'] }
-
       context 'when provided a minimal configuration' do
         before do
           manifest['properties']['blobstore'].merge!(
@@ -570,6 +568,25 @@ describe 'cpi.json.erb' do
 
         it 'raises an error' do
           expect { rendered_blobstore }.to raise_error(/Can't find property 'blobstore.path'/)
+        end
+      end
+    end
+
+    context 'when using a dav blobstore' do
+      it 'renders agent user/password for accessing blobstore' do
+        expect(rendered_blobstore['options']['user']).to eq('agent')
+        expect(rendered_blobstore['options']['password']).to eq('agent-password')
+      end
+
+      context 'when enabling signed URLs' do
+        before do
+          manifest['properties']['blobstore']['agent'].delete('user')
+          manifest['properties']['blobstore']['agent'].delete('password')
+        end
+
+        it 'does not render agent user/password for accessing blobstore' do
+          expect(rendered_blobstore['options']['user']).to be_nil
+          expect(rendered_blobstore['options']['password']).to be_nil
         end
       end
     end
