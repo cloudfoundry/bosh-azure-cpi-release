@@ -144,9 +144,13 @@ properties:
     description: Port of blobstore server used by simple blobstore plugin
     default: 25250
   blobstore.agent.user:
-    description: Username agent uses to connect to blobstore used by simple blobstore plugin
+    description: |
+      Username agent uses to connect to blobstore used by simple blobstore
+      plugin (Optional)
   blobstore.agent.password:
-    description: Password agent uses to connect to blobstore used by simple blobstore plugin
+    description: |
+      Password agent uses to connect to blobstore used by simple blobstore
+      plugin (Required only when user is provided)
 
   agent.blobstore.secret_access_key:
     description: AWS secret_access_key for agent used by s3 blobstore plugin

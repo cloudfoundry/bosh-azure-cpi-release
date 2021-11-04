@@ -112,6 +112,16 @@ cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
 
 If unit tests are passed, you can create a dev release and deploy it for tests.
 
+#### Running ERB job templates unit tests
+
+The ERB templates rendered by the jobs of this Bosh Release have specific unit
+tests that are run along with the other unit tests as instructed above. When
+required, you can run them separately though, with this command:
+
+```bash
+./src/bosh_azure_cpi/bin/test-unit --spec spec/unit/bosh_release
+```
+
 ### CI Pipeline
 
 You can setup a [CI pipeline](../ci/) to run the [integration tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/integration) and [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests/tree/gocli-bats). It's optional for submitting a PR and required for publishing a new CPI release.
