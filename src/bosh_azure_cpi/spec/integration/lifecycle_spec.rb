@@ -41,7 +41,9 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle
+      vm_lifecycle do |_|
+        sleep(60)
+      end
     end
   end
 
