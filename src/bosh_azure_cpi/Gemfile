@@ -11,6 +11,8 @@ gem 'concurrent-ruby',  '~> 1.1', '>= 1.1.8'
 gem 'jwt',              '~> 2.2', '>= 2.2.2'
 gem 'deep_merge',       '~> 1.2', '>= 1.2.1'
 
+gem 'rspec-retry', group: :test
+
 group :development, :test do
   gem 'rake',        '~>12.0'
   gem 'rspec',       '~>3.5.0'

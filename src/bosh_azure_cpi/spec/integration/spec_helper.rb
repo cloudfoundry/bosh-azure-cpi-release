@@ -5,8 +5,12 @@ require 'cloud'
 require 'open3'
 require 'securerandom'
 require 'tempfile'
+require 'rspec/retry'
 
 RSpec.configure do |rspec_config|
+  rspec_config.verbose_retry = true
+  rspec_config.display_try_failure_messages = true
+
   rspec_config.before(:all) do
     # CPI global configurations
     @azure_environment           = ENV.fetch('BOSH_AZURE_ENVIRONMENT')
