@@ -163,6 +163,8 @@ class MockTelemetryManager
 end
 
 RSpec.configure do |config|
+  config.filter_run_when_matching :focus
+
   config.before do
     logger = Logger.new('/dev/null')
     allow(Bosh::Clouds::Config).to receive(:logger).and_return(logger)
