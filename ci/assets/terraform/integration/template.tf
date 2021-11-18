@@ -57,6 +57,19 @@ resource "azurerm_subnet" "azure_subnet_2_in_default_rg" {
   virtual_network_name = azurerm_virtual_network.azure_bosh_network_in_default_rg.name
   address_prefixes       = ["10.0.1.0/24"]
 }
+resource "azurerm_network_interface" "azure_subnet_2_nic_in_default_rg" {
+  name                = "example-nic"
+  location            = var.location
+  resource_group_name = "${var.resource_group_prefix}${var.env_name}-default-rg"
+
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.azure_subnet_2_in_default_rg.id
+    private_ip_address_allocation = "Static"
+    private_ip_address            = "10.0.1.230"
+  }
+}
+
 resource "azurerm_subnet" "azure_subnet_appgw_in_default_rg" {
   name                 = "azure_subnet_3"
   resource_group_name  = azurerm_resource_group.azure_default_rg.name
