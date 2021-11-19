@@ -10,6 +10,7 @@ shared:
 
   - &create-bats-environment
     put: environment
+    tags: [azure]
     params:
       delete_on_failure: true
       generate_random_name: true
@@ -17,6 +18,7 @@ shared:
 
   - &create-az-bats-environment
     put: environment
+    tags: [azure]
     params:
       delete_on_failure: true
       generate_random_name: true
@@ -24,6 +26,7 @@ shared:
 
   - &destroy-bats-environment
     put: environment
+    tags: [azure]
     params:
       action: destroy
       env_name_file: environment/name
@@ -33,6 +36,7 @@ shared:
 
   - &destroy-az-bats-environment
     put: environment
+    tags: [azure]
     params:
       action: destroy
       env_name_file: environment/name
@@ -49,10 +53,12 @@ shared:
 
   - &deploy-director
     task: deploy-director
+    tags: [azure]
     file: pipelines/shared/tasks/deploy-director.yml
 
   - &run-bats
     task: run-bats
+    tags: [azure]
     file: pipelines/shared/tasks/run-bats.yml
     params: &run-bats-params
       INFRASTRUCTURE:                     azure
@@ -63,6 +69,7 @@ shared:
 
   - &run-az-bats
     task: run-az-bats
+    tags: [azure]
     file: bosh-cpi-src/ci/tasks/run-az-bats.yml
     params: &run-az-bats-params
       INFRASTRUCTURE:                     azure
@@ -74,10 +81,12 @@ shared:
 
   - &teardown
     task: teardown
+    tags: [azure]
     file: pipelines/shared/tasks/teardown.yml
 
   - &create-integration-environment
     put: environment
+    tags: [azure]
     params:
       delete_on_failure: true
       generate_random_name: true
@@ -85,6 +94,7 @@ shared:
 
   - &destroy-integration-environment
     put: environment
+    tags: [azure]
     params:
       action: destroy
       env_name_file: environment/name
@@ -94,12 +104,14 @@ shared:
 
   - &upload-stemcell
     task: upload-stemcell
+    tags: [azure]
     file: bosh-cpi-src/ci/tasks/upload-stemcell.yml
     params: &upload-stemcell-params
       <<: *azure-environment-params
 
   - &run-integration
     task: run-integration
+    tags: [azure]
     file: bosh-cpi-src/ci/tasks/run-integration.yml
     params: &run-integration-params
       <<: *azure-environment-params
@@ -107,12 +119,14 @@ shared:
 
   - &run-integration-windows
     task: run-integration-windows
+    tags: [azure]
     file: bosh-cpi-src/ci/tasks/run-integration-windows.yml
     params: &run-integration-windows-params
       <<: *run-integration-params
 
   - &ensure-cleanup
     task: ensure-cleanup
+    tags: [azure]
     file: bosh-cpi-src/ci/tasks/ensure-cleanup.yml
     params:
       <<: *azure-environment-params
@@ -138,7 +152,7 @@ jobs:
       - in_parallel:
         - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
+        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -159,7 +173,7 @@ jobs:
       - in_parallel:
         - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell}
+        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -180,7 +194,7 @@ jobs:
       - in_parallel:
         - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
+        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell, tags: [azure]}
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -204,7 +218,7 @@ jobs:
       - in_parallel:
         - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell}
+        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell, tags: [azure]}
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -229,7 +243,7 @@ jobs:
         - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-release,    trigger: false, resource: bosh-release}
         - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-        - {get: stemcell,        trigger: true, resource: azure-ubuntu-stemcell}
+        - {get: stemcell,        trigger: true, resource: azure-ubuntu-stemcell, tags: [azure]}
         - {get: bosh-deployment, trigger: false}
         - {get: pipelines,       trigger: false}
         - {get: bosh-cli,        trigger: false}
@@ -262,7 +276,7 @@ jobs:
         - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
         - {get: bosh-release,    trigger: false, resource: bosh-release}
         - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-        - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell}
+        - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
         - {get: bosh-deployment, trigger: false}
         - {get: pipelines,       trigger: false}
         - {get: bosh-cli,        trigger: false}
