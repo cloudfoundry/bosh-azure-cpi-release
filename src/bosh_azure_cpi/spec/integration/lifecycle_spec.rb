@@ -40,7 +40,7 @@ describe Bosh::AzureCloud::Cloud do
       }
     end
 
-    it 'should exercise the vm lifecycle', :retry => 5 do
+    it 'should exercise the vm lifecycle' do
       vm_lifecycle
     end
   end
