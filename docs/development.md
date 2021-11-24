@@ -142,7 +142,10 @@ required, you can run them separately though, with this command:
 
 ### CI Pipeline
 
-You can setup a [CI pipeline](../ci/) to run the [integration tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/integration) and [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests/tree/gocli-bats). It's optional for submitting a PR and required for publishing a new CPI release.
+You can setup a [CI pipeline](../ci/) to run the 
+[integration tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/integration) 
+and [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests/tree/gocli-bats). 
+It's optional for submitting a PR and required for publishing a new CPI release.
 
 ### Test CPI methods
 
