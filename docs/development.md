@@ -103,11 +103,29 @@ Your development environment is prepared successfully.
 
 ### Unit tests
 
-The [unit tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/unit) are **REQUIRED** before you submit a PR. When submitting a PR, you need to provide the test coverage and make sure that the coverage doesn't decrease.
+The [unit tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/unit) 
+are **REQUIRED** before you submit a PR. 
+When submitting a PR, you need to provide the test coverage and make sure that the coverage doesn't decrease.
 
 ```bash
 cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
 ./bin/test-unit
+```
+
+or:
+
+```bash
+cd ~/workspace/bosh-azure-cpi-release
+pushd src/bosh_azure_cpi
+./bin/test-unit
+popd
+```
+
+or:
+
+```bash
+cd ~/workspace/bosh-azure-cpi-release
+pushd 'src/bosh_azure_cpi' ; ./bin/test-unit ; popd
 ```
 
 If unit tests are passed, you can create a dev release and deploy it for tests.
