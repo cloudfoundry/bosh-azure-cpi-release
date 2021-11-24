@@ -130,6 +130,17 @@ pushd 'src/bosh_azure_cpi' ; ./bin/test-unit ; popd
 
 If unit tests are passed, you can create a dev release and deploy it for tests.
 
+### Rubocop
+
+The [rubocop_check](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/bin/rubocop_check) 
+script checks for rubocop offenses.
+
+```bash
+cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
+bundle install --with=test
+./bin/rubocop_check
+```
+
 #### Running ERB job templates unit tests
 
 The ERB templates rendered by the jobs of this Bosh Release have specific unit
