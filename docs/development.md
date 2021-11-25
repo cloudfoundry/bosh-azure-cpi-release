@@ -141,6 +141,24 @@ bundle install --with=test
 ./bin/rubocop_check
 ```
 
+#### Rubocop autofix
+
+The [rubocop_autofix](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/bin/rubocop_autofix) 
+script auto-corrects any rubocop offenses which can be auto-corrected.
+
+**_WARNING_:** Running this script **_COULD_** introduce bugs into the code. 
+Auto-correct code changes made by rubocop **_ARE NOT_** guaranteed to be functionally equivalent to the original code.
+You should _carefully_ review all auto-corrected code changes made by rubocop before merging them.
+
+However, with the above warning clearly in mind, this script may be useful in certain situations, 
+even if only as a way to better understand the 'problem' for rubocop offenses with ambiguous output.
+
+```bash
+cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
+bundle install --with=test
+./bin/rubocop_autofix
+```
+
 #### Running ERB job templates unit tests
 
 The ERB templates rendered by the jobs of this Bosh Release have specific unit
