@@ -32,7 +32,7 @@ Lint/AssignmentInCondition:
     - 'lib/cloud/azure/storage/blob_manager.rb'
 
 # Offense count: 1
-Lint/HandleExceptions:
+Lint/SuppressedException:
   Exclude:
     - 'lib/cloud/azure/utils/helpers.rb'
 
@@ -160,7 +160,7 @@ Naming/PredicateName:
 # Offense count: 2
 # Configuration parameters: MinNameLength, AllowNamesEndingInNumbers, AllowedNames, ForbiddenNames.
 # AllowedNames: io, id, to, by, on, in, at
-Naming/UncommunicativeMethodParamName:
+Naming/MethodParameterName:
   Exclude:
     - 'lib/cloud/azure/restapi/azure_client.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
@@ -230,7 +230,7 @@ Style/NumericPredicate:
 # Offense count: 2824
 # Configuration parameters: AllowHeredoc, AllowURI, URISchemes, IgnoreCopDirectives, IgnoredPatterns.
 # URISchemes: http, https
-Metrics/LineLength:
+Layout/LineLength:
   Max: 1214
 
 # Offense count: 1
