@@ -85,6 +85,18 @@ Lint/UnmodifiedReduceAccumulator: # new in 1.1
 Lint/UselessRuby2Keywords: # new in 1.23
   Enabled: true
 
+RSpec/ExcessiveDocstringSpacing: # new in 2.5
+  Enabled: true
+
+RSpec/IdenticalEqualityAssertion: # new in 2.4
+  Enabled: true
+
+RSpec/SubjectDeclaration: # new in 2.5
+  Enabled: true
+
+RSpec/Rails/AvoidSetupHook: # new in 2.4
+  Enabled: true
+
 Security/IoMethods: # new in 1.22
   Enabled: true
 
