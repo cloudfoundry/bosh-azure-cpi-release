@@ -22,7 +22,7 @@ module Bosh::AzureCloud
     # Cloud initialization
     #
     # @param [Hash] options cloud options
-    def initialize(options, api_version)
+    def initialize(options, api_version = 1)
       options_dup = options.dup.freeze
 
       @api_version = api_version || 1
