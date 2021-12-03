@@ -47,9 +47,9 @@
     source ~/.profile
     ```
 
-1. Install ruby
+1. Install chruby
 
-    Please make sure you have installed ruby `2.7.3` before you start.
+   Please make sure you have installed `chruby` before you start.
 
     ```bash
     cd ~/workspace
@@ -60,6 +60,29 @@
       echo 'source /usr/local/share/chruby/chruby.sh' >> ~/.profile
     popd
     source ~/.profile
+    ```
+
+   _Note:_ The development scripts expect `chruby` to be located at `/usr/local/share/chruby`.
+   Installing `chruby` via other mechanisms than those shown above may require additional steps 
+   to make the installation compatible with the development scripts' expectations.
+   For example, to install `chruby` via `homebrew`, you could create a softlink 
+   from the brew-installed location to the script-expected location:
+
+    ```bash
+    brew install chruby
+    sudo ln -s '/opt/homebrew/opt/chruby/share/chruby' '/usr/local/share/chruby'
+    echo 'source /usr/local/share/chruby/chruby.sh' >> ~/.profile
+    source ~/.profile
+    ```
+
+1. Install ruby
+
+    Please make sure you have installed ruby `2.7.3` before you start.
+
+    _Note:_ The development scripts use `chruby` as the ruby version manager.
+
+    ```bash
+    cd ~/workspace
 
     wget -O ruby-install-0.6.1.tar.gz https://github.com/postmodern/ruby-install/archive/v0.6.1.tar.gz
     tar -xzvf ruby-install-0.6.1.tar.gz
