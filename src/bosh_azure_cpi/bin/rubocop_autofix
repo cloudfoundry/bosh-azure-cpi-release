@@ -7,5 +7,10 @@ which rubocop > /dev/null 2>&1
 export XDG_CACHE_HOME=$(pwd)
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 pushd $DIR/..
+  if [[ "$skip_ruby_check" -ne "0" ]]; then
+    . ./bin/check-ruby-version
+  fi
+
+  echo "Running rubocop with Ruby version $RUBY_VERSION..."
   rubocop -a
 popd
