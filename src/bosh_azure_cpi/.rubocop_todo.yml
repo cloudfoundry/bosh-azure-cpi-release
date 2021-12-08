@@ -301,11 +301,11 @@ Lint/UselessAssignment:
 Metrics/AbcSize:
   Max: 192
 
-# Offense count: 818
+# Offense count: 18
 # Configuration parameters: CountComments, CountAsOne, ExcludedMethods, IgnoredMethods.
 # IgnoredMethods: refine
 Metrics/BlockLength:
-  Max: 2219
+  Max: 69
 
 # Offense count: 7
 # Configuration parameters: CountBlocks.

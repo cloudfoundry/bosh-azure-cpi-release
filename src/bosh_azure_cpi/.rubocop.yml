@@ -85,6 +85,11 @@ Lint/UnmodifiedReduceAccumulator: # new in 1.1
 Lint/UselessRuby2Keywords: # new in 1.23
   Enabled: true
 
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/unit/vm_manager/create/shared_stuff.rb'
+    - '**/*_spec.rb'
+
 RSpec/ExcessiveDocstringSpacing: # new in 2.5
   Enabled: true
 
