@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
+  # TODO: Refactoring: Move class to new file: LoadBalancerConfig
   class LoadBalancerConfig
     attr_reader :name, :resource_group_name, :backend_pool_name
 
@@ -15,6 +16,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: ApplicationGatewayConfig
   class ApplicationGatewayConfig
     attr_reader :name, :resource_group_name, :backend_pool_name
 
@@ -29,6 +31,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: AvailabilitySetConfig
   class AvailabilitySetConfig
     attr_reader :name
     attr_reader :platform_update_domain_count, :platform_fault_domain_count
@@ -43,6 +46,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: AzureStackConfig
   class AzureStackConfig
     attr_reader :domain, :authentication, :resource, :endpoint_prefix
     attr_writer :authentication
@@ -54,6 +58,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: ConfigDisk
   class ConfigDisk
     attr_reader :enabled
     def initialize(config_disk_config_hash)
@@ -61,6 +66,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: AzureConfig
   class AzureConfig
     include Helpers
     attr_reader :environment, :subscription_id, :location, :resource_group_name
@@ -134,6 +140,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: RegistryConfig
   class RegistryConfig
     attr_reader :endpoint, :user, :password
 
@@ -146,6 +153,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: AgentConfig
   class AgentConfig
     def initialize(agent_config_hash)
       @config = agent_config_hash
