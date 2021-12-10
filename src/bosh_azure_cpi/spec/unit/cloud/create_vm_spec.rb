@@ -410,30 +410,30 @@ describe Bosh::AzureCloud::Cloud do
 
       before do
         allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
-                                           .with(agent_id, stemcell_cid)
-                                           .and_return(bosh_vm_meta)
+          .with(agent_id, stemcell_cid)
+          .and_return(bosh_vm_meta)
         allow(instance_id).to receive(:to_s)
-                          .and_return(instance_id_string)
+          .and_return(instance_id_string)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-                                                    .with(anything, networks)
-                                                    .and_return(network_configurator)
+          .with(anything, networks)
+          .and_return(network_configurator)
       end
 
       it 'returns an array of instance id and networks' do
         expect(registry_client).to receive(:update_settings)
         expect(vm_manager).to receive(:create)
-                          .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud_v2.config)
-                          .and_return([instance_id_string, {}])
+          .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud_v2.config)
+          .and_return([instance_id_string, {}])
 
         expect(
-            cloud_v2.create_vm(
-              agent_id,
-              stemcell_cid,
-              cloud_properties,
-              networks,
-              disk_cids,
-              environment
-            )
+          cloud_v2.create_vm(
+            agent_id,
+            stemcell_cid,
+            cloud_properties,
+            networks,
+            disk_cids,
+            environment
+          )
         ).to eq([instance_id_string, networks])
       end
 
@@ -443,12 +443,12 @@ describe Bosh::AzureCloud::Cloud do
           expect(vm_manager).to receive(:create)
 
           cloud_v2.create_vm(
-              agent_id,
-              stemcell_cid,
-              cloud_properties,
-              networks,
-              disk_cids,
-              environment
+            agent_id,
+            stemcell_cid,
+            cloud_properties,
+            networks,
+            disk_cids,
+            environment
           )
         end
 
@@ -458,14 +458,14 @@ describe Bosh::AzureCloud::Cloud do
             expect(vm_manager).to receive(:create).and_return([instance_id_string, networks])
 
             expect(
-                cloud_sc_v2.create_vm(
-                    agent_id,
-                    stemcell_cid,
-                    cloud_properties,
-                    networks,
-                    disk_cids,
-                    environment
-                )
+              cloud_sc_v2.create_vm(
+                agent_id,
+                stemcell_cid,
+                cloud_properties,
+                networks,
+                disk_cids,
+                environment
+              )
             ).to eq([instance_id_string, networks])
           end
         end

@@ -69,7 +69,7 @@ describe Bosh::AzureCloud::VMManager do
                                                     public_ip: dynamic_public_ip,
                                                     subnet: subnet,
                                                     tags: tags,
-                                                    load_balancers: [ load_balancer ],
+                                                    load_balancers: [load_balancer],
                                                     application_gateways: [application_gateway]
                                                   )).once
               end
@@ -300,7 +300,7 @@ describe Bosh::AzureCloud::VMManager do
                                                     public_ip: dynamic_public_ip,
                                                     subnet: subnet,
                                                     tags: tags,
-                                                    load_balancers: [ load_balancer ],
+                                                    load_balancers: [load_balancer],
                                                     application_gateways: [application_gateway]
                                                   )).once
               end
@@ -425,7 +425,7 @@ describe Bosh::AzureCloud::VMManager do
                                                     public_ip: dynamic_public_ip,
                                                     subnet: subnet,
                                                     tags: tags,
-                                                    load_balancers: [ load_balancer ],
+                                                    load_balancers: [load_balancer],
                                                     application_gateways: application_gateway
                                                   )).once
                 allow(azure_client).to receive(:get_application_gateway_by_name)
@@ -541,7 +541,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 public_ip: dynamic_public_ip,
                                                 subnet: subnet,
                                                 tags: tags,
-                                                load_balancers: [ load_balancer ],
+                                                load_balancers: [load_balancer],
                                                 application_gateways: [application_gateway]
                                               ))
 

@@ -502,7 +502,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
         before do
           allow(Azure::Storage::Table::TableService).to receive(:new).with(client: azure_storage_client)
-            .and_return(table_service)
+                                                                     .and_return(table_service)
           allow(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
             .and_return(exponential_retry)
           allow(table_service).to receive(:with_filter).with(exponential_retry)

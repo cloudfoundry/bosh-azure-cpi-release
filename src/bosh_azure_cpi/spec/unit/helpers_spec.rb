@@ -500,7 +500,7 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should create the storage client with the correct options' do
         expect(Azure::Storage::Common::Client).to receive(:create).with(options)
-                                                          .and_return(azure_storage_client)
+                                                                  .and_return(azure_storage_client)
         expect(
           helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
         ).to eq(azure_storage_client)
@@ -529,7 +529,7 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should create the storage client with the correct options' do
         expect(Azure::Storage::Common::Client).to receive(:create).with(options)
-                                                          .and_return(azure_storage_client)
+                                                                  .and_return(azure_storage_client)
         expect(
           helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
         ).to eq(azure_storage_client)

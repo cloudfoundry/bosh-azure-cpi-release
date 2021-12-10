@@ -14,6 +14,7 @@ module Bosh::AzureCloud
   class AzureConflictError < AzureError; end
   class AzureInternalError < AzureError; end
   class AzureAsynInternalError < AzureError; end
+
   class AzureAsynchronousError < AzureError
     attr_accessor :status, :error
 
@@ -1266,7 +1267,7 @@ module Bosh::AzureCloud
       }
       if params[:zone]
         public_ip['zones'] = [params[:zone]]
-        public_ip['sku'] = {'name' => 'Standard'}
+        public_ip['sku'] = { 'name' => 'Standard' }
         public_ip['properties']['publicIPAllocationMethod'] = 'Static'
       end
 
@@ -1467,7 +1468,7 @@ module Bosh::AzureCloud
       # see: Bosh::AzureCloud::VMManager._get_load_balancers
       load_balancers = nic_params[:load_balancers]
       unless load_balancers.nil?
-        backend_pools = load_balancers.map { |load_balancer| {:id => load_balancer[:backend_address_pools][0][:id]} }
+        backend_pools = load_balancers.map { |load_balancer| { :id => load_balancer[:backend_address_pools][0][:id] } }
         inbound_nat_rules = Array.new
         load_balancers.each do |load_balancer|
           unless load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules].nil?
@@ -1482,7 +1483,7 @@ module Bosh::AzureCloud
       application_gateways = nic_params[:application_gateways]
       unless application_gateways.nil?
         # NOTE: backend_address_pools[0] should always be used. (When `application_gateway/backend_pool_name` is specified, the named pool will always be first here.)
-        backend_pools = application_gateways.map { |application_gateway| {:id => application_gateway[:backend_address_pools][0][:id]} }
+        backend_pools = application_gateways.map { |application_gateway| { :id => application_gateway[:backend_address_pools][0][:id] } }
         interface['properties']['ipConfigurations'][0]['properties']['applicationGatewayBackendAddressPools'] = backend_pools
       end
 
@@ -2132,9 +2133,8 @@ module Bosh::AzureCloud
         ip_address[:name]     = result['name']
         ip_address[:location] = result['location']
         ip_address[:tags]     = result['tags']
-        ip_address[:sku]     = result['sku']['name'] unless result['sku'].nil?
-
-        ip_address[:zone] = result['zones'][0] unless result['zones'].nil?
+        ip_address[:sku]      = result['sku']['name'] unless result['sku'].nil?
+        ip_address[:zone]     = result['zones'][0] unless result['zones'].nil?
 
         properties = result['properties']
         ip_address[:resource_guid]               = properties['resourceGuid']

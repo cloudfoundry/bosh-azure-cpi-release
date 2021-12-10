@@ -120,7 +120,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'and stemcell api version is 2' do
       it 'should not write to the registry' do
-        options['azure']['vm'] = { 'stemcell' => { 'api_version' => 2}}
+        options['azure']['vm'] = { 'stemcell' => { 'api_version' => 2 } }
         cpi = Bosh::AzureCloud::Cloud.new(options, 2)
         expect(@registry).to_not receive(:update_settings)
         vm_lifecycle(stemcell_id: @stemcell_id, cpi: cpi)
@@ -143,7 +143,7 @@ describe Bosh::AzureCloud::Cloud do
 
       context 'and stemcell api version 2' do
         it 'does not write to registry' do
-          options['azure']['vm'] = { 'stemcell' => { 'api_version' => 2}}
+          options['azure']['vm'] = { 'stemcell' => { 'api_version' => 2 } }
           cpi = Bosh::AzureCloud::Cloud.new(options, 2)
           expect(@registry).to_not receive(:update_settings)
 

@@ -53,8 +53,8 @@ describe Bosh::AzureCloud::AzureClient do
         }
       },
       'sku' => {
-          'name' => 'Basic',
-          'tier' => 'Regional'
+        'name' => 'Basic',
+        'tier' => 'Regional'
       }
     }
   end

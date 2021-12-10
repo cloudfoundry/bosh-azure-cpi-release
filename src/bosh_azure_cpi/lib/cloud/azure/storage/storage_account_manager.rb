@@ -5,6 +5,7 @@ module Bosh::AzureCloud
     include Helpers
 
     attr_reader :use_default_account_for_cleaning
+
     def initialize(azure_config, blob_manager, azure_client)
       @azure_config = azure_config
       @blob_manager = blob_manager

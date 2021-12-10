@@ -1,7 +1,6 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::BoshAgentUtil do
-
   subject(:agent_util) { described_class.new(uses_registry) }
 
   let(:registry_endpoint) { 'http://fake-registry.url/' }
@@ -30,7 +29,7 @@ describe Bosh::AzureCloud::BoshAgentUtil do
   let(:computer_name) { 'fake-computer-name' }
 
   before do
-    allow(config).to receive(:agent).and_return({'mbus' => 'http://u:p@somewhere'})
+    allow(config).to receive(:agent).and_return({ 'mbus' => 'http://u:p@somewhere' })
   end
 
   describe '#user_data_obj' do
@@ -38,9 +37,9 @@ describe Bosh::AzureCloud::BoshAgentUtil do
       let(:uses_registry) { true }
       let(:expected_user_data) do
         {
-            registry: { endpoint: registry_endpoint },
-            server: { name: instance_id },
-            dns: { nameserver: dns }
+          registry: { endpoint: registry_endpoint },
+          server: { name: instance_id },
+          dns: { nameserver: dns }
         }
       end
 
@@ -66,7 +65,7 @@ describe Bosh::AzureCloud::BoshAgentUtil do
         {
           server: { name: instance_id },
           dns: { nameserver: dns },
-          'vm' => {'name' => vm_params[:name]},
+          'vm' => { 'name' => vm_params[:name] },
           'agent_id' => agent_id,
           'networks' => {
             'network_a' => {
