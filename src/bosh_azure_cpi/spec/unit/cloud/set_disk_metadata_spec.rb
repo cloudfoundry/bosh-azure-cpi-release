@@ -13,9 +13,7 @@ describe Bosh::AzureCloud::Cloud do
     it 'should raise a NotSupported error' do
       expect do
         cloud.set_disk_metadata(disk_cid, metadata)
-      end.to raise_error {
-        Bosh::Clouds::NotSupported
-      }
+      end.to raise_error(Bosh::Clouds::NotImplemented)
     end
   end
 end
