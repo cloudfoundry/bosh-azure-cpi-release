@@ -98,12 +98,6 @@ Lint/SymbolConversion:
     - 'spec/unit/azure_client/update_tags_of_virtual_machine_spec.rb'
     - 'spec/unit/helpers_spec.rb'
 
-# Offense count: 2
-# Cop supports --auto-correct.
-Lint/ToJSON:
-  Exclude:
-    - 'lib/cloud/azure/telemetry/telemetry_event.rb'
-
 # Offense count: 1
 # Cop supports --auto-correct.
 # Configuration parameters: ContextCreatingMethods, MethodCreatingMethods.

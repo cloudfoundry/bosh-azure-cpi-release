@@ -19,8 +19,8 @@ module Bosh::AzureCloud
       { 'name' => @name, 'value' => @value }
     end
 
-    def to_json
-      to_hash.to_json
+    def to_json(*args)
+      to_hash.to_json(*args)
     end
 
     def to_xml
@@ -116,8 +116,8 @@ module Bosh::AzureCloud
       }
     end
 
-    def to_json
-      to_hash.to_json
+    def to_json(*args)
+      to_hash.to_json(*args)
     end
 
     # this function is only used in TelemetryEventList which will group the events by provider_id
