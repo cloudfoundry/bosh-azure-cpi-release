@@ -136,6 +136,13 @@ Style/HashConversion: # new in 1.10
 Style/HashExcept: # new in 1.7
   Enabled: true
 
+# Offense count: 1
+# Cop supports --auto-correct.
+Style/HashTransformValues:
+  Exclude:
+    # Note: Excluding the following file since it seems like that file might need backwards-compatibility with earlier versions than Ruby v2.4.
+    - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
+
 Style/IfWithBooleanLiteralBranches: # new in 1.9
   Enabled: true
 

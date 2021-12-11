@@ -639,12 +639,6 @@ Style/HashSyntax:
 
 # Offense count: 1
 # Cop supports --auto-correct.
-Style/HashTransformValues:
-  Exclude:
-    - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
 # Configuration parameters: AllowIfModifier.
 Style/IfInsideElse:
   Exclude:
