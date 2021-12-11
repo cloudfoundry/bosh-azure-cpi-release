@@ -698,13 +698,6 @@ Style/AccessorGrouping:
     - 'lib/cloud/azure/network/network.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
 
-# Offense count: 2
-# Cop supports --auto-correct.
-# Configuration parameters: AllowOnlyRestArgument.
-Style/ArgumentsForwarding:
-  Exclude:
-    - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
-
 # Offense count: 12
 # Cop supports --auto-correct.
 Style/BisectedAttrAccessor:

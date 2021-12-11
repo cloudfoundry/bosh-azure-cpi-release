@@ -105,8 +105,14 @@ RSpec/Rails/AvoidSetupHook: # new in 2.4
 Security/IoMethods: # new in 1.22
   Enabled: true
 
+# Offense count: 2
+# Cop supports --auto-correct.
+# Configuration parameters: AllowOnlyRestArgument.
 Style/ArgumentsForwarding: # new in 1.1
   Enabled: true
+  Exclude:
+    # Note: Excluding the following file since it seems like that file might need backwards-compatibility with earlier versions than Ruby v2.7.
+    - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
 
 Style/CollectionCompact: # new in 1.2
   Enabled: true
