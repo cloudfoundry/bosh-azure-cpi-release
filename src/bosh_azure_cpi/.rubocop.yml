@@ -114,6 +114,13 @@ Style/ArgumentsForwarding: # new in 1.1
     # Note: Excluding the following file since it seems like that file might need backwards-compatibility with earlier versions than Ruby v2.7.
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
 
+# Offense count: 6
+# Cop supports --auto-correct.
+Style/BisectedAttrAccessor:
+  Exclude:
+    # Note: Excluding the following file for the reasons noted within its comments.
+    - 'lib/cloud/azure/models/vm_cloud_props.rb'
+
 Style/CollectionCompact: # new in 1.2
   Enabled: true
 

@@ -20,6 +20,8 @@ module Bosh::AzureCloud
     attr_reader :tags
 
     # Below defines are for test purpose
+    # NOTE: The following 3 attr_writer (and their paired readers above) are explicitly separate (instead of using `attr_accessor`)
+    #     since they are (as noted above) for testing only, and in case they need to be removed/hidden later.
     attr_writer :availability_zone
     attr_writer :availability_set
     attr_writer :assign_dynamic_public_ip
