@@ -105,7 +105,7 @@ describe Bosh::AzureCloud::Helpers do
       it 'should ignore any exception' do
         expect do
           helpers_tester.ignore_exception do
-            raise Exception
+            raise Exception # rubocop:disable Lint/RaiseException
           end
         end.not_to raise_error
       end
