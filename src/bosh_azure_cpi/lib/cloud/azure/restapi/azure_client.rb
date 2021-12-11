@@ -1467,12 +1467,7 @@ module Bosh::AzureCloud
       load_balancers = nic_params[:load_balancers]
       unless load_balancers.nil?
         backend_pools = load_balancers.map { |load_balancer| { id: load_balancer[:backend_address_pools][0][:id] } }
-        inbound_nat_rules = []
-        load_balancers.each do |load_balancer|
-          unless load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules].nil?
-            inbound_nat_rules += load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
-          end
-        end
+        inbound_nat_rules = load_balancers.flat_map { |load_balancer| load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules] }.compact
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = backend_pools
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] = inbound_nat_rules
       end

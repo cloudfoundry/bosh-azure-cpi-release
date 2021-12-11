@@ -433,12 +433,6 @@ Style/GuardClause:
     - 'spec/manual_tests/resource_group_name/helpers.rb'
 
 # Offense count: 1
-# Cop supports --auto-correct.
-Style/IfUnlessModifier:
-  Exclude:
-    - 'lib/cloud/azure/restapi/azure_client.rb'
-
-# Offense count: 1
 Style/MixinUsage:
   Exclude:
     - 'bin/bosh_azure_console'
