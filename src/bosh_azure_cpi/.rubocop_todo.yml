@@ -14,16 +14,6 @@ Bundler/OrderedGems:
   Exclude:
     - 'Gemfile'
 
-# Offense count: 19
-# Configuration parameters: IgnoredMethods.
-Lint/AmbiguousBlockAssociation:
-  Exclude:
-    - 'spec/unit/azure_client/create_virtual_machine_spec.rb'
-    - 'spec/unit/azure_client/delete_virtual_machine_spec.rb'
-    - 'spec/unit/azure_client/restart_virtual_machine_spec.rb'
-    - 'spec/unit/cloud/set_disk_metadata_spec.rb'
-    - 'spec/unit/vm_manager/create/vm_is_not_created_spec.rb'
-
 # Offense count: 1
 # Cop supports --auto-correct.
 Lint/AmbiguousOperator:

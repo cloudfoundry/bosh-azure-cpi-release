@@ -1724,7 +1724,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
-        end.to raise_error { |error| expect(error.status).to eq('Cancelled') }
+        end.to(raise_error { |error| expect(error.status).to eq('Cancelled') })
       end
     end
 

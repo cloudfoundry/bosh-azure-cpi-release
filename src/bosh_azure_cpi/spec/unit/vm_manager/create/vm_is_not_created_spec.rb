@@ -125,10 +125,10 @@ describe Bosh::AzureCloud::VMManager do
 
             expect do
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-            end.to raise_error { |error|
+            end.to(raise_error do |error|
               expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
               expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
-            }
+            end)
           end
         end
 
@@ -170,10 +170,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect do
                     vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  end.to raise_error { |error|
+                  end.to(raise_error do |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
-                  }
+                  end)
                 end
               end
 
@@ -194,10 +194,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect do
                     vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  end.to raise_error { |error|
+                  end.to(raise_error do |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
-                  }
+                  end)
                 end
               end
 
@@ -214,10 +214,10 @@ describe Bosh::AzureCloud::VMManager do
 
                     expect do
                       vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                    end.to raise_error { |error|
+                    end.to(raise_error do |error|
                       expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                       expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
-                    }
+                    end)
                   end
                 end
 
@@ -238,14 +238,14 @@ describe Bosh::AzureCloud::VMManager do
 
                     expect do
                       vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                    end.to raise_error { |error|
+                    end.to(raise_error do |error|
                       expect(error.inspect).to match(/The VM fails in provisioning./)
                       expect(error.inspect).to match(/fake error message/)
                       expect(error.inspect).to match(/And an error is thrown in cleanuping VM, os disk or ephemeral disk before retry./)
                       expect(error.inspect).to match(/cannot delete the vm/)
                       # If the cleanup fails, then the VM resources have to be kept
                       expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
-                    }
+                    end)
                   end
                 end
 
@@ -269,10 +269,10 @@ describe Bosh::AzureCloud::VMManager do
 
                     expect do
                       vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                    end.to raise_error { |error|
+                    end.to(raise_error do |error|
                       expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                       expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
-                    }
+                    end)
                   end
                 end
               end
@@ -296,10 +296,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect do
                     vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  end.to raise_error { |error|
+                  end.to(raise_error do |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
-                  }
+                  end)
                 end
               end
 
@@ -315,10 +315,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect do
                     vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  end.to raise_error { |error|
+                  end.to(raise_error do |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).not_to match(/This VM fails in provisioning after multiple retries/)
-                  }
+                  end)
                 end
               end
             end
@@ -366,10 +366,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect do
                     vm_manager_to_keep_failed_vms.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  end.to raise_error { |error|
+                  end.to(raise_error do |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
-                  }
+                  end)
                 end
               end
 
@@ -386,10 +386,10 @@ describe Bosh::AzureCloud::VMManager do
 
                     expect do
                       vm_manager_to_keep_failed_vms.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                    end.to raise_error { |error|
+                    end.to(raise_error do |error|
                       expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                       expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
-                    }
+                    end)
                   end
                 end
 
@@ -410,14 +410,14 @@ describe Bosh::AzureCloud::VMManager do
 
                     expect do
                       vm_manager_to_keep_failed_vms.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                    end.to raise_error { |error|
+                    end.to(raise_error do |error|
                       expect(error.inspect).to match(/The VM fails in provisioning./)
                       expect(error.inspect).to match(/fake error message/)
                       expect(error.inspect).to match(/And an error is thrown in cleanuping VM, os disk or ephemeral disk before retry./)
                       expect(error.inspect).to match(/cannot delete the vm/)
                       # If the cleanup fails, then the VM resources have to be kept
                       expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
-                    }
+                    end)
                   end
                 end
 
@@ -441,10 +441,10 @@ describe Bosh::AzureCloud::VMManager do
 
                     expect do
                       vm_manager_to_keep_failed_vms.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                    end.to raise_error { |error|
+                    end.to(raise_error do |error|
                       expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                       expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
-                    }
+                    end)
                   end
                 end
               end
@@ -468,10 +468,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect do
                     vm_manager2_to_keep_failed_vms.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  end.to raise_error { |error|
+                  end.to(raise_error do |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
-                  }
+                  end)
                 end
               end
 
@@ -487,10 +487,10 @@ describe Bosh::AzureCloud::VMManager do
 
                   expect do
                     vm_manager2_to_keep_failed_vms.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  end.to raise_error { |error|
+                  end.to(raise_error do |error|
                     expect(error.inspect).to match(/Bosh::AzureCloud::AzureAsynchronousError/)
                     expect(error.inspect).to match(/This VM fails in provisioning after multiple retries/)
-                  }
+                  end)
                 end
               end
             end
