@@ -41,6 +41,7 @@ describe Bosh::AzureCloud::DiskId do
 
     context 'when use_managed_disks is false' do
       let(:use_managed_disks) { false }
+
       it 'should generate a disk name with prefix bosh-data' do
         disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks, disk_name: nil, storage_account_name: storage_account_name)
         expect(disk_id.disk_name).to start_with('bosh-data')
@@ -278,7 +279,7 @@ describe Bosh::AzureCloud::DiskId do
       it 'should raise an error' do
         expect do
           disk_id.caching
-        end.to raise_error /This function should only be called for data disks/
+        end.to raise_error(/This function should only be called for data disks/)
       end
     end
   end
@@ -288,11 +289,12 @@ describe Bosh::AzureCloud::DiskId do
       let(:caching) { 'None' }
       let(:storage_account_name) { 'fake-storage-account-name' }
       let(:disk_id_string) { "wrongbosh-data-#{storage_account_name}-#{SecureRandom.uuid}-#{caching}" }
+
       it 'should raise error' do
         expect do
           disk_id = Bosh::AzureCloud::DiskId.parse(disk_id_string, 'fake-resource-group-name')
           disk_id.storage_account_name
-        end.to raise_error /Invalid data disk name/
+        end.to raise_error(/Invalid data disk name/)
       end
     end
 
@@ -324,7 +326,7 @@ describe Bosh::AzureCloud::DiskId do
       it 'should raise an error' do
         expect do
           disk_id.storage_account_name
-        end.to raise_error /This function should only be called for unmanaged disks/
+        end.to raise_error(/This function should only be called for unmanaged disks/)
       end
     end
   end
@@ -337,7 +339,7 @@ describe Bosh::AzureCloud::DiskId do
         it 'should raise an error' do
           expect do
             disk_id.validate
-          end.to raise_error /Invalid disk_name in disk id \(version 2\)/
+          end.to raise_error(/Invalid disk_name in disk id \(version 2\)/)
         end
       end
     end
@@ -349,7 +351,7 @@ describe Bosh::AzureCloud::DiskId do
         it 'should raise an error' do
           expect do
             disk_id.validate
-          end.to raise_error /Invalid caching in disk id \(version 2\)/
+          end.to raise_error(/Invalid caching in disk id \(version 2\)/)
         end
       end
 
@@ -359,7 +361,7 @@ describe Bosh::AzureCloud::DiskId do
         it 'should raise an error' do
           expect do
             disk_id.validate
-          end.to raise_error /Invalid caching in disk id \(version 2\)/
+          end.to raise_error(/Invalid caching in disk id \(version 2\)/)
         end
       end
     end
@@ -371,7 +373,7 @@ describe Bosh::AzureCloud::DiskId do
         it 'should raise an error' do
           expect do
             disk_id.validate
-          end.to raise_error /Invalid resource_group_name in disk id \(version 2\)/
+          end.to raise_error(/Invalid resource_group_name in disk id \(version 2\)/)
         end
       end
     end
@@ -383,7 +385,7 @@ describe Bosh::AzureCloud::DiskId do
         it 'should raise an error' do
           expect do
             disk_id.validate
-          end.to raise_error /Invalid storage_account_name in disk id \(version 2\)/
+          end.to raise_error(/Invalid storage_account_name in disk id \(version 2\)/)
         end
       end
 
@@ -393,7 +395,7 @@ describe Bosh::AzureCloud::DiskId do
         it 'should raise an error' do
           expect do
             disk_id.validate
-          end.to raise_error /Invalid storage_account_name in disk id \(version 2\)/
+          end.to raise_error(/Invalid storage_account_name in disk id \(version 2\)/)
         end
       end
     end

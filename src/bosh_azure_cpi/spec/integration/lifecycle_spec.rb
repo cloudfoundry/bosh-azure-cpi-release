@@ -5,7 +5,7 @@ require 'integration/spec_helper'
 describe Bosh::AzureCloud::Cloud do
   let(:extra_storage_account_name) { ENV.fetch('BOSH_AZURE_EXTRA_STORAGE_ACCOUNT_NAME', nil) }
 
-  context '#calculate_vm_cloud_properties' do
+  describe '#calculate_vm_cloud_properties' do
     let(:vm_resources) do
       {
         'cpu' => 2,
@@ -122,7 +122,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'should not write to the registry' do
         options['azure']['vm'] = { 'stemcell' => { 'api_version' => 2 } }
         cpi = Bosh::AzureCloud::Cloud.new(options, 2)
-        expect(@registry).to_not receive(:update_settings)
+        expect(@registry).not_to receive(:update_settings)
         vm_lifecycle(stemcell_id: @stemcell_id, cpi: cpi)
       end
     end
@@ -135,9 +135,9 @@ describe Bosh::AzureCloud::Cloud do
         vm_lifecycle(stemcell_id: @stemcell_id, cpi: cpi) do |instance_id|
           disk = cpi.create_disk(1024, {})
           result = cpi.attach_disk(instance_id, disk)
-          expect(result).to_not be_nil
+          expect(result).not_to be_nil
           expect(result).to be_a(Hash)
-          expect(result.keys).to eq(%w(lun host_device_id))
+          expect(result.keys).to eq(%w[lun host_device_id])
         end
       end
 
@@ -145,14 +145,14 @@ describe Bosh::AzureCloud::Cloud do
         it 'does not write to registry' do
           options['azure']['vm'] = { 'stemcell' => { 'api_version' => 2 } }
           cpi = Bosh::AzureCloud::Cloud.new(options, 2)
-          expect(@registry).to_not receive(:update_settings)
+          expect(@registry).not_to receive(:update_settings)
 
           vm_lifecycle(stemcell_id: @stemcell_id, cpi: cpi) do |instance_id|
             disk = cpi.create_disk(1024, {})
             result = cpi.attach_disk(instance_id, disk)
-            expect(result).to_not be_nil
+            expect(result).not_to be_nil
             expect(result).to be_a(Hash)
-            expect(result.keys).to eq(%w(lun host_device_id))
+            expect(result.keys).to eq(%w[lun host_device_id])
           end
         end
       end

@@ -110,7 +110,7 @@ describe Bosh::AzureCloud::AzureClient do
         )
         expect do
           azure_client.create_resource_group(resource_group_name, location)
-        end.to raise_error /check_completion - http code: 200/
+        end.to raise_error(/check_completion - http code: 200/)
       end
     end
   end

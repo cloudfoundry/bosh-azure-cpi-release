@@ -40,7 +40,7 @@ module Bosh::AzureCloud
         begin
           request = Net::HTTP::Post.new(uri)
           request.body = event_list.format_data_for_wire_server
-          TELEMETRY_HEADER.keys.each do |key|
+          TELEMETRY_HEADER.each_key do |key|
             request[key] = TELEMETRY_HEADER[key]
           end
           res = Net::HTTP.new(uri.host, uri.port, nil).start { |http| http.request request }

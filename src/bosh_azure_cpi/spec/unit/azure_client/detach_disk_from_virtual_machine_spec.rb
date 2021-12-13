@@ -140,11 +140,11 @@ describe Bosh::AzureCloud::AzureClient do
             },
             'resources' => [
               {
-                "properties": {},
-                "id": 'fake-id',
-                "name": 'fake-name',
-                "type": 'fake-type',
-                "location": 'fake-location'
+                properties: {},
+                id: 'fake-id',
+                name: 'fake-name',
+                type: 'fake-type',
+                location: 'fake-location'
               }
             ]
           }.to_json
@@ -214,7 +214,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
-        end.to raise_error /detach_disk_from_virtual_machine - cannot find the virtual machine by name/
+        end.to raise_error(/detach_disk_from_virtual_machine - cannot find the virtual machine by name/)
       end
     end
 
@@ -249,7 +249,7 @@ describe Bosh::AzureCloud::AzureClient do
         disk_name = 'another-disk-name'
         expect do
           azure_client.detach_disk_from_virtual_machine(resource_group, vm_name, disk_name)
-        end.to raise_error /The disk #{disk_name} is not attached to the virtual machine #{vm_name}/
+        end.to raise_error(/The disk #{disk_name} is not attached to the virtual machine #{vm_name}/)
       end
     end
 

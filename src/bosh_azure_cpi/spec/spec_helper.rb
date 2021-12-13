@@ -133,11 +133,10 @@ def mock_registry_properties
 end
 
 def mock_registry
-  registry = double('registry',
-                    endpoint: mock_registry_properties['endpoint'],
-                    user: mock_registry_properties['user'],
-                    password: mock_registry_properties['password'])
-  registry
+  double('registry',
+         endpoint: mock_registry_properties['endpoint'],
+         user: mock_registry_properties['user'],
+         password: mock_registry_properties['password'])
 end
 
 def mock_cloud(options = nil, api_version = 1)

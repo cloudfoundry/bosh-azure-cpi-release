@@ -6,12 +6,12 @@ describe Bosh::AzureCloud::Network do
   let(:azure_config) { mock_azure_config }
   let(:network_name) { 'fake-name' }
 
-  context '#initialize' do
+  describe '#initialize' do
     context 'when spec is invalid' do
       it 'should raise an error' do
         expect do
           Bosh::AzureCloud::Network.new(azure_config, network_name, nil)
-        end.to raise_error /Invalid spec, Hash expected/
+        end.to raise_error(/Invalid spec, Hash expected/)
       end
     end
 
@@ -57,7 +57,7 @@ describe Bosh::AzureCloud::Network do
     end
   end
 
-  context '#spec' do
+  describe '#spec' do
     let(:network_spec) do
       {
         'ip' => 'fake-ip',

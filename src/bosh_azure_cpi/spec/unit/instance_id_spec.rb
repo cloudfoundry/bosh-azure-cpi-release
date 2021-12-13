@@ -251,7 +251,7 @@ describe Bosh::AzureCloud::InstanceId do
         it 'should raise an error' do
           expect do
             Bosh::AzureCloud::InstanceId.parse(instance_id_string, 'fake-resource-group-name')
-          end.to raise_error /Invalid instance id \(plain\)/
+          end.to raise_error(/Invalid instance id \(plain\)/)
         end
       end
 
@@ -261,7 +261,7 @@ describe Bosh::AzureCloud::InstanceId do
         it 'should raise an error' do
           expect do
             Bosh::AzureCloud::InstanceId.parse(instance_id_string, 'fake-resource-group-name')
-          end.to raise_error /Invalid instance id \(plain\)/
+          end.to raise_error(/Invalid instance id \(plain\)/)
         end
       end
     end
@@ -274,7 +274,7 @@ describe Bosh::AzureCloud::InstanceId do
           it 'should raise an error' do
             expect do
               instance_id.validate
-            end.to raise_error /Invalid resource_group_name in instance id \(version 2\)/
+            end.to raise_error(/Invalid resource_group_name in instance id \(version 2\)/)
           end
         end
 
@@ -284,7 +284,7 @@ describe Bosh::AzureCloud::InstanceId do
           it 'should raise an error' do
             expect do
               instance_id.validate
-            end.to raise_error /Invalid resource_group_name in instance id \(version 2\)/
+            end.to raise_error(/Invalid resource_group_name in instance id \(version 2\)/)
           end
         end
       end
@@ -296,7 +296,7 @@ describe Bosh::AzureCloud::InstanceId do
           it 'should raise an error' do
             expect do
               instance_id.validate
-            end.to raise_error /Invalid vm_name in instance id \(version 2\)/
+            end.to raise_error(/Invalid vm_name in instance id \(version 2\)/)
           end
         end
 
@@ -306,7 +306,7 @@ describe Bosh::AzureCloud::InstanceId do
           it 'should raise an error' do
             expect do
               instance_id.validate
-            end.to raise_error /Invalid vm_name in instance id \(version 2\)/
+            end.to raise_error(/Invalid vm_name in instance id \(version 2\)/)
           end
         end
       end
@@ -318,7 +318,7 @@ describe Bosh::AzureCloud::InstanceId do
           it 'should raise an error' do
             expect do
               instance_id.validate
-            end.to raise_error /Invalid storage_account_name in instance id \(version 2\)/
+            end.to raise_error(/Invalid storage_account_name in instance id \(version 2\)/)
           end
         end
       end

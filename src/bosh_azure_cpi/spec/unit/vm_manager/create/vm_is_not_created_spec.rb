@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -34,7 +34,7 @@ describe Bosh::AzureCloud::VMManager do
 
             expect do
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-            end.to raise_error /virtual machine is not created/
+            end.to raise_error(/virtual machine is not created/)
           end
         end
 
@@ -81,7 +81,7 @@ describe Bosh::AzureCloud::VMManager do
               .and_call_original
             expect do
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-            end.to raise_error /virtual machine is not created/
+            end.to raise_error(/virtual machine is not created/)
           end
         end
 
@@ -103,7 +103,7 @@ describe Bosh::AzureCloud::VMManager do
 
             expect do
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-            end.to raise_error /cannot delete nic/
+            end.to raise_error(/cannot delete nic/)
           end
         end
       end

@@ -176,6 +176,7 @@ describe Bosh::AzureCloud::TelemetryManager do
         ).to eq(result)
       end
     end
+
     context 'when environment is AzureStack' do
       let(:telemetry_manager) { Bosh::AzureCloud::TelemetryManager.new(mock_azure_config_merge('enable_telemetry' => true, 'environment' => 'AzureStack')) }
       let(:result) { 'fake-result' }
@@ -222,9 +223,7 @@ describe Bosh::AzureCloud::TelemetryManager do
           expect(file).to receive(:write)
         end
         expect(event_handler).to receive(:collect_and_send_events)
-        expect(telemetry_manager).to receive(:fork) do |&block1|
-          block1.call
-        end.exactly(2).times
+        expect(telemetry_manager).to receive(:fork).and_yield.twice
 
         expect do
           telemetry_manager.send(:_report_event, telemetry_event)

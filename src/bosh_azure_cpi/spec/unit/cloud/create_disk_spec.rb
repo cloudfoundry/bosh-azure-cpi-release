@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/cloud/shared_stuff.rb'
+require 'unit/cloud/shared_stuff'
 
 describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
@@ -47,7 +47,7 @@ describe Bosh::AzureCloud::Cloud do
         it 'should raise an error' do
           expect do
             cloud.create_disk(disk_size, cloud_properties, vm_cid)
-          end.to raise_error /Azure CPI minimum disk size is 1 GiB/
+          end.to raise_error(/Azure CPI minimum disk size is 1 GiB/)
         end
       end
     end
@@ -64,7 +64,7 @@ describe Bosh::AzureCloud::Cloud do
         it 'should raise an error' do
           expect do
             cloud.create_disk(disk_size, cloud_properties, vm_cid)
-          end.to raise_error /Unknown disk caching/
+          end.to raise_error(/Unknown disk caching/)
         end
       end
     end
@@ -119,7 +119,7 @@ describe Bosh::AzureCloud::Cloud do
           it "can't create a managed disk for a VM with unmanaged disks" do
             expect do
               managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
-            end.to raise_error /Cannot create a managed disk for a VM with unmanaged disks/
+            end.to raise_error(/Cannot create a managed disk for a VM with unmanaged disks/)
           end
         end
 
@@ -163,6 +163,7 @@ describe Bosh::AzureCloud::Cloud do
                 'storage_account_type' => 'Standard_LRS'
               }
             end
+
             it 'should create a managed disk in the same location with the vm and use the specified storage account type' do
               expect(Bosh::AzureCloud::DiskId).to receive(:create)
                 .with(caching, true, resource_group_name: resource_group_name)

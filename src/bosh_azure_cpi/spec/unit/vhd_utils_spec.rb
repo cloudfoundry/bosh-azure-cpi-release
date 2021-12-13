@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::VHDUtils do
     it 'should succees' do
       footer = nil
       expect do
-        footer = Bosh::AzureCloud::VHDUtils.generate_footer(65_535 * 16 * 63 * 512 - 512)
+        footer = Bosh::AzureCloud::VHDUtils.generate_footer((65_535 * 16 * 63 * 512) - 512)
       end.not_to raise_error
       expect(footer[:geometry]).to eq([655_34, 16, 63].pack('nCC'))
     end

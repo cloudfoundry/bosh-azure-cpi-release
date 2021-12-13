@@ -161,7 +161,7 @@ module Bosh::AzureCloud
       end
 
       xml_string_grouped_by_providers = ''
-      events_grouped_by_provider.keys.each do |provider_id|
+      events_grouped_by_provider.each_key do |provider_id|
         xml_string = ''
         events_grouped_by_provider[provider_id].each do |event|
           xml_string += event.to_xml_without_provider

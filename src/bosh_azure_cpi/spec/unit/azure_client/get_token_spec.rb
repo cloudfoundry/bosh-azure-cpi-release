@@ -87,19 +87,19 @@ describe Bosh::AzureCloud::AzureClient do
         let(:jti) { 'b55b54ac-7494-449b-94b2-d7bff0285837' }
         let(:header) do
           {
-            "alg": 'RS256',
-            "typ": 'JWT',
-            "x5t": x5t
+            alg: 'RS256',
+            typ: 'JWT',
+            x5t: x5t
           }
         end
         let(:payload) do
           {
-            "aud": authentication_endpoint,
-            "exp": (now + 3600).strftime('%s').to_i,
-            "iss": client_id,
-            "jti": jti,
-            "nbf": (now - 90).strftime('%s').to_i,
-            "sub": client_id
+            aud: authentication_endpoint,
+            exp: (now + 3600).strftime('%s').to_i,
+            iss: client_id,
+            jti: jti,
+            nbf: (now - 90).strftime('%s').to_i,
+            sub: client_id
           }
         end
         let(:rsa_private) { 'fake-rsa-private' }
@@ -216,7 +216,7 @@ describe Bosh::AzureCloud::AzureClient do
             expect(azure_client).to receive(:sleep).with(30).once
             expect do
               azure_client.get_resource_by_id(url, 'api-version' => api_version)
-            end.to raise_error /get_token - Failed to get token/
+            end.to raise_error(/get_token - Failed to get token/)
           end
         end
       end

@@ -42,6 +42,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
       context 'when the last post happened more than 1 minutes ago' do
         let(:now) { Time.new.round }
         let(:last_post_timestamp) { now - 61 }
+
         before do
           allow(Time).to receive(:new).and_return(now)
           allow(event_handler).to receive(:get_last_post_timestamp).and_return(last_post_timestamp)
@@ -167,7 +168,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
         expect(logger).to receive(:warn).with(/unknown error/)
         expect do
           event_handler.send(:collect_events, event_number)
-        end.to raise_error /unknown error/
+        end.to raise_error(/unknown error/)
       end
     end
   end

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -662,7 +662,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context 'when AzureAsynchronousError is raised once and AzureAsynchronousError.status is Failed' do
-        context ' and use_managed_disks is false' do
+        context 'and use_managed_disks is false' do
           it 'should succeed' do
             count = 0
             allow(azure_client).to receive(:create_virtual_machine) do
@@ -688,7 +688,7 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
-        context ' and use_managed_disks is true' do
+        context 'and use_managed_disks is true' do
           it 'should succeed' do
             count = 0
             allow(azure_client).to receive(:create_virtual_machine) do

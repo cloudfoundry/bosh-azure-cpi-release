@@ -6,6 +6,7 @@ describe Bosh::AzureCloud::TelemetryEventList do
   describe '#initialize' do
     context 'when event_list is an Array' do
       let(:param) { [] }
+
       it 'should not raise an error' do
         expect do
           Bosh::AzureCloud::TelemetryEventList.new(param)
@@ -15,10 +16,11 @@ describe Bosh::AzureCloud::TelemetryEventList do
 
     context 'when event_list is not an Array' do
       let(:param) { nil }
+
       it 'should raise an error' do
         expect do
           Bosh::AzureCloud::TelemetryEventList.new(param)
-        end.to raise_error /event_list must be an Array/
+        end.to raise_error(/event_list must be an Array/)
       end
     end
   end

@@ -68,14 +68,12 @@ module Bosh::AzureCloud
 
     def _get_ip_forwarding(vm_props, network)
       # ip_forwarding can be specified in vm_types or vm_extensions and networks (ordered by priority)
-      ip_forwarding = vm_props.ip_forwarding.nil? ? network.ip_forwarding : vm_props.ip_forwarding
-      ip_forwarding
+      vm_props.ip_forwarding.nil? ? network.ip_forwarding : vm_props.ip_forwarding
     end
 
     def _get_accelerated_networking(vm_props, network)
       # accelerated_networking can be specified in vm_types or vm_extensions and networks (ordered by priority)
-      accelerated_networking = vm_props.accelerated_networking.nil? ? network.accelerated_networking : vm_props.accelerated_networking
-      accelerated_networking
+      vm_props.accelerated_networking.nil? ? network.accelerated_networking : vm_props.accelerated_networking
     end
 
     def _get_public_ip(vip_network)

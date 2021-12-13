@@ -4,6 +4,7 @@ require 'integration/spec_helper'
 
 describe Bosh::AzureCloud::Cloud do
   before { @disk_id_pool = [] }
+
   after do
     @disk_id_pool.each do |disk_id|
       @logger.info("Cleanup: Deleting the disk '#{disk_id}'")

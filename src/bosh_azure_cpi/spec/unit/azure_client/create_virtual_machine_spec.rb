@@ -1336,7 +1336,7 @@ describe Bosh::AzureCloud::AzureClient do
         it 'should reaise error' do
           expect do
             azure_client.create_virtual_machine(resource_group, vm_params_invalid_os_type, network_interfaces)
-          end.to raise_error /Unsupported os type/
+          end.to raise_error(/Unsupported os type/)
         end
       end
 
@@ -1598,6 +1598,7 @@ describe Bosh::AzureCloud::AzureClient do
             headers: {}
           )
         end
+
         it 'should not raise an error' do
           expect do
             azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
@@ -1623,7 +1624,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
-          end.to raise_error /Azure authentication failed: Token is invalid./
+          end.to raise_error(/Azure authentication failed: Token is invalid./)
         end
       end
     end
@@ -1668,7 +1669,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
-        end.to raise_error /The number of network interfaces for virtual machine xxx exceeds the maximum/
+        end.to raise_error(/The number of network interfaces for virtual machine xxx exceeds the maximum/)
       end
     end
 
@@ -1697,7 +1698,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
-        end.to raise_error /check_completion - http code: 404/
+        end.to raise_error(/check_completion - http code: 404/)
       end
 
       it 'should raise an error if create operation failed' do

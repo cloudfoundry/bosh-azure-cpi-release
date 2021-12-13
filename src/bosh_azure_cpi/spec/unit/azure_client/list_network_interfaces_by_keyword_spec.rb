@@ -32,6 +32,7 @@ describe Bosh::AzureCloud::AzureClient do
 
     context 'when network interfaces are not found' do
       let(:result) { { 'value' => [] }.to_json }
+
       it 'should return an empty array of network interfaces' do
         stub_request(:post, token_uri).to_return(
           status: 200,
@@ -185,6 +186,7 @@ describe Bosh::AzureCloud::AzureClient do
           private_ip_allocation_method: 'f1'
         }
       end
+
       it 'should return network interfaces' do
         stub_request(:post, token_uri).to_return(
           status: 200,

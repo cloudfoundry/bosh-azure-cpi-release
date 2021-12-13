@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -30,7 +30,7 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context 'when VM is created' do
-      context '#tags' do
+      describe '#tags' do
         context 'when tags is specified in vm_types or vm_extensions' do
           it 'should set the tags for the VM' do
             expect(azure_client).to receive(:create_virtual_machine)
@@ -40,7 +40,7 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         context 'when tags are specified in the incoming env' do
-          let(:env) { { "bosh" => { "tags" => { 'tag-name-1' => 'value-from-env', 'tag-name-3' => 'other-env-value' } } } }
+          let(:env) { { 'bosh' => { 'tags' => { 'tag-name-1' => 'value-from-env', 'tag-name-3' => 'other-env-value' } } } }
 
           it 'should set the tags for the VM' do
             expect(azure_client).to receive(:create_virtual_machine)

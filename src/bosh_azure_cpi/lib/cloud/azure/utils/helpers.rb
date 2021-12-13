@@ -238,13 +238,14 @@ module Bosh::AzureCloud
         domain = azure_config.azure_stack.domain
         authentication = azure_config.azure_stack.authentication
 
-        if authentication == AZURESTACK_AUTHENTICATION_TYPE_AZUREAD
+        case authentication
+        when AZURESTACK_AUTHENTICATION_TYPE_AZUREAD
           url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['activeDirectoryEndpointUrl']}/#{azure_config.tenant_id}/oauth2/token"
           api_version = AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECLOUD]['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
-        elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_AZURECHINACLOUDAD
+        when AZURESTACK_AUTHENTICATION_TYPE_AZURECHINACLOUDAD
           url = "#{AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECHINACLOUD]['activeDirectoryEndpointUrl']}/#{azure_config.tenant_id}/oauth2/token"
           api_version = AZURE_ENVIRONMENTS[ENVIRONMENT_AZURECHINACLOUD]['apiVersion'][AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY]
-        elsif authentication == AZURESTACK_AUTHENTICATION_TYPE_ADFS
+        when AZURESTACK_AUTHENTICATION_TYPE_ADFS
           url = "https://adfs.#{domain}/adfs/oauth2/token"
         else
           cloud_error("No support for the AzureStack authentication: '#{authentication}'")
@@ -274,17 +275,17 @@ module Bosh::AzureCloud
       thumbprint = OpenSSL::Digest::SHA1.new(cert.to_der).to_s
       @logger.debug("The certificate thumbprint is '#{thumbprint}'")
       header = {
-        "alg": 'RS256',
-        "typ": 'JWT',
-        "x5t": Base64.urlsafe_encode64([thumbprint].pack('H*'))
+        alg: 'RS256',
+        typ: 'JWT',
+        x5t: Base64.urlsafe_encode64([thumbprint].pack('H*'))
       }
       payload = {
-        "aud": authentication_endpoint,
-        "exp": (Time.new + 3600).strftime('%s').to_i,
-        "iss": client_id,
-        "jti": SecureRandom.uuid,
-        "nbf": (Time.new - 90).strftime('%s').to_i,
-        "sub": client_id
+        aud: authentication_endpoint,
+        exp: (Time.new + 3600).strftime('%s').to_i,
+        iss: client_id,
+        jti: SecureRandom.uuid,
+        nbf: (Time.new - 90).strftime('%s').to_i,
+        sub: client_id
       }
       rsa_private = OpenSSL::PKey::RSA.new(certificate_data)
       JWT.encode(payload, rsa_private, 'RS256', header)
@@ -296,7 +297,7 @@ module Bosh::AzureCloud
       options = {
         storage_account_name: storage_account[:name],
         storage_access_key: storage_account[:key],
-        storage_dns_suffix: URI.parse(storage_account[:storage_blob_host]).host.split('.')[2..-1].join('.'),
+        storage_dns_suffix: URI.parse(storage_account[:storage_blob_host]).host.split('.')[2..].join('.'),
         user_agent_prefix: USER_AGENT_FOR_REST
       }
       options[:ca_file] = get_ca_cert_path if azure_config.environment == ENVIRONMENT_AZURESTACK
@@ -621,7 +622,7 @@ module Bosh::AzureCloud
       suffix = Process.pid.to_s(32) # default max pid 65536, .to_s(32) -> '2000'
       padding_length = WINDOWS_VM_NAME_LENGTH - prefix.length - suffix.length
       if padding_length >= 0
-        prefix + '0' * padding_length + suffix
+        prefix + ('0' * padding_length) + suffix
       else
         @logger.warn('Length of generated string is longer than expected, so it is truncated. It may be not unique.')
         (prefix + suffix)[prefix.length + suffix.length - WINDOWS_VM_NAME_LENGTH, prefix.length + suffix.length] # get tail
@@ -636,7 +637,7 @@ module Bosh::AzureCloud
     end
 
     def uri_escape(raw_uri)
-      CGI.escape(raw_uri).sub("%2F", "/")
+      CGI.escape(raw_uri).sub('%2F', '/')
     end
   end
 end

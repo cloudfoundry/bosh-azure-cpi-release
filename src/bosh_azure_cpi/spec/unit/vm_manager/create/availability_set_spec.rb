@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -19,7 +19,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       # Availability Set
-      context '#availability_set' do
+      describe '#availability_set' do
         context 'when availability set is not created' do
           let(:availability_set_name) { SecureRandom.uuid.to_s }
           let(:vm_props) do
@@ -44,11 +44,11 @@ describe Bosh::AzureCloud::VMManager do
               .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
               .and_call_original
 
-            expect(azure_client).to receive(:delete_network_interface).exactly(2).times
+            expect(azure_client).to receive(:delete_network_interface).twice
 
             expect do
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-            end.to raise_error /availability set is not created/
+            end.to raise_error(/availability set is not created/)
           end
         end
 
@@ -192,6 +192,7 @@ describe Bosh::AzureCloud::VMManager do
                     sku_tier: 'Standard'
                   }
                 end
+
                 before do
                   allow(disk_manager2).to receive(:get_data_disk)
                     .with(disk_id_object)
@@ -246,6 +247,7 @@ describe Bosh::AzureCloud::VMManager do
                     sku_tier: 'Premium'
                   }
                 end
+
                 before do
                   allow(disk_manager2).to receive(:get_data_disk)
                     .with(disk_id_object)
@@ -300,6 +302,7 @@ describe Bosh::AzureCloud::VMManager do
                     sku_tier: 'Standard'
                   }
                 end
+
                 before do
                   allow(disk_id_object).to receive(:storage_account_name)
                     .and_return(storage_account_name)
@@ -358,6 +361,7 @@ describe Bosh::AzureCloud::VMManager do
                     sku_tier: 'Premium'
                   }
                 end
+
                 before do
                   allow(disk_id_object).to receive(:storage_account_name)
                     .and_return(storage_account_name)
@@ -566,7 +570,7 @@ describe Bosh::AzureCloud::VMManager do
             context 'when the length of availability_set name is greater than 80' do
               let(:env) do
                 {
-                  'bosh' => { 'group' => 'a' * 80 + 'group' * 8 }
+                  'bosh' => { 'group' => ('a' * 80) + ('group' * 8) }
                 }
               end
 
@@ -635,6 +639,7 @@ describe Bosh::AzureCloud::VMManager do
                   'platform_fault_domain_count' => 1
                 )
               end
+
               before do
                 avset_params[:managed] = false
               end
@@ -666,6 +671,7 @@ describe Bosh::AzureCloud::VMManager do
                   }, azure_config_managed
                 )
               end
+
               before do
                 avset_params[:managed] = true
               end
@@ -712,6 +718,7 @@ describe Bosh::AzureCloud::VMManager do
                     }, azure_config
                   )
                 end
+
                 before do
                   avset_params[:platform_update_domain_count] = 5
                   avset_params[:platform_fault_domain_count]  = 3
@@ -743,6 +750,7 @@ describe Bosh::AzureCloud::VMManager do
                     }, azure_config_managed
                   )
                 end
+
                 before do
                   avset_params[:platform_update_domain_count] = 5
                   avset_params[:platform_fault_domain_count]  = 2
@@ -851,11 +859,11 @@ describe Bosh::AzureCloud::VMManager do
 
             it 'should not create the availability set and then raise an error' do
               expect(azure_client).not_to receive(:create_availability_set)
-              expect(azure_client).to receive(:delete_network_interface).exactly(2).times
+              expect(azure_client).to receive(:delete_network_interface).twice
 
               expect do
                 vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-              end.to raise_error /availability set '#{availability_set_name}' already exists, but in a different location/
+              end.to raise_error(/availability set '#{availability_set_name}' already exists, but in a different location/)
             end
           end
 
@@ -970,7 +978,7 @@ describe Bosh::AzureCloud::VMManager do
 
                 expect do
                   vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                end.to raise_error /availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./
+                end.to raise_error(/availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./)
               end
             end
           end

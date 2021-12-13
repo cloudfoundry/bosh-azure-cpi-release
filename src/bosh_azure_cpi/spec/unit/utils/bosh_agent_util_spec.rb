@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 describe Bosh::AzureCloud::BoshAgentUtil do
@@ -81,7 +83,7 @@ describe Bosh::AzureCloud::BoshAgentUtil do
             'system' => '/dev/sda',
             'persistent' => {},
             'ephemeral' => {
-              'lun' => "0",
+              'lun' => '0',
               'host_device_id' => '{f8b3781b-1e82-4818-a1c3-63d806ec15bb}',
             }
           },

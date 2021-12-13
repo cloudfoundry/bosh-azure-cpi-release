@@ -427,20 +427,20 @@ describe Bosh::AzureCloud::AzureClient do
       {
         'value' => [
           {
-            "name": 'Standard_A0',
-            "numberOfCores": 1,
-            "osDiskSizeInMB": 130_048,
-            "resourceDiskSizeInMB": 20_480,
-            "memoryInMB": 768,
-            "maxDataDiskCount": 1
+            name: 'Standard_A0',
+            numberOfCores: 1,
+            osDiskSizeInMB: 130_048,
+            resourceDiskSizeInMB: 20_480,
+            memoryInMB: 768,
+            maxDataDiskCount: 1
           },
           {
-            "name": 'Standard_A1',
-            "numberOfCores": 1,
-            "osDiskSizeInMB": 130_048,
-            "resourceDiskSizeInMB": 71_680,
-            "memoryInMB": 1792,
-            "maxDataDiskCount": 2
+            name: 'Standard_A1',
+            numberOfCores: 1,
+            osDiskSizeInMB: 130_048,
+            resourceDiskSizeInMB: 71_680,
+            memoryInMB: 1792,
+            maxDataDiskCount: 2
           }
         ]
       }
@@ -448,14 +448,14 @@ describe Bosh::AzureCloud::AzureClient do
     let(:fake_vm_size_list) do
       [
         {
-          "name": 'Standard_A0',
-          "number_of_cores": 1,
-          "memory_in_mb": 768
+          name: 'Standard_A0',
+          number_of_cores: 1,
+          memory_in_mb: 768
         },
         {
-          "name": 'Standard_A1',
-          "number_of_cores": 1,
-          "memory_in_mb": 1792
+          name: 'Standard_A1',
+          number_of_cores: 1,
+          memory_in_mb: 1792
         }
       ]
     end
@@ -493,20 +493,20 @@ describe Bosh::AzureCloud::AzureClient do
       {
         'value' => [
           {
-            "name": 'Standard_A0',
-            "numberOfCores": 1,
-            "osDiskSizeInMB": 130_048,
-            "resourceDiskSizeInMB": 20_480,
-            "memoryInMB": 768,
-            "maxDataDiskCount": 1
+            name: 'Standard_A0',
+            numberOfCores: 1,
+            osDiskSizeInMB: 130_048,
+            resourceDiskSizeInMB: 20_480,
+            memoryInMB: 768,
+            maxDataDiskCount: 1
           },
           {
-            "name": 'Standard_A1',
-            "numberOfCores": 1,
-            "osDiskSizeInMB": 130_048,
-            "resourceDiskSizeInMB": 71_680,
-            "memoryInMB": 1792,
-            "maxDataDiskCount": 2
+            name: 'Standard_A1',
+            numberOfCores: 1,
+            osDiskSizeInMB: 130_048,
+            resourceDiskSizeInMB: 71_680,
+            memoryInMB: 1792,
+            maxDataDiskCount: 2
           }
         ]
       }
@@ -514,14 +514,14 @@ describe Bosh::AzureCloud::AzureClient do
     let(:fake_vm_size_list) do
       [
         {
-          "name": 'Standard_A0',
-          "number_of_cores": 1,
-          "memory_in_mb": 768
+          name: 'Standard_A0',
+          number_of_cores: 1,
+          memory_in_mb: 768
         },
         {
-          "name": 'Standard_A1',
-          "number_of_cores": 1,
-          "memory_in_mb": 1792
+          name: 'Standard_A1',
+          number_of_cores: 1,
+          memory_in_mb: 1792
         }
       ]
     end
@@ -598,6 +598,7 @@ describe Bosh::AzureCloud::AzureClient do
     let(:fake_public_ip_list) do
       [fake_public_ip]
     end
+
     context 'when token is valid, getting response succeeds' do
       it 'should return null if response body is null' do
         stub_request(:get, list_public_ips_uri).to_return(
@@ -784,6 +785,7 @@ describe Bosh::AzureCloud::AzureClient do
             public_ip: fake_public_ip
           }
         end
+
         it 'should return the network interface with public ip' do
           stub_request(:get, public_ip_uri).to_return(
             status: 200,
@@ -847,6 +849,7 @@ describe Bosh::AzureCloud::AzureClient do
             load_balancers: [fake_load_balancer]
           }
         end
+
         it 'should return the network interface with load balancer' do
           # get_load_balancer needs get_public_ip
           stub_request(:get, public_ip_uri).to_return(
@@ -911,6 +914,7 @@ describe Bosh::AzureCloud::AzureClient do
             application_gateways: [fake_application_gateway]
           }
         end
+
         it 'should return the network interface with application gateway' do
           stub_request(:get, application_gateway_uri).to_return(
             status: 200,
@@ -967,6 +971,7 @@ describe Bosh::AzureCloud::AzureClient do
             private_ip_allocation_method: 'Dynamic'
           }
         end
+
         it 'should return the network interface with IP forwarding enabled' do
           stub_request(:get, nic_uri).to_return(
             status: 200,
@@ -1018,6 +1023,7 @@ describe Bosh::AzureCloud::AzureClient do
             private_ip_allocation_method: 'Dynamic'
           }
         end
+
         it 'should return the network interface with accelerated networking enabled' do
           stub_request(:get, nic_uri).to_return(
             status: 200,
@@ -1071,6 +1077,7 @@ describe Bosh::AzureCloud::AzureClient do
             private_ip_allocation_method: 'Dynamic'
           }
         end
+
         it 'should return the network interface with network security group' do
           stub_request(:get, nsg_uri).to_return(
             status: 200,
@@ -1129,6 +1136,7 @@ describe Bosh::AzureCloud::AzureClient do
             application_security_groups: [fake_asg]
           }
         end
+
         it 'should return the network interface with public ip' do
           stub_request(:get, asg_uri).to_return(
             status: 200,
@@ -1202,6 +1210,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#get_storage_account_by_name' do
     let(:storage_account_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}?api-version=#{AZURE_RESOURCE_PROVIDER_STORAGE}" }
+
     context 'when token is valid, getting response succeeds' do
       context 'if response body is null' do
         it 'should return null' do
@@ -2239,16 +2248,16 @@ describe Bosh::AzureCloud::AzureClient do
     let(:storage_account_list_keys_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}/listKeys?api-version=#{AZURE_RESOURCE_PROVIDER_STORAGE}" }
     let(:storage_account_list_keys_response_body) do
       {
-        "keys": [
+        keys: [
           {
-            'keyName': 'key1',
-            'permissions': 'Full',
-            'value': 'fake-key-1'
+            keyName: 'key1',
+            permissions: 'Full',
+            value: 'fake-key-1'
           },
           {
-            'keyName': 'key2',
-            'permissions': 'Full',
-            'value': 'fake-key-2'
+            keyName: 'key2',
+            permissions: 'Full',
+            value: 'fake-key-2'
           }
         ]
       }.to_json

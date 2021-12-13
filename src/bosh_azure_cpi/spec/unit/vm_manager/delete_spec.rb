@@ -133,6 +133,7 @@ describe Bosh::AzureCloud::VMManager do
               ]
             }
           end
+
           before do
             allow(azure_client).to receive(:get_virtual_machine_by_name)
               .with(resource_group_name, vm_name).and_return(vm)
@@ -173,6 +174,7 @@ describe Bosh::AzureCloud::VMManager do
               ]
             }
           end
+
           before do
             allow(azure_client).to receive(:get_virtual_machine_by_name)
               .with(resource_group_name, vm_name).and_return(vm)
@@ -339,6 +341,7 @@ describe Bosh::AzureCloud::VMManager do
           ]
         }
       end
+
       before do
         allow(azure_client).to receive(:get_virtual_machine_by_name)
           .with(resource_group_name, vm_name).and_return(vm)

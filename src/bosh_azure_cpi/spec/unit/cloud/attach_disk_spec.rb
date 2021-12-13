@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/cloud/shared_stuff.rb'
+require 'unit/cloud/shared_stuff'
 
 describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
@@ -69,6 +69,7 @@ describe Bosh::AzureCloud::Cloud do
     context 'when use_managed_disks is true' do
       context 'when the disk is a managed disk' do
         let(:disk) { {} }
+
         before do
           allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(disk)
         end
@@ -124,9 +125,10 @@ describe Bosh::AzureCloud::Cloud do
             it "can't attach a managed disk to a VM with unmanaged disks" do
               expect do
                 managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.to raise_error /Cannot attach a managed disk to a VM with unmanaged disks/
+              end.to raise_error(/Cannot attach a managed disk to a VM with unmanaged disks/)
             end
           end
+
           context 'when the managed disk does not exist' do
             before do
               allow(instance_id_object).to receive(:use_managed_disks?)
@@ -184,7 +186,7 @@ describe Bosh::AzureCloud::Cloud do
             it 'raise an error' do
               expect do
                 managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.to raise_error /attach_disk - Failed to migrate disk/
+              end.to raise_error(/attach_disk - Failed to migrate disk/)
             end
           end
         end
@@ -259,7 +261,7 @@ describe Bosh::AzureCloud::Cloud do
 
                 expect do
                   managed_cloud.attach_disk(vm_cid, disk_cid)
-                end.to raise_error /attach_disk - Failed to create the managed disk/
+                end.to raise_error(/attach_disk - Failed to create the managed disk/)
               end
             end
 
@@ -273,7 +275,7 @@ describe Bosh::AzureCloud::Cloud do
 
                 expect do
                   managed_cloud.attach_disk(vm_cid, disk_cid)
-                end.to raise_error /attach_disk - Failed to create the managed disk/
+                end.to raise_error(/attach_disk - Failed to create the managed disk/)
               end
             end
           end
@@ -357,10 +359,10 @@ describe Bosh::AzureCloud::Cloud do
 
       context 'when stemcell api version is 2' do
         it 'should not write to the registry' do
-          expect(registry_client).to_not receive(:read_settings)
-          expect(registry_client).to_not receive(:update_settings)
+          expect(registry_client).not_to receive(:read_settings)
+          expect(registry_client).not_to receive(:update_settings)
 
-          expect(cloud_sc_v2.attach_disk(vm_cid, disk_cid)).to_not be_nil
+          expect(cloud_sc_v2.attach_disk(vm_cid, disk_cid)).not_to be_nil
         end
       end
     end

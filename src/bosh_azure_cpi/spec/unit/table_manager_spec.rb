@@ -101,7 +101,7 @@ describe Bosh::AzureCloud::TableManager do
       it 'should raise an error' do
         expect do
           table_manager.has_table?(table_name)
-        end.to raise_error /Not-404-Error/
+        end.to raise_error(/Not-404-Error/)
       end
     end
   end
@@ -177,7 +177,7 @@ describe Bosh::AzureCloud::TableManager do
       it 'should raise an error' do
         expect do
           table_manager.insert_entity(table_name, entity)
-        end.to raise_error /Not-409-Error/
+        end.to raise_error(/Not-409-Error/)
       end
     end
   end
@@ -221,7 +221,7 @@ describe Bosh::AzureCloud::TableManager do
       it 'should raise an error' do
         expect do
           table_manager.delete_entity(table_name, partition_key, row_key)
-        end.to raise_error /Not-404-Error/
+        end.to raise_error(/Not-404-Error/)
       end
     end
   end

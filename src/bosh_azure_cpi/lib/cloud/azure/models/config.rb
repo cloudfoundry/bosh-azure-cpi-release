@@ -49,9 +49,8 @@ module Bosh::AzureCloud
 
   # TODO: Refactoring: Move class to new file: AzureStackConfig
   class AzureStackConfig
-    attr_reader :domain, :authentication, :resource, :endpoint_prefix
-
-    attr_writer :authentication
+    attr_accessor :authentication
+    attr_reader :domain, :resource, :endpoint_prefix
 
     def initialize(azure_stack_config_hash)
       @domain = azure_stack_config_hash['domain']
@@ -77,7 +76,8 @@ module Bosh::AzureCloud
     attr_reader :environment, :subscription_id, :location, :resource_group_name
     attr_reader :azure_stack
     attr_reader :credentials_source, :tenant_id, :client_id, :client_secret, :default_managed_identity
-    attr_reader :use_managed_disks, :storage_account_name
+    attr_accessor :storage_account_name
+    attr_reader :use_managed_disks
     attr_reader :default_security_group
     attr_reader :enable_vm_boot_diagnostics, :is_debug_mode, :keep_failed_vms
     attr_reader :enable_telemetry, :isv_tracking_guid
@@ -87,8 +87,6 @@ module Bosh::AzureCloud
     attr_reader :config_disk
     attr_reader :stemcell_api_version
     attr_reader :use_default_account_for_cleaning
-
-    attr_writer :storage_account_name
 
     def initialize(azure_config_hash)
       @environment = azure_config_hash['environment']

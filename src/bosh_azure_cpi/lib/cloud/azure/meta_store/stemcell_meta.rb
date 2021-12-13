@@ -2,8 +2,8 @@
 
 module Bosh::AzureCloud
   class StemcellMeta
-    attr_reader :name, :storage_account_name, :status, :timestamp
-    attr_writer :status
+    attr_accessor :status
+    attr_reader :name, :storage_account_name, :timestamp
 
     def initialize(name, storage_account_name, status, timestamp = nil)
       @name = name

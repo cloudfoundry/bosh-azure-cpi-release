@@ -156,7 +156,7 @@ describe Bosh::AzureCloud::LightStemcellManager do
 
         expect do
           light_stemcell_manager.create_stemcell(stemcell_properties)
-        end.to raise_error /Cannot find the light stemcell/
+        end.to raise_error(/Cannot find the light stemcell/)
       end
     end
   end
@@ -229,7 +229,7 @@ describe Bosh::AzureCloud::LightStemcellManager do
       it 'should throw an error' do
         expect do
           light_stemcell_manager.get_stemcell_info(stemcell_name)
-        end.to raise_error /The light stemcell '#{stemcell_name}' does not exist in the storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}'/
+        end.to raise_error(/The light stemcell '#{stemcell_name}' does not exist in the storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}'/)
       end
     end
 

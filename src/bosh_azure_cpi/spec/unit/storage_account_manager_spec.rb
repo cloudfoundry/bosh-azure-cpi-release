@@ -19,6 +19,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
   describe '#generate_storage_account_name' do
     context 'when the first generated name is available' do
       let(:storage_account_name) { '386ebba59c883c7d15b419b3' }
+
       before do
         allow(SecureRandom).to receive(:hex).with(12).and_return(storage_account_name)
         allow(azure_client).to receive(:check_storage_account_name_availability).with(storage_account_name)
@@ -36,6 +37,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
     context 'when the first generated name is not available, and the second one is available' do
       let(:storage_account_name_unavailable) { '386ebba59c883c7d15b419b3' }
       let(:storage_account_name_available)   { 'db49daf2fbbf100575a3af9c' }
+
       before do
         allow(SecureRandom).to receive(:hex).with(12).and_return(storage_account_name_unavailable, storage_account_name_available)
         allow(azure_client).to receive(:check_storage_account_name_availability).with(storage_account_name_unavailable)
@@ -95,6 +97,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
             message: 'fake-message'
           }
         end
+
         before do
           allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
           allow(azure_client).to receive(:check_storage_account_name_availability).with(name).and_return(result)
@@ -115,6 +118,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
             message: 'fake-message'
           }
         end
+
         before do
           allow(storage_account_manager).to receive(:find_storage_account_by_name).and_return(nil)
           allow(azure_client).to receive(:check_storage_account_name_availability).with(name).and_return(result)
@@ -383,6 +387,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME
       }
     end
+
     before do
       allow(azure_client).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
     end
@@ -396,7 +401,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         it 'should raise an error' do
           expect do
             storage_account_manager.default_storage_account
-          end.to raise_error /The default storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' is specified in Global Configuration, but it does not exist./
+          end.to raise_error(/The default storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}' is specified in Global Configuration, but it does not exist./)
         end
       end
 
@@ -429,6 +434,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
               tags: STEMCELL_STORAGE_ACCOUNT_TAGS
             }
           end
+
           before do
             allow(azure_client).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
           end
@@ -473,6 +479,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
             }
           ]
         end
+
         before do
           allow(azure_client).to receive(:list_storage_accounts).and_return(storage_accounts)
           allow(azure_client).to receive(:get_resource_group)
@@ -694,6 +701,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
 
       context 'When no storage account is found in the resource group location' do
         let(:targeted_storage_account) { { name: 'account1' } }
+
         before do
           allow(azure_client).to receive(:list_storage_accounts).and_return([])
           allow(azure_client).to receive(:get_resource_group)

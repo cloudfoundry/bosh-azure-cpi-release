@@ -143,7 +143,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.restart_virtual_machine(resource_group, vm_name)
-        end.to raise_error /check_completion - http code: 404/
+        end.to raise_error(/check_completion - http code: 404/)
       end
 
       it 'should raise error when internal error happens' do
@@ -171,7 +171,7 @@ describe Bosh::AzureCloud::AzureClient do
         )
         expect do
           azure_client.restart_virtual_machine(resource_group, vm_name)
-        end.to raise_error /check_completion - http code: 200/
+        end.to raise_error(/check_completion - http code: 200/)
       end
 
       it 'should raise an error if restart operation failed' do
@@ -256,7 +256,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.restart_virtual_machine(resource_group, vm_name)
-          end.to raise_error /Azure authentication failed: Token is invalid./
+          end.to raise_error(/Azure authentication failed: Token is invalid./)
         end
       end
     end
