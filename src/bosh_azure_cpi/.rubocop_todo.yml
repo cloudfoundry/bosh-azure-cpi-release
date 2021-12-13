@@ -448,15 +448,6 @@ Style/NegatedIfElseCondition:
     - 'lib/cloud/azure/telemetry/wire_client.rb'
     - 'lib/cloud/azure/vms/vm_manager_storage.rb'
 
-# Offense count: 9
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle, IgnoredMethods.
-# SupportedStyles: predicate, comparison
-Style/NumericPredicate:
-  Exclude:
-    - 'spec/**/*'
-    - 'lib/cloud/azure/utils/helpers.rb'
-
 # Offense count: 7
 Style/OpenStructUse:
   Exclude:
