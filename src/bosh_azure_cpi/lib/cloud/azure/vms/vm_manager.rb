@@ -184,7 +184,7 @@ module Bosh::AzureCloud
         #     Has upper characters
         #     Has a digit
         #     Has a special character (Regex match [\W_])
-        vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".split('').shuffle.join
+        vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".chars.shuffle.join
         computer_name = generate_windows_computer_name
         vm_params[:computer_name] = computer_name
         vm_params[:custom_data]   = agent_settings.encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config, computer_name)

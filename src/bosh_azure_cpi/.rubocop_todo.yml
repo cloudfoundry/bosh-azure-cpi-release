@@ -491,12 +491,6 @@ Style/RedundantReturn:
     - 'lib/cloud/azure/stemcell/stemcell_manager.rb'
     - 'lib/cloud/azure/utils/helpers.rb'
 
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/StringChars:
-  Exclude:
-    - 'lib/cloud/azure/vms/vm_manager.rb'
-
 # Offense count: 4
 # Cop supports --auto-correct.
 # Configuration parameters: Mode.
