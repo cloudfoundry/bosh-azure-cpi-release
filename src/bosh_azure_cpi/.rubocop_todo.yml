@@ -1028,13 +1028,6 @@ Style/TrailingCommaInHashLiteral:
     - 'spec/integration/lifecycle_spec.rb'
     - 'spec/unit/utils/bosh_agent_util_spec.rb'
 
-# Offense count: 4
-# Cop supports --auto-correct.
-# Configuration parameters: AllowNamedUnderscoreVariables.
-Style/TrailingUnderscoreVariable:
-  Exclude:
-    - 'spec/integration/migrations/managed_disks_migration_spec.rb'
-
 # Offense count: 20
 # Cop supports --auto-correct.
 # Configuration parameters: EnforcedStyle, MinSize, WordRegex.

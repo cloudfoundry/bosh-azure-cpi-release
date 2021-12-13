@@ -164,3 +164,8 @@ Style/StringChars: # new in 1.12
 
 Style/SwapValues: # new in 1.1
   Enabled: true
+
+# Cop supports --auto-correct.
+# Configuration parameters: AllowNamedUnderscoreVariables.
+Style/TrailingUnderscoreVariable:
+  Enabled: false # Note: This cop makes code harder to read, IMO.
