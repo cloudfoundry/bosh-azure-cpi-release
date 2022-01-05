@@ -10,18 +10,36 @@ If you are confident that you're covered under a Corporate CLA, please make sure
 
 --------------------MESSAGE FROM ADMIN, DELETE BEFORE SUBMITTING----------------------
 
-- [ ] Please check this box and fill the data as below once you have run the unit tests.
-      Code coverage should keeps at 100%. 
+# Checklist:
+
+Please check each of the boxes below for which you have completed the corresponding task:
+
+- [ ] I have performed a self-review of my own code
+- [ ] I have commented my code, particularly in hard-to-understand areas
+- [ ] I have added tests that prove my fix is effective or that my feature works
+- [ ] All unit tests pass locally (after my changes)
+- [ ] Rubocop reports zero offenses (after my changes)
+
+Please include below the summary portions of the output from the following 2 scripts:
 
   ```
   pushd src/bosh_azure_cpi
     ./bin/test-unit
+    ./bin/rubocop_check
   popd
   ```
 
-  NOTE: Please see how to setup dev environment and run unit tests in docs/development.md.
+  _NOTE:_ Please see how to setup dev environment and run unit tests in docs/development.md.
 
-### Changelog
+### Unit Test output:
+
+> (TODO: Paste unit test script summary output here)
+
+### Rubocop output:
+
+> (TODO: Paste rubocop script summary output here)
+
+# Changelog
 
 * 
 * 
