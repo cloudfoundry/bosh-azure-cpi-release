@@ -76,6 +76,33 @@ describe Bosh::AzureCloud::VMManager do
             expect(vm_params[:name]).to eq(vm_name)
           end
 
+          context 'with single load_balancer' do
+            context 'when load_balancer has multiple backend pools' do
+              # TODO: issue-644: multi-BEPool-LB: add unit tests for multi-pool LBs
+              it 'adds the public IP to the default pool'
+
+              context 'when backend_pool_name is specified' do
+                # TODO: issue-644: multi-BEPool-LB: add unit tests for named-pool LBs
+                it 'adds the public IP to the specified pool'
+              end
+
+              context 'when an invalid backend_pool_name is specified' do
+                # TODO: issue-644: multi-BEPool-LB: add unit tests for named-pool LBs
+                it 'should raise an error'
+              end
+            end
+          end
+
+          context 'with multiple load_balancers' do
+            # TODO: issue-644: multi-LB: add unit tests for multi-LBs
+            it 'adds the public IP to each load_balancer'
+
+            context 'when backend_pool_name is specified' do
+              # TODO: issue-644: multi-BEPool-LB: add unit tests for named-pool LBs
+              it 'adds the public IP to the specified pool of each load_balancer'
+            end
+          end
+
           context 'with single application_gateway' do
             context 'when application_gateway has multiple backend pools' do
               # TODO: issue-644: multi-BEPool-AGW: add unit tests for multi-pool AGWs

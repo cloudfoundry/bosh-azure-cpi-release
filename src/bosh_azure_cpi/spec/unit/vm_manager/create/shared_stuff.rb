@@ -111,7 +111,15 @@ shared_context 'shared stuff for vm manager' do
   end
   let(:load_balancer) do
     {
-      name: 'fake-lb-name'
+      name: 'fake-lb-name',
+      backend_address_pools: [
+        {
+          name: 'fake-pool-name',
+          id: 'fake-pool-id',
+          provisioning_state: 'fake-pool-state',
+          backend_ip_configurations: []
+        }
+      ]
     }
   end
   let(:application_gateway) do

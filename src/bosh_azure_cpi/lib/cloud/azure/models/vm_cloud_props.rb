@@ -115,14 +115,17 @@ module Bosh::AzureCloud
         if lbc.is_a?(Hash)
           load_balancer_names = lbc[NAME_KEY]
           resource_group_name = lbc[RESOURCE_GROUP_NAME_KEY]
+          backend_pool_name = lbc[BACKEND_POOL_NAME_KEY]
         else
           load_balancer_names = lbc
           resource_group_name = nil
+          backend_pool_name = nil
         end
         String(load_balancer_names).split(',').map do |load_balancer_name|
           Bosh::AzureCloud::LoadBalancerConfig.new(
             resource_group_name || global_azure_config.resource_group_name,
-            load_balancer_name
+            load_balancer_name,
+            backend_pool_name
           )
         end
       end

@@ -363,6 +363,36 @@ describe Bosh::AzureCloud::AzureClient do
             azure_client.create_network_interface(resource_group, nic_params)
           end.not_to raise_error
         end
+
+        context 'with multiple backend pools' do
+          # TODO: issue-644: multi-BEPool-LB: add unit tests for multi-pool LBs
+          it 'should create a network interface without error'
+
+          context 'when backend_pool_name is specified' do
+            # TODO: issue-644: multi-BEPool-LB: add unit tests for named-pool LBs
+            it 'should use the specified backend_pool'
+          end
+
+          context 'when an invalid backend_pool_name is specified' do
+            # TODO: issue-644: multi-BEPool-LB: add unit tests for named-pool LBs
+            it 'should raise an error'
+          end
+        end
+      end
+
+      context 'with multiple load balancers' do # rubocop:disable RSpec/RepeatedExampleGroupBody
+        # TODO: issue-644: multi-LB: add unit tests for multi-LBs
+        it 'should create a network interface without error'
+
+        context 'with multiple backend pools' do
+          # TODO: issue-644: multi-BEPool-LB: add unit tests for multi-pool LBs
+          it 'should create a network interface without error'
+
+          context 'when backend_pool_name is specified' do
+            # TODO: issue-644: multi-BEPool-LB: add unit tests for named-pool LBs
+            it 'should use the specified backend_pool'
+          end
+        end
       end
 
       context 'with application security groups' do
@@ -556,7 +586,7 @@ describe Bosh::AzureCloud::AzureClient do
         end
       end
 
-      context 'with multiple application gateways' do
+      context 'with multiple application gateways' do # rubocop:disable RSpec/RepeatedExampleGroupBody
         # TODO: issue-644: multi-AGW: add unit tests for multi-AGWs
         it 'should create a network interface without error'
 

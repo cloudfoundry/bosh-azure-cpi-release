@@ -94,9 +94,24 @@ module Bosh::AzureCloud
       load_balancers = nil
       load_balancer_configs = vm_props.load_balancers
       unless load_balancer_configs.nil?
+        # NOTE: The following block gets the Azure API info for each Bosh AGW config (from the vm_type config).
         load_balancers = load_balancer_configs.map do |load_balancer_config|
           load_balancer = @azure_client.get_load_balancer_by_name(load_balancer_config.resource_group_name, load_balancer_config.name)
           cloud_error("Cannot find the load balancer '#{load_balancer_config.name}'") if load_balancer.nil?
+
+          if load_balancer_config.backend_pool_name
+            # NOTE: This is the only place where we simultaneously have both the Bosh LB config (from the vm_type) AND the Azure LB info (from the Azure API).
+            # Since the `AzureClient.create_network_interface` method only uses the first backend pool,
+            # and since there is not a 1-to-1 mapping between the vm_type LB configs and LBs (despite the config property name, each vm_type LB config actually represents a single LB Backend Pool, not a whole LB),
+            # we can therefore remove all pools EXCEPT the specified pool.
+            # To handle multiple pools of a single LB, you should use 1 vm_type LB Hash (with LB name + backend_pool_name) per pool.
+            pools = load_balancer[:backend_address_pools]
+            pools = [pools] unless pools.is_a?(Array)
+            pool = pools.find { |p| Hash(p)[:name] == load_balancer_config.backend_pool_name }
+            cloud_error("'#{load_balancer_config.name}' does not have a backend_pool named '#{load_balancer_config.backend_pool_name}': #{load_balancer}") if pool.nil?
+
+            load_balancer[:backend_address_pools] = [pool]
+          end
           load_balancer
         end
       end
