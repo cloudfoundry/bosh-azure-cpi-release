@@ -655,24 +655,44 @@ describe Bosh::AzureCloud::AzureClient do
           headers: {}
         )
         expect(
-          azure_client.get_application_gateway_by_name(application_gateway_name)
+          azure_client.get_application_gateway_by_name(nil, application_gateway_name)
         ).to be_nil
       end
 
-      it 'should return the resource if response body is not null' do
-        stub_request(:get, application_gateway_uri).to_return(
-          status: 200,
-          body: application_gateway_response_body,
-          headers: {}
-        )
-        stub_request(:get, public_ip_uri).to_return(
-          status: 200,
-          body: public_ip_response_body.to_json,
-          headers: {}
-        )
-        expect(
-          azure_client.get_application_gateway_by_name(application_gateway_name)
-        ).to eq(fake_application_gateway)
+      context 'when resource_group_name is not specified' do
+        it 'should return the resource if response body is not null' do
+          stub_request(:get, application_gateway_uri).to_return(
+            status: 200,
+            body: application_gateway_response_body,
+            headers: {}
+          )
+          stub_request(:get, public_ip_uri).to_return(
+            status: 200,
+            body: public_ip_response_body.to_json,
+            headers: {}
+          )
+          expect(
+            azure_client.get_application_gateway_by_name(nil, application_gateway_name)
+          ).to eq(fake_application_gateway)
+        end
+      end
+
+      context 'when resource_group_name is specified' do
+        it 'should return the resource if response body is not null' do
+          stub_request(:get, application_gateway_uri).to_return(
+            status: 200,
+            body: application_gateway_response_body,
+            headers: {}
+          )
+          stub_request(:get, public_ip_uri).to_return(
+            status: 200,
+            body: public_ip_response_body.to_json,
+            headers: {}
+          )
+          expect(
+            azure_client.get_application_gateway_by_name(default_resource_group_name, application_gateway_name)
+          ).to eq(fake_application_gateway)
+        end
       end
     end
   end
@@ -880,7 +900,7 @@ describe Bosh::AzureCloud::AzureClient do
             ip_configuration_id: 'fake-id',
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic',
-            application_gateway: fake_application_gateway
+            application_gateways: [fake_application_gateway]
           }
         end
         it 'should return the network interface with load balancer' do

@@ -168,7 +168,7 @@ describe Bosh::AzureCloud::AzureClient do
           network_security_group: { id: 'i' },
           public_ip: { id: 'j' },
           load_balancers: [{ id: 'k' }],
-          application_gateway: { id: 'l' },
+          application_gateways: [{ id: 'l' }],
           application_security_groups: [{ id: 'asg-id-1' }]
         }
       end

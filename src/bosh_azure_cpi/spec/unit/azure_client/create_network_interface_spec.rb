@@ -56,7 +56,7 @@ describe Bosh::AzureCloud::AzureClient do
             network_security_group: { id: nsg_id },
             application_security_groups: [],
             load_balancers: nil,
-            application_gateway: nil
+            application_gateways: nil
           }
         end
         let(:request_body) do
@@ -131,7 +131,7 @@ describe Bosh::AzureCloud::AzureClient do
             network_security_group: { id: nsg_id },
             application_security_groups: [],
             load_balancers: nil,
-            application_gateway: nil
+            application_gateways: nil
           }
         end
         let(:request_body) do
@@ -209,7 +209,7 @@ describe Bosh::AzureCloud::AzureClient do
             network_security_group: nil,
             application_security_groups: [],
             load_balancers: nil,
-            application_gateway: nil
+            application_gateways: nil
           }
         end
         let(:request_body) do
@@ -296,7 +296,7 @@ describe Bosh::AzureCloud::AzureClient do
                 }
               ]
             }],
-            application_gateway: nil
+            application_gateways: nil
           }
         end
 
@@ -381,7 +381,7 @@ describe Bosh::AzureCloud::AzureClient do
             network_security_group: { id: nsg_id },
             application_security_groups: [{ id: 'fake-asg-id-1' }, { id: 'fake-asg-id-2' }],
             load_balancers: nil,
-            application_gateway: nil
+            application_gateways: nil
           }
         end
         let(:request_body) do
@@ -467,13 +467,13 @@ describe Bosh::AzureCloud::AzureClient do
             network_security_group: { id: nsg_id },
             application_security_groups: [],
             load_balancers: nil,
-            application_gateway: {
+            application_gateways: [{
               backend_address_pools: [
                 {
                   id: 'fake-id-2'
                 }
               ]
-            }
+            }]
           }
         end
         let(:request_body) do

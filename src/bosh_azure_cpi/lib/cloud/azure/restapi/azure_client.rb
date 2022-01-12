@@ -1335,13 +1335,13 @@ module Bosh::AzureCloud
     # Network/Load Balancer
 
     # Get a load balancer's information
+    # @param [String,nil] resource_group_name - The load balancer's resource group name.
     # @param [String] name - Name of load balancer.
     #
     # @return [Hash]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/load-balancer/loadbalancers/get
     #
-
     def get_load_balancer_by_name(resource_group_name, name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, resource_group_name: resource_group_name, name: name)
       _get_load_balancer(url)
@@ -1356,6 +1356,7 @@ module Bosh::AzureCloud
     #
     def _get_load_balancer(url)
       load_balancer = nil
+      # see: https://docs.microsoft.com/en-us/rest/api/load-balancer/load-balancers/get#loadbalancer
       result = get_resource_by_id(url)
       unless result.nil?
         load_balancer = {}
@@ -1380,6 +1381,7 @@ module Bosh::AzureCloud
           load_balancer[:frontend_ip_configurations].push(ip)
         end
 
+        # see: https://docs.microsoft.com/en-us/rest/api/load-balancer/load-balancers/get#backendaddresspool
         backend = properties['backendAddressPools']
         load_balancer[:backend_address_pools] = []
         backend.each do |backend_ip|
@@ -1418,8 +1420,8 @@ module Bosh::AzureCloud
     # * +:dns_servers                   - Array. DNS servers.
     # * +:network_security_group        - Hash. The network security group which the network interface is bound to.
     # * +:application_security_groups   - Array. The application security groups which the network interface is bound to.
-    # * +:load_balancers                - Array<Hash>. The load balancers which the network interface is bound to.
-    # * +:application_gateway           - Hash. The application gateway which the network interface is bound to.
+    # * +:load_balancers                - Array<Hash>. The load balancers which the network interface is bound to. (see: Bosh::AzureCloud::VMManager._get_load_balancers)
+    # * +:application_gateways          - Array<Hash>. The application gateways which the network interface is bound to. (see: Bosh::AzureCloud::VMManager._get_application_gateways)
     #
     # @return [Boolean]
     #
@@ -1462,6 +1464,7 @@ module Bosh::AzureCloud
       end
       interface['properties']['ipConfigurations'][0]['properties']['applicationSecurityGroups'] = application_security_groups unless application_security_groups.empty?
 
+      # see: Bosh::AzureCloud::VMManager._get_load_balancers
       load_balancers = nic_params[:load_balancers]
       unless load_balancers.nil?
         backend_pools = load_balancers.map { |load_balancer| {:id => load_balancer[:backend_address_pools][0][:id]} }
@@ -1475,13 +1478,12 @@ module Bosh::AzureCloud
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] = inbound_nat_rules
       end
 
-      application_gateway = nic_params[:application_gateway]
-      unless application_gateway.nil?
-        interface['properties']['ipConfigurations'][0]['properties']['applicationGatewayBackendAddressPools'] = [
-          {
-            'id' => application_gateway[:backend_address_pools][0][:id]
-          }
-        ]
+      # see: Bosh::AzureCloud::VMManager._get_application_gateways
+      application_gateways = nic_params[:application_gateways]
+      unless application_gateways.nil?
+        # NOTE: backend_address_pools[0] should always be used. (When `application_gateway/backend_pool_name` is specified, the named pool will always be first here.)
+        backend_pools = application_gateways.map { |application_gateway| {:id => application_gateway[:backend_address_pools][0][:id]} }
+        interface['properties']['ipConfigurations'][0]['properties']['applicationGatewayBackendAddressPools'] = backend_pools
       end
 
       http_put(url, interface)
@@ -1620,14 +1622,15 @@ module Bosh::AzureCloud
     # Network/Application Gateway
 
     # Get an application gateway's information
+    # @param [String,nil] resource_group_name - The application gateway's resource group name.
     # @param [String] name - Name of application gateway.
     #
     # @return [Hash]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/application-gateway/applicationgateways/get
     #
-    def get_application_gateway_by_name(name)
-      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_APPLICATION_GATEWAYS, name: name)
+    def get_application_gateway_by_name(resource_group_name, name)
+      url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_APPLICATION_GATEWAYS, resource_group_name: resource_group_name, name: name)
       get_application_gateway(url)
     end
 
@@ -1640,6 +1643,7 @@ module Bosh::AzureCloud
     #
     def get_application_gateway(url)
       application_gateway = nil
+      # see: https://docs.microsoft.com/en-us/rest/api/application-gateway/application-gateways/get#applicationgateway
       result = get_resource_by_id(url)
       unless result.nil?
         application_gateway = {}
@@ -1649,6 +1653,8 @@ module Bosh::AzureCloud
         application_gateway[:tags] = result['tags']
 
         properties = result['properties']
+        # TODO: issue-644: multi-BEPool-AGW: Review: Already supports multiple ApplicationGateway Backend Address Pools?
+        # see: https://docs.microsoft.com/en-us/rest/api/application-gateway/application-gateways/get#applicationgatewaybackendaddresspool
         backend = properties['backendAddressPools']
         application_gateway[:backend_address_pools] = []
         backend.each do |backend_ip|
@@ -2065,13 +2071,18 @@ module Bosh::AzureCloud
           end
           interface[:load_balancers] = load_balancers
         end
-        unless ip_configuration_properties['applicationGatewayBackendAddressPools'].nil?
-          if recursive
-            names = _parse_name_from_id(ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id'])
-            interface[:application_gateway] = get_application_gateway_by_name(names[:resource_name])
-          else
-            interface[:application_gateway] = { id: ip_configuration_properties['applicationGatewayBackendAddressPools'][0]['id'] }
+        application_gateway_backend_pools = ip_configuration_properties['applicationGatewayBackendAddressPools']
+        unless application_gateway_backend_pools.nil?
+          application_gateways = application_gateway_backend_pools.map do |agw_backend_pool|
+            if recursive
+              names = _parse_name_from_id(agw_backend_pool['id'])
+              application_gateway = get_application_gateway_by_name(names[:resource_group_name], names[:resource_name])
+            else
+              application_gateway = { id: agw_backend_pool['id'] }
+            end
+            application_gateway
           end
+          interface[:application_gateways] = application_gateways
         end
         unless ip_configuration_properties['applicationSecurityGroups'].nil?
           asgs_properties = ip_configuration_properties['applicationSecurityGroups']

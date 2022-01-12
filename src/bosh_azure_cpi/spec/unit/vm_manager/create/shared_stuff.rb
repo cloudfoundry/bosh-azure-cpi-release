@@ -132,7 +132,7 @@ shared_context 'shared stuff for vm manager' do
       .with(MOCK_RESOURCE_GROUP_NAME, vm_properties['load_balancer'])
       .and_return(load_balancer)
     allow(azure_client).to receive(:get_application_gateway_by_name)
-      .with(vm_properties['application_gateway'])
+      .with(nil, vm_properties['application_gateway'])
       .and_return(application_gateway)
     allow(azure_client).to receive(:get_public_ip_by_name)
       .with(MOCK_RESOURCE_GROUP_NAME, vm_name)

@@ -10,7 +10,7 @@ module Bosh::AzureCloud
     attr_reader :availability_zone
     attr_reader :availability_set
     attr_reader :load_balancers
-    attr_reader :application_gateway
+    attr_reader :application_gateways
     attr_reader :managed_identity
     attr_reader :security_group
     attr_reader :application_security_groups
@@ -26,6 +26,7 @@ module Bosh::AzureCloud
 
     AVAILABILITY_SET_KEY = 'availability_set'
     LOAD_BALANCER_KEY = 'load_balancer'
+    APPLICATION_GATEWAY_KEY = 'application_gateway'
     RESOURCE_GROUP_NAME_KEY = 'resource_group_name'
     NAME_KEY = 'name'
 
@@ -57,7 +58,8 @@ module Bosh::AzureCloud
       cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !@availability_zone.nil? && !@availability_set.name.nil?
 
       @load_balancers = _parse_load_balancer_config(vm_properties, global_azure_config)
-      @application_gateway = vm_properties['application_gateway']
+
+      @application_gateways = _parse_application_gateway_config(vm_properties)
 
       @managed_identity = global_azure_config.default_managed_identity
       managed_identity_hash = vm_properties.fetch('managed_identity', nil)
@@ -124,6 +126,35 @@ module Bosh::AzureCloud
         end
       end
       load_balancers.compact
+    end
+
+    # @return [Array<Bosh::AzureCloud::ApplicationGatewayConfig>,nil]
+    def _parse_application_gateway_config(vm_properties)
+      application_gateway_config = vm_properties[APPLICATION_GATEWAY_KEY]
+
+      return nil unless application_gateway_config
+
+      cloud_error("Property '#{APPLICATION_GATEWAY_KEY}' must be a String, Hash, or Array.") unless application_gateway_config.is_a?(String) || application_gateway_config.is_a?(Hash) || application_gateway_config.is_a?(Array)
+
+      application_gateway_configs = application_gateway_config.is_a?(Array) ? application_gateway_config : [application_gateway_config]
+      application_gateways = Array(application_gateway_configs).flat_map do |agwc|
+        if agwc.is_a?(Hash)
+          application_gateway_names = agwc[NAME_KEY]
+          resource_group_name = agwc[RESOURCE_GROUP_NAME_KEY]
+        else
+          application_gateway_names = agwc
+          resource_group_name = nil
+        end
+        String(application_gateway_names).split(',').map do |application_gateway_name|
+          Bosh::AzureCloud::ApplicationGatewayConfig.new(
+            # NOTE: It is OK for the resource_group_name to be `nil` here. The nil will be defaulted elsewhere (if needed). And leaving it nil makes the specs simpler.
+            # resource_group_name || global_azure_config.resource_group_name,
+            resource_group_name,
+            application_gateway_name
+          )
+        end
+      end
+      application_gateways.compact
     end
 
     # @return [Bosh::AzureCloud::AvailabilitySetConfig]

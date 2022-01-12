@@ -13,6 +13,20 @@ module Bosh::AzureCloud
     end
   end
 
+  class ApplicationGatewayConfig
+    # TODO: issue-644: multi-BEPool-AGW: Add support for explicitly specified BEPool name.
+    attr_reader :name, :resource_group_name
+
+    def initialize(resource_group_name, name)
+      @resource_group_name = resource_group_name
+      @name = name
+    end
+
+    def to_s
+      "name: #{@name}, resource_group_name: #{@resource_group_name}"
+    end
+  end
+
   class AvailabilitySetConfig
     attr_reader :name
     attr_reader :platform_update_domain_count, :platform_fault_domain_count

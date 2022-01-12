@@ -279,6 +279,146 @@ describe Bosh::AzureCloud::VMCloudProps do
       end
     end
 
+    context 'when application_gateway is not specified' do
+      let(:vm_cloud_props) do
+        Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D1'
+          }, azure_config_managed
+        )
+      end
+
+      it 'should return the correct config' do
+        expect(vm_cloud_props.application_gateways).to be_nil
+      end
+    end
+
+    context 'when application_gateway is a string' do
+      let(:agw_name) { 'fake_agw_name' }
+
+      let(:vm_cloud_props) do
+        Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D1',
+            'application_gateway' => agw_name
+          }, azure_config_managed
+        )
+      end
+
+      it 'should return the correct config' do
+        expect(vm_cloud_props.application_gateways.length).to eq(1)
+        application_gateway = vm_cloud_props.application_gateways.first
+        expect(application_gateway.name).to eq(agw_name)
+        expect(application_gateway.resource_group_name).to be_nil
+      end
+    end
+
+    context 'when application_gateway is a hash' do
+      let(:agw_name) { 'fake_agw_name' }
+
+      context 'when resource group not empty' do
+        let(:resource_group_name) { 'fake_resource_group' }
+        let(:vm_cloud_props) do
+          Bosh::AzureCloud::VMCloudProps.new(
+            {
+              'instance_type' => 'Standard_D1',
+              'application_gateway' => {
+                'name' => agw_name,
+                'resource_group_name' => resource_group_name
+              }
+            }, azure_config_managed
+          )
+        end
+
+        it 'should return the correct config' do
+          expect(vm_cloud_props.application_gateways.length).to eq(1)
+          application_gateway = vm_cloud_props.application_gateways.first
+          expect(application_gateway.name).to eq(agw_name)
+          expect(application_gateway.resource_group_name).to eq(resource_group_name)
+        end
+      end
+
+      context 'when resource group empty' do
+        let(:vm_cloud_props) do
+          Bosh::AzureCloud::VMCloudProps.new(
+            {
+              'instance_type' => 'Standard_D1',
+              'application_gateway' => { 'name' => agw_name }
+            }, azure_config_managed
+          )
+        end
+
+        it 'should return the correct config' do
+          expect(vm_cloud_props.application_gateways.length).to eq(1)
+          application_gateway = vm_cloud_props.application_gateways.first
+          expect(application_gateway.name).to eq(agw_name)
+          expect(application_gateway.resource_group_name).to be_nil
+        end
+      end
+    end
+
+    context 'when application_gateway is an array' do
+      let(:resource_group_name) { 'fake_resource_group' }
+
+      let(:vm_cloud_props) do
+        Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D1',
+            'application_gateway' => [
+              'fake_agw1_name', # String
+              {
+                'name' => 'fake_agw2_name'
+                # 'resource_group_name' => resource_group_name
+              }, # Hash without resource_group_name
+              'fake_agw3_name,fake_agw4_name', # delimited String
+              {
+                'name' => 'fake_agw5_name,fake_agw6_name',
+                'resource_group_name' => resource_group_name
+              } # Hash with delimited String and explicit resource_group_name
+            ]
+          }, azure_config_managed
+        )
+      end
+
+      it 'should return the correct config' do
+        application_gateways = vm_cloud_props.application_gateways
+        expect(application_gateways.length).to eq(6)
+
+        expect(application_gateways[0].name).to eq('fake_agw1_name')
+        expect(application_gateways[0].resource_group_name).to be_nil
+
+        expect(application_gateways[1].name).to eq('fake_agw2_name')
+        expect(application_gateways[1].resource_group_name).to be_nil
+
+        expect(application_gateways[2].name).to eq('fake_agw3_name')
+        expect(application_gateways[2].resource_group_name).to be_nil
+
+        expect(application_gateways[3].name).to eq('fake_agw4_name')
+        expect(application_gateways[3].resource_group_name).to be_nil
+
+        expect(application_gateways[4].name).to eq('fake_agw5_name')
+        expect(application_gateways[4].resource_group_name).to eq(resource_group_name)
+
+        expect(application_gateways[5].name).to eq('fake_agw6_name')
+        expect(application_gateways[5].resource_group_name).to eq(resource_group_name)
+      end
+    end
+
+    context 'when application_gateway is an int' do
+      let(:vm_cloud_properties) do
+        {
+          'application_gateway' => 123,
+          'instance_type' => 't'
+        }
+      end
+
+      it 'should raise an error' do
+        expect do
+          Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config_managed)
+        end.to raise_error('Property \'application_gateway\' must be a String, Hash, or Array.')
+      end
+    end
+
     context '#managed_identity' do
       context 'when default_managed_identity is not specified in global configurations' do
         context 'when managed_identity is not specified in vm_extensions' do

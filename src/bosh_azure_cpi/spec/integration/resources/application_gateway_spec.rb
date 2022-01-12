@@ -7,7 +7,7 @@ describe Bosh::AzureCloud::Cloud do
     @application_gateway_name = ENV.fetch('BOSH_AZURE_APPLICATION_GATEWAY_NAME')
   end
 
-  context 'when application_gateway is specified in resource pool' do
+  context 'when single application_gateway is specified in resource pool' do
     let(:network_spec) do
       {
         'network_a' => {
