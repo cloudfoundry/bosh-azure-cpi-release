@@ -25,7 +25,7 @@ module Bosh::AzureCloud
       end
 
       if @storage_account_manager.use_default_account_for_cleaning
-        # Delete a stemcell name in defaukt storage accounts
+        # Delete a stemcell name in default storage accounts
         @logger.info("Delete stemcell(#{name}) in default storage account #{@default_storage_account_name}")
         @blob_manager.delete_blob(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd") if has_stemcell?(@default_storage_account_name, name)
       else
