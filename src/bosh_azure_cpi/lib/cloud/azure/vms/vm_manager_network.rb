@@ -182,6 +182,7 @@ module Bosh::AzureCloud
           enable_accelerated_networking: accelerated_networking
         }
         nic_params[:subnet] = _get_network_subnet(network)
+        # NOTE: The first NIC is the Primary/Gateway network. See: `Bosh::AzureCloud::NetworkConfigurator.initialize`.
         if index.zero?
           nic_params[:public_ip] = public_ip
           nic_params[:tags] = primary_nic_tags

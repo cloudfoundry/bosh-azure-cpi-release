@@ -9,7 +9,7 @@ module Bosh::AzureCloud
   # VM can have multiple network interfaces attached to it.
   # The VM size determines the number of NICs that you can create for a VM, please refer to
   # https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-linux-sizes/ for the max number of NICs for different VM size.
-  # When there are multiple netowrks, you must have and only have 1 primary network specified. @networks[0] will be picked as the primary network.
+  # When there are multiple networks, you must have and only have 1 primary network specified. @networks[0] will be picked as the primary network.
   #
 
   class NetworkConfigurator
@@ -64,6 +64,7 @@ module Bosh::AzureCloud
         #
         unless network.nil?
           if network.has_default_gateway?
+            # make it the first network, so that it is the Primary
             @networks.insert(0, network)
           else
             @networks.push(network)

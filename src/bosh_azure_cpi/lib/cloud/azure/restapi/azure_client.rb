@@ -302,6 +302,7 @@ module Bosh::AzureCloud
         network_interfaces_params.push(
           'id' => network_interface[:id],
           'properties' => {
+            # NOTE: The first NIC is the Primary/Gateway network. See: `Bosh::AzureCloud::NetworkConfigurator.initialize`.
             'primary' => index.zero?
           }
         )
