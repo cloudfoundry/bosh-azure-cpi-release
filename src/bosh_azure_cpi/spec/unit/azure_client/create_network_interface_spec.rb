@@ -451,6 +451,7 @@ describe Bosh::AzureCloud::AzureClient do
         end
       end
 
+      # NOTE: issue-644: unit tests for single-AGW, single-pool
       context 'with application gateway' do
         let(:nic_params) do
           {
@@ -537,6 +538,36 @@ describe Bosh::AzureCloud::AzureClient do
           expect do
             azure_client.create_network_interface(resource_group, nic_params)
           end.not_to raise_error
+        end
+
+        context 'with multiple backend pools' do
+          # TODO: issue-644: multi-BEPool-AGW: add unit tests for multi-pool AGWs
+          it 'should create a network interface without error'
+
+          context 'when backend_pool_name is specified' do
+            # TODO: issue-644: multi-BEPool-AGW: add unit tests for named-pool AGWs
+            it 'should use the specified backend_pool'
+          end
+
+          context 'when an invalid backend_pool_name is specified' do
+            # TODO: issue-644: multi-BEPool-AGW: add unit tests for named-pool AGWs
+            it 'should raise an error'
+          end
+        end
+      end
+
+      context 'with multiple application gateways' do
+        # TODO: issue-644: multi-AGW: add unit tests for multi-AGWs
+        it 'should create a network interface without error'
+
+        context 'with multiple backend pools' do
+          # TODO: issue-644: multi-BEPool-AGW: add unit tests for multi-pool AGWs
+          it 'should create a network interface without error'
+
+          context 'when backend_pool_name is specified' do
+            # TODO: issue-644: multi-BEPool-AGW: add unit tests for named-pool AGWs
+            it 'should use the specified backend_pool'
+          end
         end
       end
     end

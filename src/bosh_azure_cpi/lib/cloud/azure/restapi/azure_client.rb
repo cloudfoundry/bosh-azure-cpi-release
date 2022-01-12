@@ -1653,13 +1653,15 @@ module Bosh::AzureCloud
         application_gateway[:tags] = result['tags']
 
         properties = result['properties']
-        # TODO: issue-644: multi-BEPool-AGW: Review: Already supports multiple ApplicationGateway Backend Address Pools?
         # see: https://docs.microsoft.com/en-us/rest/api/application-gateway/application-gateways/get#applicationgatewaybackendaddresspool
         backend = properties['backendAddressPools']
         application_gateway[:backend_address_pools] = []
         backend.each do |backend_ip|
           ip = {}
-          ip[:id] = backend_ip['id']
+          ip[:name]                      = backend_ip['name']
+          ip[:id]                        = backend_ip['id']
+          ip[:provisioning_state]        = backend_ip['properties']['provisioningState']
+          ip[:backend_ip_configurations] = backend_ip['properties']['backendIPConfigurations']
           application_gateway[:backend_address_pools].push(ip)
         end
       end

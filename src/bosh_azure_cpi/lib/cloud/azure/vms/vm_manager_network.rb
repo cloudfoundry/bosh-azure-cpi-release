@@ -109,9 +109,24 @@ module Bosh::AzureCloud
       application_gateways = nil
       application_gateway_configs = vm_props.application_gateways
       unless application_gateway_configs.nil?
+        # NOTE: The following block gets the Azure API info for each Bosh AGW config (from the vm_type config).
         application_gateways = application_gateway_configs.map do |application_gateway_config|
           application_gateway = @azure_client.get_application_gateway_by_name(application_gateway_config.resource_group_name, application_gateway_config.name)
           cloud_error("Cannot find the application gateway '#{application_gateway_config.name}'") if application_gateway.nil?
+
+          if application_gateway_config.backend_pool_name
+            # NOTE: This is the only place where we simultaneously have both the Bosh AGW config (from the vm_type) AND the Azure AGW info (from the Azure API).
+            # Since the `AzureClient.create_network_interface` method only uses the first backend pool,
+            # and since there is not a 1-to-1 mapping between the vm_type AGW configs and AGWs (despite the config property name, each vm_type AGW config actually represents a single AGW Backend Pool, not a whole AGW),
+            # we can therefore remove all pools EXCEPT the specified pool.
+            # To handle multiple pools of a single AGW, you should use 1 vm_type AGW Hash (with AGW name + backend_pool_name) per pool.
+            pools = application_gateway[:backend_address_pools]
+            pools = [pools] unless pools.is_a?(Array)
+            pool = pools.find { |p| Hash(p)[:name] == application_gateway_config.backend_pool_name }
+            cloud_error("'#{application_gateway_config.name}' does not have a backend_pool named '#{application_gateway_config.backend_pool_name}': #{application_gateway}") if pool.nil?
+
+            application_gateway[:backend_address_pools] = [pool]
+          end
           application_gateway
         end
       end

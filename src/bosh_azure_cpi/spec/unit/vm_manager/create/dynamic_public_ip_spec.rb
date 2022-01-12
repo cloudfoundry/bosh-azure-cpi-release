@@ -58,6 +58,7 @@ describe Bosh::AzureCloud::VMManager do
               .and_return(name: storage_account_name)
           end
 
+          # TODO: issue-644: multi-BEPool-AGW: use this spec as a template for the pending specs below
           it 'creates a public IP and assigns it to the primary NIC' do
             expect(azure_client).to receive(:create_public_ip)
               .with(MOCK_RESOURCE_GROUP_NAME, public_ip_params)
@@ -73,6 +74,33 @@ describe Bosh::AzureCloud::VMManager do
 
             _, vm_params = vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:name]).to eq(vm_name)
+          end
+
+          context 'with single application_gateway' do
+            context 'when application_gateway has multiple backend pools' do
+              # TODO: issue-644: multi-BEPool-AGW: add unit tests for multi-pool AGWs
+              it 'adds the public IP to the default pool'
+
+              context 'when backend_pool_name is specified' do
+                # TODO: issue-644: multi-BEPool-AGW: add unit tests for named-pool AGWs
+                it 'adds the public IP to the specified pool'
+              end
+
+              context 'when an invalid backend_pool_name is specified' do
+                # TODO: issue-644: multi-BEPool-AGW: add unit tests for named-pool AGWs
+                it 'should raise an error'
+              end
+            end
+          end
+
+          context 'with multiple application_gateways' do
+            # TODO: issue-644: multi-AGW: add unit tests for multi-AGWs
+            it 'adds the public IP to each application_gateway'
+
+            context 'when backend_pool_name is specified' do
+              # TODO: issue-644: multi-BEPool-AGW: add unit tests for named-pool AGWs
+              it 'adds the public IP to the specified pool of each application_gateway'
+            end
           end
         end
 

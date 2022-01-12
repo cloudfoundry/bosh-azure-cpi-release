@@ -27,6 +27,7 @@ module Bosh::AzureCloud
     AVAILABILITY_SET_KEY = 'availability_set'
     LOAD_BALANCER_KEY = 'load_balancer'
     APPLICATION_GATEWAY_KEY = 'application_gateway'
+    BACKEND_POOL_NAME_KEY = 'backend_pool_name'
     RESOURCE_GROUP_NAME_KEY = 'resource_group_name'
     NAME_KEY = 'name'
 
@@ -141,16 +142,19 @@ module Bosh::AzureCloud
         if agwc.is_a?(Hash)
           application_gateway_names = agwc[NAME_KEY]
           resource_group_name = agwc[RESOURCE_GROUP_NAME_KEY]
+          backend_pool_name = agwc[BACKEND_POOL_NAME_KEY]
         else
           application_gateway_names = agwc
           resource_group_name = nil
+          backend_pool_name = nil
         end
         String(application_gateway_names).split(',').map do |application_gateway_name|
           Bosh::AzureCloud::ApplicationGatewayConfig.new(
             # NOTE: It is OK for the resource_group_name to be `nil` here. The nil will be defaulted elsewhere (if needed). And leaving it nil makes the specs simpler.
             # resource_group_name || global_azure_config.resource_group_name,
             resource_group_name,
-            application_gateway_name
+            application_gateway_name,
+            backend_pool_name
           )
         end
       end

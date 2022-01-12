@@ -14,16 +14,16 @@ module Bosh::AzureCloud
   end
 
   class ApplicationGatewayConfig
-    # TODO: issue-644: multi-BEPool-AGW: Add support for explicitly specified BEPool name.
-    attr_reader :name, :resource_group_name
+    attr_reader :name, :resource_group_name, :backend_pool_name
 
-    def initialize(resource_group_name, name)
+    def initialize(resource_group_name, name, backend_pool_name = nil)
       @resource_group_name = resource_group_name
       @name = name
+      @backend_pool_name = backend_pool_name
     end
 
     def to_s
-      "name: #{@name}, resource_group_name: #{@resource_group_name}"
+      "name: #{@name}, resource_group_name: #{@resource_group_name}, backend_pool_name: #{@backend_pool_name}"
     end
   end
 

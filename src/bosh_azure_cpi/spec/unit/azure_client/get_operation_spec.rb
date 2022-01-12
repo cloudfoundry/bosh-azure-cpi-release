@@ -183,7 +183,12 @@ describe Bosh::AzureCloud::AzureClient do
       'properties' => {
         'provisioningState' => 'fake-state',
         'backendAddressPools' => [{
-          'id' => 'fake-id'
+          'name' => 'fake-name',
+          'id' => 'fake-id',
+          'properties' => {
+            'provisioningState' => 'fake-state',
+            'backendIPConfigurations' => []
+          }
         }]
       }
     }.to_json
@@ -196,7 +201,10 @@ describe Bosh::AzureCloud::AzureClient do
       tags: 'fake-tags',
       backend_address_pools: [
         {
-          id: 'fake-id'
+          name: 'fake-name',
+          id: 'fake-id',
+          provisioning_state: 'fake-state',
+          backend_ip_configurations: []
         }
       ]
     }
