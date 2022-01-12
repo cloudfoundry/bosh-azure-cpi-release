@@ -597,7 +597,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 public_ip: dynamic_public_ip,
                                                 subnet: subnet,
                                                 tags: tags,
-                                                load_balancer: [ load_balancer ],
+                                                load_balancers: [ load_balancer ],
                                                 application_gateway: application_gateway
                                               )).once
 
@@ -625,7 +625,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 public_ip: dynamic_public_ip,
                                                 subnet: subnet,
                                                 tags: tags,
-                                                load_balancer: [ load_balancer ],
+                                                load_balancers: [ load_balancer ],
                                                 application_gateway: application_gateway
                                               ))
 

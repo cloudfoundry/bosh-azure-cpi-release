@@ -9,7 +9,7 @@ module Bosh::AzureCloud
     attr_reader :root_disk, :ephemeral_disk, :caching
     attr_reader :availability_zone
     attr_reader :availability_set
-    attr_reader :load_balancer
+    attr_reader :load_balancers
     attr_reader :application_gateway
     attr_reader :managed_identity
     attr_reader :security_group
@@ -56,7 +56,7 @@ module Bosh::AzureCloud
       @availability_set = _parse_availability_set_config(vm_properties, global_azure_config)
       cloud_error("Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both.") if !@availability_zone.nil? && !@availability_set.name.nil?
 
-      @load_balancer = _parse_load_balancer_config(vm_properties, global_azure_config)
+      @load_balancers = _parse_load_balancer_config(vm_properties, global_azure_config)
       @application_gateway = vm_properties['application_gateway']
 
       @managed_identity = global_azure_config.default_managed_identity
@@ -99,21 +99,34 @@ module Bosh::AzureCloud
       end
     end
 
+    # @return [Array<Bosh::AzureCloud::LoadBalancerConfig>,nil]
     def _parse_load_balancer_config(vm_properties, global_azure_config)
-      if vm_properties[LOAD_BALANCER_KEY].is_a?(Hash)
-        resource_group_name = vm_properties[LOAD_BALANCER_KEY][RESOURCE_GROUP_NAME_KEY] || global_azure_config.resource_group_name
-        Bosh::AzureCloud::LoadBalancerConfig.new(
-          resource_group_name,
-          vm_properties[LOAD_BALANCER_KEY][NAME_KEY]
-        )
-      else
-        Bosh::AzureCloud::LoadBalancerConfig.new(
-          global_azure_config.resource_group_name,
-          vm_properties[LOAD_BALANCER_KEY]
-        )
+      load_balancer_config = vm_properties[LOAD_BALANCER_KEY]
+
+      return nil unless load_balancer_config
+
+      cloud_error("Property '#{LOAD_BALANCER_KEY}' must be a String, Hash, or Array.") unless load_balancer_config.is_a?(String) || load_balancer_config.is_a?(Hash) || load_balancer_config.is_a?(Array)
+
+      load_balancer_configs = load_balancer_config.is_a?(Array) ? load_balancer_config : [load_balancer_config]
+      load_balancers = Array(load_balancer_configs).flat_map do |lbc|
+        if lbc.is_a?(Hash)
+          load_balancer_names = lbc[NAME_KEY]
+          resource_group_name = lbc[RESOURCE_GROUP_NAME_KEY]
+        else
+          load_balancer_names = lbc
+          resource_group_name = nil
+        end
+        String(load_balancer_names).split(',').map do |load_balancer_name|
+          Bosh::AzureCloud::LoadBalancerConfig.new(
+            resource_group_name || global_azure_config.resource_group_name,
+            load_balancer_name
+          )
+        end
       end
+      load_balancers.compact
     end
 
+    # @return [Bosh::AzureCloud::AvailabilitySetConfig]
     def _parse_availability_set_config(vm_properties, global_azure_config)
       if vm_properties[AVAILABILITY_SET_KEY].is_a?(Hash)
         platform_update_domain_count = vm_properties[AVAILABILITY_SET_KEY]['platform_update_domain_count'] || _default_update_domain_count(global_azure_config)

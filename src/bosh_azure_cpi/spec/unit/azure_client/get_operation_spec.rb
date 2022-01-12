@@ -816,7 +816,7 @@ describe Bosh::AzureCloud::AzureClient do
             ip_configuration_id: 'fake-id',
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic',
-            load_balancer: fake_load_balancer
+            load_balancers: [fake_load_balancer]
           }
         end
         it 'should return the network interface with load balancer' do

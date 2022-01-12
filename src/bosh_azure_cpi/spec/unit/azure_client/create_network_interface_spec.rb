@@ -55,7 +55,7 @@ describe Bosh::AzureCloud::AzureClient do
             public_ip: { id: 'fake-public-id' },
             network_security_group: { id: nsg_id },
             application_security_groups: [],
-            load_balancer: nil,
+            load_balancers: nil,
             application_gateway: nil
           }
         end
@@ -130,7 +130,7 @@ describe Bosh::AzureCloud::AzureClient do
             enable_accelerated_networking: false,
             network_security_group: { id: nsg_id },
             application_security_groups: [],
-            load_balancer: nil,
+            load_balancers: nil,
             application_gateway: nil
           }
         end
@@ -208,7 +208,7 @@ describe Bosh::AzureCloud::AzureClient do
             public_ip: { id: 'fake-public-id' },
             network_security_group: nil,
             application_security_groups: [],
-            load_balancer: nil,
+            load_balancers: nil,
             application_gateway: nil
           }
         end
@@ -284,7 +284,7 @@ describe Bosh::AzureCloud::AzureClient do
             public_ip: { id: 'fake-public-id' },
             network_security_group: { id: nsg_id },
             application_security_groups: [],
-            load_balancer: [{
+            load_balancers: [{
               backend_address_pools: [
                 {
                   id: 'fake-id'
@@ -380,7 +380,7 @@ describe Bosh::AzureCloud::AzureClient do
             public_ip: { id: 'fake-public-id' },
             network_security_group: { id: nsg_id },
             application_security_groups: [{ id: 'fake-asg-id-1' }, { id: 'fake-asg-id-2' }],
-            load_balancer: nil,
+            load_balancers: nil,
             application_gateway: nil
           }
         end
@@ -466,7 +466,7 @@ describe Bosh::AzureCloud::AzureClient do
             public_ip: { id: 'fake-public-id' },
             network_security_group: { id: nsg_id },
             application_security_groups: [],
-            load_balancer: nil,
+            load_balancers: nil,
             application_gateway: {
               backend_address_pools: [
                 {

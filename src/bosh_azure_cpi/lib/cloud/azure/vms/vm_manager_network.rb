@@ -88,18 +88,18 @@ module Bosh::AzureCloud
       public_ip
     end
 
-    def _get_load_balancer(vm_props)
-      load_balancer = nil
-      unless vm_props.load_balancer.name.nil?
-        load_balancer_name_split = vm_props.load_balancer.name.split(',')        
-        load_balancer = Array.new
-        load_balancer_name_split.each do |load_balancer_name|
-          single_load_balancer = @azure_client.get_load_balancer_by_name(vm_props.load_balancer.resource_group_name, load_balancer_name)
-          cloud_error("Cannot find the load balancer '#{load_balancer_name}'") if single_load_balancer.nil?
-          load_balancer.push(single_load_balancer)
+    # @return [Array<Hash>]
+    def _get_load_balancers(vm_props)
+      load_balancers = nil
+      load_balancer_configs = vm_props.load_balancers
+      unless load_balancer_configs.nil?
+        load_balancers = load_balancer_configs.map do |load_balancer_config|
+          load_balancer = @azure_client.get_load_balancer_by_name(load_balancer_config.resource_group_name, load_balancer_config.name)
+          cloud_error("Cannot find the load balancer '#{load_balancer_config.name}'") if load_balancer.nil?
+          load_balancer
         end
       end
-      load_balancer
+      load_balancers
     end
 
     def _get_application_gateway(vm_props)
@@ -133,8 +133,8 @@ module Bosh::AzureCloud
 
     def _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
       # Tasks to prepare before creating NICs:
-      #   * preapre public ip
-      #   * prepare load balancer
+      #   * prepare public ip
+      #   * prepare load balancer(s)
       #   * prepare application gateway
       tasks_preparing = []
 
@@ -144,8 +144,8 @@ module Bosh::AzureCloud
         end
       )
       tasks_preparing.push(
-        task_get_load_balancer = Concurrent::Future.execute do
-          _get_load_balancer(vm_props)
+        task_get_load_balancers = Concurrent::Future.execute do
+          _get_load_balancers(vm_props)
         end
       )
       tasks_preparing.push(
@@ -158,7 +158,7 @@ module Bosh::AzureCloud
       tasks_preparing.map(&:wait)
 
       public_ip = task_get_or_create_public_ip.value!
-      load_balancer = task_get_load_balancer.value!
+      load_balancers = task_get_load_balancers.value!
       application_gateway = task_get_application_gateway.value!
 
       # tasks to create NICs, NICs will be created in different threads
@@ -185,12 +185,12 @@ module Bosh::AzureCloud
         if index.zero?
           nic_params[:public_ip] = public_ip
           nic_params[:tags] = primary_nic_tags
-          nic_params[:load_balancer] = load_balancer
+          nic_params[:load_balancers] = load_balancers
           nic_params[:application_gateway] = application_gateway
         else
           nic_params[:public_ip] = nil
           nic_params[:tags] = AZURE_TAGS
-          nic_params[:load_balancer] = nil
+          nic_params[:load_balancers] = nil
           nic_params[:application_gateway] = nil
         end
         tasks_creating.push(

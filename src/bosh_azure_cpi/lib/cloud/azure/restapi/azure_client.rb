@@ -1417,7 +1417,7 @@ module Bosh::AzureCloud
     # * +:dns_servers                   - Array. DNS servers.
     # * +:network_security_group        - Hash. The network security group which the network interface is bound to.
     # * +:application_security_groups   - Array. The application security groups which the network interface is bound to.
-    # * +:load_balancer                 - Hash. The load balancer which the network interface is bound to.
+    # * +:load_balancers                - Array<Hash>. The load balancers which the network interface is bound to.
     # * +:application_gateway           - Hash. The application gateway which the network interface is bound to.
     #
     # @return [Boolean]
@@ -1461,13 +1461,13 @@ module Bosh::AzureCloud
       end
       interface['properties']['ipConfigurations'][0]['properties']['applicationSecurityGroups'] = application_security_groups unless application_security_groups.empty?
 
-      load_balancer = nic_params[:load_balancer]
-      unless load_balancer.nil?
-        backend_pools = load_balancer.collect { |single_load_balancer| {:id => single_load_balancer[:backend_address_pools][0][:id]} }
+      load_balancers = nic_params[:load_balancers]
+      unless load_balancers.nil?
+        backend_pools = load_balancers.map { |load_balancer| {:id => load_balancer[:backend_address_pools][0][:id]} }
         inbound_nat_rules = Array.new
-        load_balancer.each do |single_load_balancer|
-          unless single_load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules].nil?
-            inbound_nat_rules += single_load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
+        load_balancers.each do |load_balancer|
+          unless load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules].nil?
+            inbound_nat_rules += load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
           end
         end
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = backend_pools
@@ -2051,13 +2051,18 @@ module Bosh::AzureCloud
                                     { id: ip_configuration_properties['publicIPAddress']['id'] }
                                   end
         end
-        unless ip_configuration_properties['loadBalancerBackendAddressPools'].nil?
-          if recursive
-            names = _parse_name_from_id(ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'])
-            interface[:load_balancer] = get_load_balancer_by_name(names[:resource_group_name], names[:resource_name])
-          else
-            interface[:load_balancer] = { id: ip_configuration_properties['loadBalancerBackendAddressPools'][0]['id'] }
+        load_balancer_backend_pools = ip_configuration_properties['loadBalancerBackendAddressPools']
+        unless load_balancer_backend_pools.nil?
+          load_balancers = load_balancer_backend_pools.map do |lb_backend_pool|
+            if recursive
+              names = _parse_name_from_id(lb_backend_pool['id'])
+              load_balancer = get_load_balancer_by_name(names[:resource_group_name], names[:resource_name])
+            else
+              load_balancer = { id: lb_backend_pool['id'] }
+            end
+            load_balancer
           end
+          interface[:load_balancers] = load_balancers
         end
         unless ip_configuration_properties['applicationGatewayBackendAddressPools'].nil?
           if recursive

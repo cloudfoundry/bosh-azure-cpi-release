@@ -90,9 +90,67 @@ describe Bosh::AzureCloud::VMCloudProps do
       end
     end
 
+    context 'when load_balancer is not specified' do
+      let(:vm_cloud_props) do
+        Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D1'
+          }, azure_config_managed
+        )
+      end
+
+      it 'should return the correct config' do
+        expect(vm_cloud_props.load_balancers).to be_nil
+      end
+    end
+
+    context 'when load_balancer is a string' do
+      let(:lb_name) { 'fake_lb_name' }
+
+      let(:vm_cloud_props) do
+        Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D1',
+            'load_balancer' => lb_name
+          }, azure_config_managed
+        )
+      end
+
+      it 'should return the correct config' do
+        expect(vm_cloud_props.load_balancers.length).to eq(1)
+        load_balancer = vm_cloud_props.load_balancers.first
+        expect(load_balancer.name).to eq(lb_name)
+        expect(load_balancer.resource_group_name).to eq(azure_config_managed.resource_group_name)
+      end
+    end
+
+    context 'when load_balancer is a comma-delimited string' do
+      let(:lb_name) { 'fake_lb_name' }
+
+      let(:vm_cloud_props) do
+        Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D1',
+            'load_balancer' => "#{lb_name},b,c"
+          }, azure_config_managed
+        )
+      end
+
+      it 'should return the correct config' do
+        expect(vm_cloud_props.load_balancers.length).to eq(3)
+        expect(vm_cloud_props.load_balancers[0].name).to eq(lb_name)
+        expect(vm_cloud_props.load_balancers[0].resource_group_name).to eq(azure_config_managed.resource_group_name)
+        expect(vm_cloud_props.load_balancers[1].name).to eq('b')
+        expect(vm_cloud_props.load_balancers[1].resource_group_name).to eq(azure_config_managed.resource_group_name)
+        expect(vm_cloud_props.load_balancers[2].name).to eq('c')
+        expect(vm_cloud_props.load_balancers[2].resource_group_name).to eq(azure_config_managed.resource_group_name)
+      end
+    end
+
     context 'when load_balancer is a hash' do
       let(:lb_name) { 'fake_lb_name' }
       let(:resource_group_name) { 'fake_resource_group' }
+
       context 'when resource group not empty' do
         let(:vm_cloud_props) do
           Bosh::AzureCloud::VMCloudProps.new(
@@ -107,8 +165,10 @@ describe Bosh::AzureCloud::VMCloudProps do
         end
 
         it 'should return the correct config' do
-          expect(vm_cloud_props.load_balancer.name).to eq(lb_name)
-          expect(vm_cloud_props.load_balancer.resource_group_name).to eq(resource_group_name)
+          expect(vm_cloud_props.load_balancers.length).to eq(1)
+          load_balancer = vm_cloud_props.load_balancers.first
+          expect(load_balancer.name).to eq(lb_name)
+          expect(load_balancer.resource_group_name).to eq(resource_group_name)
         end
       end
 
@@ -125,9 +185,97 @@ describe Bosh::AzureCloud::VMCloudProps do
         end
 
         it 'should return the correct config' do
-          expect(vm_cloud_props.load_balancer.name).to eq(lb_name)
-          expect(vm_cloud_props.load_balancer.resource_group_name).to eq(azure_config_managed.resource_group_name)
+          expect(vm_cloud_props.load_balancers.length).to eq(1)
+          load_balancer = vm_cloud_props.load_balancers.first
+          expect(load_balancer.name).to eq(lb_name)
+          expect(load_balancer.resource_group_name).to eq(azure_config_managed.resource_group_name)
         end
+      end
+
+      context 'when name is a comma-delimited string' do
+        let(:vm_cloud_props) do
+          Bosh::AzureCloud::VMCloudProps.new(
+            {
+              'instance_type' => 'Standard_D1',
+              'load_balancer' => {
+                'name' => "#{lb_name},b,c",
+                'resource_group_name' => resource_group_name
+              }
+            }, azure_config_managed
+          )
+        end
+
+        it 'should return the correct config' do
+          expect(vm_cloud_props.load_balancers.length).to eq(3)
+          expect(vm_cloud_props.load_balancers[0].name).to eq(lb_name)
+          expect(vm_cloud_props.load_balancers[0].resource_group_name).to eq(resource_group_name)
+          expect(vm_cloud_props.load_balancers[1].name).to eq('b')
+          expect(vm_cloud_props.load_balancers[1].resource_group_name).to eq(resource_group_name)
+          expect(vm_cloud_props.load_balancers[2].name).to eq('c')
+          expect(vm_cloud_props.load_balancers[2].resource_group_name).to eq(resource_group_name)
+        end
+      end
+    end
+
+    context 'when load_balancer is an array' do
+      let(:resource_group_name) { 'fake_resource_group' }
+
+      let(:vm_cloud_props) do
+        Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D1',
+            'load_balancer' => [
+              'fake_lb1_name', # String
+              {
+                'name' => 'fake_lb2_name'
+                # 'resource_group_name' => resource_group_name
+              }, # Hash without resource_group_name
+              'fake_lb3_name,fake_lb4_name', # delimited String
+              {
+                'name' => 'fake_lb5_name,fake_lb6_name',
+                'resource_group_name' => resource_group_name
+              } # Hash with delimited String and explicit resource_group_name
+            ]
+          }, azure_config_managed
+        )
+      end
+
+      it 'should return the correct config' do
+        load_balancers = vm_cloud_props.load_balancers
+        expect(load_balancers.length).to eq(6)
+
+        expect(load_balancers[0].name).to eq('fake_lb1_name')
+        expect(load_balancers[0].resource_group_name).to eq(azure_config_managed.resource_group_name)
+
+        expect(load_balancers[1].name).to eq('fake_lb2_name')
+        expect(load_balancers[1].resource_group_name).to eq(azure_config_managed.resource_group_name)
+
+        expect(load_balancers[2].name).to eq('fake_lb3_name')
+        expect(load_balancers[2].resource_group_name).to eq(azure_config_managed.resource_group_name)
+
+        expect(load_balancers[3].name).to eq('fake_lb4_name')
+        expect(load_balancers[3].resource_group_name).to eq(azure_config_managed.resource_group_name)
+
+        expect(load_balancers[4].name).to eq('fake_lb5_name')
+        expect(load_balancers[4].resource_group_name).to eq(resource_group_name)
+
+        expect(load_balancers[5].name).to eq('fake_lb6_name')
+        expect(load_balancers[5].resource_group_name).to eq(resource_group_name)
+      end
+    end
+
+    context 'when load_balancer is an int' do
+      let(:vm_cloud_properties) do
+        {
+          'load_balancer' => 123,
+          'instance_type' => 't'
+        }
+      end
+
+      it 'should raise an error' do
+        expect do
+          Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config_managed)
+        end.to raise_error('Property \'load_balancer\' must be a String, Hash, or Array.')
       end
     end
 
