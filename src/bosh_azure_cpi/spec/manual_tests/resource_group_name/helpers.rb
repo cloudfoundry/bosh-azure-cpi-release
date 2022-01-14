@@ -47,7 +47,7 @@ def load_bosh_azure_cpi(cpi_dir, config)
   cloud_config = OpenStruct.new(logger: Logger.new(STDOUT))
   Bosh::Clouds::Config.configure(cloud_config)
 
-  cpi = Bosh::AzureCloud::Cloud.new(config)
+  cpi = Bosh::AzureCloud::Cloud.new(config, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
 
   cpi
 end
