@@ -429,10 +429,6 @@ describe Bosh::AzureCloud::AzureClient do
                   # which would remove all but the `vm_props`-configured pool from the list.
                   load_balancers: [{
                     backend_address_pools: [
-                      # {
-                      #   name: 'fake-lb-pool-name',
-                      #   id: 'fake-lb-pool-id'
-                      # },
                       {
                         name: 'fake-lb-pool2-name',
                         id: 'fake-lb-pool2-id'
@@ -455,11 +451,6 @@ describe Bosh::AzureCloud::AzureClient do
               end
             end
           end
-
-          # NOTE: This should never happen, since an error would be raised earlier (preventing `azure_client.create_network_interface` from being called)
-          # context 'when an invalid backend_pool_name is specified' do
-          #   it 'should never happen'
-          # end
         end
 
         context 'with multiple load balancers' do
@@ -600,10 +591,6 @@ describe Bosh::AzureCloud::AzureClient do
                   load_balancers: [
                     {
                       backend_address_pools: [
-                        # {
-                        #   name: 'fake-lb-pool-name',
-                        #   id: 'fake-lb-pool-id'
-                        # },
                         {
                           name: 'fake-lb-pool2-name',
                           id: 'fake-lb-pool2-id'
@@ -617,10 +604,6 @@ describe Bosh::AzureCloud::AzureClient do
                     },
                     {
                       backend_address_pools: [
-                        # {
-                        #   name: 'fake-lb2-pool-1-name',
-                        #   id: 'fake-lb2-pool-1-id'
-                        # },
                         {
                           name: 'fake-lb2-pool-2-name',
                           id: 'fake-lb2-pool-2-id'
@@ -886,10 +869,6 @@ describe Bosh::AzureCloud::AzureClient do
                   application_gateways: [
                     {
                       backend_address_pools: [
-                        # {
-                        #   name: 'fake-agw-pool-name',
-                        #   id: 'fake-agw-pool-id'
-                        # },
                         {
                           name: 'fake-agw-pool2-name',
                           id: 'fake-agw-pool2-id'
@@ -907,11 +886,6 @@ describe Bosh::AzureCloud::AzureClient do
               end
             end
           end
-
-          # NOTE: This should never happen, since an error would be raised earlier (preventing `azure_client.create_network_interface` from being called)
-          # context 'when an invalid backend_pool_name is specified' do
-          #   it 'should never happen'
-          # end
         end
 
         context 'with multiple application gateways' do
@@ -1033,10 +1007,6 @@ describe Bosh::AzureCloud::AzureClient do
                   application_gateways: [
                     {
                       backend_address_pools: [
-                        # {
-                        #   name: 'fake-agw-pool-name',
-                        #   id: 'fake-agw-pool-id'
-                        # },
                         {
                           name: 'fake-agw-pool2-name',
                           id: 'fake-agw-pool2-id'
@@ -1045,10 +1015,6 @@ describe Bosh::AzureCloud::AzureClient do
                     },
                     {
                       backend_address_pools: [
-                        # {
-                        #   name: 'fake-agw2-pool-1-name',
-                        #   id: 'fake-agw2-pool-1-id'
-                        # },
                         {
                           name: 'fake-agw2-pool-2-name',
                           id: 'fake-agw2-pool-2-id'

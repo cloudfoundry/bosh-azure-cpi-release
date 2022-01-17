@@ -108,9 +108,7 @@ describe Bosh::AzureCloud::VMManager do
                       'storage_account_name' => 'dfe03ad623f34d42999e93ca',
                       'caching' => 'ReadWrite',
                       'load_balancer' => {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-lb-name'
-                        # 'backend_pool_name' => 'fake-pool2-name'
                       },
                       'application_gateway' => 'fake-ag-name'
                     }
@@ -130,7 +128,6 @@ describe Bosh::AzureCloud::VMManager do
                       'storage_account_name' => 'dfe03ad623f34d42999e93ca',
                       'caching' => 'ReadWrite',
                       'load_balancer' => {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-lb-name',
                         'backend_pool_name' => 'fake-pool2-name'
                       },
@@ -215,14 +212,10 @@ describe Bosh::AzureCloud::VMManager do
                     'caching' => 'ReadWrite',
                     'load_balancer' => [
                       {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-lb-name'
-                        # 'backend_pool_name' => 'fake-pool2-name'
                       },
                       {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-lb2-name'
-                        # 'backend_pool_name' => 'fake-lb2-pool-2-name'
                       }
                     ],
                     'application_gateway' => 'fake-ag-name'
@@ -244,12 +237,10 @@ describe Bosh::AzureCloud::VMManager do
                     'caching' => 'ReadWrite',
                     'load_balancer' => [
                       {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-lb-name',
                         'backend_pool_name' => 'fake-pool2-name'
                       },
                       {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-lb2-name',
                         'backend_pool_name' => 'fake-lb2-pool-2-name'
                       }
@@ -275,7 +266,6 @@ describe Bosh::AzureCloud::VMManager do
                   'storage_account_name' => 'dfe03ad623f34d42999e93ca',
                   'caching' => 'ReadWrite',
                   'load_balancer' => {
-                    # 'resource_group_name' => 'fake-rg-name',
                     'name' => 'fake-lb-name',
                     'backend_pool_name' => 'invalid-pool-name'
                   },
@@ -351,9 +341,7 @@ describe Bosh::AzureCloud::VMManager do
                       'caching' => 'ReadWrite',
                       'load_balancer' => 'fake-lb-name',
                       'application_gateway' => {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-ag-name'
-                        # 'backend_pool_name' => 'fake-pool2-name'
                       }
                     }
                   end
@@ -373,7 +361,6 @@ describe Bosh::AzureCloud::VMManager do
                       'caching' => 'ReadWrite',
                       'load_balancer' => 'fake-lb-name',
                       'application_gateway' => {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-ag-name',
                         'backend_pool_name' => 'fake-pool2-name'
                       }
@@ -458,14 +445,10 @@ describe Bosh::AzureCloud::VMManager do
                     'load_balancer' => 'fake-lb-name',
                     'application_gateway' => [
                       {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-ag-name'
-                        # 'backend_pool_name' => 'fake-pool2-name'
                       },
                       {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-ag2-name'
-                        # 'backend_pool_name' => 'fake-ag2-pool-2-name'
                       }
                     ]
                   }
@@ -487,12 +470,10 @@ describe Bosh::AzureCloud::VMManager do
                     'load_balancer' => 'fake-lb-name',
                     'application_gateway' => [
                       {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-ag-name',
                         'backend_pool_name' => 'fake-pool2-name'
                       },
                       {
-                        # 'resource_group_name' => 'fake-rg-name',
                         'name' => 'fake-ag2-name',
                         'backend_pool_name' => 'fake-ag2-pool-2-name'
                       }
@@ -518,7 +499,6 @@ describe Bosh::AzureCloud::VMManager do
                   'caching' => 'ReadWrite',
                   'load_balancer' => 'fake-lb-name',
                   'application_gateway' => {
-                    # 'resource_group_name' => 'fake-rg-name',
                     'name' => 'fake-ag-name',
                     'backend_pool_name' => 'invalid-pool-name'
                   }

@@ -228,7 +228,6 @@ describe Bosh::AzureCloud::VMCloudProps do
               'fake_lb1_name', # String
               {
                 'name' => 'fake_lb2_name'
-                # 'resource_group_name' => resource_group_name
               }, # Hash without resource_group_name
               'fake_lb3_name,fake_lb4_name', # delimited String
               {
@@ -368,7 +367,6 @@ describe Bosh::AzureCloud::VMCloudProps do
               'fake_agw1_name', # String
               {
                 'name' => 'fake_agw2_name'
-                # 'resource_group_name' => resource_group_name
               }, # Hash without resource_group_name
               'fake_agw3_name,fake_agw4_name', # delimited String
               {
