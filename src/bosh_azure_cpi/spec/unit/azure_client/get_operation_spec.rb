@@ -883,13 +883,7 @@ describe Bosh::AzureCloud::AzureClient do
             application_gateway: fake_application_gateway
           }
         end
-        it 'should return the network interface with load balancer' do
-          # get_load_balancer needs get_public_ip
-          stub_request(:get, public_ip_uri).to_return(
-            status: 200,
-            body: public_ip_response_body.to_json,
-            headers: {}
-          )
+        it 'should return the network interface with application gateway' do
           stub_request(:get, application_gateway_uri).to_return(
             status: 200,
             body: application_gateway_response_body,

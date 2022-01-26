@@ -62,20 +62,22 @@ describe Bosh::AzureCloud::StemcellManager2 do
         .and_return(entities)
     end
 
-    it 'deletes the stemcell in default storage account' do
-      # Delete the user images whose prefix is the stemcell_uuid or stemcell_name
-      expect(azure_client).to receive(:delete_user_image)
-        .with("#{stemcell_uuid}-postfix").once
-      expect(azure_client).to receive(:delete_user_image)
-        .with("#{stemcell_name}-postfix").once
+    context 'when use_default_account_for_cleaning is false' do
+      it 'deletes all stemcells with the given stemcell name in all storage accounts' do
+        # Delete the user images whose prefix is the stemcell_uuid or stemcell_name
+        expect(azure_client).to receive(:delete_user_image)
+          .with("#{stemcell_uuid}-postfix").once
+        expect(azure_client).to receive(:delete_user_image)
+          .with("#{stemcell_name}-postfix").once
 
-      # Delete all stemcells with the given stemcell name in all storage accounts
-      expect(blob_manager).to receive(:delete_blob).twice
+        # Delete all stemcells with the given stemcell name in all storage accounts
+        expect(blob_manager).to receive(:delete_blob).twice
 
-      # Delete all records whose PartitionKey is the given stemcell name
-      allow(table_manager).to receive(:delete_entity)
+        # Delete all records whose PartitionKey is the given stemcell name
+        allow(table_manager).to receive(:delete_entity)
 
-      stemcell_manager2.delete_stemcell(stemcell_name)
+        stemcell_manager2.delete_stemcell(stemcell_name)
+      end
     end
   end
 
