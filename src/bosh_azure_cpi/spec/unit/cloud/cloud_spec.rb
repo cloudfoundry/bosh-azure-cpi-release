@@ -23,12 +23,55 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     context 'api_version' do
-      it 'defaults to api version 1' do
-        expect(cloud.api_version).to eq(1)
+      context 'when not set' do
+        let(:default_api_version) { 1 }
+        let(:cloud) do
+          # NOTE: We can't use `mock_cloud(nil)` here, because that method always explicitly passes both args to the underlying `initialize` method
+          Bosh::AzureCloud::Cloud.new(mock_cloud_options['properties'])
+        end
+
+        it 'defaults to api version 1' do
+          expect(cloud.api_version).to eq(default_api_version)
+        end
       end
 
-      it 'can be set' do
-        expect(cloud_v2.api_version).to eq(2)
+      context 'when explicitly set' do
+        context 'to api version 1' do
+          let(:api_version) { 1 }
+          let(:cloud) { mock_cloud(nil, api_version) }
+
+          it 'succeeds' do
+            expect(cloud.api_version).to eq(api_version)
+          end
+        end
+
+        context 'to api version 2' do
+          let(:api_version) { 2 }
+
+          it 'succeeds' do
+            expect(cloud_v2.api_version).to eq(api_version)
+          end
+        end
+
+        context 'to api version nil' do
+          let(:api_version) { nil }
+
+          it 'raises an exception' do
+            expect do
+              mock_cloud(nil, api_version)
+            end.to raise_error(Bosh::Clouds::CloudError, "Invalid api_version '#{api_version}'")
+          end
+        end
+
+        context 'to api version 3' do
+          let(:api_version) { 3 }
+
+          it 'raises an exception' do
+            expect do
+              mock_cloud(nil, api_version)
+            end.to raise_error(Bosh::Clouds::CloudError, "Invalid api_version '#{api_version}'")
+          end
+        end
       end
     end
 

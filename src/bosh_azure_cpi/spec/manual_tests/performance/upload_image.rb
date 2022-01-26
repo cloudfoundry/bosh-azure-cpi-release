@@ -16,7 +16,7 @@ Bosh::Clouds::Config.configure(cloud_config)
 cpi_config_file = File.expand_path('cpi.cfg', __dir__)
 puts cpi_config_file
 config = Psych.load_file(cpi_config_file)
-cpi = Bosh::AzureCloud::Cloud.new(config)
+cpi = Bosh::AzureCloud::Cloud.new(config, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
 stemcell_properties = {
   'name' => 'fake-name2',
   'version' => 'fake-version',
