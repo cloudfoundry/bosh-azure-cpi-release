@@ -22,10 +22,10 @@ describe Bosh::AzureCloud::VMManager do
             .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
             .and_return([])
           allow(azure_client).to receive(:get_load_balancer_by_name)
-            .with(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+            .with(vm_props.load_balancers.first.resource_group_name, vm_props.load_balancers.first.name)
             .and_return(load_balancer)
           allow(azure_client).to receive(:get_application_gateway_by_name)
-            .with(vm_props.application_gateway)
+            .with(vm_props.application_gateways.first.resource_group_name, vm_props.application_gateways.first.name)
             .and_return(application_gateway)
           allow(azure_client).to receive(:list_public_ips)
             .and_return([{
@@ -49,10 +49,10 @@ describe Bosh::AzureCloud::VMManager do
             .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
             .and_return([])
           allow(azure_client).to receive(:get_load_balancer_by_name)
-            .with(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+            .with(vm_props.load_balancers.first.resource_group_name, vm_props.load_balancers.first.name)
             .and_return(load_balancer)
           allow(azure_client).to receive(:get_application_gateway_by_name)
-            .with(vm_props.application_gateway)
+            .with(vm_props.application_gateways.first.resource_group_name, vm_props.application_gateways.first.name)
             .and_return(application_gateway)
           allow(azure_client).to receive(:list_public_ips)
             .and_return([{
@@ -79,10 +79,10 @@ describe Bosh::AzureCloud::VMManager do
         allow(manual_network).to receive(:resource_group_name)
           .and_return('fake-resource-group-name')
         allow(azure_client).to receive(:get_load_balancer_by_name)
-          .with(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+          .with(vm_props.load_balancers.first.resource_group_name, vm_props.load_balancers.first.name)
           .and_return(load_balancer)
         allow(azure_client).to receive(:get_application_gateway_by_name)
-          .with(vm_props.application_gateway)
+          .with(vm_props.application_gateways.first.resource_group_name, vm_props.application_gateways.first.name)
           .and_return(application_gateway)
         allow(azure_client).to receive(:list_public_ips)
           .and_return([{
@@ -128,10 +128,10 @@ describe Bosh::AzureCloud::VMManager do
     context 'when public ip is not found' do
       before do
         allow(azure_client).to receive(:get_load_balancer_by_name)
-          .with(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+          .with(vm_props.load_balancers.first.resource_group_name, vm_props.load_balancers.first.name)
           .and_return(load_balancer)
         allow(azure_client).to receive(:get_application_gateway_by_name)
-          .with(vm_props.application_gateway)
+          .with(vm_props.application_gateways.first.resource_group_name, vm_props.application_gateways.first.name)
           .and_return(application_gateway)
       end
 
@@ -190,7 +190,7 @@ describe Bosh::AzureCloud::VMManager do
 
       it 'should raise an error' do
         allow(azure_client).to receive(:get_load_balancer_by_name)
-          .with(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+          .with(vm_props.load_balancers.first.resource_group_name, vm_props.load_balancers.first.name)
           .and_return(nil)
 
         expect(azure_client).not_to receive(:delete_virtual_machine)
@@ -211,10 +211,10 @@ describe Bosh::AzureCloud::VMManager do
 
       it 'should raise an error' do
         allow(azure_client).to receive(:get_load_balancer_by_name)
-          .with(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+          .with(vm_props.load_balancers.first.resource_group_name, vm_props.load_balancers.first.name)
           .and_return(load_balancer)
         allow(azure_client).to receive(:get_application_gateway_by_name)
-          .with(vm_props.application_gateway)
+          .with(vm_props.application_gateways.first.resource_group_name, vm_props.application_gateways.first.name)
           .and_return(nil)
 
         expect(azure_client).not_to receive(:delete_virtual_machine)
@@ -231,10 +231,10 @@ describe Bosh::AzureCloud::VMManager do
         allow(azure_client).to receive(:get_network_subnet_by_name)
           .and_return(subnet)
         allow(azure_client).to receive(:get_load_balancer_by_name)
-          .with(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+          .with(vm_props.load_balancers.first.resource_group_name, vm_props.load_balancers.first.name)
           .and_return(load_balancer)
         allow(azure_client).to receive(:get_application_gateway_by_name)
-          .with(vm_props.application_gateway)
+          .with(vm_props.application_gateways.first.resource_group_name, vm_props.application_gateways.first.name)
           .and_return(application_gateway)
         allow(azure_client).to receive(:list_public_ips)
           .and_return([{
@@ -275,10 +275,10 @@ describe Bosh::AzureCloud::VMManager do
           allow(azure_client).to receive(:get_network_subnet_by_name)
             .and_return(subnet)
           allow(azure_client).to receive(:get_load_balancer_by_name)
-            .with(vm_props.load_balancer.resource_group_name, vm_props.load_balancer.name)
+            .with(vm_props.load_balancers.first.resource_group_name, vm_props.load_balancers.first.name)
             .and_return(load_balancer)
           allow(azure_client).to receive(:get_application_gateway_by_name)
-            .with(vm_props.application_gateway)
+            .with(vm_props.application_gateways.first.resource_group_name, vm_props.application_gateways.first.name)
             .and_return(application_gateway)
           allow(azure_client).to receive(:list_public_ips)
             .and_return([{

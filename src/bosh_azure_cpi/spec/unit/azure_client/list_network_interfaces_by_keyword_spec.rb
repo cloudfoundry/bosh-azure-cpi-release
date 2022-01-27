@@ -167,8 +167,8 @@ describe Bosh::AzureCloud::AzureClient do
           private_ip_allocation_method: 'f0',
           network_security_group: { id: 'i' },
           public_ip: { id: 'j' },
-          load_balancer: { id: 'k' },
-          application_gateway: { id: 'l' },
+          load_balancers: [{ id: 'k' }],
+          application_gateways: [{ id: 'l' }],
           application_security_groups: [{ id: 'asg-id-1' }]
         }
       end

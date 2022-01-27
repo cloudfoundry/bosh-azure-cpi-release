@@ -57,7 +57,7 @@ describe Bosh::AzureCloud::VMManager do
       allow(azure_client).to receive(:get_load_balancer_by_name)
         .with(resource_group_name, vm_name).and_return(load_balancer)
       allow(azure_client).to receive(:get_application_gateway_by_name)
-        .with(vm_name).and_return(application_gateway)
+        .with(nil, vm_name).and_return(application_gateway)
       allow(azure_client).to receive(:get_network_interface_by_name)
         .with(resource_group_name, vm_name).and_return(network_interface)
       allow(azure_client).to receive(:get_public_ip_by_name)

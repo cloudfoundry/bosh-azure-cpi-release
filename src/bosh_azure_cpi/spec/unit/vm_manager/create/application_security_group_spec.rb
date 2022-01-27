@@ -597,8 +597,8 @@ describe Bosh::AzureCloud::VMManager do
                                                 public_ip: dynamic_public_ip,
                                                 subnet: subnet,
                                                 tags: tags,
-                                                load_balancer: [ load_balancer ],
-                                                application_gateway: application_gateway
+                                                load_balancers: [ load_balancer ],
+                                                application_gateways: [application_gateway]
                                               )).once
 
             _, vm_params = vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
@@ -625,8 +625,8 @@ describe Bosh::AzureCloud::VMManager do
                                                 public_ip: dynamic_public_ip,
                                                 subnet: subnet,
                                                 tags: tags,
-                                                load_balancer: [ load_balancer ],
-                                                application_gateway: application_gateway
+                                                load_balancers: [ load_balancer ],
+                                                application_gateways: [application_gateway]
                                               ))
 
             _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)

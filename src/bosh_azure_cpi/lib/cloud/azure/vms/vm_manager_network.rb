@@ -88,28 +88,64 @@ module Bosh::AzureCloud
       public_ip
     end
 
-    def _get_load_balancer(vm_props)
-      load_balancer = nil
-      unless vm_props.load_balancer.name.nil?
-        load_balancer_name_split = vm_props.load_balancer.name.split(',')        
-        load_balancer = Array.new
-        load_balancer_name_split.each do |load_balancer_name|
-          single_load_balancer = @azure_client.get_load_balancer_by_name(vm_props.load_balancer.resource_group_name, load_balancer_name)
-          cloud_error("Cannot find the load balancer '#{load_balancer_name}'") if single_load_balancer.nil?
-          load_balancer.push(single_load_balancer)
+    # @return [Array<Hash>]
+    # @see Bosh::AzureCloud::AzureClient.create_network_interface
+    def _get_load_balancers(vm_props)
+      load_balancers = nil
+      load_balancer_configs = vm_props.load_balancers
+      unless load_balancer_configs.nil?
+        # NOTE: The following block gets the Azure API info for each Bosh AGW config (from the vm_type config).
+        load_balancers = load_balancer_configs.map do |load_balancer_config|
+          load_balancer = @azure_client.get_load_balancer_by_name(load_balancer_config.resource_group_name, load_balancer_config.name)
+          cloud_error("Cannot find the load balancer '#{load_balancer_config.name}'") if load_balancer.nil?
+
+          if load_balancer_config.backend_pool_name
+            # NOTE: This is the only place where we simultaneously have both the Bosh LB config (from the vm_type) AND the Azure LB info (from the Azure API).
+            # Since the `AzureClient.create_network_interface` method only uses the first backend pool,
+            # and since there is not a 1-to-1 mapping between the vm_type LB configs and LBs (despite the config property name, each vm_type LB config actually represents a single LB Backend Pool, not a whole LB),
+            # we can therefore remove all pools EXCEPT the specified pool.
+            # To handle multiple pools of a single LB, you should use 1 vm_type LB Hash (with LB name + backend_pool_name) per pool.
+            pools = load_balancer[:backend_address_pools]
+            pools = [pools] unless pools.is_a?(Array)
+            pool = pools.find { |p| Hash(p)[:name] == load_balancer_config.backend_pool_name }
+            cloud_error("'#{load_balancer_config.name}' does not have a backend_pool named '#{load_balancer_config.backend_pool_name}': #{load_balancer}") if pool.nil?
+
+            load_balancer[:backend_address_pools] = [pool]
+          end
+          load_balancer
         end
       end
-      load_balancer
+      load_balancers
     end
 
-    def _get_application_gateway(vm_props)
-      application_gateway = nil
-      unless vm_props.application_gateway.nil?
-        application_gateway_name = vm_props.application_gateway
-        application_gateway = @azure_client.get_application_gateway_by_name(application_gateway_name)
-        cloud_error("Cannot find the application gateway '#{application_gateway_name}'") if application_gateway.nil?
+    # @return [Array<Hash>]
+    # @see Bosh::AzureCloud::AzureClient.create_network_interface
+    def _get_application_gateways(vm_props)
+      application_gateways = nil
+      application_gateway_configs = vm_props.application_gateways
+      unless application_gateway_configs.nil?
+        # NOTE: The following block gets the Azure API info for each Bosh AGW config (from the vm_type config).
+        application_gateways = application_gateway_configs.map do |application_gateway_config|
+          application_gateway = @azure_client.get_application_gateway_by_name(application_gateway_config.resource_group_name, application_gateway_config.name)
+          cloud_error("Cannot find the application gateway '#{application_gateway_config.name}'") if application_gateway.nil?
+
+          if application_gateway_config.backend_pool_name
+            # NOTE: This is the only place where we simultaneously have both the Bosh AGW config (from the vm_type) AND the Azure AGW info (from the Azure API).
+            # Since the `AzureClient.create_network_interface` method only uses the first backend pool,
+            # and since there is not a 1-to-1 mapping between the vm_type AGW configs and AGWs (despite the config property name, each vm_type AGW config actually represents a single AGW Backend Pool, not a whole AGW),
+            # we can therefore remove all pools EXCEPT the specified pool.
+            # To handle multiple pools of a single AGW, you should use 1 vm_type AGW Hash (with AGW name + backend_pool_name) per pool.
+            pools = application_gateway[:backend_address_pools]
+            pools = [pools] unless pools.is_a?(Array)
+            pool = pools.find { |p| Hash(p)[:name] == application_gateway_config.backend_pool_name }
+            cloud_error("'#{application_gateway_config.name}' does not have a backend_pool named '#{application_gateway_config.backend_pool_name}': #{application_gateway}") if pool.nil?
+
+            application_gateway[:backend_address_pools] = [pool]
+          end
+          application_gateway
+        end
       end
-      application_gateway
+      application_gateways
     end
 
     def _get_or_create_public_ip(resource_group_name, vm_name, location, vm_props, network_configurator)
@@ -131,11 +167,12 @@ module Bosh::AzureCloud
       public_ip
     end
 
+    # @return [Array<Hash>] one Hash (returned by Bosh::AzureCloud::AzureClient.get_network_interface_by_name)  per network interface created
     def _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
       # Tasks to prepare before creating NICs:
-      #   * preapre public ip
-      #   * prepare load balancer
-      #   * prepare application gateway
+      #   * prepare public ip
+      #   * prepare load balancer(s)
+      #   * prepare application gateway(s)
       tasks_preparing = []
 
       tasks_preparing.push(
@@ -144,13 +181,13 @@ module Bosh::AzureCloud
         end
       )
       tasks_preparing.push(
-        task_get_load_balancer = Concurrent::Future.execute do
-          _get_load_balancer(vm_props)
+        task_get_load_balancers = Concurrent::Future.execute do
+          _get_load_balancers(vm_props)
         end
       )
       tasks_preparing.push(
-        task_get_application_gateway = Concurrent::Future.execute do
-          _get_application_gateway(vm_props)
+        task_get_application_gateways = Concurrent::Future.execute do
+          _get_application_gateways(vm_props)
         end
       )
 
@@ -158,8 +195,8 @@ module Bosh::AzureCloud
       tasks_preparing.map(&:wait)
 
       public_ip = task_get_or_create_public_ip.value!
-      load_balancer = task_get_load_balancer.value!
-      application_gateway = task_get_application_gateway.value!
+      load_balancers = task_get_load_balancers.value!
+      application_gateways = task_get_application_gateways.value!
 
       # tasks to create NICs, NICs will be created in different threads
       tasks_creating = []
@@ -182,16 +219,17 @@ module Bosh::AzureCloud
           enable_accelerated_networking: accelerated_networking
         }
         nic_params[:subnet] = _get_network_subnet(network)
+        # NOTE: The first NIC is the Primary/Gateway network. See: `Bosh::AzureCloud::NetworkConfigurator.initialize`.
         if index.zero?
           nic_params[:public_ip] = public_ip
           nic_params[:tags] = primary_nic_tags
-          nic_params[:load_balancer] = load_balancer
-          nic_params[:application_gateway] = application_gateway
+          nic_params[:load_balancers] = load_balancers
+          nic_params[:application_gateways] = application_gateways
         else
           nic_params[:public_ip] = nil
           nic_params[:tags] = AZURE_TAGS
-          nic_params[:load_balancer] = nil
-          nic_params[:application_gateway] = nil
+          nic_params[:load_balancers] = nil
+          nic_params[:application_gateways] = nil
         end
         tasks_creating.push(
           Concurrent::Future.execute do
