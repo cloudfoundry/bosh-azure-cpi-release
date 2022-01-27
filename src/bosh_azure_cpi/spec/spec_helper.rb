@@ -149,8 +149,10 @@ def time_measure
   Time.new - start
 end
 
+# REVIEW: `run_in_new_process` is flagged as a correctable Style/ExplicitBlockArgument offense.
+# However, it seems like the entire method should probably be converted into a method alias. E.g. `alias_method run_in_new_process, fork`
 def run_in_new_process
-  fork do
+  fork do # rubocop:todo Style/ExplicitBlockArgument
     yield
   end
 end

@@ -392,12 +392,6 @@ Style/ClassAndModuleChildren:
 Style/Documentation:
   Enabled: false
 
-# Offense count: 1
-# Cop supports --auto-correct.
-Style/ExplicitBlockArgument:
-  Exclude:
-    - 'spec/spec_helper.rb'
-
 # Offense count: 15
 # Configuration parameters: MaxUnannotatedPlaceholdersAllowed, IgnoredMethods.
 # SupportedStyles: annotated, template, unannotated
