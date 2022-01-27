@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class BlobManager
+  class BlobManager # rubocop:todo Metrics/ClassLength
     include Helpers
 
     MAX_CHUNK_SIZE = 2 * 1024 * 1024  # 2MB

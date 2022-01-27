@@ -3,7 +3,7 @@
 module Bosh::AzureCloud
   class RetriableError < RuntimeError; end
 
-  class WireClient
+  class WireClient # rubocop:todo Metrics/ClassLength
     TELEMETRY_URI_FORMAT = 'http://%{endpoint}/machine?comp=telemetrydata'
     TELEMETRY_HEADER     = { 'Content-Type' => 'text/xml;charset=utf-8', 'x-ms-version' => '2012-11-30' }.freeze
 

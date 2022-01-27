@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class Cloud < Bosh::Cloud
+  class Cloud < Bosh::Cloud # rubocop:todo Metrics/ClassLength
     attr_reader   :registry
     attr_reader   :config
     # Below defines are for test purpose

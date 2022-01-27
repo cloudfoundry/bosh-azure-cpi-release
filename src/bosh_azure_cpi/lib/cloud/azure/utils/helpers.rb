@@ -338,7 +338,7 @@ module Bosh::AzureCloud
     #   If the size is larger than 1,000 GiB, CPI uses 1,000 GiB because it is not expected to use such a large ephemeral disk in CF currently. You can find the temporary disk size in the comment if it is larger than 1,000 GiB
     # count: The maximum number of data disks for the instance type
     #   The maximum number of data disks on Azure for now is 64. Set it to 64 if instance_type cannot be found in case a new instance type is supported in future
-    class DiskInfo
+    class DiskInfo # rubocop:todo Metrics/ClassLength
       INSTANCE_TYPE_DISK_MAPPING = {
         # A-series
         'STANDARD_A0' => [30, 1], # 20 GiB
