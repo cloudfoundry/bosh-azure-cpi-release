@@ -53,14 +53,6 @@ Layout/EmptyLinesAroundBlockBody:
 
 # Offense count: 1
 # Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyleAlignWith, Severity.
-# SupportedStylesAlignWith: keyword, variable, start_of_line
-Layout/EndAlignment:
-  Exclude:
-    - 'lib/cloud/azure/restapi/azure_client.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
 # Configuration parameters: AllowForAlignment, AllowBeforeTrailingComments, ForceEqualSignAlignment.
 Layout/ExtraSpacing:
   Exclude:
@@ -83,29 +75,6 @@ Layout/FirstHashElementIndentation:
   Exclude:
     - 'spec/unit/azure_client/get_operation_spec.rb'
     - 'spec/unit/utils/bosh_agent_util_spec.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: EnforcedStyle.
-# SupportedStyles: normal, indented_internal_methods
-Layout/IndentationConsistency:
-  Exclude:
-    - 'lib/cloud/azure/restapi/azure_client.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: IndentationWidth, EnforcedStyle.
-# SupportedStyles: spaces, tabs
-Layout/IndentationStyle:
-  Exclude:
-    - 'lib/cloud/azure/restapi/azure_client.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: Width, IgnoredPatterns.
-Layout/IndentationWidth:
-  Exclude:
-    - 'lib/cloud/azure/restapi/azure_client.rb'
 
 # Offense count: 1
 # Cop supports --auto-correct.
@@ -856,13 +825,6 @@ Style/NegatedIfElseCondition:
 # Offense count: 1
 # Cop supports --auto-correct.
 Style/NestedTernaryOperator:
-  Exclude:
-    - 'lib/cloud/azure/restapi/azure_client.rb'
-
-# Offense count: 1
-# Cop supports --auto-correct.
-# Configuration parameters: IncludeSemanticChanges.
-Style/NonNilCheck:
   Exclude:
     - 'lib/cloud/azure/restapi/azure_client.rb'
 

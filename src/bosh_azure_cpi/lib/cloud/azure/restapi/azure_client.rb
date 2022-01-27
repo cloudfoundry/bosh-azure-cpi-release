@@ -152,7 +152,7 @@ module Bosh::AzureCloud
           next_url = body['nextLink']
         end
 
-	while next_url != nil
+        until next_url.nil?
           @logger.debug("Getting resources from nextLink #{next_url}")
           uri = URI(next_url)
           response = http_get(uri)
