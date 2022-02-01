@@ -23,6 +23,7 @@ variable "resource_group_prefix" {
 }
 locals {
   bats_public_ip_sku         = "Standard"
+  bosh_public_ip_sku         = "Standard"
 }
 
 # Configure the Microsoft Azure Provider
@@ -152,6 +153,7 @@ resource "azurerm_public_ip" "azure_ip_bosh" {
   location                     = "${var.location}"
   resource_group_name          = "${azurerm_resource_group.azure_rg_bosh.name}"
   public_ip_address_allocation = "static"
+  sku                          = "${local.bosh_public_ip_sku}"
 }
 
 # Public IP Address for BATS
