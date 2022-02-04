@@ -71,9 +71,7 @@ module Bosh::AzureCloud
       else
         cloud_error("Invalid resource_group_name in instance id (version 2) '#{self}'") if resource_group_name.nil? || resource_group_name.empty?
         cloud_error("Invalid vm_name in instance id (version 2)' '#{self}'") if vm_name.nil? || vm_name.empty?
-        unless storage_account_name.nil?
-          cloud_error("Invalid storage_account_name in instance id (version 2) '#{self}'") if storage_account_name.empty?
-        end
+        cloud_error("Invalid storage_account_name in instance id (version 2) '#{self}'") if !storage_account_name.nil? && storage_account_name.empty?
       end
     end
 

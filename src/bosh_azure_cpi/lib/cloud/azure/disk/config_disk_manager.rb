@@ -20,8 +20,7 @@ module Bosh::AzureCloud
 
     # Returns the config disk uri.
     def prepare_config_disk(resource_group_name, vm_name, location, metadata_obj, user_data_obj)
-      disk = _create_config_disk(resource_group_name, vm_name, location, metadata_obj, user_data_obj)
-      disk
+      _create_config_disk(resource_group_name, vm_name, location, metadata_obj, user_data_obj)
     end
 
     private

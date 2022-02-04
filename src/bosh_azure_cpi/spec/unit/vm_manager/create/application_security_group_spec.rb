@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -40,7 +40,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       # Application Security Groups
-      context '#application_security_groups' do
+      describe '#application_security_groups' do
         context 'when the application security groups are specified in network specs' do
           let(:asg_1_name_in_network_spec) { 'fake-asg-1-name-specified-in-network-spec' }
           let(:asg_1_in_network_spec) do
@@ -84,7 +84,7 @@ describe Bosh::AzureCloud::VMManager do
             end.not_to raise_error
           end
 
-          context ' and vm_properties' do
+          context 'and vm_properties' do
             let(:asg_1_name_in_vm_properties) { 'fake-asg-1-name-specified-in-resource-pool' }
             let(:asg_1_in_vm_properties) do
               {
@@ -138,7 +138,7 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         # The cases in the below context doesn't care where the asg names is specified.
-        context '#resource_group_for_application_security_group' do
+        describe '#resource_group_for_application_security_group' do
           let(:asg_name) { 'fake-asg-name' }
           let(:asg) do
             {
@@ -189,6 +189,7 @@ describe Bosh::AzureCloud::VMManager do
 
           context 'when the resource group name is specified in the network spec' do
             let(:rg_name_for_asg) { 'resource-group-name-for-application-security-group' }
+
             before do
               allow(manual_network).to receive(:resource_group_name).and_return(rg_name_for_asg)
               allow(dynamic_network).to receive(:resource_group_name).and_return(rg_name_for_asg)
@@ -254,7 +255,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).not_to receive(:delete_network_interface)
                 expect do
                   vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                end.to raise_error /Cannot find the application security group '#{asg_name}'/
+                end.to raise_error(/Cannot find the application security group '#{asg_name}'/)
               end
             end
           end
@@ -262,7 +263,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       # IP Forwarding
-      context '#ip_forwarding' do
+      describe '#ip_forwarding' do
         context 'when ip forwarding is disbaled in network specs' do
           before do
             allow(manual_network).to receive(:ip_forwarding).and_return(false)
@@ -275,6 +276,7 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               )
             end
+
             it 'should disable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -293,6 +295,7 @@ describe Bosh::AzureCloud::VMManager do
                 'ip_forwarding' => false
               )
             end
+
             it 'should disable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -311,6 +314,7 @@ describe Bosh::AzureCloud::VMManager do
                 'ip_forwarding' => true
               )
             end
+
             it 'should enable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -335,6 +339,7 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               )
             end
+
             it 'should enable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -353,6 +358,7 @@ describe Bosh::AzureCloud::VMManager do
                 'ip_forwarding' => false
               )
             end
+
             it 'should disable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -371,6 +377,7 @@ describe Bosh::AzureCloud::VMManager do
                 'ip_forwarding' => true
               )
             end
+
             it 'should enable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -385,7 +392,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       # Accelerated Networking
-      context '#accelerated_networking' do
+      describe '#accelerated_networking' do
         context 'when accelerated networking is disbaled in network specs' do
           before do
             allow(manual_network).to receive(:accelerated_networking).and_return(false)
@@ -398,6 +405,7 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               )
             end
+
             it 'should disable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -416,6 +424,7 @@ describe Bosh::AzureCloud::VMManager do
                 'accelerated_networking' => false
               )
             end
+
             it 'should disable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -434,6 +443,7 @@ describe Bosh::AzureCloud::VMManager do
                 'accelerated_networking' => true
               )
             end
+
             it 'should enable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -458,6 +468,7 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               )
             end
+
             it 'should enable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -476,6 +487,7 @@ describe Bosh::AzureCloud::VMManager do
                 'accelerated_networking' => false
               )
             end
+
             it 'should disable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -494,6 +506,7 @@ describe Bosh::AzureCloud::VMManager do
                 'accelerated_networking' => true
               )
             end
+
             it 'should enable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -508,13 +521,13 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       # Stemcell
-      context '#stemcell' do
+      describe '#stemcell' do
         context 'when a heavy stemcell is used' do
           it 'should succeed' do
             expect(azure_client).not_to receive(:delete_virtual_machine)
             expect(azure_client).not_to receive(:delete_network_interface)
 
-            expect(azure_client).to receive(:create_network_interface).exactly(2).times
+            expect(azure_client).to receive(:create_network_interface).twice
             _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             expect(vm_params[:name]).to eq(vm_name)
             expect(vm_params[:image_uri]).to eq(stemcell_uri)
@@ -597,7 +610,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 public_ip: dynamic_public_ip,
                                                 subnet: subnet,
                                                 tags: tags,
-                                                load_balancers: [ load_balancer ],
+                                                load_balancers: [load_balancer],
                                                 application_gateways: [application_gateway]
                                               )).once
 
@@ -625,7 +638,7 @@ describe Bosh::AzureCloud::VMManager do
                                                 public_ip: dynamic_public_ip,
                                                 subnet: subnet,
                                                 tags: tags,
-                                                load_balancers: [ load_balancer ],
+                                                load_balancers: [load_balancer],
                                                 application_gateways: [application_gateway]
                                               ))
 
@@ -745,7 +758,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context 'when AzureAsynchronousError is raised once and AzureAsynchronousError.status is Failed' do
-        context ' and use_managed_disks is false' do
+        context 'and use_managed_disks is false' do
           it 'should succeed' do
             count = 0
             allow(azure_client).to receive(:create_virtual_machine) do
@@ -771,7 +784,7 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
-        context ' and use_managed_disks is true' do
+        context 'and use_managed_disks is true' do
           it 'should succeed' do
             count = 0
             allow(azure_client).to receive(:create_virtual_machine) do

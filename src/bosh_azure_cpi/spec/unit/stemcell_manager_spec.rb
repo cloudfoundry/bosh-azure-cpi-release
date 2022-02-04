@@ -72,6 +72,7 @@ describe Bosh::AzureCloud::StemcellManager do
       allow(Open3).to receive(:capture2e).and_return(['',
                                                       double('status', exitstatus: 0)])
     end
+
     it 'creates the stemcell' do
       expect(blob_manager).to receive(:create_page_blob)
 
@@ -145,7 +146,7 @@ describe Bosh::AzureCloud::StemcellManager do
 
             expect do
               stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-            end.to raise_error /The status of the stemcell #{stemcell_name} in the storage account #{storage_account_name} is unknown/
+            end.to raise_error(/The status of the stemcell #{stemcell_name} in the storage account #{storage_account_name} is unknown/)
           end
         end
 
@@ -169,6 +170,7 @@ describe Bosh::AzureCloud::StemcellManager do
                 }
               ]
             end
+
             before do
               allow(table_manager).to receive(:query_entities)
                 .and_return(entities_first_query, entities_second_query)
@@ -201,10 +203,12 @@ describe Bosh::AzureCloud::StemcellManager do
                   }
                 ]
               end
+
               before do
                 allow(Time).to receive(:new).and_return(time_now, (time_now + 1.1))
                 allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
               end
+
               it 'should raise an error' do
                 expect(blob_manager).not_to receive(:get_blob_properties)
                 # The first query is in get_blob_properties, the second and third queries are in wait_stemcell_copy
@@ -218,7 +222,7 @@ describe Bosh::AzureCloud::StemcellManager do
 
                 expect do
                   stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-                end.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+                end.to raise_error(/The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/)
               end
             end
 
@@ -254,7 +258,7 @@ describe Bosh::AzureCloud::StemcellManager do
 
                 expect do
                   stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-                end.to raise_error /The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/
+                end.to raise_error(/The operation of copying the stemcell #{stemcell_name} to the storage account #{storage_account_name} timeouts/)
               end
             end
           end
@@ -332,7 +336,7 @@ describe Bosh::AzureCloud::StemcellManager do
         it 'should get one exception' do
           expect do
             stemcell_manager.has_stemcell?(storage_account_name, stemcell_name)
-          end.to raise_error /insert into table failed./
+          end.to raise_error(/insert into table failed./)
         end
       end
     end
@@ -377,7 +381,7 @@ describe Bosh::AzureCloud::StemcellManager do
       it 'should throw an error' do
         expect do
           stemcell_manager.get_stemcell_info(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_name)
-        end.to raise_error /The stemcell '#{stemcell_name}' does not exist in the storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}'/
+        end.to raise_error(/The stemcell '#{stemcell_name}' does not exist in the storage account '#{MOCK_DEFAULT_STORAGE_ACCOUNT_NAME}'/)
       end
     end
 

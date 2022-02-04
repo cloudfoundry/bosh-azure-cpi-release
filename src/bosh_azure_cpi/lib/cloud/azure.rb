@@ -28,7 +28,7 @@ require 'yaml'
 # Reference:
 #  https://makandracards.com/ninjaconcept/30815-fixing-socketerror-getaddrinfo-name-or-service-not-known-with-ruby-s-resolv-replace-rb
 #  http://www.subelsky.com/2014/05/fixing-socketerror-getaddrinfo-name-or.html
-require 'resolv-replace.rb'
+require 'resolv-replace'
 
 require 'digest/md5'
 require 'net/http'

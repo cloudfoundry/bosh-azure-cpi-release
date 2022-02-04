@@ -55,13 +55,17 @@ describe Bosh::AzureCloud::VMManager do
         .and_return(vm_name)
 
       allow(azure_client).to receive(:get_load_balancer_by_name)
-        .with(resource_group_name, vm_name).and_return(load_balancer)
+        .with(resource_group_name, vm_name)
+        .and_return(load_balancer)
       allow(azure_client).to receive(:get_application_gateway_by_name)
-        .with(nil, vm_name).and_return(application_gateway)
+        .with(nil, vm_name)
+        .and_return(application_gateway)
       allow(azure_client).to receive(:get_network_interface_by_name)
-        .with(resource_group_name, vm_name).and_return(network_interface)
+        .with(resource_group_name, vm_name)
+        .and_return(network_interface)
       allow(azure_client).to receive(:get_public_ip_by_name)
-        .with(resource_group_name, vm_name).and_return(public_ip)
+        .with(resource_group_name, vm_name)
+        .and_return(public_ip)
 
       allow(azure_client).to receive(:list_network_interfaces_by_keyword)
         .with(resource_group_name, vm_name).and_return(network_interfaces)
@@ -129,6 +133,7 @@ describe Bosh::AzureCloud::VMManager do
               ]
             }
           end
+
           before do
             allow(azure_client).to receive(:get_virtual_machine_by_name)
               .with(resource_group_name, vm_name).and_return(vm)
@@ -169,6 +174,7 @@ describe Bosh::AzureCloud::VMManager do
               ]
             }
           end
+
           before do
             allow(azure_client).to receive(:get_virtual_machine_by_name)
               .with(resource_group_name, vm_name).and_return(vm)
@@ -335,6 +341,7 @@ describe Bosh::AzureCloud::VMManager do
           ]
         }
       end
+
       before do
         allow(azure_client).to receive(:get_virtual_machine_by_name)
           .with(resource_group_name, vm_name).and_return(vm)

@@ -7,7 +7,7 @@ describe Bosh::AzureCloud::Cloud do
     @stemcell_path = ENV.fetch('BOSH_AZURE_STEMCELL_PATH')
   end
 
-  context '#stemcell' do
+  describe '#stemcell' do
     context 'with heavy stemcell', heavy_stemcell: true do
       let(:extract_path)               { '/tmp/with-heavy-stemcell' }
       let(:image_path)                 { "#{extract_path}/image" }

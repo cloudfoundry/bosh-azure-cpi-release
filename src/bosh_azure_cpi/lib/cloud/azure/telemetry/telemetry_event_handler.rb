@@ -55,15 +55,13 @@ module Bosh::AzureCloud
       event_files = Dir["#{@events_dir}/*.tld"]
       event_files = event_files[0...max] if event_files.length > max
       event_files.each do |file|
-        begin
-          hash = JSON.parse(File.read(file))
-          event_list << Bosh::AzureCloud::TelemetryEvent.parse_hash(hash)
-        rescue StandardError => e
-          @logger.warn("[Telemetry] Failed to collect event from '#{file}'. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
-          raise e
-        ensure
-          File.delete(file)
-        end
+        hash = JSON.parse(File.read(file))
+        event_list << Bosh::AzureCloud::TelemetryEvent.parse_hash(hash)
+      rescue StandardError => e
+        @logger.warn("[Telemetry] Failed to collect event from '#{file}'. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
+        raise e
+      ensure
+        File.delete(file)
       end
       Bosh::AzureCloud::TelemetryEventList.new(event_list)
     end

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -30,22 +30,22 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context 'when VM is created' do
-      context '#tags' do
+      describe '#tags' do
         context 'when tags is specified in vm_types or vm_extensions' do
           it 'should set the tags for the VM' do
             expect(azure_client).to receive(:create_virtual_machine)
-                                      .with(MOCK_RESOURCE_GROUP_NAME, hash_including(tags: custom_tags.merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
+              .with(MOCK_RESOURCE_GROUP_NAME, hash_including(tags: custom_tags.merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
             vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, anything, anything, anything)
           end
         end
 
         context 'when tags are specified in the incoming env' do
-          let(:env) { {"bosh" => {"tags" => {'tag-name-1' => 'value-from-env', 'tag-name-3' => 'other-env-value'}}} }
+          let(:env) { { 'bosh' => { 'tags' => { 'tag-name-1' => 'value-from-env', 'tag-name-3' => 'other-env-value' } } } }
 
           it 'should set the tags for the VM' do
             expect(azure_client).to receive(:create_virtual_machine)
-                                      .with(MOCK_RESOURCE_GROUP_NAME, hash_including(tags: env['bosh']['tags'].merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
-            vm_manager.create(bosh_vm_meta, location, props_factory.parse_vm_props({'instance_type' => 'Standard_D1'}), disk_cids, network_configurator, env, anything, anything, anything)
+              .with(MOCK_RESOURCE_GROUP_NAME, hash_including(tags: env['bosh']['tags'].merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
+            vm_manager.create(bosh_vm_meta, location, props_factory.parse_vm_props({ 'instance_type' => 'Standard_D1' }), disk_cids, network_configurator, env, anything, anything, anything)
           end
 
           context 'when tags are also specified in vm_types' do
@@ -56,7 +56,7 @@ describe Bosh::AzureCloud::VMManager do
                 'tag-name-3' => 'other-env-value'
               }
               expect(azure_client).to receive(:create_virtual_machine)
-                                        .with(MOCK_RESOURCE_GROUP_NAME, hash_including(tags: expected_tags.merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
+                .with(MOCK_RESOURCE_GROUP_NAME, hash_including(tags: expected_tags.merge(Bosh::AzureCloud::Helpers::AZURE_TAGS)), any_args)
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, anything, anything, anything)
             end
           end

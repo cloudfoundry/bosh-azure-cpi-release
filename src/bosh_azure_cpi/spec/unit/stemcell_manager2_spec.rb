@@ -164,7 +164,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
         it 'should raise an error' do
           expect do
             stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-          end.to raise_error /Failed to get user image for the stemcell '#{stemcell_name}'/
+          end.to raise_error(/Failed to get user image for the stemcell '#{stemcell_name}'/)
         end
       end
 
@@ -354,7 +354,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
                     .and_call_original
                   expect do
                     stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                  end.to raise_error /Error when copying blobs/
+                  end.to raise_error(/Error when copying blobs/)
                 end
               end
             end
@@ -372,7 +372,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
                 it 'raise an error' do
                   expect do
                     stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
-                  end.to raise_error /Error when creating storage account/
+                  end.to raise_error(/Error when creating storage account/)
                 end
               end
             end
@@ -442,6 +442,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
               location: location
             }
           end
+
           before do
             allow(storage_account_manager).to receive(:default_storage_account)
               .and_return(default_storage_account)

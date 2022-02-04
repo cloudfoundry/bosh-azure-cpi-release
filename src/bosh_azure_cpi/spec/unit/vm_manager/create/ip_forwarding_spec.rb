@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -21,7 +21,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       # IP Forwarding
-      context '#ip_forwarding' do
+      describe '#ip_forwarding' do
         context 'when ip forwarding is disbaled in network specs' do
           before do
             allow(manual_network).to receive(:ip_forwarding).and_return(false)
@@ -34,6 +34,7 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               )
             end
+
             it 'should disable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -52,6 +53,7 @@ describe Bosh::AzureCloud::VMManager do
                 'ip_forwarding' => false
               )
             end
+
             it 'should disable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -70,6 +72,7 @@ describe Bosh::AzureCloud::VMManager do
                 'ip_forwarding' => true
               )
             end
+
             it 'should enable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -94,6 +97,7 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               )
             end
+
             it 'should enable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -112,6 +116,7 @@ describe Bosh::AzureCloud::VMManager do
                 'ip_forwarding' => false
               )
             end
+
             it 'should disable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -130,6 +135,7 @@ describe Bosh::AzureCloud::VMManager do
                 'ip_forwarding' => true
               )
             end
+
             it 'should enable ip forwarding on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)

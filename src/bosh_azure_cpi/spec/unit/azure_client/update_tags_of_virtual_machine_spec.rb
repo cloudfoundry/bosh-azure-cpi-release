@@ -53,11 +53,11 @@ describe Bosh::AzureCloud::AzureClient do
             },
             'resources' => [
               {
-                "properties": {},
-                "id": 'fake-id',
-                "name": 'fake-name',
-                "type": 'fake-type',
-                "location": 'fake-location'
+                properties: {},
+                id: 'fake-id',
+                name: 'fake-name',
+                type: 'fake-type',
+                location: 'fake-location'
               }
             ]
           }.to_json
@@ -178,11 +178,11 @@ describe Bosh::AzureCloud::AzureClient do
               },
               'resources' => [
                 {
-                  "properties": {},
-                  "id": 'fake-id',
-                  "name": 'fake-name',
-                  "type": 'fake-type',
-                  "location": 'fake-location'
+                  properties: {},
+                  id: 'fake-id',
+                  name: 'fake-name',
+                  type: 'fake-type',
+                  location: 'fake-location'
                 }
               ]
             }.to_json
@@ -253,7 +253,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
-        end.to raise_error /update_tags_of_virtual_machine - cannot find the virtual machine by name/
+        end.to raise_error(/update_tags_of_virtual_machine - cannot find the virtual machine by name/)
       end
     end
   end

@@ -153,7 +153,7 @@ describe Bosh::AzureCloud::AzureClient do
               'publicIPAllocationMethod' => 'Static'  # Standard SKUs require Static
             },
             'zones' => ['fake-zone'],
-            'sku' => {'name' => 'Standard'}
+            'sku' => { 'name' => 'Standard' }
           }
         end
 

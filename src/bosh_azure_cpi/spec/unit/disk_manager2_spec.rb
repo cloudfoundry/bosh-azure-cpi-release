@@ -174,6 +174,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           .with(resource_group_name, disk_name)
           .and_return({})
       end
+
       it 'should return true' do
         expect(disk_manager2.has_data_disk?(disk_id)).to be(true)
       end
@@ -185,6 +186,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           .with(resource_group_name, disk_name)
           .and_return(nil)
       end
+
       it 'should return false' do
         expect(disk_manager2.has_data_disk?(disk_id)).to be(false)
       end
@@ -193,6 +195,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
   describe '#get_data_disk' do
     let(:mock_disk) { {} }
+
     it 'should get the disk' do
       expect do
         expect(azure_client).to receive(:get_managed_disk_by_name)
@@ -343,7 +346,7 @@ describe Bosh::AzureCloud::DiskManager2 do
         it 'should raise an error' do
           expect do
             disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
-          end.to raise_error /Unknown disk caching/
+          end.to raise_error(/Unknown disk caching/)
         end
       end
     end
@@ -401,8 +404,10 @@ describe Bosh::AzureCloud::DiskManager2 do
 
           context 'when the OS is Linux' do
             let(:minimum_required_disk_size) { 30 }
+
             context 'when the image_size is smaller than the minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size - 1) * 1024 }
+
               before do
                 allow(stemcell_info).to receive(:image_size)
                   .and_return(image_size)
@@ -421,6 +426,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
             context 'when the image_size is larger than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size + 1) * 1024 }
+
               before do
                 allow(stemcell_info).to receive(:image_size)
                   .and_return(image_size)
@@ -440,6 +446,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
           context 'when the OS is Windows' do
             let(:minimum_required_disk_size) { 128 }
+
             before do
               allow(stemcell_info).to receive(:is_windows?)
                 .and_return(true)
@@ -447,6 +454,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
             context 'when the image_size is smaller than the minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size - 1) * 1024 }
+
               before do
                 allow(stemcell_info).to receive(:image_size)
                   .and_return(image_size)
@@ -465,6 +473,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
             context 'when the image_size is larger than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size + 1) * 1024 }
+
               before do
                 allow(stemcell_info).to receive(:image_size)
                   .and_return(image_size)
@@ -512,6 +521,7 @@ describe Bosh::AzureCloud::DiskManager2 do
             )
           end
           let(:image_size) { 4 * 1024 }
+
           before do
             allow(stemcell_info).to receive(:image_size)
               .and_return(image_size)
@@ -554,7 +564,7 @@ describe Bosh::AzureCloud::DiskManager2 do
             props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
-                'size' => 5 * 1024 + 512
+                'size' => (5 * 1024) + 512
               }
             )
           end
@@ -802,7 +812,7 @@ describe Bosh::AzureCloud::DiskManager2 do
       it 'should raise an error' do
         expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        end.to raise_error /migrate_to_zone - Can'n find snapshot '#{snapshot_name}' in resource group '#{resource_group_name}'/
+        end.to raise_error(/migrate_to_zone - Can'n find snapshot '#{snapshot_name}' in resource group '#{resource_group_name}'/)
       end
     end
 
@@ -818,7 +828,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
         expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        end.to raise_error /fails to create disk/
+        end.to raise_error(/fails to create disk/)
       end
     end
 
@@ -831,7 +841,7 @@ describe Bosh::AzureCloud::DiskManager2 do
             count == 1 ? raise('fails to create disk') : nil
           end
 
-        expect(azure_client).to receive(:create_managed_disk_from_snapshot).exactly(2).times
+        expect(azure_client).to receive(:create_managed_disk_from_snapshot).twice
 
         expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
@@ -851,7 +861,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
         expect do
           disk_manager2.migrate_to_zone(disk_id, disk, zone)
-        end.to raise_error /migrate_to_zone - Can'n find disk '#{disk_name}' in resource group '#{resource_group_name}' after migration/
+        end.to raise_error(/migrate_to_zone - Can'n find disk '#{disk_name}' in resource group '#{resource_group_name}' after migration/)
       end
     end
   end

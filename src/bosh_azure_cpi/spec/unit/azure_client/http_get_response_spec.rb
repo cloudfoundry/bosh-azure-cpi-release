@@ -77,6 +77,7 @@ describe Bosh::AzureCloud::AzureClient do
 
     context 'when the response status code is one of AZURE_GENERAL_RETRY_ERROR_CODES ([408, 429, 500, 502, 503, 504])' do
       let(:retry_after) { 10 }
+
       before do
         allow(response).to receive(:key?).with('Retry-After').and_return(true)
         allow(response).to receive(:[]).with('Retry-After').and_return(retry_after)

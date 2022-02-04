@@ -32,6 +32,7 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'when logger is not nil' do
       let(:logger_strio) { StringIO.new }
+
       before do
         helpers_tester.set_logger(Logger.new(logger_strio))
       end
@@ -47,6 +48,7 @@ describe Bosh::AzureCloud::Helpers do
 
       context 'when exception is not nil' do
         let(:fake_exception) { StandardError.new('fake-exception') }
+
         it 'should raise CloudError, log the message and the exception' do
           expect do
             helpers_tester.cloud_error(message, fake_exception)
@@ -95,7 +97,7 @@ describe Bosh::AzureCloud::Helpers do
       it 'should raise an error' do
         expect do
           helpers_tester.validate_disk_caching(caching)
-        end.to raise_error /Unknown disk caching/
+        end.to raise_error(/Unknown disk caching/)
       end
     end
   end
@@ -105,7 +107,7 @@ describe Bosh::AzureCloud::Helpers do
       it 'should ignore any exception' do
         expect do
           helpers_tester.ignore_exception do
-            raise Exception
+            raise Exception # rubocop:disable Lint/RaiseException
           end
         end.not_to raise_error
       end
@@ -130,6 +132,7 @@ describe Bosh::AzureCloud::Helpers do
   describe '#bosh_jobs_dir' do
     context 'when the environment variable BOSH_JOBS_DIR exists' do
       let(:bosh_jobs_dir) { '.bosh_init/installations/a3ee66ec-6f00-4aab-632d-f6d4c5dc5f5b/jobs' }
+
       before do
         allow(ENV).to receive(:[]).with('BOSH_JOBS_DIR').and_return(bosh_jobs_dir)
       end
@@ -400,6 +403,7 @@ describe Bosh::AzureCloud::Helpers do
   describe '#get_service_principal_certificate_path' do
     context 'when the environment variable BOSH_JOBS_DIR exists' do
       let(:bosh_jobs_dir) { '.bosh_init/installations/a3ee66ec-6f00-4aab-632d-f6d4c5dc5f5b/jobs' }
+
       before do
         allow(ENV).to receive(:[]).with('BOSH_JOBS_DIR').and_return(bosh_jobs_dir)
       end
@@ -427,19 +431,19 @@ describe Bosh::AzureCloud::Helpers do
     let(:jti) { 'b55b54ac-7494-449b-94b2-d7bff0285837' }
     let(:header) do
       {
-        "alg": 'RS256',
-        "typ": 'JWT',
-        "x5t": x5t
+        alg: 'RS256',
+        typ: 'JWT',
+        x5t: x5t
       }
     end
     let(:payload) do
       {
-        "aud": authentication_endpoint,
-        "exp": (now + 3600).strftime('%s').to_i,
-        "iss": client_id,
-        "jti": jti,
-        "nbf": (now - 90).strftime('%s').to_i,
-        "sub": client_id
+        aud: authentication_endpoint,
+        exp: (now + 3600).strftime('%s').to_i,
+        iss: client_id,
+        jti: jti,
+        nbf: (now - 90).strftime('%s').to_i,
+        sub: client_id
       }
     end
     let(:rsa_private) { 'fake-rsa-private' }
@@ -465,7 +469,7 @@ describe Bosh::AzureCloud::Helpers do
         expect(JWT).to receive(:encode).with(payload, rsa_private, 'RS256', header).and_raise('JWT-ENCODING-ERROR')
         expect do
           helpers_tester.get_jwt_assertion(authentication_endpoint, client_id)
-        end.to raise_error /Failed to get the jwt assertion: .*JWT-ENCODING-ERROR/
+        end.to raise_error(/Failed to get the jwt assertion: .*JWT-ENCODING-ERROR/)
       end
     end
   end
@@ -500,7 +504,7 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should create the storage client with the correct options' do
         expect(Azure::Storage::Common::Client).to receive(:create).with(options)
-                                                          .and_return(azure_storage_client)
+                                                                  .and_return(azure_storage_client)
         expect(
           helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
         ).to eq(azure_storage_client)
@@ -529,7 +533,7 @@ describe Bosh::AzureCloud::Helpers do
 
       it 'should create the storage client with the correct options' do
         expect(Azure::Storage::Common::Client).to receive(:create).with(options)
-                                                          .and_return(azure_storage_client)
+                                                                  .and_return(azure_storage_client)
         expect(
           helpers_tester.initialize_azure_storage_client(storage_account, azure_config)
         ).to eq(azure_storage_client)
@@ -540,6 +544,7 @@ describe Bosh::AzureCloud::Helpers do
   describe '#get_ca_cert_path' do
     context 'when the environment variable BOSH_JOBS_DIR exists' do
       let(:bosh_jobs_dir) { '.bosh_init/installations/a3ee66ec-6f00-4aab-632d-f6d4c5dc5f5b/jobs' }
+
       before do
         allow(ENV).to receive(:[]).with('BOSH_JOBS_DIR').and_return(bosh_jobs_dir)
       end
@@ -835,6 +840,7 @@ describe Bosh::AzureCloud::Helpers do
     context 'when metadata is empty' do
       let(:uri) { 'fake-uri' }
       let(:metadata) { {} }
+
       it 'should return correct values' do
         stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new(uri, metadata)
         expect(stemcell_info.uri).to eq('fake-uri')
@@ -893,8 +899,10 @@ describe Bosh::AzureCloud::Helpers do
 
     context 'for single process' do
       let(:mode) { File::LOCK_EX }
+
       context 'when the block is executed successfully' do
         let(:result) { 'fake-result' }
+
         it 'should return the result' do
           expect(File).to receive(:open).and_call_original
           expect_any_instance_of(File).to receive(:flock).with(mode).and_call_original

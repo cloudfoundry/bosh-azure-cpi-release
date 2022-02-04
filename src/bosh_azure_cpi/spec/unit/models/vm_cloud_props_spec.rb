@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/cloud/shared_stuff.rb'
+require 'unit/cloud/shared_stuff'
 
 describe Bosh::AzureCloud::VMCloudProps do
   include_context 'shared stuff'
@@ -70,7 +70,7 @@ describe Bosh::AzureCloud::VMCloudProps do
       it 'should raise an error' do
         expect do
           Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config_managed)
-        end.to raise_error /'#{zone}' is not a valid zone/
+        end.to raise_error(/'#{zone}' is not a valid zone/)
       end
     end
 
@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::VMCloudProps do
       it 'should raise an error' do
         expect do
           Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config_managed)
-        end.to raise_error /Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both/
+        end.to raise_error(/Only one of 'availability_zone' and 'availability_set' is allowed to be configured for the VM but you have configured both/)
       end
     end
 
@@ -417,7 +417,7 @@ describe Bosh::AzureCloud::VMCloudProps do
       end
     end
 
-    context '#managed_identity' do
+    describe '#managed_identity' do
       context 'when default_managed_identity is not specified in global configurations' do
         context 'when managed_identity is not specified in vm_extensions' do
           let(:vm_cloud_props) do

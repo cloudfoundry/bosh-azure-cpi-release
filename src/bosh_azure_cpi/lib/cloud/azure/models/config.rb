@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
+  # TODO: Refactoring: Move class to new file: LoadBalancerConfig
   class LoadBalancerConfig
     attr_reader :name, :resource_group_name, :backend_pool_name
 
@@ -15,6 +16,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: ApplicationGatewayConfig
   class ApplicationGatewayConfig
     attr_reader :name, :resource_group_name, :backend_pool_name
 
@@ -29,9 +31,11 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: AvailabilitySetConfig
   class AvailabilitySetConfig
     attr_reader :name
     attr_reader :platform_update_domain_count, :platform_fault_domain_count
+
     def initialize(name, platform_update_domain_count, platform_fault_domain_count)
       @name = name
       @platform_update_domain_count = platform_update_domain_count
@@ -43,9 +47,11 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: AzureStackConfig
   class AzureStackConfig
-    attr_reader :domain, :authentication, :resource, :endpoint_prefix
-    attr_writer :authentication
+    attr_accessor :authentication
+    attr_reader :domain, :resource, :endpoint_prefix
+
     def initialize(azure_stack_config_hash)
       @domain = azure_stack_config_hash['domain']
       @authentication = azure_stack_config_hash['authentication']
@@ -54,19 +60,24 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: ConfigDisk
   class ConfigDisk
     attr_reader :enabled
+
     def initialize(config_disk_config_hash)
       @enabled = config_disk_config_hash['enabled']
     end
   end
 
+  # TODO: Refactoring: Move class to new file: AzureConfig
   class AzureConfig
     include Helpers
+
     attr_reader :environment, :subscription_id, :location, :resource_group_name
     attr_reader :azure_stack
     attr_reader :credentials_source, :tenant_id, :client_id, :client_secret, :default_managed_identity
-    attr_reader :use_managed_disks, :storage_account_name
+    attr_accessor :storage_account_name
+    attr_reader :use_managed_disks
     attr_reader :default_security_group
     attr_reader :enable_vm_boot_diagnostics, :is_debug_mode, :keep_failed_vms
     attr_reader :enable_telemetry, :isv_tracking_guid
@@ -76,8 +87,6 @@ module Bosh::AzureCloud
     attr_reader :config_disk
     attr_reader :stemcell_api_version
     attr_reader :use_default_account_for_cleaning
-
-    attr_writer :storage_account_name
 
     def initialize(azure_config_hash)
       @environment = azure_config_hash['environment']
@@ -134,6 +143,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: RegistryConfig
   class RegistryConfig
     attr_reader :endpoint, :user, :password
 
@@ -146,6 +156,7 @@ module Bosh::AzureCloud
     end
   end
 
+  # TODO: Refactoring: Move class to new file: AgentConfig
   class AgentConfig
     def initialize(agent_config_hash)
       @config = agent_config_hash
@@ -158,6 +169,7 @@ module Bosh::AzureCloud
 
   class Config
     attr_reader :azure, :registry, :agent
+
     def initialize(config_hash)
       @config = config_hash
       @azure = AzureConfig.new(config_hash['azure'] || {})

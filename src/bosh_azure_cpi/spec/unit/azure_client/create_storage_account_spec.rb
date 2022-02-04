@@ -183,8 +183,8 @@ describe Bosh::AzureCloud::AzureClient do
                   headers: {}
                 )
 
-                expect(azure_client).to receive(:sleep).with(default_retry_after).exactly(2).times
-                expect(azure_client).to receive(:sleep).with(1).exactly(1).times
+                expect(azure_client).to receive(:sleep).with(default_retry_after).twice
+                expect(azure_client).to receive(:sleep).with(1).once
                 expect(
                   azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
                 ).to be(true)

@@ -141,7 +141,7 @@ describe Bosh::AzureCloud::NetworkConfigurator do
       expect do
         Bosh::AzureCloud::NetworkConfigurator.new(azure_config, network_spec)
       end.to raise_error Bosh::Clouds::CloudError, "Invalid network type 'foo' for Azure, " \
-                        "can only handle 'dynamic', 'vip', or 'manual' network types"
+                                                   "can only handle 'dynamic', 'vip', or 'manual' network types"
     end
   end
 

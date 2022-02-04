@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 describe Bosh::AzureCloud::CPILogger do
-  context '#set_request_id' do
+  describe '#set_request_id' do
     let(:message) { 'fake-message' }
     let(:request_id) { 'fake-req-id' }
     let(:log_file) { '/tmp/cpi-fake-logger.log' }

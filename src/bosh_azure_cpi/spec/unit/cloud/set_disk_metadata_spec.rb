@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/cloud/shared_stuff.rb'
+require 'unit/cloud/shared_stuff'
 
 describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
@@ -13,9 +13,7 @@ describe Bosh::AzureCloud::Cloud do
     it 'should raise a NotSupported error' do
       expect do
         cloud.set_disk_metadata(disk_cid, metadata)
-      end.to raise_error {
-        Bosh::Clouds::NotSupported
-      }
+      end.to raise_error(Bosh::Clouds::NotImplemented)
     end
   end
 end

@@ -154,7 +154,7 @@ describe Bosh::AzureCloud::DiskManager do
       it 'should raise an error' do
         expect do
           disk_manager.delete_snapshot(snapshot_id)
-        end.to raise_error /Invalid snapshot id/
+        end.to raise_error(/Invalid snapshot id/)
       end
     end
 
@@ -197,6 +197,7 @@ describe Bosh::AzureCloud::DiskManager do
       allow(blob_manager).to receive(:get_blob_properties)
         .and_return({})
     end
+
     it 'should delete the disk' do
       expect(disk_manager.has_data_disk?(disk_id)).to be(true)
     end
@@ -228,6 +229,7 @@ describe Bosh::AzureCloud::DiskManager do
             'migrated' => 'true'
           }
         end
+
         before do
           allow(blob_manager).to receive(:get_blob_metadata)
             .and_return(metadata)
@@ -240,6 +242,7 @@ describe Bosh::AzureCloud::DiskManager do
 
       context "when the disk doesn't have the metadata" do
         let(:metadata) { {} }
+
         before do
           allow(blob_manager).to receive(:get_blob_metadata)
             .and_return(metadata)
@@ -372,7 +375,7 @@ describe Bosh::AzureCloud::DiskManager do
         it 'should raise an error' do
           expect do
             disk_manager.os_disk(storage_account_name, vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk)
-          end.to raise_error /Unknown disk caching/
+          end.to raise_error(/Unknown disk caching/)
         end
       end
     end
@@ -432,8 +435,10 @@ describe Bosh::AzureCloud::DiskManager do
 
           context 'when the OS is Linux' do
             let(:minimum_required_disk_size) { 30 }
+
             context 'when the image_size is smaller than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size - 1) * 1024 }
+
               before do
                 allow(stemcell_info).to receive(:image_size)
                   .and_return(image_size)
@@ -453,6 +458,7 @@ describe Bosh::AzureCloud::DiskManager do
 
             context 'when the image_size is larger than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size + 1) * 1024 }
+
               before do
                 allow(stemcell_info).to receive(:image_size)
                   .and_return(image_size)
@@ -473,6 +479,7 @@ describe Bosh::AzureCloud::DiskManager do
 
           context 'when the OS is Windows' do
             let(:minimum_required_disk_size) { 128 }
+
             before do
               allow(stemcell_info).to receive(:is_windows?)
                 .and_return(true)
@@ -480,6 +487,7 @@ describe Bosh::AzureCloud::DiskManager do
 
             context 'when the image_size is smaller than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size - 1) * 1024 }
+
               before do
                 allow(stemcell_info).to receive(:image_size)
                   .and_return(image_size)
@@ -499,6 +507,7 @@ describe Bosh::AzureCloud::DiskManager do
 
             context 'when the image_size is larger than minimum required disk size' do
               let(:image_size) { (minimum_required_disk_size + 1) * 1024 }
+
               before do
                 allow(stemcell_info).to receive(:image_size)
                   .and_return(image_size)
@@ -547,6 +556,7 @@ describe Bosh::AzureCloud::DiskManager do
             )
           end
           let(:image_size) { 4 * 1024 }
+
           before do
             allow(stemcell_info).to receive(:image_size)
               .and_return(image_size)
@@ -591,7 +601,7 @@ describe Bosh::AzureCloud::DiskManager do
             props_factory.parse_vm_props(
               'instance_type' => 'STANDARD_A1',
               'root_disk' => {
-                'size' => 5 * 1024 + 512
+                'size' => (5 * 1024) + 512
               }
             )
           end

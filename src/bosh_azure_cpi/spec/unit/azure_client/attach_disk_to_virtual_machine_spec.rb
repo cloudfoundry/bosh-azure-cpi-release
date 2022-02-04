@@ -256,11 +256,11 @@ describe Bosh::AzureCloud::AzureClient do
             },
             'resources' => [
               {
-                "properties": {},
-                "id": 'fake-id',
-                "name": 'fake-name',
-                "type": 'fake-type',
-                "location": 'fake-location'
+                properties: {},
+                id: 'fake-id',
+                name: 'fake-name',
+                type: 'fake-type',
+                location: 'fake-location'
               }
             ]
           }.to_json
@@ -317,7 +317,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
-          end.to raise_error /attach_disk_to_virtual_machine - cannot find the virtual machine by name/
+          end.to raise_error(/attach_disk_to_virtual_machine - cannot find the virtual machine by name/)
         end
       end
 
@@ -360,7 +360,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.attach_disk_to_virtual_machine(resource_group, vm_name, disk_params)
-          end.to raise_error /attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine/
+          end.to raise_error(/attach_disk_to_virtual_machine - cannot find an available lun in the virtual machine/)
         end
       end
     end

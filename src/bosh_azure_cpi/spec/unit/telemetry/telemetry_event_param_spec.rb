@@ -105,6 +105,7 @@ describe Bosh::AzureCloud::TelemetryEventParam do
 
     context 'when type of value is unknown' do
       let(:obj) { double('unknown-type') }
+
       it 'should return with right value' do
         expect(telemetry_event_param.send(:type_of, obj)).to eq('mt:wstr')
       end

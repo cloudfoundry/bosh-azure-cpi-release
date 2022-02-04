@@ -99,7 +99,7 @@ describe Bosh::AzureCloud::AzureClient do
         id = ''
         expect do
           azure_client.send(:_parse_name_from_id, id)
-        end.to raise_error /\"#{id}\" is not a valid URL./
+        end.to raise_error(/"#{id}" is not a valid URL./)
       end
     end
 
@@ -108,7 +108,7 @@ describe Bosh::AzureCloud::AzureClient do
       it 'should raise an error' do
         expect do
           azure_client.send(:_parse_name_from_id, id)
-        end.to raise_error /\"#{id}\" is not a valid URL./
+        end.to raise_error(/"#{id}" is not a valid URL./)
       end
     end
 
@@ -201,7 +201,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.get_resource_by_id(url, 'api-version' => api_version)
-        end.to raise_error /get_token - http code: 404/
+        end.to raise_error(/get_token - http code: 404/)
       end
 
       it 'should raise an error if tenant_id, client_id or client_secret/certificate is invalid' do
@@ -213,7 +213,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.get_resource_by_id(url, 'api-version' => api_version)
-        end.to raise_error %r{get_token - http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate.}
+        end.to raise_error %r{get_token - http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret/certificate.}
       end
 
       it 'should raise an error if the request is invalid' do
@@ -225,7 +225,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.get_resource_by_id(url, 'api-version' => api_version)
-        end.to raise_error %r{get_token - http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret\/certificate.}
+        end.to raise_error %r{get_token - http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret/certificate.}
       end
 
       it 'should raise an error if authentication retry fails' do
@@ -245,7 +245,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.get_resource_by_id(url, 'api-version' => api_version)
-        end.to raise_error /Azure authentication failed: Token is invalid./
+        end.to raise_error(/Azure authentication failed: Token is invalid./)
       end
     end
 
@@ -298,7 +298,7 @@ describe Bosh::AzureCloud::AzureClient do
         it 'should raise an error' do
           expect do
             azure_client.get_resource_by_id(url, 'api-version' => api_version)
-          end.to raise_error %r{get_token - http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret\/certificate.}
+          end.to raise_error %r{get_token - http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret/certificate.}
         end
       end
     end
@@ -361,7 +361,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.get_resource_by_id(url, 'api-version' => api_version)
-        end.to raise_error /http_get - http code: 400. Error message: {"foo":"bar"}/
+        end.to raise_error(/http_get - http code: 400. Error message: {"foo":"bar"}/)
       end
     end
   end
