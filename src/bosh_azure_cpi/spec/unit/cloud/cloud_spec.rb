@@ -53,16 +53,6 @@ describe Bosh::AzureCloud::Cloud do
           end
         end
 
-        context 'to api version nil' do
-          let(:api_version) { nil }
-
-          it 'raises an exception' do
-            expect do
-              mock_cloud(nil, api_version)
-            end.to raise_error(Bosh::Clouds::CloudError, "Invalid api_version '#{api_version}'")
-          end
-        end
-
         context 'to api version 3' do
           let(:api_version) { 3 }
 

@@ -48,7 +48,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'should call Azure management endpoint with a valid access token' do
-        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' })
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_falsey
         expect(result['error']).to be_nil
@@ -93,7 +93,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'should call Azure management endpoint with a valid access token' do
-        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' })
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_falsey
         expect(result['error']).to be_nil
@@ -131,7 +131,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' })
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
         expect(result['error']['message']).to match(%r{http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret/certificate})
@@ -170,7 +170,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' })
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
         expect(result['error']['message']).to match(%r{http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret/certificate})
@@ -185,7 +185,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
     let(:cloud_properties) { {} }
 
     it 'will return an appropriate error message when passed an invalid config file' do
-      result = run_cpi('method' => 'ping', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' })
+      result = run_cpi('method' => 'ping', 'arguments' => [], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
       expect(result.keys).to eq(%w[result error log])
       expect(result['result']).to be_nil
       expect(result['error']).to eq(
@@ -232,7 +232,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
     end
 
     it 'merges the context into the cloud_properties' do
-      result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => context)
+      result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => context, 'api_version' => 2)
       expect(result.keys).to eq(%w[result error log])
       expect(result['result']).not_to be_nil
       expect(result['result']).to be_falsey
@@ -240,8 +240,8 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
     end
 
     it 'returns the api version' do
-      result = run_cpi('method' => 'info', 'arguments' => [], 'context' => context)
-      expect(result['result']).not_to be_nil
+      result = run_cpi('method' => 'info', 'arguments' => [], 'context' => context, 'api_version' => 2)
+      expect(result['result']).to_not be_nil
       expect(result['error']).to be_nil
       expect(result['result']['api_version']).to eq(2)
     end
