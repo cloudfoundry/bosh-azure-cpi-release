@@ -886,6 +886,16 @@ module Bosh::AzureCloud
       http_put(url, disk)
     end
 
+    def resize_managed_disk(resource_group_name, params)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
+      disk = {
+        'properties' => {
+          'diskSizeGB' => params[:disk_size]
+        }
+      }
+      http_patch(url, disk)
+    end
+
     # Create a managed disk from storage blob SAS URI (import).
     #
     # ==== Attributes
