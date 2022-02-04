@@ -2,20 +2,21 @@
 
 source 'https://rubygems.org'
 
-gem 'azure-storage-common', '~> 2.0', '>= 2.0.2'
-gem 'azure-storage-blob', '~> 2.0', '>= 2.0.1'
-gem 'azure-storage-table', '~> 2.0', '>= 2.0.2'
+gem 'azure-storage-common', '~> 2.0', '>= 2.0.4'
+gem 'azure-storage-blob', '~> 2.0', '>= 2.0.3'
+gem 'azure-storage-table', '~> 2.0', '>= 2.0.4'
 gem 'bosh_common',      '1.3262.24.0'
 gem 'bosh_cpi',         '2.5.0'
 gem 'concurrent-ruby',  '~> 1.1', '>= 1.1.8'
 gem 'jwt',              '~> 2.2', '>= 2.2.2'
 gem 'deep_merge',       '~> 1.2', '>= 1.2.1'
-
+gem 'net-smtp'
+gem 'pry'
 gem 'rspec-retry', group: :test
 
 group :development, :test do
   gem 'rake',          '~>12.0'
-  gem 'rspec',         '~>3.5.0'
+  gem 'rspec',         '~>3.10.0'
   gem 'rubocop',       '~>1.23.0', require: false
   gem 'rubocop-rake',  '~>0.6.0', require: false
   gem 'rubocop-rspec', '~>2.6.0', require: false
