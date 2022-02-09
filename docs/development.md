@@ -63,9 +63,9 @@
     ```
 
    _Note:_ The development scripts expect `chruby` to be located at `/usr/local/share/chruby`.
-   Installing `chruby` via other mechanisms than those shown above may require additional steps 
+   Installing `chruby` via other mechanisms than those shown above may require additional steps
    to make the installation compatible with the development scripts' expectations.
-   For example, to install `chruby` via `homebrew`, you could create a softlink 
+   For example, to install `chruby` via `homebrew`, you could create a softlink
    from the brew-installed location to the script-expected location:
 
     ```bash
@@ -77,7 +77,7 @@
 
 1. Install ruby
 
-    Please make sure you have installed ruby `2.7.3` before you start.
+    Please make sure you have installed ruby `3.1.0` before you start.
 
     _Note:_ The development scripts use `chruby` as the ruby version manager.
 
@@ -90,8 +90,8 @@
       sudo make install
     popd
 
-    ruby-install ruby 2.7.3
-    echo 'chruby 2.7.3' >> ~/.profile
+    ruby-install ruby 3.1.0
+    echo 'chruby 3.1.0' >> ~/.profile
     source ~/.profile
     ruby -v
     ```
@@ -126,8 +126,8 @@ Your development environment is prepared successfully.
 
 ### Unit tests
 
-The [unit tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/unit) 
-are **REQUIRED** before you submit a PR. 
+The [unit tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/unit)
+are **REQUIRED** before you submit a PR.
 When submitting a PR, you need to provide the test coverage and make sure that the coverage doesn't decrease.
 
 ```bash
@@ -155,7 +155,7 @@ If unit tests are passed, you can create a dev release and deploy it for tests.
 
 ### Rubocop
 
-The [rubocop_check](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/bin/rubocop_check) 
+The [rubocop_check](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/bin/rubocop_check)
 script checks for rubocop offenses.
 
 ```bash
@@ -166,14 +166,14 @@ bundle install --with=test
 
 #### Rubocop autofix
 
-The [rubocop_autofix](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/bin/rubocop_autofix) 
+The [rubocop_autofix](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/bin/rubocop_autofix)
 script auto-corrects any rubocop offenses which can be auto-corrected.
 
-**_WARNING_:** Running this script **_COULD_** introduce bugs into the code. 
+**_WARNING_:** Running this script **_COULD_** introduce bugs into the code.
 Auto-correct code changes made by rubocop **_ARE NOT_** guaranteed to be functionally equivalent to the original code.
 You should _carefully_ review all auto-corrected code changes made by rubocop before merging them.
 
-However, with the above warning clearly in mind, this script may be useful in certain situations, 
+However, with the above warning clearly in mind, this script may be useful in certain situations,
 even if only as a way to better understand the 'problem' for rubocop offenses with ambiguous output.
 
 ```bash
@@ -194,9 +194,9 @@ required, you can run them separately though, with this command:
 
 ### CI Pipeline
 
-You can setup a [CI pipeline](../ci/) to run the 
-[integration tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/integration) 
-and [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests/tree/gocli-bats). 
+You can setup a [CI pipeline](../ci/) to run the
+[integration tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/integration)
+and [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests/tree/gocli-bats).
 It's optional for submitting a PR and required for publishing a new CPI release.
 
 ### Test CPI methods
@@ -225,7 +225,7 @@ You can use `bosh_azure_console` to test your code changes quickly.
   gem install pg --version 0.20.0 --no-ri --no-rdoc
 
   # Workaround for the issue https://github.com/cloudfoundry/bosh/issues/1621
-  sed -i -e '23s/^/#/' ~/.gem/ruby/2.7.3/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
+  sed -i -e '23s/^/#/' ~/.gem/ruby/3.1.0/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
 
   cat > ~/workspace/registry.cfg <<EOS
   ---

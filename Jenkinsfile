@@ -1,5 +1,5 @@
 pipeline {
-    agent { docker { image 'ruby:2.7.3' } }
+    agent { docker { image 'ruby:3.1.0' } }
     stages {
         stage('rubocop') {
             steps {
