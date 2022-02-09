@@ -241,7 +241,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
 
     it 'returns the api version' do
       result = run_cpi('method' => 'info', 'arguments' => [], 'context' => context, 'api_version' => 2)
-      expect(result['result']).to_not be_nil
+      expect(result['result']).not_to be_nil
       expect(result['error']).to be_nil
       expect(result['result']['api_version']).to eq(2)
     end
