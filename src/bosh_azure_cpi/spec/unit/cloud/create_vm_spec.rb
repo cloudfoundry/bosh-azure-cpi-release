@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/cloud/shared_stuff.rb'
+require 'unit/cloud/shared_stuff'
 
 describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
@@ -117,6 +117,7 @@ describe Bosh::AzureCloud::Cloud do
           }
         }
       end
+
       before do
         allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
           .with(vm_props, location)
@@ -158,6 +159,7 @@ describe Bosh::AzureCloud::Cloud do
     context 'when the location in the global configuration is different from the vnet location' do
       let(:cloud_properties_with_location) { mock_cloud_properties_merge('azure' => { 'location' => "location-other-than-#{location}" }) }
       let(:cloud_with_location) { mock_cloud(cloud_properties_with_location) }
+
       before do
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
           .with(cloud_with_location.config.azure, networks)
@@ -410,30 +412,30 @@ describe Bosh::AzureCloud::Cloud do
 
       before do
         allow(Bosh::AzureCloud::BoshVMMeta).to receive(:new)
-                                           .with(agent_id, stemcell_cid)
-                                           .and_return(bosh_vm_meta)
+          .with(agent_id, stemcell_cid)
+          .and_return(bosh_vm_meta)
         allow(instance_id).to receive(:to_s)
-                          .and_return(instance_id_string)
+          .and_return(instance_id_string)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
-                                                    .with(anything, networks)
-                                                    .and_return(network_configurator)
+          .with(anything, networks)
+          .and_return(network_configurator)
       end
 
       it 'returns an array of instance id and networks' do
         expect(registry_client).to receive(:update_settings)
         expect(vm_manager).to receive(:create)
-                          .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud_v2.config)
-                          .and_return([instance_id_string, {}])
+          .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud_v2.config)
+          .and_return([instance_id_string, {}])
 
         expect(
-            cloud_v2.create_vm(
-              agent_id,
-              stemcell_cid,
-              cloud_properties,
-              networks,
-              disk_cids,
-              environment
-            )
+          cloud_v2.create_vm(
+            agent_id,
+            stemcell_cid,
+            cloud_properties,
+            networks,
+            disk_cids,
+            environment
+          )
         ).to eq([instance_id_string, networks])
       end
 
@@ -443,29 +445,29 @@ describe Bosh::AzureCloud::Cloud do
           expect(vm_manager).to receive(:create)
 
           cloud_v2.create_vm(
-              agent_id,
-              stemcell_cid,
-              cloud_properties,
-              networks,
-              disk_cids,
-              environment
+            agent_id,
+            stemcell_cid,
+            cloud_properties,
+            networks,
+            disk_cids,
+            environment
           )
         end
 
         context 'and stemcell api version is 2' do
           it 'does not write to the registry' do
-            expect(registry_client).to_not receive(:update_settings)
+            expect(registry_client).not_to receive(:update_settings)
             expect(vm_manager).to receive(:create).and_return([instance_id_string, networks])
 
             expect(
-                cloud_sc_v2.create_vm(
-                    agent_id,
-                    stemcell_cid,
-                    cloud_properties,
-                    networks,
-                    disk_cids,
-                    environment
-                )
+              cloud_sc_v2.create_vm(
+                agent_id,
+                stemcell_cid,
+                cloud_properties,
+                networks,
+                disk_cids,
+                environment
+              )
             ).to eq([instance_id_string, networks])
           end
         end

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/cloud/shared_stuff.rb'
+require 'unit/cloud/shared_stuff'
 
 describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
@@ -52,6 +52,7 @@ describe Bosh::AzureCloud::Cloud do
               'ephemeral_disk_size' => size_in_gb * 1024
             }
           end
+
           it 'should return the cloud_properties' do
             expect(azure_client).to receive(:list_available_virtual_machine_sizes_by_location).with(location).and_return(available_vm_sizes)
             expect(instance_type_mapper).to receive(:map)
@@ -71,9 +72,10 @@ describe Bosh::AzureCloud::Cloud do
             {
               'cpu' => 1,
               'ram' => 1024,
-              'ephemeral_disk_size' => size_in_gb * 1024 + 1
+              'ephemeral_disk_size' => (size_in_gb * 1024) + 1
             }
           end
+
           it 'should return the cloud_properties' do
             expect(azure_client).to receive(:list_available_virtual_machine_sizes_by_location).with(location).and_return(available_vm_sizes)
             expect(instance_type_mapper).to receive(:map)

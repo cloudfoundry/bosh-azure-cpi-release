@@ -135,11 +135,10 @@ def mock_registry_properties
 end
 
 def mock_registry
-  registry = double('registry',
-                    endpoint: mock_registry_properties['endpoint'],
-                    user: mock_registry_properties['user'],
-                    password: mock_registry_properties['password'])
-  registry
+  double('registry',
+         endpoint: mock_registry_properties['endpoint'],
+         user: mock_registry_properties['user'],
+         password: mock_registry_properties['password'])
 end
 
 def mock_cloud(options = nil, api_version = 1)
@@ -152,8 +151,10 @@ def time_measure
   Time.new - start
 end
 
+# REVIEW: `run_in_new_process` is flagged as a correctable Style/ExplicitBlockArgument offense.
+# However, it seems like the entire method should probably be converted into a method alias. E.g. `alias_method run_in_new_process, fork`
 def run_in_new_process
-  fork do
+  fork do # rubocop:todo Style/ExplicitBlockArgument
     yield
   end
 end

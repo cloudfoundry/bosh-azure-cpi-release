@@ -88,7 +88,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.update_tags_of_storage_account(storage_account_name, tags)
-        end.to raise_error /check_completion - http code: 200/
+        end.to raise_error(/check_completion - http code: 200/)
       end
     end
   end

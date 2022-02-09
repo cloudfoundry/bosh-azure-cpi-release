@@ -14,6 +14,7 @@ module Bosh::AzureCloud
   class AzureConflictError < AzureError; end
   class AzureInternalError < AzureError; end
   class AzureAsynInternalError < AzureError; end
+
   class AzureAsynchronousError < AzureError
     attr_accessor :status, :error
 
@@ -22,7 +23,7 @@ module Bosh::AzureCloud
     end
   end
 
-  class AzureClient
+  class AzureClient # rubocop:todo Metrics/ClassLength
     include Helpers
 
     HTTP_CODE_OK                  = 200
@@ -152,7 +153,7 @@ module Bosh::AzureCloud
           next_url = body['nextLink']
         end
 
-	while next_url != nil
+        until next_url.nil?
           @logger.debug("Getting resources from nextLink #{next_url}")
           uri = URI(next_url)
           response = http_get(uri)
@@ -813,9 +814,7 @@ module Bosh::AzureCloud
         availability_set[:tags]     = result['tags']
 
         availability_set[:managed] = false
-        unless result['sku'].nil?
-          availability_set[:managed] = true if result['sku']['name'] == 'Aligned'
-        end
+        availability_set[:managed] = true if !result['sku'].nil? && (result['sku']['name'] == 'Aligned')
 
         properties = result['properties']
         availability_set[:provisioning_state]           = properties['provisioningState']
@@ -1266,7 +1265,7 @@ module Bosh::AzureCloud
       }
       if params[:zone]
         public_ip['zones'] = [params[:zone]]
-        public_ip['sku'] = {'name' => 'Standard'}
+        public_ip['sku'] = { 'name' => 'Standard' }
         public_ip['properties']['publicIPAllocationMethod'] = 'Static'
       end
 
@@ -1467,13 +1466,8 @@ module Bosh::AzureCloud
       # see: Bosh::AzureCloud::VMManager._get_load_balancers
       load_balancers = nic_params[:load_balancers]
       unless load_balancers.nil?
-        backend_pools = load_balancers.map { |load_balancer| {:id => load_balancer[:backend_address_pools][0][:id]} }
-        inbound_nat_rules = Array.new
-        load_balancers.each do |load_balancer|
-          unless load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules].nil?
-            inbound_nat_rules += load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules]
-          end
-        end
+        backend_pools = load_balancers.map { |load_balancer| { id: load_balancer[:backend_address_pools][0][:id] } }
+        inbound_nat_rules = load_balancers.flat_map { |load_balancer| load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules] }.compact
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = backend_pools
         interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] = inbound_nat_rules
       end
@@ -1482,7 +1476,7 @@ module Bosh::AzureCloud
       application_gateways = nic_params[:application_gateways]
       unless application_gateways.nil?
         # NOTE: backend_address_pools[0] should always be used. (When `application_gateway/backend_pool_name` is specified, the named pool will always be first here.)
-        backend_pools = application_gateways.map { |application_gateway| {:id => application_gateway[:backend_address_pools][0][:id]} }
+        backend_pools = application_gateways.map { |application_gateway| { id: application_gateway[:backend_address_pools][0][:id] } }
         interface['properties']['ipConfigurations'][0]['properties']['applicationGatewayBackendAddressPools'] = backend_pools
       end
 
@@ -1852,12 +1846,11 @@ module Bosh::AzureCloud
       result = http_post(url, storage_account)
       raise AzureError, "Cannot check the availability of the storage account name '#{name}'" unless result.is_a?(Hash)
 
-      ret = {
+      {
         available: result['nameAvailable'],
         reason: result['reason'],
         message: result['message']
       }
-      ret
     end
 
     # Get a storage account's information
@@ -1944,7 +1937,7 @@ module Bosh::AzureCloud
     def update_tags_of_storage_account(name, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
       request_body = {
-        "tags": tags
+        tags: tags
       }
       http_patch(url, request_body)
     end
@@ -2132,9 +2125,8 @@ module Bosh::AzureCloud
         ip_address[:name]     = result['name']
         ip_address[:location] = result['location']
         ip_address[:tags]     = result['tags']
-        ip_address[:sku]     = result['sku']['name'] unless result['sku'].nil?
-
-        ip_address[:zone] = result['zones'][0] unless result['zones'].nil?
+        ip_address[:sku]      = result['sku']['name'] unless result['sku'].nil?
+        ip_address[:zone]     = result['zones'][0] unless result['zones'].nil?
 
         properties = result['properties']
         ip_address[:resource_guid]               = properties['resourceGuid']
@@ -2181,7 +2173,13 @@ module Bosh::AzureCloud
     end
 
     def redact_credentials(keys, hash)
-      Hash[hash.map { |k, v| [k, v.is_a?(Hash) ? redact_credentials(keys, v) : (keys.include?(k) ? '<redacted>' : v)] }]
+      hash.map do |k, v|
+        [k, if v.is_a?(Hash)
+              redact_credentials(keys, v)
+            else
+              (keys.include?(k) ? '<redacted>' : v)
+            end]
+      end.to_h
     end
 
     # @return [String]
@@ -2200,9 +2198,9 @@ module Bosh::AzureCloud
     def http(uri, use_ssl = true)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true && use_ssl
-      if @azure_config.environment == ENVIRONMENT_AZURESTACK
+      if @azure_config.environment == ENVIRONMENT_AZURESTACK && uri.host.include?(@azure_config.azure_stack.domain)
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
-        http.ca_file = get_ca_cert_path if uri.host.include?(@azure_config.azure_stack.domain)
+        http.ca_file = get_ca_cert_path
       end
       # The default value for read_timeout is 60 seconds.
       # The default value for open_timeout is nil before ruby 2.3.0 so set it to 60 seconds here.
@@ -2243,11 +2241,12 @@ module Bosh::AzureCloud
           end
         end
 
-        if status_code == HTTP_CODE_OK
+        case status_code
+        when HTTP_CODE_OK
           @token = JSON(response.body)
-        elsif status_code == HTTP_CODE_UNAUTHORIZED
+        when HTTP_CODE_UNAUTHORIZED
           raise AzureError, "get_token - http code: #{status_code}. Azure authentication failed: Invalid tenant_id, client_id or client_secret/certificate. Error message: #{response.body}"
-        elsif status_code == HTTP_CODE_BAD_REQUEST
+        when HTTP_CODE_BAD_REQUEST
           raise AzureError, "get_token - http code: #{status_code}. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret/certificate. Error message: #{response.body}"
         else
           raise AzureError, "get_token - http code: #{status_code}. Error message: #{response.body}"
@@ -2467,9 +2466,10 @@ module Bosh::AzureCloud
         raise AzureAsynchronousError.new, "The body of the asynchronous response does not contain 'status'. Response: #{response.body}" if result['status'].nil?
 
         status = result['status']
-        if status == PROVISIONING_STATE_SUCCEEDED
+        case status
+        when PROVISIONING_STATE_SUCCEEDED
           return true
-        elsif status == PROVISIONING_STATE_INPROGRESS
+        when PROVISIONING_STATE_INPROGRESS
           @logger.debug('check_completion - InProgress...')
         else
           error = "check_completion - http code: #{response.code}\n"

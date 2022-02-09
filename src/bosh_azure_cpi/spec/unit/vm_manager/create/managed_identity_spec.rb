@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -20,7 +20,7 @@ describe Bosh::AzureCloud::VMManager do
         allow(azure_client).to receive(:create_virtual_machine)
       end
 
-      context '#managed_identity' do
+      describe '#managed_identity' do
         context 'when managed identity is nil in vm_props' do
           let(:vm_props) do
             props_factory.parse_vm_props(

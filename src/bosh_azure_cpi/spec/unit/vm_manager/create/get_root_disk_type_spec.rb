@@ -1,14 +1,14 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
 
   # The following variables are defined in shared_stuff.rb. You can override it if needed.
   #   - default_security_group
-  context '#root_disk_type' do
+  describe '#root_disk_type' do
     context 'when only instance_type is specified' do
       context 'when instance_type does not support SSD disks' do
         let(:vm_props) do

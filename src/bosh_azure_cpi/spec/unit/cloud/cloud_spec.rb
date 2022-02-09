@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/cloud/shared_stuff.rb'
+require 'unit/cloud/shared_stuff'
 
 describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::Cloud do
       it 'raises an exception with a user friendly message' do
         expect(FileUtils).to receive(:mkdir_p).with(CPI_LOCK_DIR).and_call_original
         expect do
-          cloud.has_vm?("fake-vm-cid")
+          cloud.has_vm?('fake-vm-cid')
         end.to raise_error(Bosh::Clouds::CloudError, 'Please make sure the CPI has proper network access to Azure. #<Net::OpenTimeout: execution expired>')
       end
     end
@@ -50,16 +50,6 @@ describe Bosh::AzureCloud::Cloud do
 
           it 'succeeds' do
             expect(cloud_v2.api_version).to eq(api_version)
-          end
-        end
-
-        context 'to api version nil' do
-          let(:api_version) { nil }
-
-          it 'raises an exception' do
-            expect do
-              mock_cloud(nil, api_version)
-            end.to raise_error(Bosh::Clouds::CloudError, "Invalid api_version '#{api_version}'")
           end
         end
 

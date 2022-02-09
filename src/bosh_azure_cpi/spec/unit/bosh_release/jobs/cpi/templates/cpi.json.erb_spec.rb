@@ -613,7 +613,7 @@ class TemplateEvaluationContext
 
   def recursive_merge(hash, other)
     hash.merge(other) do |_, old_value, new_value|
-      if old_value.class == Hash && new_value.class == Hash
+      if old_value.instance_of?(Hash) && new_value.instance_of?(Hash)
         recursive_merge(old_value, new_value)
       else
         new_value
@@ -643,7 +643,7 @@ class TemplateEvaluationContext
 
       value
     end
-    yield *values
+    yield(*values)
     InactiveElseBlock.new
   end
 

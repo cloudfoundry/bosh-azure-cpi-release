@@ -172,7 +172,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.delete_virtual_machine(resource_group, vm_name)
-          end.to raise_error { |error| expect(error.status).to eq('Failed') }
+          end.to(raise_error { |error| expect(error.status).to eq('Failed') })
         end
 
         it 'should raise an error if the body of the asynchronous response is empty' do
@@ -190,7 +190,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.delete_virtual_machine(resource_group, vm_name)
-          end.to raise_error /The body of the asynchronous response is empty/
+          end.to raise_error(/The body of the asynchronous response is empty/)
         end
 
         it "should raise an error if the body of the asynchronous response does not contain 'status'" do
@@ -209,7 +209,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.delete_virtual_machine(resource_group, vm_name)
-          end.to raise_error /The body of the asynchronous response does not contain 'status'/
+          end.to raise_error(/The body of the asynchronous response does not contain 'status'/)
         end
 
         it 'should raise an error if check completion operation is not accepeted' do
@@ -228,7 +228,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.delete_virtual_machine(resource_group, vm_name)
-          end.to raise_error /check_completion - http code: 404/
+          end.to raise_error(/check_completion - http code: 404/)
         end
 
         it 'should raise an error if create peration failed' do
@@ -247,7 +247,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.delete_virtual_machine(resource_group, vm_name)
-          end.to raise_error { |error| expect(error.status).to eq('Cancelled') }
+          end.to(raise_error { |error| expect(error.status).to eq('Cancelled') })
         end
       end
     end
@@ -306,7 +306,7 @@ describe Bosh::AzureCloud::AzureClient do
 
           expect do
             azure_client.delete_virtual_machine(resource_group, vm_name)
-          end.to raise_error /Azure authentication failed: Token is invalid./
+          end.to raise_error(/Azure authentication failed: Token is invalid./)
         end
       end
     end

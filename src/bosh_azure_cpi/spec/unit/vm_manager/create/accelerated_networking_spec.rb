@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       # Accelerated Networking
-      context '#accelerated_networking' do
+      describe '#accelerated_networking' do
         context 'when accelerated networking is disbaled in network specs' do
           before do
             allow(manual_network).to receive(:accelerated_networking).and_return(false)
@@ -37,6 +37,7 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               )
             end
+
             it 'should disable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -55,6 +56,7 @@ describe Bosh::AzureCloud::VMManager do
                 'accelerated_networking' => false
               )
             end
+
             it 'should disable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -73,6 +75,7 @@ describe Bosh::AzureCloud::VMManager do
                 'accelerated_networking' => true
               )
             end
+
             it 'should enable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -97,6 +100,7 @@ describe Bosh::AzureCloud::VMManager do
                 'instance_type' => 'Standard_D1'
               )
             end
+
             it 'should enable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -115,6 +119,7 @@ describe Bosh::AzureCloud::VMManager do
                 'accelerated_networking' => false
               )
             end
+
             it 'should disable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)
@@ -133,6 +138,7 @@ describe Bosh::AzureCloud::VMManager do
                 'accelerated_networking' => true
               )
             end
+
             it 'should enable accelerated networking on the network interface' do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect(azure_client).not_to receive(:delete_network_interface)

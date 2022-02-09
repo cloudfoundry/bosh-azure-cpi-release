@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class DiskManager2
+  class DiskManager2 # rubocop:todo Metrics/ClassLength
     include Bosh::Exec
     include Helpers
 

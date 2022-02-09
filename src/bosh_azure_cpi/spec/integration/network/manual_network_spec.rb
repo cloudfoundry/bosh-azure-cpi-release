@@ -4,6 +4,7 @@ require 'integration/spec_helper'
 
 describe Bosh::AzureCloud::Cloud do
   before { @disk_id_pool = [] }
+
   after do
     @disk_id_pool.each do |disk_id|
       @logger.info("Cleanup: Deleting the disk '#{disk_id}'")
@@ -64,6 +65,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'with existing disks' do
       let!(:existing_disk_id) { @cpi.create_disk(2048, {}) }
+
       after { @cpi.delete_disk(existing_disk_id) if existing_disk_id }
 
       it 'can excercise the vm lifecycle and list the disks' do
@@ -106,7 +108,7 @@ describe Bosh::AzureCloud::Cloud do
 
           expect do
             @cpi.attach_disk(new_instance_id, disk_id)
-          end.to_not raise_error
+          end.not_to raise_error
 
           expect(@cpi.get_disks(new_instance_id)).to include(disk_id)
         ensure

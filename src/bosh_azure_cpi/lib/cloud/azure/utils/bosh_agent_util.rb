@@ -73,8 +73,8 @@ module Bosh::AzureCloud
     def meta_data_obj(instance_id, ssh_public_key)
       user_data_obj = { instance_id: instance_id }
       user_data_obj[:'public-keys'] = {
-        "0": {
-          "openssh-key": ssh_public_key
+        '0': {
+          'openssh-key': ssh_public_key
         }
       }
       user_data_obj

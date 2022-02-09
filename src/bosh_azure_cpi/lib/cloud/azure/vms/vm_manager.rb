@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class VMManager
+  class VMManager # rubocop:todo Metrics/ClassLength
     include Helpers
 
     def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager = nil)
@@ -184,7 +184,7 @@ module Bosh::AzureCloud
         #     Has upper characters
         #     Has a digit
         #     Has a special character (Regex match [\W_])
-        vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".split('').shuffle.join
+        vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".chars.shuffle.join
         computer_name = generate_windows_computer_name
         vm_params[:computer_name] = computer_name
         vm_params[:custom_data]   = agent_settings.encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config, computer_name)
@@ -465,16 +465,14 @@ module Bosh::AzureCloud
             raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell '#{stemcell_cid}': #{e.inspect}\n#{e.backtrace.join("\n")}"
           end
         end
+      elsif is_light_stemcell_cid?(stemcell_cid)
+        raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
+
+        stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
       else
-        if is_light_stemcell_cid?(stemcell_cid)
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
+        raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account_name, stemcell_cid)
 
-          stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
-        else
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account_name, stemcell_cid)
-
-          stemcell_info = @stemcell_manager.get_stemcell_info(storage_account_name, stemcell_cid)
-        end
+        stemcell_info = @stemcell_manager.get_stemcell_info(storage_account_name, stemcell_cid)
       end
 
       @logger.debug("get_stemcell_info - got stemcell '#{stemcell_info.inspect}'")

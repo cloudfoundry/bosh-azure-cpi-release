@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/cloud/shared_stuff.rb'
+require 'unit/cloud/shared_stuff'
 
 describe Bosh::AzureCloud::Cloud do
   include_context 'shared stuff'
@@ -9,6 +9,7 @@ describe Bosh::AzureCloud::Cloud do
   describe '#delete_snapshot' do
     let(:snapshot_cid) { 'fake-snapshot-cid' }
     let(:snapshot_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
+
     before do
       allow(telemetry_manager).to receive(:monitor)
         .with('delete_snapshot', id: snapshot_cid).and_call_original

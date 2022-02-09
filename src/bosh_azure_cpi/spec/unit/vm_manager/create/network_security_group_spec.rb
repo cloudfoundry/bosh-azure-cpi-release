@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require 'unit/vm_manager/create/shared_stuff.rb'
+require 'unit/vm_manager/create/shared_stuff'
 
 describe Bosh::AzureCloud::VMManager do
   include_context 'shared stuff for vm manager'
@@ -24,7 +24,7 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       # Network Security Group
-      context '#network_security_group' do
+      describe '#network_security_group' do
         context 'when the network security group is not specified in the global configuration' do
           let(:azure_config_without_default_security_group) do
             mock_azure_config_merge(
@@ -79,7 +79,7 @@ describe Bosh::AzureCloud::VMManager do
               expect(azure_client).not_to receive(:delete_virtual_machine)
               expect do
                 vm_manager_without_default_security_group.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-              end.to raise_error /Cannot specify an empty string to the network security group/
+              end.to raise_error(/Cannot specify an empty string to the network security group/)
             end
           end
 
@@ -94,7 +94,7 @@ describe Bosh::AzureCloud::VMManager do
               end.not_to raise_error
             end
 
-            context ' and network specs' do
+            context 'and network specs' do
               let(:nsg_name_in_network_spec) { 'fake-nsg-name-specified-in-network-spec' }
               let(:nsg_in_network_spec) do
                 Bosh::AzureCloud::SecurityGroup.new(
@@ -128,7 +128,7 @@ describe Bosh::AzureCloud::VMManager do
                 end.not_to raise_error
               end
 
-              context ' and vm_properties' do
+              context 'and vm_properties' do
                 let(:nsg_name_in_vm_properties) { 'fake-nsg-name-specified-in-resource-pool' }
                 let(:security_group_in_vm_properties) do
                   {
@@ -167,7 +167,7 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         # The cases in the below context doesn't care where the nsg name is specified.
-        context '#resource_group_for_network_security_group' do
+        describe '#resource_group_for_network_security_group' do
           let(:nsg_name) { 'fake-nsg-name' }
           let(:security_group) do
             {
@@ -206,6 +206,7 @@ describe Bosh::AzureCloud::VMManager do
 
           context 'when the resource group name is specified in the network spec' do
             let(:rg_name_for_nsg) { 'resource-group-name-for-network-security-group' }
+
             before do
               allow(manual_network).to receive(:resource_group_name)
                 .and_return(rg_name_for_nsg)
@@ -275,7 +276,7 @@ describe Bosh::AzureCloud::VMManager do
                 expect(azure_client).not_to receive(:delete_network_interface)
                 expect do
                   vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                end.to raise_error /Cannot find the network security group '#{nsg_name}'/
+                end.to raise_error(/Cannot find the network security group '#{nsg_name}'/)
               end
             end
           end

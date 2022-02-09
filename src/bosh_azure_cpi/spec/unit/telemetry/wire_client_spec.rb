@@ -212,7 +212,7 @@ lease {
           .and_call_original.twice
         expect(
           wire_client.send(:get_endpoint_from_leases_path, lease_path)
-        ).to eq('168.63.129.16') # Note: a8:3f:81:10 is translated to 168.63.129.16
+        ).to eq('168.63.129.16') # NOTE: a8:3f:81:10 is translated to 168.63.129.16
       end
     end
 
@@ -258,7 +258,7 @@ lease {
           .and_call_original
         expect(
           wire_client.send(:get_endpoint_from_leases_path, lease_path)
-        ).to eq('168.63.129.16') # Note: a8:3f:81:10 is translated to 168.63.129.16
+        ).to eq('168.63.129.16') # NOTE: a8:3f:81:10 is translated to 168.63.129.16
       end
     end
 

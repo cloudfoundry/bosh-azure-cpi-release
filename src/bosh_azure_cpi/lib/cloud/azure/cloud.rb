@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class Cloud < Bosh::Cloud
+  class Cloud < Bosh::Cloud # rubocop:todo Metrics/ClassLength
     attr_reader   :registry
     attr_reader   :config
     # Below defines are for test purpose
@@ -9,6 +9,7 @@ module Bosh::AzureCloud
     attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
     attr_reader   :props_factory
     attr_reader   :api_version, :stemcell_api_version
+
     include Helpers
 
     # CPI API Version
@@ -23,7 +24,7 @@ module Bosh::AzureCloud
     #
     # @param [Hash] options cloud options
     def initialize(options, api_version = 1)
-      cloud_error("Invalid api_version '#{api_version}'") unless [1, 2].include?(api_version)
+      cloud_error("Invalid api_version '#{api_version}'") unless [1, 2, nil].include?(api_version)
 
       options_dup = options.dup.freeze
 
@@ -187,11 +188,11 @@ module Bosh::AzureCloud
 
           begin
             settings = agent_settings.initial_agent_settings(
-                bosh_vm_meta.agent_id,
-                networks,
-                environment,
-                vm_params,
-                @config
+              bosh_vm_meta.agent_id,
+              networks,
+              environment,
+              vm_params,
+              @config
             )
             registry.update_settings(instance_id.to_s, settings) if _should_write_to_registry?
 
@@ -620,7 +621,6 @@ module Bosh::AzureCloud
       end
       with_thread_name("detach_disk(#{vm_cid},#{disk_cid})") do
         @telemetry_manager.monitor('detach_disk', id: vm_cid) do
-
           if _should_write_to_registry?
             _update_agent_settings(vm_cid) do |settings|
               settings['disks'] ||= {}

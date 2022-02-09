@@ -474,6 +474,7 @@ describe Bosh::AzureCloud::AzureClient do
         end.not_to raise_error
       end
     end
+
     context 'when retry reach max number.' do
       it 'should raise error' do
         stub_request(:post, token_uri).to_return(
@@ -506,7 +507,7 @@ describe Bosh::AzureCloud::AzureClient do
         )
         expect do
           azure_client.delete_managed_disk(resource_group, disk_name)
-        end.to raise_error /check_completion - http code: 200/
+        end.to raise_error(/check_completion - http code: 200/)
       end
     end
   end

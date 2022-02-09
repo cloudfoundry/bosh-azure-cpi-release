@@ -49,7 +49,7 @@ describe Bosh::AzureCloud::TableManager do
       .and_return(storage_account)
 
     allow(Azure::Storage::Table::TableService).to receive(:new).with(client: azure_storage_client)
-      .and_return(table_service)
+                                                               .and_return(table_service)
     allow(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
       .and_return(exponential_retry)
     allow(table_service).to receive(:with_filter).with(exponential_retry)
@@ -101,7 +101,7 @@ describe Bosh::AzureCloud::TableManager do
       it 'should raise an error' do
         expect do
           table_manager.has_table?(table_name)
-        end.to raise_error /Not-404-Error/
+        end.to raise_error(/Not-404-Error/)
       end
     end
   end
@@ -177,7 +177,7 @@ describe Bosh::AzureCloud::TableManager do
       it 'should raise an error' do
         expect do
           table_manager.insert_entity(table_name, entity)
-        end.to raise_error /Not-409-Error/
+        end.to raise_error(/Not-409-Error/)
       end
     end
   end
@@ -221,7 +221,7 @@ describe Bosh::AzureCloud::TableManager do
       it 'should raise an error' do
         expect do
           table_manager.delete_entity(table_name, partition_key, row_key)
-        end.to raise_error /Not-404-Error/
+        end.to raise_error(/Not-404-Error/)
       end
     end
   end

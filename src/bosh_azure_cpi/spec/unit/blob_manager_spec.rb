@@ -48,7 +48,7 @@ describe Bosh::AzureCloud::BlobManager do
       .and_return(storage_account)
     allow(azure_storage_client).to receive(:storage_blob_host).and_return(blob_host)
     allow(Azure::Storage::Blob::BlobService).to receive(:new).with(client: azure_storage_client)
-      .and_return(blob_service)
+                                                             .and_return(blob_service)
     allow(Bosh::AzureCloud::CustomizedRetryPolicyFilter).to receive(:new)
       .and_return(customized_retry)
     allow(blob_service).to receive(:with_filter).with(customized_retry)
@@ -71,13 +71,14 @@ describe Bosh::AzureCloud::BlobManager do
   describe '#get_sas_blob_uri' do
     let(:now) { Time.new }
     let(:mock_sas_token) { 'mock_sas_token' }
+
     before do
       allow(Time).to receive(:new).and_return(now)
       allow(sas_generator).to receive(:generate_service_sas_token)
         .with(
           "#{container_name}/#{blob_name}",
           service: 'b', resource: 'b', permissions: 'r', protocol: 'https',
-          expiry: (now + 3600 * 24 * 7).utc.iso8601
+          expiry: (now + (3600 * 24 * 7)).utc.iso8601
         ).and_return(mock_sas_token)
     end
 
@@ -147,6 +148,7 @@ describe Bosh::AzureCloud::BlobManager do
         @file_path = '/tmp/fake_image'
         File.open(@file_path, 'wb') { |f| f.write('Hello CloudFoundry!') }
       end
+
       after(:context) do
         File.delete(@file_path) if File.exist?(@file_path)
       end
@@ -175,7 +177,7 @@ describe Bosh::AzureCloud::BlobManager do
         it 'should raise an error' do
           expect do
             blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
-          end.to raise_error /Failed to upload page blob/
+          end.to raise_error(/Failed to upload page blob/)
         end
       end
 
@@ -191,7 +193,7 @@ describe Bosh::AzureCloud::BlobManager do
           expect(blob_service).to receive(:delete_blob)
           expect do
             blob_manager.create_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
-          end.to raise_error /put blob pages failed/
+          end.to raise_error(/put blob pages failed/)
         end
       end
     end
@@ -203,9 +205,11 @@ describe Bosh::AzureCloud::BlobManager do
         @empty_chunk_content = Array.new(MAX_CHUNK_SIZE, 0).pack('c*')
         File.open(@empty_file_path, 'wb') { |f| f.write(@empty_chunk_content) }
       end
+
       after do
         File.delete(@empty_file_path) if File.exist?(@empty_file_path)
       end
+
       it 'should not call put_blob_pages' do
         expect(blob_service).to receive(:create_page_blob)
           .with(container_name, blob_name, kind_of(Numeric), options)
@@ -250,7 +254,7 @@ describe Bosh::AzureCloud::BlobManager do
       it 'should raise an error' do
         expect do
           blob_manager.create_empty_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1, metadata)
-        end.to raise_error /Failed to create empty page blob/
+        end.to raise_error(/Failed to create empty page blob/)
       end
     end
 
@@ -260,6 +264,7 @@ describe Bosh::AzureCloud::BlobManager do
           request_id: request_id
         }
       end
+
       before do
         times = 0
         allow(blob_service).to receive(:create_page_blob) do
@@ -324,7 +329,7 @@ describe Bosh::AzureCloud::BlobManager do
 
           expect do
             blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1024)
-          end.to raise_error /Failed to create empty vhd blob/
+          end.to raise_error(/Failed to create empty vhd blob/)
         end
       end
 
@@ -339,7 +344,7 @@ describe Bosh::AzureCloud::BlobManager do
 
           expect do
             blob_manager.create_empty_vhd_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, 1024)
-          end.to raise_error /Failed to create empty vhd blob/
+          end.to raise_error(/Failed to create empty vhd blob/)
         end
       end
     end
@@ -351,14 +356,17 @@ describe Bosh::AzureCloud::BlobManager do
       @empty_chunk_content = Array.new(2 * 1024 * 1024, 0).pack('c*')
       File.open(@file_path, 'wb') { |f| f.write(@empty_chunk_content) }
     end
+
     after(:context) do
       File.delete(@file_path) if File.exist?(@file_path)
     end
+
     context 'when creating vhd page blob succeeds' do
       before do
         allow(blob_service).to receive(:create_page_blob)
         allow(blob_service).to receive(:put_blob_pages)
       end
+
       it 'raise no error' do
         expect do
           blob_manager.create_vhd_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
@@ -372,22 +380,25 @@ describe Bosh::AzureCloud::BlobManager do
           allow(blob_service).to receive(:create_page_blob)
           allow(blob_service).to receive(:put_blob_pages).and_raise(StandardError)
         end
+
         it 'page blob should be deleted' do
           expect(blob_service).to receive(:delete_blob)
           expect do
             blob_manager.create_vhd_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
-          end.to raise_error /Failed to upload page blob/
+          end.to raise_error(/Failed to upload page blob/)
         end
       end
+
       context 'page blob not created' do
         before do
           allow(blob_service).to receive(:create_page_blob).and_raise(StandardError)
         end
+
         it 'page blob should be deleted' do
           expect(blob_service).not_to receive(:delete_blob)
           expect do
             blob_manager.create_vhd_page_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, @file_path, blob_name, metadata)
-          end.to raise_error /Failed to upload page blob/
+          end.to raise_error(/Failed to upload page blob/)
         end
       end
     end
@@ -506,10 +517,11 @@ describe Bosh::AzureCloud::BlobManager do
         allow(blob_service).to receive(:set_blob_metadata)
           .and_raise('(404)')
       end
+
       it 'should raise error' do
         expect do
           blob_manager.set_blob_metadata(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, metadata)
-        end.to raise_error /(404)/
+        end.to raise_error(/(404)/)
       end
     end
   end
@@ -523,7 +535,7 @@ describe Bosh::AzureCloud::BlobManager do
       it 'should return empty' do
         expect do
           blob_manager.list_blobs(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name)
-        end.to raise_error /The container does not exist/
+        end.to raise_error(/The container does not exist/)
       end
     end
 
@@ -622,6 +634,7 @@ describe Bosh::AzureCloud::BlobManager do
       }
     end
     let(:blob) { instance_double(Azure::Storage::Blob::Blob) }
+
     before do
       allow(azure_client).to receive(:get_storage_account_by_name)
         .with(another_storage_account_name)
@@ -675,6 +688,7 @@ describe Bosh::AzureCloud::BlobManager do
             copy_progress: '5678/5678'
           }
         end
+
         before do
           allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
@@ -695,6 +709,7 @@ describe Bosh::AzureCloud::BlobManager do
             request_id: request_id
           }
         end
+
         before do
           times = 0
           allow(blob_service).to receive(:copy_blob_from_uri) do
@@ -745,7 +760,7 @@ describe Bosh::AzureCloud::BlobManager do
 
           expect do
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-          end.to raise_error /Failed to copy the blob/
+          end.to raise_error(/Failed to copy the blob/)
         end
       end
 
@@ -765,6 +780,7 @@ describe Bosh::AzureCloud::BlobManager do
             copy_status_description: 'fake-status-description'
           }
         end
+
         before do
           allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
@@ -777,7 +793,7 @@ describe Bosh::AzureCloud::BlobManager do
 
           expect do
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-          end.to raise_error /Failed to copy the blob/
+          end.to raise_error(/Failed to copy the blob/)
         end
       end
     end
@@ -790,6 +806,7 @@ describe Bosh::AzureCloud::BlobManager do
             copy_status: 'interrupted'
           }
         end
+
         before do
           allow_any_instance_of(Object).to receive(:sleep).and_return(nil)
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
@@ -802,7 +819,7 @@ describe Bosh::AzureCloud::BlobManager do
 
           expect do
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-          end.to raise_error %r{The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted}
+          end.to raise_error %r{The progress of copying the blob #{source_blob_uri} to #{container_name}/#{blob_name} was interrupted}
         end
       end
 
@@ -815,6 +832,7 @@ describe Bosh::AzureCloud::BlobManager do
             copy_progress: '1234/5678'
           }
         end
+
         before do
           allow(blob_service).to receive(:copy_blob_from_uri).and_return(['fake-copy-id', 'pending'])
           allow(blob).to receive(:properties).and_return(blob_properties)
@@ -826,7 +844,7 @@ describe Bosh::AzureCloud::BlobManager do
 
           expect do
             blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-          end.to raise_error %r{The progress of copying the blob #{source_blob_uri} to #{container_name}\/#{blob_name} was interrupted}
+          end.to raise_error %r{The progress of copying the blob #{source_blob_uri} to #{container_name}/#{blob_name} was interrupted}
         end
       end
     end
@@ -835,10 +853,11 @@ describe Bosh::AzureCloud::BlobManager do
       before do
         allow(blob_service).to receive(:copy_blob_from_uri).and_raise('Unexpected Error')
       end
+
       it 'succeeds to copy the blob' do
         expect do
           blob_manager.copy_blob(another_storage_account_name, container_name, blob_name, source_blob_uri)
-        end.to raise_error /Unexpected Error/
+        end.to raise_error(/Unexpected Error/)
       end
     end
   end
@@ -846,6 +865,7 @@ end
 
 describe Bosh::AzureCloud::CustomizedRetryPolicyFilter do
   let(:customized_retry_policy_filter) { Bosh::AzureCloud::CustomizedRetryPolicyFilter.new }
+
   describe '#apply_retry_policy' do
     context 'when there is no error' do
       let(:retry_data) { {} }

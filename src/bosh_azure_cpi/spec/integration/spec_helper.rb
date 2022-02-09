@@ -32,7 +32,7 @@ RSpec.configure do |rspec_config|
     @subnet_name                 = ENV.fetch('BOSH_AZURE_SUBNET_NAME')
   end
 
-  rspec_config.before(:each) do
+  rspec_config.before do
     @registry = instance_double(Bosh::Cpi::RegistryClient).as_null_object
     allow(Bosh::Cpi::RegistryClient).to receive(:new).and_return(@registry)
     allow(@registry).to receive(:read_settings).and_return({})

@@ -47,6 +47,7 @@ describe Bosh::AzureCloud::Cloud do
   end
 
   before { @disk_id_pool = [] }
+
   after do
     @disk_id_pool.each do |disk_id|
       @logger.info("Cleanup: Deleting the disk '#{disk_id}'")
@@ -102,6 +103,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when the regional VM is with managed disks' do
       let(:disk_id) { cpi_managed.create_disk(2048, {}, nil) }
+
       before do
         # Create an regional disk
         expect(disk_id).not_to be_nil
