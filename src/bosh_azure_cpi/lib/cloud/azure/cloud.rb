@@ -449,7 +449,36 @@ module Bosh::AzureCloud
     #
     def resize_disk(disk_cid, new_size)
       @logger.info("resize_disk(#{disk_cid}, #{new_size})")
-      raise Bosh::Clouds::NotSupported
+      raise Bosh::Clouds::NotSupported unless @use_managed_disks
+
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
+
+      extras = { 'disk_size' => new_size }
+      with_thread_name("resize_disk(#{disk_cid}, #{new_size})") do
+        @telemetry_manager.monitor('resize_disk', id: disk_cid, extras: extras) do
+          # Azure API wants disk sizes in GiBs
+          new_size_in_gib = mib_to_gib(new_size)
+          disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
+          disk_name = disk_id.disk_name
+          disk = @disk_manager2.get_data_disk(disk_id)
+          old_size_in_gib = disk[:disk_size]
+          if new_size_in_gib < old_size_in_gib
+            # fall back to creating a new disk and copying data
+            raise Bosh::Clouds::NotSupported
+          elsif new_size_in_gib == old_size_in_gib
+            @logger.info("Skip resize of disk '#{disk_name}' because the new size of #{new_size_in_gib} GiB matches the actual disk size")
+          else
+            @logger.info("Start resize of disk '#{disk_name}' from #{old_size_in_gib} GiB to #{new_size_in_gib} GiB")
+            @disk_manager2.resize_disk(disk_id, new_size_in_gib)
+          end
+        end
+      end
+    end
+
+    def mib_to_gib(size)
+      (size / 1024.0).ceil
     end
 
     ##

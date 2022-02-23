@@ -90,6 +90,39 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
   end
 
+  describe '#resize_disk' do
+    let(:new_size) { 1000 }
+    let(:disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
+    let(:resource_group_name) { 'fake-resource-group-name' }
+    let(:disk_name) { 'fake-disk-name' }
+    let(:disk_params) do
+      {
+        name: 'fake-disk-name',
+        disk_size: 1000
+      }
+    end
+
+    before do
+      allow(Bosh::AzureCloud::DiskId).to receive(:parse)
+        .and_return(disk_id_object)
+      allow(disk_id_object).to receive(:resource_group_name)
+        .and_return(resource_group_name)
+      allow(disk_id_object).to receive(:disk_name)
+        .and_return(disk_name)
+      allow(Bosh::Clouds::Config.logger).to receive(:info)
+    end
+
+    it 'resizes the managed disk' do
+      expect(azure_client).to receive(:resize_managed_disk)
+        .with(resource_group_name, disk_params)
+      expect(Bosh::Clouds::Config.logger).to receive(:info)
+        .with("Start resize of disk 'fake-disk-name' to 1000 GiB")
+      expect do
+        disk_manager2.resize_disk(disk_id, new_size)
+      end.not_to raise_error
+    end
+  end
+
   describe '#delete_disk' do
     context 'when the disk exists' do
       before do

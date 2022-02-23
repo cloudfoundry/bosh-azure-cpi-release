@@ -64,6 +64,19 @@ module Bosh::AzureCloud
       @azure_client.create_managed_disk_from_blob(resource_group_name, disk_params)
     end
 
+    def resize_disk(disk_id, new_size)
+      @logger.info("resize_disk(#{disk_id}, #{new_size})")
+      resource_group_name = disk_id.resource_group_name
+      disk_name = disk_id.disk_name
+      disk_params = {
+        name: disk_name,
+        disk_size: new_size
+      }
+
+      @logger.info("Start resize of disk '#{disk_name}' to #{new_size} GiB")
+      @azure_client.resize_managed_disk(resource_group_name, disk_params)
+    end
+
     def delete_disk(resource_group_name, disk_name)
       @logger.info("delete_disk(#{resource_group_name}, #{disk_name})")
       retried = false

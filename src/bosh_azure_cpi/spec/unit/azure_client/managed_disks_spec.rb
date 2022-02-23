@@ -511,4 +511,106 @@ describe Bosh::AzureCloud::AzureClient do
       end
     end
   end
+
+  describe '#resize_managed_disk' do
+    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    let(:disk_params) do
+      {
+        name: disk_name,
+        disk_size: 1000
+      }
+    end
+
+    let(:request_body) do
+      {
+        properties: {
+          diskSizeGB: 1000
+        }
+      }
+    end
+
+    context 'when the response immediately says the disk is updated' do
+      it 'should work' do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
+          }.to_json,
+          headers: {}
+        )
+        stub_request(:patch, disk_uri).with(body: request_body).to_return(
+          status: 200,
+          body: '',
+          headers: {}
+        )
+
+        expect do
+          azure_client.resize_managed_disk(resource_group, disk_params)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when the response says the disk is still updating' do
+      it 'should work' do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
+          }.to_json,
+          headers: {}
+        )
+        stub_request(:patch, disk_uri).to_return(
+          status: 202,
+          body: '{}',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
+        stub_request(:get, operation_status_link).to_return(
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {
+            'Retry-After' => '1'
+          }
+        )
+
+        expect do
+          azure_client.resize_managed_disk(resource_group, disk_params)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when the request failed' do
+      it 'should raise an exception' do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
+          }.to_json,
+          headers: {}
+        )
+        stub_request(:patch, disk_uri).to_return(
+          status: 202,
+          body: '{}',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
+        stub_request(:get, operation_status_link).to_return(
+          status: 200,
+          body: '{"status":"Failed"}',
+          headers: {
+            'Retry-After' => '1'
+          }
+        )
+
+        expect do
+          azure_client.resize_managed_disk(resource_group, disk_params)
+        end.to raise_error /check_completion - http code: 200/
+      end
+    end
+  end
 end
