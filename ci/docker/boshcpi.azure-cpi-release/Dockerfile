@@ -25,14 +25,14 @@ RUN /bin/bash -l -c " \
 # ruby-install
 RUN /bin/bash -l -c " \
     curl https://codeload.github.com/postmodern/ruby-install/tar.gz/v0.5.0 | tar -xz -C /tmp/ && \
-    pushd /tmp/ruby-install-0.5.0 && \
+    pushd /tmp/ruby-install-0.8.3 && \
     make install && \
     popd && \
-    rm -rf /tmp/ruby-install-0.5.0 \
+    rm -rf /tmp/ruby-install-0.8.3 \
 "
 
 # ruby
-ENV RUBY_VERSION 2.7.3
+ENV RUBY_VERSION 3.1.0
 RUN ruby-install ruby ${RUBY_VERSION}
 
 # Bundler

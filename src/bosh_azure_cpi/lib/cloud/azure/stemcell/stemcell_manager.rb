@@ -117,8 +117,8 @@ module Bosh::AzureCloud
         return true if stemcell_meta.status == STEMCELL_STATUS_SUCCESS
 
         start_time = stemcell_meta.timestamp
-        start_time = Time.parse(start_time) if start_time.is_a?(String)
         current_time = Time.new
+        start_time = Time.parse(start_time, current_time) if start_time.is_a?(String)
         if (current_time - start_time) > timeout
           @logger.info("The timestamp of the record is #{start_time}, current time is #{current_time}")
           @meta_store.delete_stemcell_meta(name, storage_account_name)
