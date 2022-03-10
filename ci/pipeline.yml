@@ -468,5 +468,5 @@ resources:
     type: docker-image
     source:
       repository: boshcpi/azure-cpi-release
-      username: ((dockerhub_username))
-      password: ((dockerhub_password))
+      username: ((docker.username))
+      password: ((docker.password))
