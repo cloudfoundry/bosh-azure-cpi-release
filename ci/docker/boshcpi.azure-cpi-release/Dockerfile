@@ -1,17 +1,34 @@
-FROM ubuntu:16.04
+FROM ubuntu:focal
 
-RUN apt-get update; apt-get -y upgrade; apt-get clean
+ENV bosh_cli_version 6.4.15
+ENV DEBIAN_FRONTEND noninteractive
 
-RUN apt-get install -y git curl tar make jq; apt-get clean
+RUN apt-get -y update && apt-get install -y locales && locale-gen en_US.UTF-8
+RUN update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 
-# dependencies for "bosh create-env" command
-RUN apt-get install -y build-essential zlibc zlib1g-dev ruby ruby-dev openssl libxslt-dev libxml2-dev libssl-dev libreadline6 libreadline6-dev libyaml-dev libsqlite3-dev sqlite3; apt-get clean
+RUN apt-get install -y \
+    sudo \
+    apt-utils \
+    git curl wget tar make jq uuid-runtime \
+    sqlite3 libsqlite3-dev \
+    build-essential \
+    libxslt-dev libxml2-dev libyaml-dev && \
+    apt-get clean
 
 # azure-cli
-RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ xenial main" | tee /etc/apt/sources.list.d/azure-cli.list
-RUN curl -L https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-RUN apt-get install -y apt-transport-https
-RUN apt-get update; apt-get install -y azure-cli=2.0.41-1~xenial; apt-get clean; az -v
+RUN apt-get install -y azure-cli
+
+# ruby-install
+RUN mkdir /tmp/ruby-install && \
+    cd /tmp/ruby-install && \
+    curl https://codeload.github.com/postmodern/ruby-install/tar.gz/v0.8.3 | tar -xz && \
+    cd /tmp/ruby-install/ruby-install-0.8.3 && \
+    make install && \
+    rm -rf /tmp/ruby-install
+
+# ruby
+ENV RUBY_VERSION 3.1.0
+RUN ruby-install ruby ${RUBY_VERSION}
 
 # chruby
 RUN /bin/bash -l -c " \
@@ -22,18 +39,6 @@ RUN /bin/bash -l -c " \
     rm -rf /tmp/chruby-0.3.9 \
 "
 
-# ruby-install
-RUN /bin/bash -l -c " \
-    curl https://codeload.github.com/postmodern/ruby-install/tar.gz/v0.5.0 | tar -xz -C /tmp/ && \
-    pushd /tmp/ruby-install-0.8.3 && \
-    make install && \
-    popd && \
-    rm -rf /tmp/ruby-install-0.8.3 \
-"
-
-# ruby
-ENV RUBY_VERSION 3.1.0
-RUN ruby-install ruby ${RUBY_VERSION}
 
 # Bundler
 RUN /bin/bash -l -c "                   \
@@ -41,3 +46,10 @@ RUN /bin/bash -l -c "                   \
   chruby ${RUBY_VERSION} ;              \
   gem install bundler --no-document \
 "
+
+#BOSH CLI
+RUN \
+  wget --quiet https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-${bosh_cli_version}-linux-amd64 --output-document="/usr/bin/bosh" && \
+  chmod +x /usr/bin/bosh && \
+  cp /usr/bin/bosh /usr/local/bin/bosh-go && \
+  chmod +x /usr/local/bin/bosh-go
