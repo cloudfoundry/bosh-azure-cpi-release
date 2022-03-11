@@ -12,11 +12,9 @@ RUN apt-get install -y \
     git curl wget tar make jq uuid-runtime \
     sqlite3 libsqlite3-dev \
     build-essential \
-    libxslt-dev libxml2-dev libyaml-dev && \
+    libxslt-dev libxml2-dev libyaml-dev  \
+    ruby azure-cli && \
     apt-get clean
-
-# azure-cli
-RUN apt-get install -y azure-cli
 
 # ruby-install
 RUN mkdir /tmp/ruby-install && \
