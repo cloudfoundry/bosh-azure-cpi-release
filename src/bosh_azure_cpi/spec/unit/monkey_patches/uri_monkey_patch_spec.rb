@@ -5,6 +5,8 @@ require 'monkey_patches/uri_monkey_patch'
 describe Bosh::AzureCloud::URIMonkeyPatch do
   describe '.apply_patch' do
     context 'when URI does not have an escape method' do
+      before { URI.instance_eval { undef :escape } }
+
       it 'should add the escape function' do
         expect { URI.method(:escape) }.to raise_error(NameError)
         expect { Bosh::AzureCloud::URIMonkeyPatch.apply_patch }.not_to raise_error

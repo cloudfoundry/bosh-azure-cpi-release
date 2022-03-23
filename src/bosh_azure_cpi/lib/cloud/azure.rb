@@ -103,6 +103,9 @@ require 'cloud/azure/telemetry/telemetry_event'
 require 'cloud/azure/telemetry/telemetry_event_handler'
 require 'cloud/azure/telemetry/wire_client'
 
+require 'monkey_patches/uri_monkey_patch'
+Bosh::AzureCloud::URIMonkeyPatch.apply_patch
+
 module Bosh
   module Clouds
     Azure = Bosh::AzureCloud::Cloud
