@@ -117,7 +117,7 @@
 
     ```bash
     cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
-    ./vendor_gems
+    ./bin/vendor_gems
     ```
 
 Your development environment is prepared successfully.

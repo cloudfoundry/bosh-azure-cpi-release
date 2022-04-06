@@ -1,0 +1,14 @@
+#!/bin/bash
+
+set -eux -o pipefail
+
+CPI_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+(
+  cd "$CPI_DIR" &&
+  BUNDLE_GEMFILE="$CPI_DIR/Gemfile" \
+  BUNDLE_CACHE_PATH="vendor/package" \
+  BUNDLE_WITHOUT="development:test" \
+  bundle cache \
+    --all-platforms \
+    --no-install
+)

@@ -22,7 +22,9 @@ export NO_PROXY="<%= no_proxy %>"
 export no_proxy="<%= no_proxy %>"
 <% end %>
 
-export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/bosh_azure_cpi/Gemfile
+export BUNDLE_DEPLOYMENT="true"
+export BUNDLE_GEMFILE="$BOSH_PACKAGES_DIR/bosh_azure_cpi/Gemfile"
 
-exec bundle exec $BOSH_PACKAGES_DIR/bosh_azure_cpi/bin/azure_cpi \
-  $BOSH_JOBS_DIR/azure_cpi/config/cpi.json
+exec bundle exec \
+    "$BOSH_PACKAGES_DIR/bosh_azure_cpi/bin/azure_cpi" \
+    "$BOSH_JOBS_DIR/azure_cpi/config/cpi.json"
