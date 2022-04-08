@@ -11,7 +11,7 @@ output "vnet-name" {
 }
 
 output "bosh-default-storage-name" {
-  value = "${replace(lower(var.prefix), "/[^0-9a-z]/","")}"
+  value = replace(lower(var.prefix), "/[^0-9a-z]/", "")
 }
 
 output "bosh-subnet-name" {

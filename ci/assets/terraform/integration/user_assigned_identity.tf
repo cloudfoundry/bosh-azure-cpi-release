@@ -1,7 +1,7 @@
 resource "azurerm_user_assigned_identity" "default_identity" {
-  resource_group_name  = azurerm_resource_group.azure_default_rg.name
-  location             = var.location
-  name                 = "${var.env_name}-default"
+  resource_group_name = azurerm_resource_group.azure_default_rg.name
+  location            = var.location
+  name                = "${var.env_name}-default"
 
   # wait for server replication before attempting role assignment creation
   provisioner "local-exec" {
@@ -16,9 +16,9 @@ resource "azurerm_role_assignment" "assign_default_identity" {
 }
 
 resource "azurerm_user_assigned_identity" "identity" {
-  resource_group_name  = azurerm_resource_group.azure_default_rg.name
-  location             = var.location
-  name                 = var.env_name
+  resource_group_name = azurerm_resource_group.azure_default_rg.name
+  location            = var.location
+  name                = var.env_name
 
   # wait for server replication before attempting role assignment creation
   provisioner "local-exec" {

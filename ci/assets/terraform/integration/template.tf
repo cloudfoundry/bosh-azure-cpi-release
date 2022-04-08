@@ -53,28 +53,28 @@ resource "azurerm_subnet" "azure_subnet_1_in_default_rg" {
   name                 = "azure_subnet_1"
   resource_group_name  = azurerm_resource_group.azure_default_rg.name
   virtual_network_name = azurerm_virtual_network.azure_bosh_network_in_default_rg.name
-  address_prefixes       = ["10.0.0.0/24"]
+  address_prefixes     = ["10.0.0.0/24"]
 }
 resource "azurerm_subnet" "azure_subnet_2_in_default_rg" {
   name                 = "azure_subnet_2"
   resource_group_name  = azurerm_resource_group.azure_default_rg.name
   virtual_network_name = azurerm_virtual_network.azure_bosh_network_in_default_rg.name
-  address_prefixes       = ["10.0.1.0/24"]
+  address_prefixes     = ["10.0.1.0/24"]
 }
 resource "azurerm_subnet" "azure_subnet_appgw_in_default_rg" {
   name                 = "azure_subnet_3"
   resource_group_name  = azurerm_resource_group.azure_default_rg.name
   virtual_network_name = azurerm_virtual_network.azure_bosh_network_in_default_rg.name
-  address_prefixes       = ["10.0.2.0/24"]
+  address_prefixes     = ["10.0.2.0/24"]
 }
 
 # Create a default Storage Account in the azure_default_rg resouce group
 resource "azurerm_storage_account" "azure_bosh_sa" {
-  name                     = replace(var.env_name, "-", "")
-  resource_group_name      = azurerm_resource_group.azure_default_rg.name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+  name                            = replace(var.env_name, "-", "")
+  resource_group_name             = azurerm_resource_group.azure_default_rg.name
+  location                        = var.location
+  account_tier                    = "Standard"
+  account_replication_type        = "LRS"
   allow_nested_items_to_be_public = true
 }
 # Create a Storage Container for the disks
@@ -91,17 +91,17 @@ resource "azurerm_storage_container" "azure_stemcell_container" {
 }
 # Create a Storage Table for the metadata of the stemcells
 resource "azurerm_storage_table" "azure_stemcells_table" {
-  name                  = "stemcells"
-  storage_account_name  = azurerm_storage_account.azure_bosh_sa.name
+  name                 = "stemcells"
+  storage_account_name = azurerm_storage_account.azure_bosh_sa.name
 }
 
 # Create an extra Storage Account in the azure_default_rg resouce group
 resource "azurerm_storage_account" "azure_bosh_sa_extra" {
-  name                     = format("%sx", replace(var.env_name, "-", ""))
-  resource_group_name      = azurerm_resource_group.azure_default_rg.name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+  name                            = format("%sx", replace(var.env_name, "-", ""))
+  resource_group_name             = azurerm_resource_group.azure_default_rg.name
+  location                        = var.location
+  account_tier                    = "Standard"
+  account_replication_type        = "LRS"
   allow_nested_items_to_be_public = true
 }
 # Create a Storage Container for the disks
@@ -174,24 +174,24 @@ resource "azurerm_network_security_group" "azure_bosh_nsg_in_default_rg" {
 
 # Public IP Address for Integration Test
 resource "azurerm_public_ip" "azure_ip_integration_in_default_rg" {
-  name                         = "azure_ip_integration"
-  location                     = var.location
-  resource_group_name          = azurerm_resource_group.azure_default_rg.name
-  allocation_method            = "Static"
+  name                = "azure_ip_integration"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.azure_default_rg.name
+  allocation_method   = "Static"
 }
 
 resource "azurerm_application_security_group" "azure_asg" {
-  name                         = "azure_asg"
-  location                     = var.location
-  resource_group_name          = azurerm_resource_group.azure_default_rg.name
+  name                = "azure_asg"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.azure_default_rg.name
 }
 
 # Public IP Address for Application Gateway
 resource "azurerm_public_ip" "azure_ip_application_gateway" {
-  name                         = "azure_ip_application_gateway"
-  location                     = var.location
-  resource_group_name          = azurerm_resource_group.azure_default_rg.name
-  allocation_method            = "Dynamic"
+  name                = "azure_ip_application_gateway"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.azure_default_rg.name
+  allocation_method   = "Dynamic"
 }
 
 resource "azurerm_application_gateway" "azure_application_gateway" {
@@ -265,13 +265,13 @@ resource "azurerm_subnet" "azure_subnet_1_in_additional_rg" {
   name                 = "azure_subnet_1"
   resource_group_name  = azurerm_resource_group.azure_additional_rg.name
   virtual_network_name = azurerm_virtual_network.azure_bosh_network_in_additional_rg.name
-  address_prefixes       = ["10.0.0.0/24"]
+  address_prefixes     = ["10.0.0.0/24"]
 }
 resource "azurerm_subnet" "azure_subnet_2_in_additional_rg" {
   name                 = "azure_subnet_2"
   resource_group_name  = azurerm_resource_group.azure_additional_rg.name
   virtual_network_name = azurerm_virtual_network.azure_bosh_network_in_additional_rg.name
-  address_prefixes       = ["10.0.1.0/24"]
+  address_prefixes     = ["10.0.1.0/24"]
 }
 
 # Create a Network Securtiy Group
@@ -331,10 +331,10 @@ resource "azurerm_network_security_group" "azure_bosh_nsg_in_additional_rg" {
 
 # Public IP Address for Integration Test
 resource "azurerm_public_ip" "azure_ip_integration_in_additional_rg" {
-  name                         = "azure_ip_integration"
-  location                     = var.location
-  resource_group_name          = azurerm_resource_group.azure_additional_rg.name
-  allocation_method            = "Static"
+  name                = "azure_ip_integration"
+  location            = var.location
+  resource_group_name = azurerm_resource_group.azure_additional_rg.name
+  allocation_method   = "Static"
 }
 
 output "environment" {

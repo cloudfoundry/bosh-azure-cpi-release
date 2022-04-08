@@ -1,4 +1,4 @@
 module "namings" {
   source = "../namings"
-  prefix = "${var.prefix}"
+  prefix = var.prefix
 }
