@@ -32,7 +32,11 @@ provider "azurerm" {
   subscription_id = var.azure_subscription_id
   tenant_id       = var.azure_tenant_id
   environment     = var.environments[var.azure_environment]
-  features {}
+  features {
+    resource_group {
+      prevent_deletion_if_contains_resources = false
+    }
+  }
 }
 # Create a resource group
 resource "azurerm_resource_group" "azure_rg_bosh" {
