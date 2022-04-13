@@ -362,9 +362,27 @@ jobs:
       - get: bosh-azure-cpi-release
         resource: bosh-azure-cpi-release-dockerfile-src
         trigger: true
+      - task: extract-ruby-version-from-release
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source: { repository: busybox }
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                  tar -xzf bosh-azure-cpi-release/bosh-azure-cpi-release-*.tgz
+                  echo "{\"RUBY_VERSION\": \"$(ls packages/ruby-*.tgz | cut -f2 -d- )\"}" > build-args/args.json
+          inputs:
+            - name: bosh-azure-cpi-release
+          outputs:
+            - name: build-args
       - put: azure-cpi-docker-image
         params:
           build: bosh-azure-cpi-release/ci/docker/boshcpi.azure-cpi-release/
+          build_args_file: build-args/args.json
 
 resource_types:
   - name: terraform_type

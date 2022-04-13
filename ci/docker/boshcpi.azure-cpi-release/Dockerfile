@@ -25,7 +25,6 @@ RUN mkdir /tmp/ruby-install && \
     rm -rf /tmp/ruby-install
 
 # ruby
-ENV RUBY_VERSION 3.1.0
 RUN ruby-install ruby ${RUBY_VERSION}
 
 # chruby
