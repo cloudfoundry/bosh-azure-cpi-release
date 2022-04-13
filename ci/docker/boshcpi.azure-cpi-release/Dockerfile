@@ -25,6 +25,7 @@ RUN mkdir /tmp/ruby-install && \
     rm -rf /tmp/ruby-install
 
 # ruby
+ARG RUBY_VERSION
 RUN ruby-install ruby ${RUBY_VERSION}
 
 # chruby
