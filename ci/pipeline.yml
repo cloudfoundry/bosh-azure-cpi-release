@@ -373,8 +373,7 @@ jobs:
             args:
               - -exc
               - |
-                  tar -xzf bosh-azure-cpi-release/bosh-azure-cpi-release-*.tgz
-                  echo "{\"RUBY_VERSION\": \"$(ls packages/ruby-*.tgz | cut -f2 -d- )\"}" > build-args/args.json
+                  echo "{\"RUBY_VERSION\": \"$(ls -d bosh-azure-cpi-release/packages/ruby-* | cut -f5 -d- )\"}" > build-args/args.json
           inputs:
             - name: bosh-azure-cpi-release
           outputs:
