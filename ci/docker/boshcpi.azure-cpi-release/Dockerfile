@@ -9,12 +9,18 @@ RUN update-locale LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8
 RUN apt-get install -y \
     sudo \
     apt-utils \
+    gpg gpg-agent \
     git curl wget tar make jq uuid-runtime \
     sqlite3 libsqlite3-dev \
     build-essential \
     libxslt-dev libxml2-dev libyaml-dev  \
-    ruby azure-cli && \
+    ruby && \
     apt-get clean
+
+RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc |\
+    gpg --dearmor |\
+    sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null \
+    sudo apt install azure-cli
 
 # ruby-install
 RUN mkdir /tmp/ruby-install && \
