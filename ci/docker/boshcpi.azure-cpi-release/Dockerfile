@@ -1,6 +1,6 @@
-FROM ubuntu:focal
+FROM ubuntu:jammy
 
-ENV bosh_cli_version 6.4.15
+ENV bosh_cli_version 7.0.1
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get -y update && apt-get install -y locales && locale-gen en_US.UTF-8
