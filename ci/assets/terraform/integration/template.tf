@@ -200,7 +200,7 @@ resource "azurerm_application_gateway" "azure_application_gateway" {
   location            = var.location
 
   sku {
-    name     = "Standard_Medium"
+    name     = "Standard_v2"
     tier     = "Standard_v2"
     capacity = 2
   }
