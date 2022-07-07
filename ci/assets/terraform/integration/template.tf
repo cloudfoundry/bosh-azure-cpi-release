@@ -201,7 +201,7 @@ resource "azurerm_application_gateway" "azure_application_gateway" {
 
   sku {
     name     = "Standard_Medium"
-    tier     = "Standard"
+    tier     = "Standard_v2"
     capacity = 2
   }
 
