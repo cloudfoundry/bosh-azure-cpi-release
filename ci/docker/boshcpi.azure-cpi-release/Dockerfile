@@ -13,14 +13,18 @@ RUN apt-get install -y \
     git curl wget tar make jq uuid-runtime \
     sqlite3 libsqlite3-dev \
     build-essential \
+    ca-certificates apt-transport-https lsb-release \
     libxslt-dev libxml2-dev libyaml-dev  \
     ruby && \
     apt-get clean
 
 RUN curl -sL https://packages.microsoft.com/keys/microsoft.asc |\
     gpg --dearmor |\
-    sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null \
-    sudo apt install azure-cli
+    sudo tee /etc/apt/trusted.gpg.d/microsoft.gpg > /dev/null 
+
+RUN echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $(lsb_release -cs) main" |\
+    sudo tee /etc/apt/sources.list.d/azure-cli.list && \
+    sudo apt update && sudo apt install azure-cli
 
 # ruby-install
 RUN mkdir /tmp/ruby-install && \
