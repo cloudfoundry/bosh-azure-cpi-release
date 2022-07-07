@@ -245,6 +245,7 @@ resource "azurerm_application_gateway" "azure_application_gateway" {
     http_listener_name         = "appGatewayHttpListener"
     backend_address_pool_name  = "appGatewayBackendPool"
     backend_http_settings_name = "appGWBEHttpSettings"
+    priority                   = 10
   }
 }
 
