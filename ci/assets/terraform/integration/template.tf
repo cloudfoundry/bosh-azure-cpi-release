@@ -192,6 +192,7 @@ resource "azurerm_public_ip" "azure_ip_application_gateway" {
   location            = var.location
   resource_group_name = azurerm_resource_group.azure_default_rg.name
   allocation_method   = "Dynamic"
+  sku                 = "Standard"
 }
 
 resource "azurerm_application_gateway" "azure_application_gateway" {
