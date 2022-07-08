@@ -57,17 +57,22 @@ shared:
     tags: [azure]
     file: pipelines/shared/tasks/deploy-director.yml
     image: azure-cpi-image
+    params:
+      RUBY_VERSION: ((ruby_version))
+
 
   - &run-bats
     task: run-bats
     tags: [azure]
     file: pipelines/shared/tasks/run-bats.yml
+    image: azure-cpi-image
     params: &run-bats-params
       INFRASTRUCTURE:                     azure
       STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
       BAT_INFRASTRUCTURE:                 azure
       BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
+      RUBY_VERSION: ((ruby_version))
 
   - &run-az-bats
     task: run-az-bats
@@ -84,7 +89,11 @@ shared:
   - &teardown
     task: teardown
     tags: [azure]
+    image: azure-cpi-image
     file: pipelines/shared/tasks/teardown.yml
+    params:
+      RUBY_VERSION: ((ruby_version))
+
 
   - &create-integration-environment
     put: environment
