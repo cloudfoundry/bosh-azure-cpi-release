@@ -64,7 +64,7 @@ shared:
     file: pipelines/shared/tasks/run-bats.yml
     params: &run-bats-params
       INFRASTRUCTURE:                     azure
-      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-xenial-go_agent
+      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
       BAT_INFRASTRUCTURE:                 azure
       BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
@@ -75,7 +75,7 @@ shared:
     file: bosh-cpi-src/ci/tasks/run-az-bats.yml
     params: &run-az-bats-params
       INFRASTRUCTURE:                     azure
-      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-xenial-go_agent
+      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
       BAT_INFRASTRUCTURE:                 azure
       BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
@@ -477,7 +477,7 @@ resources:
   - name: azure-ubuntu-stemcell
     type: bosh-io-stemcell
     source:
-      name: bosh-azure-hyperv-ubuntu-xenial-go_agent
+      name: bosh-azure-hyperv-ubuntu-jammy-go_agent
   - name: azure-windows-stemcell
     type: bosh-io-stemcell
     source:
