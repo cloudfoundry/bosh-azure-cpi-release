@@ -74,6 +74,7 @@ shared:
   - &deploy-director
     task: deploy-director
     file: pipelines/shared/tasks/deploy-director.yml
+    image: azure-cpi-image
 
   - &run-bats
     task: run-bats
@@ -571,6 +572,13 @@ resources:
       ignore_paths:
         - .final_builds/**/*.yml
         - releases/**/*.yml
+  - name: azure-cpi-image
+    type: docker-image
+    source:
+      repository: boshcpi/azure-cpi-release
+      username: ((docker.username))
+      password: ((docker.password))
+
   - name: bosh-cpi-src-in-35-4
     type: git
     source:
