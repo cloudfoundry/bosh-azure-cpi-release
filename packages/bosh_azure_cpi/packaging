@@ -10,7 +10,10 @@ cp -a bosh_azure_cpi/* "${BOSH_INSTALL_TARGET}"
 
 cd "${BOSH_INSTALL_TARGET}"
 
-BUNDLE_DEPLOYMENT="true" \
-BUNDLE_CACHE_PATH="vendor/package" \
-BUNDLE_WITHOUT="development:test" \
-bundle install --local
+BUNDLE_CACHE_PATH="vendor/package"
+
+bundle config set --local deployment 'true'
+bundle config set --local no_prune 'true'
+bundle config set --local without 'development test'
+
+bundle install
