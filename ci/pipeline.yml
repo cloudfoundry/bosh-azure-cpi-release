@@ -267,7 +267,7 @@ jobs:
             <<: *prepare-director-params
             OPTIONAL_OPS_FILE: |
               -o pipelines/shared/assets/ops/remove-hm.yml
-              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+              -o bosh-deployment/external-ip-not-recommended.yml
         - do:
           - <<: *deploy-director
           - <<: *run-bats
@@ -301,7 +301,7 @@ jobs:
             <<: *prepare-director-params
             OPTIONAL_OPS_FILE: |
               -o pipelines/shared/assets/ops/remove-hm.yml
-              -o bosh-deployment/external-ip-with-registry-not-recommended.yml
+              -o bosh-deployment/external-ip-not-recommended.yml
               -o bosh-deployment/azure/use-managed-disks.yml
         - do:
           - <<: *deploy-director
