@@ -4,7 +4,7 @@ set -e -x
 
 BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 
-source "${BOSH_PACKAGES_DIR}/ruby-3.1.0-r0.81.0/bosh/compile.env"
+source "${BOSH_PACKAGES_DIR}/ruby-3.1/bosh/compile.env"
 
 cp -a bosh_azure_cpi/* "${BOSH_INSTALL_TARGET}"
 
