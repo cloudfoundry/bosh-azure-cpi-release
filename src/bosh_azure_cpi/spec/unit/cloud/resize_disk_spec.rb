@@ -36,6 +36,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when trying to resize to a larger disk size multiple of 1024' do
       let(:new_size) { 1_024_000 }
+
       it 'should work' do
         expect(disk_manager2).to receive(:resize_disk).with(disk_id_object, 1000)
         expect(Bosh::Clouds::Config.logger).to receive(:info).with("Start resize of disk 'fake-disk-name' from 512 GiB to 1000 GiB")
@@ -47,6 +48,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when trying to resize to a larger disk size not multiple of 1024' do
       let(:new_size) { 1_024_100 }
+
       it 'should work' do
         expect(disk_manager2).to receive(:resize_disk).with(disk_id_object, 1001)
         expect(Bosh::Clouds::Config.logger).to receive(:info).with("Start resize of disk 'fake-disk-name' from 512 GiB to 1001 GiB")
@@ -58,6 +60,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when trying to resize to the same disk size' do
       let(:new_size) { 512 * 1024 }
+
       it 'should work' do
         expect(Bosh::Clouds::Config.logger).to receive(:info).with("Skip resize of disk 'fake-disk-name' because the new size of 512 GiB matches the actual disk size")
         expect do
@@ -68,6 +71,7 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when trying to resize to a smaller disk size' do
       let(:new_size) { 256_000 }
+
       it 'should raise a NotSupported error' do
         expect do
           managed_cloud.resize_disk(disk_cid, new_size)
