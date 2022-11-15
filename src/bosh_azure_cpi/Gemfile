@@ -12,6 +12,7 @@ gem 'jwt',              '~> 2.2', '>= 2.2.2'
 gem 'deep_merge',       '~> 1.2', '>= 1.2.1'
 gem 'net-smtp'
 
+gem 'fast_jsonparser', '~> 0.6.0'
 gem 'rspec-retry', group: :test
 
 group :development, :test do
