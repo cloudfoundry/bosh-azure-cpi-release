@@ -54,6 +54,7 @@ GEM
     faraday-retry (1.0.3)
     faraday_middleware (1.2.0)
       faraday (~> 1.0)
+    fast_jsonparser (0.6.0)
     hashdiff (1.0.1)
     httpclient (2.8.3)
     io-wait (0.2.1)
@@ -141,6 +142,7 @@ PLATFORMS
   aarch64-linux
   arm64-darwin
   x86_64-darwin-21
+  x86_64-darwin-22
   x86_64-linux
 
 DEPENDENCIES
@@ -151,6 +153,7 @@ DEPENDENCIES
   bosh_cpi (= 2.5.0)
   concurrent-ruby (~> 1.1, >= 1.1.8)
   deep_merge (~> 1.2, >= 1.2.1)
+  fast_jsonparser (~> 0.6.0)
   jwt (~> 2.2, >= 2.2.2)
   net-smtp
   rake (~> 12.0)
