@@ -2,11 +2,12 @@
 
 module Bosh::AzureCloud
   class RootDisk
-    attr_reader :size, :type
+    attr_reader :size, :type, :placement
 
-    def initialize(size, type)
+    def initialize(size, type, placement)
       @size = size
       @type = type
+      @placement = placement
     end
   end
 end

@@ -110,7 +110,7 @@ module Bosh::AzureCloud
       }
 
       unless vm_params[:ephemeral_disk].nil?
-        # Azure uses a data disk as the ephermeral disk and the lun is 0
+        # Azure uses a data disk as the ephemeral disk and the lun is 0
         settings['disks']['ephemeral'] = {
           'lun' => '0',
           'host_device_id' => Bosh::AzureCloud::Helpers::AZURE_SCSI_HOST_DEVICE_ID

@@ -417,6 +417,63 @@ describe Bosh::AzureCloud::VMCloudProps do
       end
     end
 
+    context 'when root_disk is specified' do
+      context 'with type and placement' do
+        let(:vm_cloud_properties) do
+          {
+            'instance_type' => 'Standard_D1',
+            'root_disk' => {
+              'type' => 'Premium_ZRS',
+              'placement' => 'resource-disk'
+            }
+          }
+        end
+
+        it 'should raise an error' do
+          expect do
+            Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config)
+          end.to raise_error("Only one of 'type' and 'placement' is allowed to be configured for the root_disk when 'placement' is not set to persistent")
+        end
+      end
+
+      context 'with type wrong placement' do
+        let(:vm_cloud_properties) do
+          {
+            'instance_type' => 'Standard_D1',
+            'root_disk' => {
+              'placement' => 'local-persistent'
+            }
+          }
+        end
+
+        it 'should raise an error' do
+          expect do
+            Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config)
+          end.to raise_error("root_disk 'placement' must be one of 'resource-disk','cache-disk','remote'")
+        end
+      end
+
+      context 'with placement' do
+        let(:vm_cloud_props) do
+          Bosh::AzureCloud::VMCloudProps.new(
+            {
+              'instance_type' => 'Standard_D1',
+              'root_disk' => {
+                'placement' => 'cache-disk'
+              }
+            }, azure_config_managed
+          )
+        end
+
+        it 'should return the correct config' do
+          root_disk = vm_cloud_props.root_disk
+          expect(root_disk.size).to be_nil
+          expect(root_disk.type).to be_nil
+          expect(root_disk.placement).to eq('cache-disk')
+        end
+      end
+    end
+
     describe '#managed_identity' do
       context 'when default_managed_identity is not specified in global configurations' do
         context 'when managed_identity is not specified in vm_extensions' do
