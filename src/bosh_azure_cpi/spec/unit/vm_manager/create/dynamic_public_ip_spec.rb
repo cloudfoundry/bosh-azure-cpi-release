@@ -581,6 +581,7 @@ describe Bosh::AzureCloud::VMManager do
               custom_data: Base64.strict_encode64(JSON.dump(user_data)),
               os_disk: os_disk_managed,
               ephemeral_disk: ephemeral_disk_managed,
+              ephemeral_os_disk: nil,
               os_type: 'linux',
               managed: true,
               image_id: 'fake-uri'
@@ -630,6 +631,7 @@ describe Bosh::AzureCloud::VMManager do
               custom_data: Base64.strict_encode64(JSON.dump(user_data)),
               os_disk: os_disk_managed,
               ephemeral_disk: ephemeral_disk_managed,
+              ephemeral_os_disk: nil,
               os_type: 'windows',
               managed: true,
               image_id: 'fake-uri',

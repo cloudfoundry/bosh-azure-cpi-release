@@ -313,6 +313,206 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
   end
 
+  describe '#os_disk as ephemeral' do
+    let(:vm_name) { 'fake-vm-name' }
+    let(:disk_name) { 'fake-disk-name' }
+    let(:stemcell_info) { instance_double(Bosh::AzureCloud::Helpers::StemcellInfo) }
+    let(:image_size) { 3 * 1024 }
+
+    before do
+      allow(disk_manager2).to receive(:generate_os_disk_name)
+        .and_return(disk_name)
+      allow(stemcell_info).to receive(:image_size)
+        .and_return(image_size)
+      allow(stemcell_info).to receive(:is_windows?)
+        .and_return(false)
+    end
+
+    # use_root_disk
+    context 'when use_root_disk is true and placement is != remote' do
+      let(:vm_props) do
+        props_factory.parse_vm_props(
+          'instance_type' => 'STANDARD_A1',
+          'ephemeral_disk' => {
+            'size' => 2048,
+            'use_root_disk' => true
+          },
+          'root_disk' => {
+            'size' => 5120,
+            'placement' => 'cache-disk'
+          }
+        )
+      end
+
+      it 'should return the sum size of the root and ephemeral_disk' do
+        expect(
+          disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement)
+        ).to eq(
+          disk_name: disk_name,
+          disk_size: 7,
+          disk_placement: 'CacheDisk',
+          disk_caching: 'ReadOnly'
+        )
+      end
+    end
+
+    context 'when use_root_disk is false and placement is default' do
+      let(:vm_props) do
+        props_factory.parse_vm_props(
+          'instance_type' => 'STANDARD_A1',
+          'ephemeral_disk' => {
+            'size' => 2048,
+            'use_root_disk' => false
+          },
+          'root_disk' => {
+            'size' => 8129
+          }
+        )
+      end
+
+      it 'should return the size of the root disk' do
+        expect(
+          disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement)
+        ).to eq(
+          disk_name: disk_name,
+          disk_size: 8,
+          disk_placement: nil,
+          disk_caching: 'ReadOnly'
+        )
+      end
+    end
+
+    context 'when use_root_disk is false and placement is resource-disk' do
+      let(:vm_props) do
+        props_factory.parse_vm_props(
+          'instance_type' => 'STANDARD_A1',
+          'ephemeral_disk' => {
+            'size' => 2048,
+            'use_root_disk' => false
+          },
+          'root_disk' => {
+            'size' => 3069,
+            'placement' => 'resource-disk'
+          }
+        )
+      end
+
+      it 'should return the size of the root disk' do
+        expect(
+          disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement)
+        ).to eq(
+          disk_name: disk_name,
+          disk_size: 3,
+          disk_placement: 'ResourceDisk',
+          disk_caching: 'ReadOnly'
+        )
+      end
+    end
+
+    context 'when use_root_disk is true and placement is default' do
+      let(:vm_props) do
+        props_factory.parse_vm_props(
+          'instance_type' => 'STANDARD_A1',
+          'ephemeral_disk' => {
+            'size' => 2048,
+            'use_root_disk' => true
+          },
+          'root_disk' => {
+            'size' => 3069
+          }
+        )
+      end
+
+      it 'should return nil for placement' do
+        expect(
+          disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement)
+        ).to eq(
+          disk_name: disk_name,
+          disk_size: 5,
+          disk_placement: nil,
+          disk_caching: 'ReadOnly'
+        )
+      end
+    end
+
+    context 'when use_root_disk is true and placement is cache-disk' do
+      let(:vm_props) do
+        props_factory.parse_vm_props(
+          'instance_type' => 'STANDARD_A1',
+          'ephemeral_disk' => {
+            'size' => 2048,
+            'use_root_disk' => true
+          },
+          'root_disk' => {
+            'placement' => 'cache-disk'
+          }
+        )
+      end
+
+      it 'should return the default os image size (3gb) + the ephemeral_disk size' do
+        expect(
+          disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement)
+        ).to eq(
+          disk_name: disk_name,
+          disk_size: 5,
+          disk_placement: 'CacheDisk',
+          disk_caching: 'ReadOnly'
+        )
+      end
+    end
+
+    context 'when use_root_disk is true and placement is cache-disk and ephemeral_disk has no size' do
+      let(:vm_props) do
+        props_factory.parse_vm_props(
+          'instance_type' => 'STANDARD_A1',
+          'ephemeral_disk' => {
+            'use_root_disk' => true
+          },
+          'root_disk' => {
+            'placement' => 'cache-disk'
+          }
+        )
+      end
+
+      it 'should return the size of the root disk' do
+        expect(
+          disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement)
+        ).to eq(
+          disk_name: disk_name,
+          disk_size: 30,
+          disk_placement: 'CacheDisk',
+          disk_caching: 'ReadOnly'
+        )
+      end
+    end
+
+    context 'when use_root_disk with custom size and placement cache-disk with ephemeral_disk without size' do
+      let(:vm_props) do
+        props_factory.parse_vm_props(
+          'instance_type' => 'STANDARD_A1',
+          'ephemeral_disk' => {
+            'use_root_disk' => true
+          },
+          'root_disk' => {
+            'size' => 10_240,
+            'placement' => 'cache-disk'
+          }
+        )
+      end
+
+      it 'should return the size of the root disk' do
+        expect(
+          disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement)
+        ).to eq(
+          disk_name: disk_name,
+          disk_size: 10,
+          disk_placement: 'CacheDisk',
+          disk_caching: 'ReadOnly'
+        )
+      end
+    end
+  end
+
   describe '#os_disk' do
     let(:vm_name) { 'fake-vm-name' }
     let(:disk_name) { 'fake-disk-name' }

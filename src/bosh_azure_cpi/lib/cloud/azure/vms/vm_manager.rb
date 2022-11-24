@@ -140,7 +140,7 @@ module Bosh::AzureCloud
         }
       end
       vm_params[:zone] = zone.to_s unless zone.nil?
-      vm_params[:os_disk], vm_params[:ephemeral_disk] = _build_disks(instance_id, stemcell_info, vm_props)
+      vm_params[:os_disk], vm_params[:ephemeral_disk], vm_params[:ephemeral_os_disk] = _build_disks(instance_id, stemcell_info, vm_props)
       vm_params[:os_type] = stemcell_info.os_type
 
       if stemcell_info.is_light_stemcell?
@@ -530,16 +530,19 @@ module Bosh::AzureCloud
               @azure_client.delete_virtual_machine(resource_group_name, vm_name)
             end
 
-            if @use_managed_disks
-              os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
-              @disk_manager2.delete_disk(resource_group_name, os_disk_name)
-            else
-              storage_account_name = instance_id.storage_account_name
-              os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
-              @disk_manager.delete_disk(storage_account_name, os_disk_name)
+            # ephemeral_os_disk delete automatically, run for os_disk and ephemeral_disk only
+            unless vm_params[:os_disk].nil?
+              if @use_managed_disks
+                os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
+                @disk_manager2.delete_disk(resource_group_name, os_disk_name)
+              else
+                storage_account_name = instance_id.storage_account_name
+                os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
+                @disk_manager.delete_disk(storage_account_name, os_disk_name)
 
-              # Cleanup invalid VM status file
-              @disk_manager.delete_vm_status_files(storage_account_name, vm_name)
+                # Cleanup invalid VM status file
+                @disk_manager.delete_vm_status_files(storage_account_name, vm_name)
+              end
             end
 
             unless vm_params[:ephemeral_disk].nil?

@@ -155,6 +155,15 @@ module Bosh::AzureCloud
       "#{MANAGED_OS_DISK_PREFIX}-#{vm_name}-#{EPHEMERAL_DISK_POSTFIX}"
     end
 
+    def os_disk_placement(placement)
+      case placement
+      when 'resource-disk'
+        'ResourceDisk'
+      when 'cache-disk'
+        'CacheDisk'
+      end
+    end
+
     def os_disk(vm_name, stemcell_info, size, caching, use_root_disk_as_ephemeral)
       validate_disk_caching(caching)
 
@@ -164,6 +173,26 @@ module Bosh::AzureCloud
         disk_name: generate_os_disk_name(vm_name),
         disk_size: disk_size,
         disk_caching: caching
+      }
+    end
+
+    def ephemeral_os_disk(vm_name, stemcell_info, root_disk_size, ephemeral_disk_size, use_root_disk_as_ephemeral, placement)
+      disk_size = if use_root_disk_as_ephemeral && !ephemeral_disk_size.nil? && root_disk_size.nil?
+                    # when no size was specified at the root disk, we have to use the default stemcell image size based on the os type. For linux we will use 3g and 128gb for windows.
+                    stemcell_info.image_size / 1024
+                  else
+                    disk_size = get_os_disk_size(root_disk_size, stemcell_info, use_root_disk_as_ephemeral)
+                  end
+
+      # when a epehemeral os disk size was configured we add the size of the disk to the root disk to get the same size for the user content as expected.
+      disk_size += ephemeral_disk_size / 1024 if use_root_disk_as_ephemeral && !ephemeral_disk_size.nil?
+
+      disk_placement = os_disk_placement(placement)
+      {
+        disk_name: generate_os_disk_name(vm_name),
+        disk_size: disk_size,
+        disk_caching: 'ReadOnly',
+        disk_placement: disk_placement
       }
     end
 

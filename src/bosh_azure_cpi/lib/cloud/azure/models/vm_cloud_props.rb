@@ -41,7 +41,13 @@ module Bosh::AzureCloud
       cloud_error("You need to specify one of 'vm_type/instance_type' or 'vm_resources'.") if @instance_type.nil? && (@instance_types.nil? || @instance_types.empty?)
 
       root_disk_hash = vm_properties.fetch('root_disk', {})
-      @root_disk = Bosh::AzureCloud::RootDisk.new(root_disk_hash['size'], root_disk_hash['type'])
+      @root_disk = Bosh::AzureCloud::RootDisk.new(
+        root_disk_hash['size'],
+        root_disk_hash['type'],
+        _default_root_disk_placement(root_disk_hash['placement'])
+      )
+
+      cloud_error("Only one of 'type' and 'placement' is allowed to be configured for the root_disk when 'placement' is not set to persistent") if @root_disk.placement != 'remote' && !@root_disk.type.nil? && !global_azure_config.use_managed_disks
 
       ephemeral_disk_hash = vm_properties.fetch('ephemeral_disk', {})
       @ephemeral_disk = Bosh::AzureCloud::EphemeralDisk.new(
@@ -85,6 +91,20 @@ module Bosh::AzureCloud
     end
 
     private
+
+    # In Azure you can place your root disk at:
+    #   temp disk   - resource-disk
+    #   cache disk  - chache-disk
+    #   persistent (default) - persistent os disk
+    def _default_root_disk_placement(root_disk_placement)
+      if root_disk_placement.nil?
+        'remote'
+      else
+        valid_placements = %w[resource-disk cache-disk remote]
+        cloud_error("root_disk 'placement' must be one of 'resource-disk','cache-disk','remote'") unless valid_placements.include?(root_disk_placement)
+        root_disk_placement
+      end
+    end
 
     # In AzureStack, availability sets can only be configured with 1 update domain.
     # In Azure, the max update domain count of a managed/unmanaged availability set is 5.

@@ -265,6 +265,13 @@ module Bosh::AzureCloud
     # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
     # *   +:disk_type+          - String. The disk type of the ephemeral disk.
     #
+    #   When managed is true and root_disk type is not 'remote' below parameters are required
+    # * +:image_id+             - String. The id of the image to create the virtual machine.
+    # * +:ephemeral_os_disk+    - Hash. Azure Ephemeral OS Disk for the virtual machine instance.
+    # *   +:disk_name+          - String. The name of the ephemeral disk.
+    # *   +:disk_size+          - Integer. The size in GiB of the OS disk. It could be nil.
+    # *   +:disk_placement+     - String. Where Ephemeral OS Disk is placed. Possible values: remote, resource-disk, cache-disk.
+    #
     #   When managed is false or nil, below parameters are required
     # * +:image_uri+            - String. The URI of the image.
     # * +:os_disk+              - Hash. OS Disk for the virtual machine instance.
@@ -342,12 +349,28 @@ module Bosh::AzureCloud
 
       vm['zones'] = [vm_params[:zone]] unless vm_params[:zone].nil?
 
-      os_disk = {
-        'name' => vm_params[:os_disk][:disk_name],
-        'createOption' => 'FromImage',
-        'caching' => vm_params[:os_disk][:disk_caching]
-      }
-      os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
+      os_disk = {}
+      unless vm_params[:os_disk].nil?
+        os_disk = {
+          'name' => vm_params[:os_disk][:disk_name],
+          'createOption' => 'FromImage',
+          'caching' => vm_params[:os_disk][:disk_caching]
+        }
+        os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
+      end
+
+      unless vm_params[:ephemeral_os_disk].nil?
+        os_disk = {
+          'diffDiskSettings' => {
+            'option' => 'Local',
+            'placement' => vm_params[:ephemeral_os_disk][:disk_placement]
+          },
+          'caching' => vm_params[:ephemeral_os_disk][:disk_caching],
+          'createOption' => 'FromImage',
+          'name' => vm_params[:ephemeral_os_disk][:disk_name]
+        }
+        os_disk['diskSizeGB'] = vm_params[:ephemeral_os_disk][:disk_size] unless vm_params[:ephemeral_os_disk][:disk_size].nil?
+      end
 
       if vm_params[:image_reference].nil?
         if vm_params[:managed]
@@ -390,6 +413,7 @@ module Bosh::AzureCloud
           'product' => vm_params[:image_reference]['offer']
         }
       end
+
       unless vm_params[:ephemeral_disk].nil?
         vm['properties']['storageProfile']['dataDisks'] = [{
           'name' => vm_params[:ephemeral_disk][:disk_name],
