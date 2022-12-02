@@ -37,7 +37,7 @@ describe Bosh::AzureCloud::Cloud do
           instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
           vm = get_azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
           expect(vm[:identity][:type]).to eq('UserAssigned')
-          expect(vm[:identity][:user_assigned_identities].keys).to include(@user_assigned_identity_name)
+          expect(vm[:identity][:user_assigned_identities].keys[0]).to include(@user_assigned_identity_name)
         end
       end
     end
@@ -69,7 +69,7 @@ describe Bosh::AzureCloud::Cloud do
           instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
           vm = get_azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
           expect(vm[:identity][:type]).to eq('UserAssigned')
-          expect(vm[:identity][:user_assigned_identities].keys).to include(@user_assigned_identity_name)
+          expect(vm[:identity][:user_assigned_identities].keys[0]).to include(@user_assigned_identity_name)
         end
       end
     end
@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::Cloud do
           instance_id_obj = Bosh::AzureCloud::InstanceId.parse(instance_id, @azure_config.resource_group_name)
           vm = get_azure_client.get_virtual_machine_by_name(@default_resource_group_name, instance_id_obj.vm_name.to_s)
           expect(vm[:identity][:type]).to eq('UserAssigned')
-          expect(vm[:identity][:user_assigned_identities].keys).to include(@default_user_assigned_identity_name)
+          expect(vm[:identity][:user_assigned_identities].keys[0]).to include(@default_user_assigned_identity_name)
         end
       end
     end
