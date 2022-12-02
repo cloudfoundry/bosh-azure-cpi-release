@@ -1080,7 +1080,8 @@ module Bosh::AzureCloud
               'caching' => 'readwrite',
               'storageAccountType' => params[:account_type]
             }
-          }
+          },
+          'hyperVGeneration' => 'V1'
         }
       }
 
