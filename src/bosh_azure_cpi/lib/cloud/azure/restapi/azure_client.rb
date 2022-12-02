@@ -338,7 +338,7 @@ module Bosh::AzureCloud
           identity_id = rest_api_url(REST_API_PROVIDER_MANAGED_IDENTITY, REST_API_USER_ASSIGNED_IDENTITIES, resource_group_name: resource_group_name, name: vm_params[:identity][:identity_name])
           vm['identity'] = {
             'type' => MANAGED_IDENTITY_TYPE_USER_ASSIGNED,
-            'identityIds' => [identity_id]
+            'userAssignedIdentities' => [identity_id]
           }
         else
           vm['identity'] = {
@@ -692,7 +692,7 @@ module Bosh::AzureCloud
         if result.key?('identity')
           vm[:identity] = {}
           vm[:identity][:type] = result['identity']['type']
-          vm[:identity][:identity_ids] = result['identity']['identityIds']
+          vm[:identity][:user_assigned_identities] = result['identity']['userAssignedIdentities']
         end
 
         vm[:zone]  = result['zones'][0] unless result['zones'].nil?

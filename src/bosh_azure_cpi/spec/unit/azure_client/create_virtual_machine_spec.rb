@@ -208,7 +208,7 @@ describe Bosh::AzureCloud::AzureClient do
               },
               identity: {
                 type: 'UserAssigned',
-                identityIds: ["/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/fake-identity-name"]
+                userAssignedIdentities: ["/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/fake-identity-name"]
               },
               properties: {
                 hardwareProfile: {

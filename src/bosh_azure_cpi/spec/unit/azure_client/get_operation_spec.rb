@@ -1507,7 +1507,7 @@ describe Bosh::AzureCloud::AzureClient do
             'tags' => {},
             'identity' => {
               'type' => 'UserAssigned',
-              'identityIds' => ['fake-id-1']
+              'userAssignedIdentities' => ['fake-id-1']
             },
             'properties' => {
               'provisioningState' => 'foo',
@@ -1548,7 +1548,7 @@ describe Bosh::AzureCloud::AzureClient do
             tags: {},
             identity: {
               type: 'UserAssigned',
-              identity_ids: ['fake-id-1']
+              user_assigned_identities: ['fake-id-1']
             },
             provisioning_state: 'foo',
             vm_size: 'bar',
