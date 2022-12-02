@@ -246,7 +246,10 @@ module Bosh::AzureCloud
                   rescue AzureError => e
                     retry_count += 1
                     if retry_count < 20
-                      retry if e.message =~ /NicReservedForAnotherVm/
+                      if e.message =~ /NicReservedForAnotherVm/
+                        sleep 10
+                        retry
+                      end
                     end
                     raise e
                   end

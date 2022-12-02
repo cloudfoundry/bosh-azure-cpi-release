@@ -113,6 +113,7 @@ describe Bosh::AzureCloud::VMManager do
               .and_raise('virtual machine is not created')
             allow(azure_client).to receive(:delete_network_interface)
               .and_raise(Bosh::AzureCloud::AzureError.new('Something something NicReservedForAnotherVm something else'))
+            allow(vm_manager).to receive(:sleep)
           end
 
           it 'retries 20 times when the error is NicReservedForAnotherVm' do
