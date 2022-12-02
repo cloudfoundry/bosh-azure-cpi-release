@@ -243,15 +243,15 @@ module Bosh::AzureCloud
                   retry_count = 0
                   begin
                     @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
-                  rescue AzureError => e
+                  rescue AzureError => delete_error
                     retry_count += 1
                     if retry_count < 20
-                      if e.message =~ /NicReservedForAnotherVm/
+                      if delete_error.message =~ /NicReservedForAnotherVm/
                         sleep 10
                         retry
                       end
                     end
-                    raise e
+                    raise delete_error
                   end
                 end
               else
