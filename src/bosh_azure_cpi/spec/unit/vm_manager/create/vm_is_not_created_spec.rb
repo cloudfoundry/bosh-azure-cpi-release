@@ -90,7 +90,7 @@ describe Bosh::AzureCloud::VMManager do
             allow(azure_client).to receive(:create_virtual_machine)
               .and_raise('virtual machine is not created')
             allow(azure_client).to receive(:delete_network_interface)
-              .and_raise('cannot delete nic')
+              .and_raise(Bosh::AzureCloud::AzureError.new('cannot delete nic'))
           end
 
           it 'should delete vm and nics and then raise an error' do
@@ -104,6 +104,28 @@ describe Bosh::AzureCloud::VMManager do
             expect do
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
             end.to raise_error(/cannot delete nic/)
+          end
+        end
+
+        context 'and an error occurs when deleting nic' do
+          before do
+            allow(azure_client).to receive(:create_virtual_machine)
+              .and_raise('virtual machine is not created')
+            allow(azure_client).to receive(:delete_network_interface)
+              .and_raise(Bosh::AzureCloud::AzureError.new('Something something NicReservedForAnotherVm something else'))
+          end
+
+          it 'retries 20 times when the error is NicReservedForAnotherVm' do
+            expect(azure_client).to receive(:delete_virtual_machine).once
+            expect(disk_manager).to receive(:delete_disk).with(storage_account_name, os_disk_name).once
+            expect(disk_manager).to receive(:delete_disk).with(storage_account_name, ephemeral_disk_name).once
+            expect(disk_manager).to receive(:delete_vm_status_files)
+              .with(storage_account_name, vm_name).once
+            expect(azure_client).to receive(:delete_network_interface).exactly(20).times
+
+            expect do
+              vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+            end.to raise_error(/NicReservedForAnotherVm/)
           end
         end
       end

@@ -240,7 +240,16 @@ module Bosh::AzureCloud
               # Delete NICs
               if network_interfaces
                 network_interfaces.each do |network_interface|
-                  @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
+                  retry_count = 0
+                  begin
+                    @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
+                  rescue AzureError => e
+                    retry_count += 1
+                    if retry_count < 20
+                      retry if e.message =~ /NicReservedForAnotherVm/
+                    end
+                    raise e
+                  end
                 end
               else
                 # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
