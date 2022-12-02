@@ -60,7 +60,8 @@ describe Bosh::AzureCloud::AzureClient do
               caching: 'readwrite',
               storageAccountType: 'd'
             }
-          }
+          },
+          hyperVGeneration: 'V1'
         }
       }
     end
