@@ -161,7 +161,8 @@ describe Bosh::AzureCloud::AzureClient do
           location: 'b',
           tags: { 'foo' => 'bar' },
           source_uri: 'c',
-          account_type: 'd'
+          account_type: 'd',
+          storage_account_id: 'e'
         }
       end
 
@@ -177,7 +178,8 @@ describe Bosh::AzureCloud::AzureClient do
           properties: {
             creationData: {
               createOption: 'Import',
-              sourceUri: 'c'
+              sourceUri: 'c',
+              storageAccountId: 'e'
             }
           }
         }
@@ -219,6 +221,7 @@ describe Bosh::AzureCloud::AzureClient do
           tags: { 'foo' => 'bar' },
           source_uri: 'c',
           account_type: 'd',
+          storage_account_id: 'e',
           zone: 'e'
         }
       end
@@ -236,7 +239,8 @@ describe Bosh::AzureCloud::AzureClient do
           properties: {
             creationData: {
               createOption: 'Import',
-              sourceUri: 'c'
+              sourceUri: 'c',
+              storageAccountId: 'e'
             }
           }
         }

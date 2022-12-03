@@ -952,7 +952,8 @@ module Bosh::AzureCloud
         'properties' => {
           'creationData' => {
             'createOption' => 'Import',
-            'sourceUri' => params[:source_uri]
+            'sourceUri' => params[:source_uri],
+            'storageAccountId' => params[:storage_account_id]
           }
         }
       }

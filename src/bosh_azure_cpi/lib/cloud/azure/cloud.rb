@@ -578,7 +578,7 @@ module Bosh::AzureCloud
                     # Can not use the type of the default storage account because only Standard_LRS and Premium_LRS are supported for managed disk.
                     account_type = storage_account[:sku_tier] == SKU_TIER_PREMIUM ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
                     @logger.debug("attach_disk - Migrating the unmanaged disk '#{disk_name}' to a managed disk")
-                    @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type, vm_zone)
+                    @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type, storage_account[:id], vm_zone)
 
                     # Set below metadata but not delete it.
                     # Users can manually delete all blobs in container 'bosh' whose names start with 'bosh-data' after migration is finished.

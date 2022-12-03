@@ -64,6 +64,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     let(:blob_uri) { 'fake-blob-uri' }
     let(:location) { 'SouthEastAsia' }
     let(:storage_account_type) { 'Standard_LRS' }
+    let(:storage_account_id) { 'storage_account_id' }
     let(:zone) { 'fake-zone' }
 
     let(:disk_params) do
@@ -77,6 +78,7 @@ describe Bosh::AzureCloud::DiskManager2 do
         },
         source_uri: blob_uri,
         account_type: storage_account_type,
+        storage_account_id: storage_account_id,
         zone: zone
       }
     end
@@ -85,7 +87,7 @@ describe Bosh::AzureCloud::DiskManager2 do
       expect(azure_client).to receive(:create_managed_disk_from_blob)
         .with(resource_group_name, disk_params)
       expect do
-        disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, zone)
+        disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, storage_account_id, zone)
       end.not_to raise_error
     end
   end

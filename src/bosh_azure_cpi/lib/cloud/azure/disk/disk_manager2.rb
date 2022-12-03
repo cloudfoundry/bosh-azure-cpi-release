@@ -43,8 +43,8 @@ module Bosh::AzureCloud
       @azure_client.create_empty_managed_disk(resource_group_name, disk_params)
     end
 
-    def create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, zone = nil)
-      @logger.info("create_disk_from_blob(#{disk_id}, #{blob_uri}, #{location}, #{storage_account_type}, #{zone})")
+    def create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, storage_account_id, zone = nil)
+      @logger.info("create_disk_from_blob(#{disk_id}, #{blob_uri}, #{location}, #{storage_account_type}, #{storage_account_id}, #{zone})")
       resource_group_name = disk_id.resource_group_name
       disk_name = disk_id.disk_name
       caching = disk_id.caching
@@ -58,6 +58,7 @@ module Bosh::AzureCloud
         tags: tags,
         source_uri: blob_uri,
         account_type: storage_account_type,
+        storage_account_id: storage_account_id,
         zone: zone
       }
       @logger.info("Start to create a managed disk '#{disk_name}' in resource group '#{resource_group_name}' from the source uri '#{blob_uri}'")
