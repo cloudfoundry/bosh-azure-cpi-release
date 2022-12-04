@@ -202,11 +202,13 @@ describe Bosh::AzureCloud::Cloud do
           let(:blob_uri) { 'fake-blob-uri' }
           let(:location) { 'fake-location' }
           let(:account_type) { 'Premium_LRS' }
+          let(:storage_account_id) { 'storage-account-id' }
           let(:storage_account) do
             {
               location: location,
               account_type: account_type,
-              sku_tier: 'Premium'
+              sku_tier: 'Premium',
+              id: storage_account_id
             }
           end
 
@@ -226,7 +228,7 @@ describe Bosh::AzureCloud::Cloud do
               expect(disk_id_object).to receive(:storage_account_name)
                 .and_return(storage_account_name)
               expect(disk_manager2).to receive(:create_disk_from_blob)
-                .with(disk_id_object, blob_uri, location, account_type, nil)
+                .with(disk_id_object, blob_uri, location, account_type, storage_account_id, nil)
               expect(blob_manager).to receive(:set_blob_metadata)
 
               expect(vm_manager).to receive(:attach_disk)
