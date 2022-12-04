@@ -57,7 +57,7 @@ module Bosh::AzureCloud
     end
 
     def caching
-      invalid = !disk_name.start_with?(DATA_DISK_PREFIX, MANAGED_DATA_DISK_PREFIX, MANAGED_CONFIG_DISK_PREFIX)
+      invalid = !disk_name.start_with?(DATA_DISK_PREFIX, MANAGED_DATA_DISK_PREFIX)
       cloud_error('This function should only be called for data disks') if invalid
 
       return _parse_data_disk_caching_plain(@plain_id) unless @plain_id.nil?

@@ -114,7 +114,6 @@ module Bosh::AzureCloud
     DATA_DISK_PREFIX                = 'bosh-data'
     MANAGED_OS_DISK_PREFIX          = 'bosh-disk-os'
     MANAGED_DATA_DISK_PREFIX        = 'bosh-disk-data'
-    MANAGED_CONFIG_DISK_PREFIX      = 'bosh-cfg-disk'
     EPHEMERAL_DISK_POSTFIX          = 'ephemeral-disk'
     STEMCELL_PREFIX                 = 'bosh-stemcell'
     LIGHT_STEMCELL_PREFIX           = 'bosh-light-stemcell'

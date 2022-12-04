@@ -60,15 +60,6 @@ module Bosh::AzureCloud
     end
   end
 
-  # TODO: Refactoring: Move class to new file: ConfigDisk
-  class ConfigDisk
-    attr_reader :enabled
-
-    def initialize(config_disk_config_hash)
-      @enabled = config_disk_config_hash['enabled']
-    end
-  end
-
   # TODO: Refactoring: Move class to new file: AzureConfig
   class AzureConfig
     include Helpers
@@ -84,7 +75,6 @@ module Bosh::AzureCloud
     attr_reader :pip_idle_timeout_in_minutes
     attr_reader :parallel_upload_thread_num
     attr_reader :ssh_user, :ssh_public_key
-    attr_reader :config_disk
     attr_reader :stemcell_api_version
     attr_reader :use_default_account_for_cleaning
 
@@ -126,8 +116,6 @@ module Bosh::AzureCloud
 
       @ssh_user = azure_config_hash['ssh_user']
       @ssh_public_key = azure_config_hash['ssh_public_key']
-
-      @config_disk = ConfigDisk.new(azure_config_hash.fetch('config_disk', 'enabled' => false))
 
       # Flag to skip looping all storage account in subscription
       @use_default_account_for_cleaning = false

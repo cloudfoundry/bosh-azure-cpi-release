@@ -435,18 +435,6 @@ module Bosh::AzureCloud
         end
       end
 
-      unless vm_params[:config_disk].nil?
-        # append the config disk into the vm.
-        vm['properties']['storageProfile']['dataDisks'] = [] if vm['properties']['storageProfile']['dataDisks'].nil?
-        vm['properties']['storageProfile']['dataDisks'].push(
-          'lun' => 1,
-          'createOption' => 'Attach',
-          'managedDisk' => {
-            'id' => vm_params[:config_disk][:id].to_s
-          }
-        )
-      end
-
       unless availability_set.nil?
         vm['properties']['availabilitySet'] = {
           'id' => availability_set[:id]

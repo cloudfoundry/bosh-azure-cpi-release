@@ -451,7 +451,6 @@ Style/OpenStructUse:
     - 'spec/manual_tests/performance/upload_image.rb'
     - 'spec/manual_tests/resource_group_name/helpers.rb'
     - 'spec/unit/bosh_release/jobs/cpi/templates/cpi.json.erb_spec.rb'
-    - 'spec/unit/vm_manager/create/use_config_disk_spec.rb'
 
 # Offense count: 4
 # Configuration parameters: AllowedMethods.

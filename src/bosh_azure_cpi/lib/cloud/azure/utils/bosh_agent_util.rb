@@ -46,10 +46,10 @@ module Bosh::AzureCloud
       Base64.strict_encode64(JSON.dump(user_data))
     end
 
-    # Obtain the full VM metadata to write in config disk or custom data.
+    # Obtain the full VM metadata to write custom data.
     #
     # As of CPI API version 2, and stemcell API version 2, the registry is bypassed.
-    # The agent settings are written directly to config disk if used, or the VM's custom data.
+    # The agent settings are written directly to the VM's custom data.
     # The stemcell API version is used to determine compatibility with the agent on the stemcell.
     # An updated agent will read the base metadata, and additionally the agent settings, bypassing the registry.
     def user_data_obj(registry_endpoint, instance_id, dns, agent_id, network_spec, environment, vm_params, config, computer_name = nil)
@@ -88,7 +88,7 @@ module Bosh::AzureCloud
     #
     # Note:
     # As of CPI API version 2, and stemcell API version 2, the registry is bypassed.
-    # The agent settings are written directly to config disk if used, or the VM's custom data.
+    # The agent settings are written directly to the VM's custom data.
     #
     # @param [String] agent_id Agent id (will be picked up by agent to
     #   assume its identity
