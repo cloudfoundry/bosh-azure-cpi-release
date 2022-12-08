@@ -4,10 +4,9 @@ module Bosh::AzureCloud
   class VMManager # rubocop:todo Metrics/ClassLength
     include Helpers
 
-    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, config_disk_manager = nil)
+    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager)
       @azure_config = azure_config
       @registry_endpoint = registry_endpoint
-      @config_disk_manager = config_disk_manager
       @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
       @azure_client = azure_client
@@ -156,16 +155,7 @@ module Bosh::AzureCloud
         vm_params[:ssh_username]  = @azure_config.ssh_user
         vm_params[:ssh_cert_data] = @azure_config.ssh_public_key
         user_data = agent_settings.user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config)
-        if @azure_config.config_disk.enabled
-          meta_data_obj = agent_settings.meta_data_obj(
-            instance_id.to_s,
-            @azure_config.ssh_public_key
-          )
-          config_disk = @config_disk_manager.prepare_config_disk(resource_group_name, vm_name, location, meta_data_obj, user_data)
-          vm_params[:config_disk] = config_disk
-        else
-          vm_params[:custom_data] = agent_settings.encode_user_data(user_data)
-        end
+        vm_params[:custom_data] = agent_settings.encode_user_data(user_data)
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
         # Users do not use this credential to logon to Windows VMs
@@ -211,8 +201,6 @@ module Bosh::AzureCloud
             ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
             error_message += "\t Managed Ephemeral Disk: #{ephemeral_disk_name}\n"
           end
-
-          # TODO: Output message to delete config disk
         else
           storage_account_name = instance_id.storage_account_name
           os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
@@ -265,8 +253,6 @@ module Bosh::AzureCloud
               @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
             end
           )
-
-          # TODO: delete the config disk.
 
           tasks.map(&:wait)
           tasks.map(&:wait!)

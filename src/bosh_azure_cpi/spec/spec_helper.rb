@@ -73,10 +73,7 @@ def mock_cloud_options
         'default_security_group' => MOCK_DEFAULT_SECURITY_GROUP,
         'debug_mode' => false,
         'use_managed_disks' => false,
-        'request_id' => MOCK_REQUEST_ID,
-        'config_disk' => {
-          'enabled' => false
-        }
+        'request_id' => MOCK_REQUEST_ID
       },
       'registry' => {
         'endpoint' => 'localhost:42288',
