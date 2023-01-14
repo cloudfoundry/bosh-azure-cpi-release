@@ -1,12 +1,14 @@
 ---
 shared:
   - &azure-environment-params
-    AZURE_ENVIRONMENT:                    {{azure_environment}}
-    AZURE_TENANT_ID:                      {{azure_tenant_id}}
-    AZURE_SUBSCRIPTION_ID:                {{azure_subscription_id}}
-    AZURE_CLIENT_ID:                      {{azure_client_id}}
-    AZURE_CLIENT_SECRET:                  {{azure_client_secret}}
-    AZURE_CERTIFICATE:                    {{azure_certificate}}
+    AZURE_ENVIRONMENT:                    AzureCloud
+    AZURE_TENANT_ID:                      ((cpi_azure_credentials_json.tenant_id))
+    AZURE_SUBSCRIPTION_ID:                ((cpi_azure_credentials_json.subscription_id))
+    AZURE_CLIENT_ID:                      ((cpi_azure_credentials_json.client_id))
+    AZURE_CLIENT_SECRET:                  ((cpi_azure_credentials_json.client_secret))
+    AZURE_CERTIFICATE: |
+      ((bosh-azure-cpi/cpi_certificate_auth.private_key))
+      ((bosh-azure-cpi/cpi_certificate_auth.certificate))
 
   - &create-bats-environment
     put: environment
@@ -50,7 +52,12 @@ shared:
     image: azure-cpi-image
     params: &prepare-director-params
       INFRASTRUCTURE:     azure
-      DIRECTOR_VARS_FILE: {{azure_director_vars_file}}
+      DIRECTOR_VARS_FILE:  |
+        subscription_id: ((cpi_azure_credentials_json.subscription_id))
+        tenant_id: ((cpi_azure_credentials_json.tenant_id))
+        client_id: ((cpi_azure_credentials_json.client_id))
+        client_secret: ((cpi_azure_credentials_json.client_secret))
+        dns_recursor_ip: 8.8.8.8
 
   - &deploy-director
     task: deploy-director
@@ -84,7 +91,7 @@ shared:
       BAT_INFRASTRUCTURE:                 azure
       BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
-      AZURE_BATS_ZONE:                    {{azure_bats_zone}}
+      AZURE_BATS_ZONE:                    "1"
 
   - &teardown
     task: teardown
@@ -126,7 +133,7 @@ shared:
     file: bosh-cpi-src/ci/tasks/run-integration.yml
     params: &run-integration-params
       <<: *azure-environment-params
-      SSH_PUBLIC_KEY:                                 {{ssh_public_key}}
+      SSH_PUBLIC_KEY: ((bosh-azure-cpi/integration_vm_keypair.public_key))
 
   - &run-integration-windows
     task: run-integration-windows
@@ -326,8 +333,8 @@ jobs:
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
-          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
-          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
+          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
+          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_aws_access_key.password))
       - put: bosh-cpi-src
         resource: bosh-cpi-src-out
         params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
@@ -344,8 +351,8 @@ jobs:
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
-          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
-          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
+          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
+          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_aws_access_key.password))
       - put: bosh-cpi-src
         resource: bosh-cpi-src-out
         params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
@@ -362,8 +369,8 @@ jobs:
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
-          S3_ACCESS_KEY_ID:     {{s3_access_key__promote}}
-          S3_SECRET_ACCESS_KEY: {{s3_secret_key__promote}}
+          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
+          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_aws_access_key.password))
       - put: bosh-cpi-src
         resource: bosh-cpi-src-out
         params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
@@ -414,10 +421,10 @@ resources:
     type: s3
     source:
       regexp: bosh-azure-cpi-(\d+\.\d+\.\d+)\.tgz
-      bucket: {{s3_azure_cpi_pipeline_bucket}}
-      region_name: {{s3_region__primary}}
-      access_key_id: {{s3_access_key__primary}}
-      secret_access_key: {{s3_secret_key__primary}}
+      bucket: azure-pipeline-bucket
+      region_name: us-east-1
+      access_key_id: ((bosh-azure-cpi-uploaded_aws_access_key.username))
+      secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
   - name: bosh-cpi-src-in
     type: git
     source:
@@ -431,7 +438,7 @@ resources:
     source:
       uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
       branch: master
-      private_key: {{github_deployment_key__bosh-azure-cpi-release}}
+      private_key: ((github_deploy_key_bosh-azure-cpi-release.private_key))
   - name: bosh-azure-cpi-release-dockerfile-src
     type: git
     source:
@@ -442,32 +449,32 @@ resources:
     type: semver
     source:
       key:               current-version # dev-release version
-      bucket:            {{s3_azure_cpi_pipeline_bucket}}
-      access_key_id:     {{s3_access_key__primary}}
-      secret_access_key: {{s3_secret_key__primary}}
+      bucket:            azure-pipeline-bucket
+      access_key_id:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
+      secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
   - name: release-version-semver
     type: semver
     source:
       key:               release-current-version
-      bucket:            {{s3_azure_cpi_pipeline_bucket}}
-      access_key_id:     {{s3_access_key__primary}}
-      secret_access_key: {{s3_secret_key__primary}}
+      bucket:            azure-pipeline-bucket
+      access_key_id:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
+      secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
   - name: environment
     type: terraform_type
     source:
       storage:
-        access_key_id:     {{s3_access_key__primary}}
-        secret_access_key: {{s3_secret_key__primary}}
-        bucket:            {{terraform_bucket}}
+        access_key_id:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
+        secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
+        bucket:            azure-pipeline-bucket
         bucket_path:       terraform-state
       vars:
-        location:              {{azure_location}}
-        azure_environment:     {{azure_environment}}
-        azure_subscription_id: {{azure_subscription_id}}
-        azure_client_id:       {{azure_client_id}}
-        azure_client_secret:   {{azure_client_secret}}
-        azure_tenant_id:       {{azure_tenant_id}}
-        resource_group_prefix: {{resource_group_prefix}}
+        location:              eastus2
+        azure_environment:     AzureCloud
+        azure_subscription_id: ((cpi_azure_credentials_json.subscription_id))
+        azure_client_id:       ((cpi_azure_credentials_json.client_id))
+        azure_client_secret:   ((cpi_azure_credentials_json.client_secret))
+        azure_tenant_id:       ((cpi_azure_credentials_json.tenant_id))
+        resource_group_prefix: azurecpi
   - name: bosh-cli
     type: s3
     source:
