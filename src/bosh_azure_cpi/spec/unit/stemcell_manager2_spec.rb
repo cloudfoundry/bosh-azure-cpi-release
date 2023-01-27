@@ -218,6 +218,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
             it 'should get the stemcell from the default storage account, create a new user image and return the user image information' do
               expect(azure_client).not_to receive(:list_storage_accounts)
               expect(stemcell_manager2).to receive(:flock).with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX).and_call_original
+              expect(stemcell_manager2).to receive(:flock).with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX).and_call_original
               expect(azure_client).to receive(:create_user_image)
               stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
               expect(stemcell_info.uri).to eq(user_image_id)
@@ -234,6 +235,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
             it 'should get the stemcell from the default storage account, get the user image and return image information' do
               expect(azure_client).not_to receive(:list_storage_accounts)
+              expect(stemcell_manager2).to receive(:flock).with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX).and_call_original
               expect(stemcell_manager2).to receive(:flock).with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX).and_call_original
               expect(azure_client).not_to receive(:create_user_image)
               stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
@@ -298,6 +300,9 @@ describe Bosh::AzureCloud::StemcellManager2 do
                 expect(stemcell_manager2).to receive(:flock)
                   .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
                   .and_call_original
+                expect(stemcell_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                  .and_call_original
                 expect(azure_client).to receive(:create_user_image)
                 stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
                 expect(stemcell_info.uri).to eq(user_image_id)
@@ -329,6 +334,9 @@ describe Bosh::AzureCloud::StemcellManager2 do
                   expect(stemcell_manager2).to receive(:flock)
                     .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
                     .and_call_original
+                  expect(stemcell_manager2).to receive(:flock)
+                    .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                    .and_call_original
                   expect(blob_manager).to receive(:copy_blob)
                     .with(existing_storage_account_name, stemcell_container, "#{stemcell_name}.vhd", stemcell_blob_uri)
                   expect(azure_client).to receive(:create_user_image)
@@ -349,6 +357,9 @@ describe Bosh::AzureCloud::StemcellManager2 do
                 end
 
                 it 'should raise an error' do
+                  expect(stemcell_manager2).to receive(:flock)
+                    .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                    .and_call_original
                   expect(stemcell_manager2).to receive(:flock)
                     .with("#{CPI_LOCK_COPY_STEMCELL}-#{stemcell_name}-#{existing_storage_account_name}", File::LOCK_EX)
                     .and_call_original
@@ -425,6 +436,9 @@ describe Bosh::AzureCloud::StemcellManager2 do
                 expect(stemcell_manager2).to receive(:flock)
                   .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
                   .and_call_original
+                expect(stemcell_manager2).to receive(:flock)
+                  .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                  .and_call_original
                 expect(blob_manager).to receive(:copy_blob)
                 expect(azure_client).to receive(:create_user_image)
                 stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
@@ -468,6 +482,9 @@ describe Bosh::AzureCloud::StemcellManager2 do
               expect(stemcell_manager2).to receive(:flock)
                 .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
                 .and_call_original
+              expect(stemcell_manager2).to receive(:flock)
+                .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                .and_call_original
               expect(azure_client).to receive(:create_user_image)
 
               expect do
@@ -495,6 +512,9 @@ describe Bosh::AzureCloud::StemcellManager2 do
             end
 
             it 'should return the new user image' do
+              expect(stemcell_manager2).to receive(:flock)
+                .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
+                .and_call_original
               expect(stemcell_manager2).to receive(:flock)
                 .with("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX)
                 .and_call_original
