@@ -67,7 +67,16 @@ module Bosh::AzureCloud
                                                   .sub(STORAGE_ACCOUNT_TYPE_STANDARD_LRS, 'S')
                                                   .sub(STORAGE_ACCOUNT_TYPE_STANDARDSSD_LRS, 'SSSD')
                                                   .sub(STORAGE_ACCOUNT_TYPE_PREMIUM_LRS, 'P')
-      user_image = @azure_client.get_user_image_by_name(user_image_name)
+      
+      # Lock GET operations to avoid using an image that is currently being created
+      # Example:
+      #   CPI Process 1: Get -> 404 -> image create -> create operation running
+      #   CPI Process 2: Get -> 200 > VM create -> fails since image is still being created on Azure side
+      user_image = nil
+      flock("#{CPI_LOCK_CREATE_USER_IMAGE}-#{user_image_name}", File::LOCK_EX) do
+        user_image = @azure_client.get_user_image_by_name(user_image_name)
+      end
+
       return user_image unless user_image.nil?
 
       default_storage_account = @storage_account_manager.default_storage_account
