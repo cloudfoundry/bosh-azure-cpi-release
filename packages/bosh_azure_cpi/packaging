@@ -10,6 +10,7 @@ cp -a bosh_azure_cpi/* "${BOSH_INSTALL_TARGET}"
 
 cd "${BOSH_INSTALL_TARGET}"
 
+
 export BUNDLER_VERSION="$(bundle -v | grep -o -e '[0-9.]*')"
 bundle config set --local deployment 'true'
 bundle config set --local no_prune 'true'

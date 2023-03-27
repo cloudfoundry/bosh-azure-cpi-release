@@ -12,7 +12,14 @@ require 'etc'
 require 'fcntl'
 require 'fileutils'
 require 'logging'
-require 'fast_jsonparser'
+
+begin
+  require 'fast_jsonparser'
+rescue LoadError
+  require 'monkey_patches/fast_json_monkey_patch'
+  Bosh::AzureCloud::FastJsonMonkeyPatch.apply_patch
+end
+
 require 'jwt'
 require 'open3'
 require 'pp'
