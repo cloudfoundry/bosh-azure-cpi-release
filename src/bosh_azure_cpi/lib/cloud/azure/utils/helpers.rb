@@ -38,6 +38,11 @@ module Bosh::AzureCloud
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.us',
         'apiVersion' => API_VERSIONS
       },
+      ENVIRONMENT_AZUREGERMANCLOUD => {
+        'resourceManagerEndpointUrl' => 'https://management.microsoftazure.de/',
+        'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.de',
+        'apiVersion' => API_VERSIONS
+      },
       ENVIRONMENT_AZURESTACK => {
         # We have no way to test on Azure Stack, and its API versions in the code here haven't been updated
         # since October, 2018. The API versions for the other Azure "regions" have been updated since them.
@@ -49,11 +54,6 @@ module Bosh::AzureCloud
           AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
         }
-      },
-      ENVIRONMENT_AZUREGERMANCLOUD => {
-        'resourceManagerEndpointUrl' => 'https://management.microsoftazure.de/',
-        'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.de',
-        'apiVersion' => API_VERSIONS
       }
     }.freeze
 
