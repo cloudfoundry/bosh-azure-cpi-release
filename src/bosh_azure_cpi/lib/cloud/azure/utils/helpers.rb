@@ -14,56 +14,43 @@ module Bosh::AzureCloud
     ENVIRONMENT_AZURESTACK        = 'AzureStack'
     ENVIRONMENT_AZUREGERMANCLOUD  = 'AzureGermanCloud'
 
+    API_VERSIONS = {
+      AZURE_RESOURCE_PROVIDER_COMPUTE => '2021-04-01',
+      AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
+      AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
+      AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
+      AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
+    }
+
     AZURE_ENVIRONMENTS = {
       ENVIRONMENT_AZURECLOUD => {
         'resourceManagerEndpointUrl' => 'https://management.azure.com/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.com',
-        'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE => '2021-04-01',
-          AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
-          AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
-          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
-        }
+        'apiVersion' => API_VERSIONS
       },
       ENVIRONMENT_AZURECHINACLOUD => {
         'resourceManagerEndpointUrl' => 'https://management.chinacloudapi.cn/',
         'activeDirectoryEndpointUrl' => 'https://login.chinacloudapi.cn',
-        'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE => '2018-04-01',
-          AZURE_RESOURCE_PROVIDER_NETWORK => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
-          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
-        }
+        'apiVersion' => API_VERSIONS
       },
       ENVIRONMENT_AZUREUSGOVERNMENT => {
         'resourceManagerEndpointUrl' => 'https://management.usgovcloudapi.net/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.us',
-        'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE => '2018-04-01',
-          AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
-          AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
-          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
-        }
-      },
-      ENVIRONMENT_AZURESTACK => {
-        'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_NETWORK => '2015-06-15',
-          AZURE_RESOURCE_PROVIDER_STORAGE => '2016-01-01',
-          AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
-          AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
-        }
+        'apiVersion' => API_VERSIONS
       },
       ENVIRONMENT_AZUREGERMANCLOUD => {
         'resourceManagerEndpointUrl' => 'https://management.microsoftazure.de/',
         'activeDirectoryEndpointUrl' => 'https://login.microsoftonline.de',
+        'apiVersion' => API_VERSIONS
+      },
+      ENVIRONMENT_AZURESTACK => {
+        # We have no way to test on Azure Stack, and its API versions in the code here haven't been updated
+        # since October, 2018. The API versions for the other Azure "regions" have been updated since them.
+        # If you can test changes you make here, and need to update these, feel free.
         'apiVersion' => {
-          AZURE_RESOURCE_PROVIDER_COMPUTE => '2018-04-01',
-          AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
-          AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
+          AZURE_RESOURCE_PROVIDER_COMPUTE => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_NETWORK => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_STORAGE => '2016-01-01',
           AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
           AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
         }

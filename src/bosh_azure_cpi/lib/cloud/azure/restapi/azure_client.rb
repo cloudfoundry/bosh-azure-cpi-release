@@ -463,7 +463,7 @@ module Bosh::AzureCloud
     # @return [Array]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachinesizes/list
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/compute.json
     #
     def list_available_virtual_machine_sizes_by_location(location)
       vm_sizes = []
@@ -487,7 +487,7 @@ module Bosh::AzureCloud
     # @return [Array]
     #
     # @See https://docs.microsoft.com/en-us/rest/api/compute/availabilitysets/listavailablesizes
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/compute.json
     #
     def list_available_virtual_machine_sizes_by_availability_set(resource_group_name, availability_set_name)
       vm_sizes = []
@@ -875,8 +875,8 @@ module Bosh::AzureCloud
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAnEmptyManagedDisk.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/examples/CreateAnEmptyManagedDisk.json
     #
     def create_empty_managed_disk(resource_group_name, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
@@ -926,8 +926,8 @@ module Bosh::AzureCloud
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAManagedDiskByImportingAnUnmanagedBlobFromTheSameSubscription.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/examples/CreateAManagedDiskByImportingAnUnmanagedBlobFromTheSameSubscription.json
     #
     def create_managed_disk_from_blob(resource_group_name, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
@@ -968,8 +968,8 @@ module Bosh::AzureCloud
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAManagedDiskByCopyingASnapshot.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/examples/CreateAManagedDiskByCopyingASnapshot.json
     #
     def create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
       disk_url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: disk_params[:name])
@@ -997,7 +997,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
     #
     def delete_managed_disk(resource_group_name, name)
       @logger.debug("delete_managed_disk - trying to delete #{name} from resource group #{resource_group_name}")
@@ -1011,7 +1011,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
     #
     def get_managed_disk_by_name(resource_group_name, name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
@@ -1023,7 +1023,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
     #
     def get_managed_disk(url)
       result = get_resource_by_id(url)
@@ -1051,8 +1051,8 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/examples/CreateAnImageFromABlob.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/compute.json
+    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/examples/CreateAnImageFromABlob.json
     #
     def create_user_image(params)
       @logger.debug("create_user_image - trying to create a user image '#{params[:name]}'")
@@ -1082,7 +1082,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/compute.json
     #
     def delete_user_image(name)
       @logger.debug("delete_user_image - trying to delete '#{name}'")
@@ -1095,7 +1095,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/compute.json
     #
     def get_user_image_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_IMAGES, name: name)
@@ -1107,7 +1107,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/compute.json
     #
     def get_user_image(url)
       result = get_resource_by_id(url)
@@ -1118,7 +1118,7 @@ module Bosh::AzureCloud
     #
     # @return [Array]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/compute.json
     #
     def list_user_images
       user_images = []
@@ -1150,7 +1150,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
     #
     def create_managed_snapshot(resource_group_name, params)
       snapshot_name = params[:name]
@@ -1181,7 +1181,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
     #
     def get_managed_snapshot_by_name(resource_group_name, snapshot_name)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_SNAPSHOTS, resource_group_name: resource_group_name, name: snapshot_name)
@@ -1193,7 +1193,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
     #
     #
     def get_managed_snapshot(url)
@@ -1219,7 +1219,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/disk.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/disk.json
     #
     #
     def delete_managed_snapshot(resource_group_name, name)
@@ -1237,7 +1237,7 @@ module Bosh::AzureCloud
     # @param [String] sku       - The sku of the publisher's offer.
     #
     # @return [Array]
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2018-04-01/compute.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/compute/resource-manager/Microsoft.Compute/stable/2021-04-01/compute.json
     #
     def list_platform_image_versions(location, publisher, offer, sku)
       images = []
@@ -1775,7 +1775,6 @@ module Bosh::AzureCloud
     # @return [Boolean]
     #
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def create_storage_account(name, location, sku, kind, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
@@ -1857,7 +1856,6 @@ module Bosh::AzureCloud
     # @return [Hash]
     #
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def check_storage_account_name_availability(name)
       url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
@@ -1883,7 +1881,6 @@ module Bosh::AzureCloud
     # @return [Hash]
     #
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def get_storage_account_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
@@ -1896,7 +1893,6 @@ module Bosh::AzureCloud
     # @return [Hash]
     #
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def get_storage_account(url)
       result = get_resource_by_id(url)
@@ -1909,7 +1905,6 @@ module Bosh::AzureCloud
     # @return [Hash]
     #
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def get_storage_account_keys_by_name(name)
       result = nil
@@ -1934,7 +1929,6 @@ module Bosh::AzureCloud
     # @return [Array]
     #
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def list_storage_accounts
       storage_accounts = []
@@ -1956,7 +1950,6 @@ module Bosh::AzureCloud
     # @return [Boolean]
     #
     # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
-    #      https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2016-01-01/storage.json
     #
     def update_tags_of_storage_account(name, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
