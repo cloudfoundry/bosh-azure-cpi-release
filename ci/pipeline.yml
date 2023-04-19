@@ -333,8 +333,9 @@ jobs:
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
-          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
-          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_aws_access_key.password))
+          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
+          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
+          S3_ROLE_ARN:          ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
       - put: bosh-cpi-src
         resource: bosh-cpi-src-out
         params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
@@ -351,8 +352,9 @@ jobs:
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
-          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
-          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_aws_access_key.password))
+          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
+          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
+          S3_ROLE_ARN:          ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
       - put: bosh-cpi-src
         resource: bosh-cpi-src-out
         params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
@@ -369,8 +371,9 @@ jobs:
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
-          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
-          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_aws_access_key.password))
+          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
+          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
+          S3_ROLE_ARN:          ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
       - put: bosh-cpi-src
         resource: bosh-cpi-src-out
         params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
@@ -423,8 +426,9 @@ resources:
       regexp: bosh-azure-cpi-(\d+\.\d+\.\d+)\.tgz
       bucket: azure-pipeline-bucket
       region_name: us-east-1
-      access_key_id: ((bosh-azure-cpi-uploaded_aws_access_key.username))
-      secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
+      access_key_id: ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
+      secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
+      role_arn: ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
   - name: bosh-cpi-src-in
     type: git
     source:
@@ -462,7 +466,14 @@ resources:
   - name: environment
     type: terraform_type
     source:
-      storage:
+      backend_type: s3
+      backend_config:
+        access_key:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
+        secret_key:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
+        role_arn:       ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
+        bucket:         azure-pipeline-bucket
+        key:            terraform-state/terraform.tfstate
+      migrated_from_storage:
         access_key_id:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
         secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
         bucket:            azure-pipeline-bucket

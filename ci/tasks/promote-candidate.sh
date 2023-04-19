@@ -4,6 +4,7 @@ set -e -x
 
 : ${S3_ACCESS_KEY_ID:?}
 : ${S3_SECRET_ACCESS_KEY:?}
+: ${S3_ROLE_ARN:?}
 
 source bosh-cpi-src/ci/utils.sh
 source /etc/profile.d/chruby.sh
@@ -26,6 +27,7 @@ blobstore:
   options:
     access_key_id: ${S3_ACCESS_KEY_ID}
     secret_access_key: ${S3_SECRET_ACCESS_KEY}
+    role_arn: ${S3_ROLE_ARN}
 EOF
 
   echo "finalizing CPI release..."
