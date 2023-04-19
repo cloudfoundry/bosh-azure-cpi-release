@@ -472,6 +472,7 @@ resources:
         secret_key:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
         role_arn:       ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
         bucket:         azure-pipeline-bucket
+        region: us-east-1
         key:            terraform-state/terraform.tfstate
       migrated_from_storage:
         access_key_id:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
