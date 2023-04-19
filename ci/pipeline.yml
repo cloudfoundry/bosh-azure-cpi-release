@@ -428,7 +428,7 @@ resources:
       region_name: us-east-1
       access_key_id: ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
       secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-      role_arn: ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
+      aws_role_arn: ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
   - name: bosh-cpi-src-in
     type: git
     source:
