@@ -81,9 +81,6 @@ def mock_cloud_options
         'password' => 'admin'
       },
       'agent' => {
-        'blobstore' => {
-          'address' => '10.0.0.5'
-        },
         'nats' => {
           'address' => '10.0.0.5'
         }
