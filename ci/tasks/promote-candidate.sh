@@ -27,7 +27,7 @@ blobstore:
   options:
     access_key_id: ${S3_ACCESS_KEY_ID}
     secret_access_key: ${S3_SECRET_ACCESS_KEY}
-    role_arn: ${S3_ROLE_ARN}
+    assume_role_arn: ${S3_ROLE_ARN}
 EOF
 
   echo "finalizing CPI release..."
