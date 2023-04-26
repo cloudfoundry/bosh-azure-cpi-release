@@ -29,13 +29,6 @@ describe 'cpi.json.erb' do
           'password' => 'admin',
           'port' => 25_777
         },
-        'blobstore' => {
-          'address' => 'blobstore-address.example.com',
-          'agent' => {
-            'user' => 'agent',
-            'password' => 'agent-password'
-          }
-        },
         'nats' => {
           'address' => 'nats-address.example.com',
           'password' => 'nats-password'
@@ -89,14 +82,6 @@ describe 'cpi.json.erb' do
               '0.pool.ntp.org',
               '1.pool.ntp.org'
             ],
-            'blobstore' => {
-              'provider' => 'dav',
-              'options' => {
-                'endpoint' => 'http://blobstore-address.example.com:25250',
-                'user' => 'agent',
-                'password' => 'agent-password'
-              }
-            },
             'mbus' => 'nats://nats:nats-password@nats-address.example.com:4222'
           }
         }
@@ -489,13 +474,6 @@ describe 'cpi.json.erb' do
               'ssh_public_key' => 'ssh-rsa ABCDEFGHIJKLMN',
               'default_security_group' => 'fake-default-security-group'
             },
-            'blobstore' => {
-              'address' => 'blobstore-address.example.com',
-              'agent' => {
-                'user' => 'agent',
-                'password' => 'agent-password'
-              }
-            },
             'nats' => {
               'address' => 'nats-address.example.com',
               'password' => 'nats-password'
@@ -506,88 +484,6 @@ describe 'cpi.json.erb' do
 
       it 'should not include registry settings in json' do
         expect(subject['cloud']['properties'].key?('registry')).to be_falsy
-      end
-    end
-  end
-
-  context 'when parsing the agent property' do
-    let(:rendered_blobstore) { subject['cloud']['properties']['agent']['blobstore'] }
-
-    context 'when using an s3 blobstore' do
-      context 'when provided a minimal configuration' do
-        before do
-          manifest['properties']['blobstore'].merge!(
-            'provider' => 's3',
-            'bucket_name' => 'my_bucket',
-            'access_key_id' => 'blobstore-access-key-id',
-            'secret_access_key' => 'blobstore-secret-access-key'
-          )
-        end
-
-        it 'renders the s3 provider section with the correct defaults' do
-          expect(rendered_blobstore).to eq(
-            'provider' => 's3',
-            'options' => {
-              'bucket_name' => 'my_bucket',
-              'access_key_id' => 'blobstore-access-key-id',
-              'secret_access_key' => 'blobstore-secret-access-key',
-              'use_ssl' => true,
-              'port' => 443,
-              's3_force_path_style' => false
-            }
-          )
-        end
-      end
-    end
-
-    context 'when using a local blobstore' do
-      context 'when provided a minimal configuration' do
-        before do
-          manifest['properties']['blobstore'].merge!(
-            'provider' => 'local',
-            'path' => '/fake/path'
-          )
-        end
-
-        it 'renders the local provider section with the correct defaults' do
-          expect(rendered_blobstore).to eq(
-            'provider' => 'local',
-            'options' => {
-              'blobstore_path' => '/fake/path'
-            }
-          )
-        end
-      end
-
-      context 'when provided an incomplete configuration' do
-        before do
-          manifest['properties']['blobstore'].merge!(
-            'provider' => 'local'
-          )
-        end
-
-        it 'raises an error' do
-          expect { rendered_blobstore }.to raise_error(/Can't find property 'blobstore.path'/)
-        end
-      end
-    end
-
-    context 'when using a dav blobstore' do
-      it 'renders agent user/password for accessing blobstore' do
-        expect(rendered_blobstore['options']['user']).to eq('agent')
-        expect(rendered_blobstore['options']['password']).to eq('agent-password')
-      end
-
-      context 'when enabling signed URLs' do
-        before do
-          manifest['properties']['blobstore']['agent'].delete('user')
-          manifest['properties']['blobstore']['agent'].delete('password')
-        end
-
-        it 'does not render agent user/password for accessing blobstore' do
-          expect(rendered_blobstore['options']['user']).to be_nil
-          expect(rendered_blobstore['options']['password']).to be_nil
-        end
       end
     end
   end
