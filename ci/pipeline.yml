@@ -412,6 +412,11 @@ resource_types:
     source:
       repository: ljfranklin/terraform-resource
 
+  - name: semver
+    type: docker-image
+    source:
+      repository: concourse/semver-resource
+      tag: 1.6
 resources:
   - name: azure-cpi-image
     type: docker-image
@@ -454,15 +459,17 @@ resources:
     source:
       key:               current-version # dev-release version
       bucket:            azure-pipeline-bucket
-      access_key_id:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
-      secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
+      access_key_id:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
+      secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
+      assume_role_arn:   ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
   - name: release-version-semver
     type: semver
     source:
       key:               release-current-version
       bucket:            azure-pipeline-bucket
-      access_key_id:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
-      secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
+      access_key_id:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
+      secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
+      assume_role_arn:   ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
   - name: environment
     type: terraform_type
     source:
@@ -474,11 +481,6 @@ resources:
         bucket:         azure-pipeline-bucket
         region: us-east-1
         key:            terraform-state/terraform.tfstate
-      migrated_from_storage:
-        access_key_id:     ((bosh-azure-cpi-uploaded_aws_access_key.username))
-        secret_access_key: ((bosh-azure-cpi-uploaded_aws_access_key.password))
-        bucket:            azure-pipeline-bucket
-        bucket_path:       terraform-state
       vars:
         location:              eastus2
         azure_environment:     AzureCloud
