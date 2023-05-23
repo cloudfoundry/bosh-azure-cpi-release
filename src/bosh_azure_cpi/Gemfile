@@ -13,7 +13,10 @@ gem 'deep_merge',       '~> 1.2', '>= 1.2.1'
 gem 'net-smtp'
 
 #fast_jsonparser has a GCC requirement that cannot be guaranteed by all VMs the CPI might run on.
-gem 'fast_jsonparser', '~> 0.6.0', :install_if => `gcc -dumpversion`.to_i > 6
+if ((`uname`.include?('Linux')) && !(`lsb_release -sr`.include?('16.04'))) || `gcc -dumpversion`.to_i > 6
+  gem 'fast_jsonparser', '~> 0.6.0'
+end
+
 gem 'rspec-retry', group: :test
 
 group :development, :test do
