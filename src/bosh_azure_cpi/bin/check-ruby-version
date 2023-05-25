@@ -1,10 +1,18 @@
 #!/usr/bin/env bash
 
-[[ ! -f $(brew --prefix)/share/chruby/chruby.sh ]] && {
+BREW_CMD=$(command -v brew)
+
+if [ -n "$BREW_CMD" ]; then
+  CHRUBY_PATH="$($BREW_CMD --prefix)/share/chruby/chruby.sh"
+else
+  CHRUBY_PATH=/usr/local/share/chruby/chruby.sh
+fi
+
+[[ ! -f "$CHRUBY_PATH" ]] && {
   echo "You need to install chruby. Please follow the README to install: https://github.com/postmodern/chruby#install"
   exit
 }
-source $(brew --prefix)/share/chruby/chruby.sh
+source "$CHRUBY_PATH"
 
 chruby $PROJECT_RUBY_VERSION
 if [[ "$?" -eq "1" ]]; then
