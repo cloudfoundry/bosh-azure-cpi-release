@@ -36,12 +36,12 @@ describe Bosh::AzureCloud::AzureClient do
       others = 'd'
       resource_group_name = 'e'
       expect(azure_client.rest_api_url(
-               resource_provider,
-               resource_type,
-               resource_group_name: resource_group_name,
-               name: name,
-               others: others
-             )).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/c/d")
+        resource_provider,
+        resource_type,
+        resource_group_name: resource_group_name,
+        name: name,
+        others: others
+      )).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/c/d")
     end
 
     it 'returns the right url if resource group name is not provided' do
@@ -50,11 +50,11 @@ describe Bosh::AzureCloud::AzureClient do
       name = 'c'
       others = 'd'
       expect(azure_client.rest_api_url(
-               resource_provider,
-               resource_type,
-               name: name,
-               others: others
-             )).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group}/providers/a/b/c/d")
+        resource_provider,
+        resource_type,
+        name: name,
+        others: others
+      )).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group}/providers/a/b/c/d")
     end
 
     it 'returns the right url if name is not provided' do
@@ -63,11 +63,11 @@ describe Bosh::AzureCloud::AzureClient do
       others = 'd'
       resource_group_name = 'e'
       expect(azure_client.rest_api_url(
-               resource_provider,
-               resource_type,
-               resource_group_name: resource_group_name,
-               others: others
-             )).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/d")
+        resource_provider,
+        resource_type,
+        resource_group_name: resource_group_name,
+        others: others
+      )).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/d")
     end
 
     it 'returns the right url if others is not provided' do
@@ -76,20 +76,102 @@ describe Bosh::AzureCloud::AzureClient do
       name = 'c'
       resource_group_name = 'e'
       expect(azure_client.rest_api_url(
-               resource_provider,
-               resource_type,
-               resource_group_name: resource_group_name,
-               name: name
-             )).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/c")
+        resource_provider,
+        resource_type,
+        resource_group_name: resource_group_name,
+        name: name
+      )).to eq("/subscriptions/#{subscription_id}/resourceGroups/e/providers/a/b/c")
     end
 
     it 'returns the right url if resource_group_name, name and others are all not provided' do
       resource_provider = 'a'
       resource_type = 'b'
       expect(azure_client.rest_api_url(
-               resource_provider,
-               resource_type
-             )).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group}/providers/a/b")
+        resource_provider,
+        resource_type
+      )).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group}/providers/a/b")
+    end
+  end
+
+  describe '#update_tags_of_virtual_machine' do
+
+    let(:resource_name) { "some-resource-name" }
+    let(:resource_group_name) { "some-resource-group-name" }
+    let(:resource_url) { 'some-resource-url' }
+
+    before do
+      # it's pretty gross to do so much stubbing of the unit under test, but ...
+      # no-one has bothered to set up a harness for this and the behavior of the stubbed functions does not affect the
+      # functionality we are interested in here (it could be changed in the future so it does, but ... please don't :) )
+      allow(azure_client).to receive(:rest_api_url).
+        with(Bosh::AzureCloud::AzureClient::REST_API_PROVIDER_COMPUTE,
+             Bosh::AzureCloud::AzureClient::REST_API_VIRTUAL_MACHINES,
+             resource_group_name: "some-resource-group-name",
+             name: resource_name).and_return(resource_url)
+      allow(azure_client).to receive(:get_resource_by_id).with(resource_url).and_return(vm_properties)
+    end
+
+    context "when identity is UserAssigned and there are values in userAssignedIdentities" do
+      let(:vm_properties) do
+        {
+          "identity" => {
+            "type" => Bosh::AzureCloud::AzureClient::MANAGED_IDENTITY_TYPE_USER_ASSIGNED,
+            "userAssignedIdentities" => {
+              "/some/user-assigned/identity/url" => { "principalId" => "some-guid", "clientId" => 'some-guid' }
+            }
+          },
+          "tags" => {}
+        }
+      end
+      it "should correctly remove invalid userAssignedIdentities values if they exist" do
+        expected_properties = {
+          "identity" => {
+            "type" => Bosh::AzureCloud::AzureClient::MANAGED_IDENTITY_TYPE_USER_ASSIGNED,
+            "userAssignedIdentities" => {
+              "/some/user-assigned/identity/url" => {}
+            }
+          },
+          "tags" => { "added" => "tags" }
+        }
+        expect(azure_client).to receive(:http_put).with('some-resource-url', expected_properties)
+        azure_client.update_tags_of_virtual_machine(resource_group_name, resource_name, { "added" => "tags" })
+      end
+    end
+
+    context "with SystemAssigned identities" do
+      let(:vm_properties) do
+        {
+          "identity" => {
+            "type" => Bosh::AzureCloud::AzureClient::MANAGED_IDENTITY_TYPE_SYSTEM_ASSIGNED,
+          },
+          "tags" => {}
+        }
+      end
+      it "should not fail" do
+        expected_properties = {
+          "identity" => {
+            "type" => Bosh::AzureCloud::AzureClient::MANAGED_IDENTITY_TYPE_SYSTEM_ASSIGNED,
+          },
+          "tags" => { "added" => "tags" }
+        }
+        expect(azure_client).to receive(:http_put).with('some-resource-url', expected_properties)
+        azure_client.update_tags_of_virtual_machine(resource_group_name, resource_name, { "added" => "tags" })
+      end
+    end
+
+    context "with no Identity hash" do
+      let(:vm_properties) do
+        {
+          "tags" => {}
+        }
+      end
+      it "should not fail" do
+        expected_properties = {
+          "tags" => { "added" => "tags" }
+        }
+        expect(azure_client).to receive(:http_put).with('some-resource-url', expected_properties)
+        azure_client.update_tags_of_virtual_machine(resource_group_name, resource_name, { "added" => "tags" })
+      end
     end
   end
 
@@ -116,11 +198,11 @@ describe Bosh::AzureCloud::AzureClient do
       id = '/subscriptions/a/resourceGroups/b/providers/c/d/e'
       it 'should return the name' do
         result = {}
-        result[:subscription_id]     = 'a'
+        result[:subscription_id] = 'a'
         result[:resource_group_name] = 'b'
-        result[:provider_name]       = 'c'
-        result[:resource_type]       = 'd'
-        result[:resource_name]       = 'e'
+        result[:provider_name] = 'c'
+        result[:resource_type] = 'd'
+        result[:resource_name] = 'e'
         expect(azure_client.send(:_parse_name_from_id, id)).to eq(result)
       end
     end
@@ -129,11 +211,11 @@ describe Bosh::AzureCloud::AzureClient do
       id = '/subscriptions/a/resourceGroups/b/providers/c/d/e/f'
       it 'should return the name' do
         result = {}
-        result[:subscription_id]     = 'a'
+        result[:subscription_id] = 'a'
         result[:resource_group_name] = 'b'
-        result[:provider_name]       = 'c'
-        result[:resource_type]       = 'd'
-        result[:resource_name]       = 'e'
+        result[:provider_name] = 'c'
+        result[:resource_type] = 'd'
+        result[:resource_name] = 'e'
         expect(azure_client.send(:_parse_name_from_id, id)).to eq(result)
       end
     end

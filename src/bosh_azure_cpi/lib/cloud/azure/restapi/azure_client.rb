@@ -2669,8 +2669,13 @@ module Bosh::AzureCloud
 
     # Sometimes Azure returns VM information with a node 'resources' which contains all extensions' information.
     # Azure will retrun 'InvalidRequestContent' if CPI does not delete the node 'resources'.
+    # Similarly, the "content" of userAssignedIdentities (an object which may contain principalId and clientId keys) is invalid to send during an update
+    # _sometimes_ resulting in a InvalidIdentityValues error
     def remove_resources_from_vm(vm)
       vm.delete('resources')
+      if vm["identity"] && vm["identity"]["type"] == "UserAssigned"
+        vm["identity"]["userAssignedIdentities"] = vm["identity"]["userAssignedIdentities"].keys.inject({}) { |result, k| result[k] = {}; result }
+      end
       vm
     end
   end
