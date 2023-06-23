@@ -11,7 +11,8 @@ set -e
 
 source pipelines/shared/utils.sh
 source /etc/profile.d/chruby.sh
-chruby 3.1.0
+export RUBY_VERSION=$(cat bosh-cpi-src/src/bosh_azure_cpi/.ruby-version)
+chruby $RUBY_VERSION
 
 metadata="$( cat environment/metadata )"
 mkdir -p bats-config

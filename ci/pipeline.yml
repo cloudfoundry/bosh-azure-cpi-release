@@ -396,7 +396,7 @@ jobs:
             args:
               - -exc
               - |
-                  echo "{\"RUBY_VERSION\": \"$(ls -d bosh-azure-cpi-release/packages/ruby-* | cut -f5 -d- )\"}" > build-args/args.json
+                  echo "{\"RUBY_VERSION\": \"$(cat bosh-azure-cpi-release/src/bosh_azure_cpi/.ruby-version)\"}" > build-args/args.json
           inputs:
             - name: bosh-azure-cpi-release
           outputs:
@@ -405,6 +405,66 @@ jobs:
         params:
           build: bosh-azure-cpi-release/ci/docker/boshcpi.azure-cpi-release/
           build_args_file: build-args/args.json
+
+  - name: bump-deps
+    plan:
+    - in_parallel:
+      - get: bosh-cpi-src
+        resource: bosh-cpi-src-in
+      - get: ruby-release
+      - get: bosh-ruby-release-registry-image
+      - get: weekly
+        trigger: true
+    - task: bump-gems
+      image: bosh-ruby-release-registry-image
+      file: ruby-release/ci/tasks/shared/bump-gems.yml
+      input_mapping:
+        input-repo: bosh-cpi-src
+      output_mapping:
+        output-repo: bosh-cpi-src
+      params:
+        GEM_DIRS: src/bosh_azure_cpi
+        GIT_USER_NAME: CI Bot
+        GIT_USER_EMAIL: bots@cloudfoundry.org
+        PACKAGE: ruby-3.1
+        VENDOR: true
+    - put: bosh-cpi-src-out
+      params:
+        repository: bosh-cpi-src
+        rebase: true
+
+  - name: bump-bosh-packages
+    plan:
+    - in_parallel:
+      - get: bosh-cpi-src
+        resource: bosh-cpi-src-in
+      - get: ruby-release
+        trigger: true
+      - get: bosh-ecosystem-concourse-image
+    - task: bump-ruby-package
+      image: bosh-ecosystem-concourse-image
+      file: ruby-release/ci/tasks/shared/bump-ruby-package.yml
+      input_mapping:
+        bosh-release: bosh-cpi-src
+      output_mapping:
+        bosh-release: bosh-cpi-src
+      params:
+        GIT_USER_NAME: CI Bot
+        GIT_USER_EMAIL: cf-bosh-eng@pivotal.io
+        PACKAGE: ruby-3.1
+        PACKAGE_PREFIX: azure-cpi
+        PRIVATE_YML: |
+          blobstore:
+            provider: s3
+            options:
+              access_key_id:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
+              secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
+              assume_role_arn: ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
+        RUBY_VERSION_PATH: src/bosh_azure_cpi/.ruby-version
+    - put: bosh-cpi-src-out
+      params:
+        repository: bosh-cpi-src
+        rebase: true
 
 resource_types:
   - name: terraform_type
@@ -454,6 +514,7 @@ resources:
       uri: https://github.com/cloudfoundry/bosh-azure-cpi-release.git
       paths:
         - ci/docker/boshcpi.azure-cpi-release/Dockerfile
+        - src/bosh_azure_cpi/.ruby-version
   - name: version-semver
     type: semver
     source:
@@ -528,3 +589,25 @@ resources:
       repository: boshcpi/azure-cpi-release
       username: ((docker.username))
       password: ((docker.password))
+  - name: bosh-ruby-release-registry-image
+    type: registry-image
+    source:
+      repository: bosh/ruby-release
+      username: ((docker.username))
+      password: ((docker.password))
+  - name: ruby-release
+    type: git
+    source:
+      uri: https://github.com/bosh-packages/ruby-release.git
+  - name: bosh-ecosystem-concourse-image
+    type: registry-image
+    source:
+      repository: bosh/bosh-ecosystem-concourse
+      username: ((docker.username))
+      password: ((docker.password))
+  - name: weekly
+    type: time
+    source:
+      start: 3:00 -0700
+      stop: 4:30 -0700
+      days: [ Saturday ]
