@@ -556,12 +556,12 @@ describe Bosh::AzureCloud::StorageAccountManager do
             it 'should return the storage account' do
               azure_config.storage_account_name = nil
               expect(Azure::Storage::Common::Client).to receive(:create)
-                .with(
+                .with({
                   storage_account_name: targeted_storage_account[:name],
                   storage_access_key: keys[0],
                   storage_dns_suffix: storage_dns_suffix,
                   user_agent_prefix: 'BOSH-AZURE-CPI'
-                ).and_return(azure_storage_client)
+                }).and_return(azure_storage_client)
               expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
               expect(azure_client).to receive(:update_tags_of_storage_account).with(targeted_storage_account[:name], STEMCELL_STORAGE_ACCOUNT_TAGS)
 
@@ -603,12 +603,12 @@ describe Bosh::AzureCloud::StorageAccountManager do
             it 'should raise an error' do
               azure_config.storage_account_name = nil
               expect(Azure::Storage::Common::Client).to receive(:create)
-                .with(
+                .with({
                   storage_account_name: targeted_storage_account[:name],
                   storage_access_key: keys[0],
                   storage_dns_suffix: storage_dns_suffix,
                   user_agent_prefix: 'BOSH-AZURE-CPI'
-                ).and_return(azure_storage_client)
+                }).and_return(azure_storage_client)
 
               expect do
                 storage_account_manager.default_storage_account
