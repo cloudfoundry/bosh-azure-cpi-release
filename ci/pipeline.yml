@@ -598,7 +598,7 @@ resources:
   - name: ruby-release
     type: git
     source:
-      uri: https://github.com/bosh-packages/ruby-release.git
+      uri: https://github.com/cloudfoundry/bosh-package-ruby-release.git
   - name: bosh-ecosystem-concourse-image
     type: registry-image
     source:
