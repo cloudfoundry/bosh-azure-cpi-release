@@ -208,7 +208,7 @@ describe Bosh::AzureCloud::AzureClient do
               },
               identity: {
                 type: 'UserAssigned',
-                userAssignedIdentities: {"/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/fake-identity-name": {}}
+                userAssignedIdentities: { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/fake-identity-name": {} }
               },
               properties: {
                 hardwareProfile: {
@@ -1038,6 +1038,63 @@ describe Bosh::AzureCloud::AzureClient do
           }
         end
 
+        let(:response_body) do
+          {
+            name: vm_name,
+            location: 'b',
+            type: 'Microsoft.Compute/virtualMachines',
+            tags: {
+              foo: 'bar'
+            },
+            properties: {
+              hardwareProfile: {
+                vmSize: 'c'
+              },
+              osProfile: {
+                customData: 'f',
+                computerName: vm_name,
+                adminUsername: 'd',
+                adminPassword: windows_password,
+                windowsConfiguration: {
+                  enableAutomaticUpdates: false
+                }
+              },
+              networkProfile: {
+                networkInterfaces: [
+                  {
+                    id: 'a',
+                    properties: {
+                      primary: true
+                    }
+                  },
+                  {
+                    id: 'b',
+                    properties: {
+                      primary: false
+                    }
+                  }
+                ]
+              },
+              storageProfile: {
+                osDisk: {
+                  name: 'h',
+                  osType: 'windows',
+                  createOption: 'FromImage',
+                  caching: 'j',
+                  image: {
+                    uri: 'g'
+                  },
+                  vhd: {
+                    uri: 'i'
+                  },
+                  diskSizeGB: 'k'
+                },
+                dataDisks: []
+              }
+            }
+          }
+        end
+
         context 'redact credentials in logs' do
           let(:azure_client) do
             Bosh::AzureCloud::AzureClient.new(
@@ -1057,7 +1114,7 @@ describe Bosh::AzureCloud::AzureClient do
             )
             stub_request(:put, vm_uri).with(body: request_body).to_return(
               status: 200,
-              body: request_body.to_json.to_s,
+              body: response_body.to_json.to_s,
               headers: {
                 'azure-asyncoperation' => operation_status_link
               }
@@ -1098,7 +1155,7 @@ describe Bosh::AzureCloud::AzureClient do
             )
             stub_request(:put, vm_uri).with(body: request_body).to_return(
               status: 200,
-              body: '',
+              body: response_body.to_json.to_s,
               headers: {
                 'azure-asyncoperation' => operation_status_link
               }

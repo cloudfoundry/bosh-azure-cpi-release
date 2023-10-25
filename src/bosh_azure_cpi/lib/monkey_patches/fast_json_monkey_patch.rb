@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 # Note this will be removed when xenial with ESM is out of support
 # @TODO remove when xenial is no longer supported
 

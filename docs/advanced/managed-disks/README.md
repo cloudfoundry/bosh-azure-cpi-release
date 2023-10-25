@@ -77,6 +77,8 @@ This is the recommended approach for existing deployment, you can migrate entire
 
     1. (Optional) You can specify the `storage_account_type` in [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools). For example, if you need a SSD persistent disk for the BOSH director, you can use `Premium_LRS`.
 
+    1. (Optional) You can specify the `iops` and `mbps` properties in [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools) if `storage_account_type` is either `PremiumV2_LRS` or `UltraSSD_LRS`. For more information, read [Premium SSD v2 performance](https://learn.microsoft.com/azure/virtual-machines/disks-types#premium-ssd-v2-performance) or [Ultra disk performance](https://learn.microsoft.com/azure/virtual-machines/disks-types#ultra-disk-performance).
+
     >NOTE: Since an existing CF deployment has a default storage account which contains uploaded stemcells, you need to keep `azure.storage_account_name` in the global configurations in `bosh.yml` while migrating. CPI will re-use the uploaded stemcells. After the migration, you can remove the default storage account from `bosh.yml`.
 
 1. Re-deploy BOSH director

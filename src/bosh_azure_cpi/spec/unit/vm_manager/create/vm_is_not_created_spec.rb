@@ -107,7 +107,7 @@ describe Bosh::AzureCloud::VMManager do
           end
         end
 
-        context 'and an error occurs when deleting nic' do
+        context 'and an NicReservedForAnotherVm error occurs when deleting nic' do
           before do
             allow(azure_client).to receive(:create_virtual_machine)
               .and_raise('virtual machine is not created')
