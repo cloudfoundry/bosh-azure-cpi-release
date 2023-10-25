@@ -21,7 +21,7 @@ module Bosh::AzureCloud
     # @param [String] zone                   Zone number in string. Possible values: "1", "2" or "3".
     #
     # @return [void]
-    def create_disk(disk_id, location, size, storage_account_type, zone = nil)
+    def create_disk(disk_id, location, size, storage_account_type, zone = nil, iops = nil, mbps = nil)
       @logger.info("create_disk(#{disk_id}, #{location}, #{size}, #{storage_account_type}, #{zone})")
       resource_group_name = disk_id.resource_group_name
       disk_name = disk_id.disk_name
@@ -38,6 +38,8 @@ module Bosh::AzureCloud
       }
 
       disk_params[:zone] = zone unless zone.nil?
+      disk_params[:iops] = iops unless iops.nil?
+      disk_params[:mbps] = mbps unless mbps.nil?
 
       @logger.info("Start to create an empty managed disk '#{disk_name}' in resource group '#{resource_group_name}'")
       @azure_client.create_empty_managed_disk(resource_group_name, disk_params)

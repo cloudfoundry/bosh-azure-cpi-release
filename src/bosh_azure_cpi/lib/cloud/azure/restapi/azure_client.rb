@@ -80,6 +80,7 @@ module Bosh::AzureCloud
     ].freeze
 
     REST_API_PROVIDER_COMPUTE            = 'Microsoft.Compute'
+    REST_API_PROVIDER_AND_TYPE_DISK      = 'Microsoft.Compute/disks'
     REST_API_VIRTUAL_MACHINES            = 'virtualMachines'
     REST_API_AVAILABILITY_SETS           = 'availabilitySets'
     REST_API_DISKS                       = 'disks'
@@ -894,6 +895,8 @@ module Bosh::AzureCloud
         }
       }
       disk['zones'] = [params[:zone]] unless params[:zone].nil?
+      disk['properties']['diskIOPSReadWrite'] = params[:iops] unless params[:iops].nil?
+      disk['properties']['diskMBpsReadWrite'] = params[:mbps] unless params[:mbps].nil?
       http_put(url, disk)
     end
 
@@ -2332,7 +2335,9 @@ module Bosh::AzureCloud
     def http_url(url, params = {})
       unless params.key?('api-version')
         resource_provider = nil
-        resource_provider = if url.include?(REST_API_PROVIDER_COMPUTE)
+        resource_provider = if url.include?(REST_API_PROVIDER_AND_TYPE_DISK)
+                              AZURE_RESOURCE_PROVIDER_COMPUTE_DISK
+                            elsif url.include?(REST_API_PROVIDER_COMPUTE)
                               AZURE_RESOURCE_PROVIDER_COMPUTE
                             elsif url.include?(REST_API_PROVIDER_NETWORK)
                               AZURE_RESOURCE_PROVIDER_NETWORK
