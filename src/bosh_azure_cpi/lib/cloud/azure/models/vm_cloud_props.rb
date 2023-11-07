@@ -53,7 +53,8 @@ module Bosh::AzureCloud
       @ephemeral_disk = Bosh::AzureCloud::EphemeralDisk.new(
         ephemeral_disk_hash['use_root_disk'].nil? ? false : ephemeral_disk_hash['use_root_disk'],
         ephemeral_disk_hash['size'],
-        ephemeral_disk_hash['type']
+        ephemeral_disk_hash['type'],
+        ephemeral_disk_hash['caching']
       )
 
       @caching = vm_properties.fetch('caching', 'ReadWrite')

@@ -199,7 +199,7 @@ module Bosh::AzureCloud
       }
     end
 
-    def ephemeral_disk(vm_name, instance_type, size, type, use_root_disk_as_ephemeral)
+    def ephemeral_disk(vm_name, instance_type, size, type, use_root_disk_as_ephemeral, caching)
       return nil if use_root_disk_as_ephemeral
 
       disk_info = DiskInfo.for(instance_type)
@@ -209,10 +209,14 @@ module Bosh::AzureCloud
         disk_size = size / 1024
       end
 
+      if caching.nil?
+        caching = 'ReadWrite'
+      end
+
       {
         disk_name: generate_ephemeral_disk_name(vm_name),
         disk_size: disk_size,
-        disk_caching: 'ReadWrite',
+        disk_caching: caching,
         disk_type: type
       }
     end
