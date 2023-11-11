@@ -66,7 +66,7 @@ GEM
     multipart-post (2.3.0)
     net-http-persistent (4.0.2)
       connection_pool (~> 2.2)
-    net-protocol (0.2.1)
+    net-protocol (0.2.2)
       timeout
     net-smtp (0.4.0)
       net-protocol
@@ -127,7 +127,7 @@ GEM
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.12.3)
     simplecov_json_formatter (0.1.4)
-    timeout (0.4.0)
+    timeout (0.4.1)
     unicode-display_width (2.5.0)
     webmock (3.19.1)
       addressable (>= 2.8.0)
