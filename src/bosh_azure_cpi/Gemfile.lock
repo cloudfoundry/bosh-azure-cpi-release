@@ -70,19 +70,19 @@ GEM
       timeout
     net-smtp (0.4.0)
       net-protocol
-    nokogiri (1.15.4-aarch64-linux)
+    nokogiri (1.15.5-aarch64-linux)
       racc (~> 1.4)
-    nokogiri (1.15.4-arm64-darwin)
+    nokogiri (1.15.5-arm64-darwin)
       racc (~> 1.4)
-    nokogiri (1.15.4-x86_64-darwin)
+    nokogiri (1.15.5-x86_64-darwin)
       racc (~> 1.4)
-    nokogiri (1.15.4-x86_64-linux)
+    nokogiri (1.15.5-x86_64-linux)
       racc (~> 1.4)
     parallel (1.23.0)
     parser (3.2.2.4)
       ast (~> 2.4.1)
       racc
-    public_suffix (5.0.3)
+    public_suffix (5.0.4)
     racc (1.7.3)
     rainbow (3.1.1)
     rake (12.3.3)
@@ -162,4 +162,4 @@ DEPENDENCIES
   webmock
 
 BUNDLED WITH
-   2.3.26
+   2.3.27
