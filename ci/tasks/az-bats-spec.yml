@@ -8,6 +8,9 @@ properties:
   pool_size: 1
   instances: 1
   second_static_ip: ((bats_first_network.static_ip_2))
+  ssh_key_pair:
+    public_key: ((ssh_public_key))
+    private_key: ((ssh_private_key))
   availability_zone: ((availability_zone))
   networks:
   - name: default

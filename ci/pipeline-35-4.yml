@@ -83,7 +83,6 @@ shared:
       INFRASTRUCTURE:                     azure
       STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-trusty-go_agent
       BAT_INFRASTRUCTURE:                 azure
-      BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
 
   - &run-az-bats
@@ -93,7 +92,6 @@ shared:
       INFRASTRUCTURE:                     azure
       STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-trusty-go_agent
       BAT_INFRASTRUCTURE:                 azure
-      BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
       AZURE_BATS_ZONE:                    {{azure_bats_zone}}
 

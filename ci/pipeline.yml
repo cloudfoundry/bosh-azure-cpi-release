@@ -77,7 +77,6 @@ shared:
       INFRASTRUCTURE:                     azure
       STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
       BAT_INFRASTRUCTURE:                 azure
-      BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
       RUBY_VERSION: ((ruby_version))
 
@@ -89,7 +88,6 @@ shared:
       INFRASTRUCTURE:                     azure
       STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
       BAT_INFRASTRUCTURE:                 azure
-      BAT_NETWORKING:                     manual
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
       AZURE_BATS_ZONE:                    "1"
 

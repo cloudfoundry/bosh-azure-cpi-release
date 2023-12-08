@@ -20,6 +20,5 @@ params:
   INFRASTRUCTURE:                                    ""
   STEMCELL_NAME:                                     ""
   BAT_INFRASTRUCTURE:                                ""
-  BAT_NETWORKING:                                    ""
   BAT_RSPEC_FLAGS:                                   ""
   AZURE_BATS_ZONE:                                   ""
