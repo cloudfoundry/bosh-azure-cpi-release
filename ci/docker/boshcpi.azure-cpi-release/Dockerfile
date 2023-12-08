@@ -15,6 +15,7 @@ RUN apt-get install -y \
     build-essential \
     ca-certificates apt-transport-https lsb-release \
     libxslt-dev libxml2-dev libyaml-dev  \
+    netcat \
     ruby && \
     apt-get clean
 
