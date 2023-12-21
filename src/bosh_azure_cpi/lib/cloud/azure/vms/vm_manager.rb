@@ -182,7 +182,14 @@ module Bosh::AzureCloud
 
       vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host] unless diagnostics_storage_account.nil?
 
-      _create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
+      virtual_machine_result = _create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
+
+      # IOPS and MBPS for the ephemeral disk need to be set after the disk was created
+      if @use_managed_disks && (vm_params[:ephemeral_disk][:iops] || vm_params[:ephemeral_disk][:mbps])
+
+        disk_name = virtual_machine_result[:data_disks][0][:name]
+        @azure_client.update_managed_disk_performance(instance_id.resource_group_name, disk_name, vm_params[:ephemeral_disk][:iops], vm_params[:ephemeral_disk][:mbps])
+      end
 
       [instance_id, vm_params]
     rescue StandardError => e
@@ -233,11 +240,9 @@ module Bosh::AzureCloud
                     @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
                   rescue AzureError => delete_error
                     retry_count += 1
-                    if retry_count < 20
-                      if delete_error.message =~ /NicReservedForAnotherVm/
-                        sleep 10
-                        retry
-                      end
+                    if (retry_count < 20) && (delete_error.message =~ /NicReservedForAnotherVm/)
+                      sleep 10
+                      retry
                     end
                     raise delete_error
                   end
@@ -493,14 +498,16 @@ module Bosh::AzureCloud
       vm_name = instance_id.vm_name
       max_retries = 2
       retry_create_count = 0
+      virtual_machine_result = nil
+
       begin
         @keep_failed_vms = false
         if availability_set.nil?
-          @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
+          virtual_machine_result = @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, nil)
         else
           availability_set_name = availability_set[:name]
           flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH) do
-            @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
+            virtual_machine_result = @azure_client.create_virtual_machine(resource_group_name, vm_params, network_interfaces, availability_set)
           end
         end
       rescue StandardError => e
@@ -567,6 +574,8 @@ module Bosh::AzureCloud
 
         raise e
       end
+
+      virtual_machine_result
     end
 
     def _check_resource_group(resource_group_name, location)

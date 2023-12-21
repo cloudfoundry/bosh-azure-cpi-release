@@ -3,6 +3,7 @@
 module Bosh::AzureCloud
   module Helpers
     AZURE_RESOURCE_PROVIDER_COMPUTE          = 'crp'
+    AZURE_RESOURCE_PROVIDER_COMPUTE_DISK     = 'diskcrp'
     AZURE_RESOURCE_PROVIDER_NETWORK          = 'nrp'
     AZURE_RESOURCE_PROVIDER_STORAGE          = 'srp'
     AZURE_RESOURCE_PROVIDER_GROUP            = 'rp'
@@ -15,12 +16,13 @@ module Bosh::AzureCloud
     ENVIRONMENT_AZUREGERMANCLOUD  = 'AzureGermanCloud'
 
     API_VERSIONS = {
-      AZURE_RESOURCE_PROVIDER_COMPUTE => '2021-04-01',
+      AZURE_RESOURCE_PROVIDER_COMPUTE => '2021-11-01',
+      AZURE_RESOURCE_PROVIDER_COMPUTE_DISK => '2023-04-02',
       AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
       AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
       AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
       AZURE_RESOURCE_PROVIDER_ACTIVEDIRECTORY => '2015-06-15'
-    }
+    }.freeze
 
     AZURE_ENVIRONMENTS = {
       ENVIRONMENT_AZURECLOUD => {
@@ -49,6 +51,7 @@ module Bosh::AzureCloud
         # If you can test changes you make here, and need to update these, feel free.
         'apiVersion' => {
           AZURE_RESOURCE_PROVIDER_COMPUTE => '2015-06-15',
+          AZURE_RESOURCE_PROVIDER_COMPUTE_DISK => '2015-06-15',
           AZURE_RESOURCE_PROVIDER_NETWORK => '2015-06-15',
           AZURE_RESOURCE_PROVIDER_STORAGE => '2016-01-01',
           AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',

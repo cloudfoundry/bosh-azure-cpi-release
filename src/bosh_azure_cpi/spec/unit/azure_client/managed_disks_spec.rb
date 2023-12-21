@@ -17,6 +17,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:tenant_id) { mock_azure_config.tenant_id }
   let(:api_version) { AZURE_API_VERSION }
   let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
+  let(:api_version_disks) { AZURE_RESOURCE_PROVIDER_COMPUTE_DISK }
   let(:resource_group) { 'fake-resource-group-name' }
   let(:request_id) { 'fake-request-id' }
 
@@ -32,7 +33,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#create_empty_managed_disk' do
-    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_disks}" }
 
     context 'when common disk_params are provided' do
       let(:disk_params) do
@@ -152,7 +153,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#create_managed_disk_from_blob' do
-    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_disks}" }
 
     context 'when common disk_params are provided' do
       let(:disk_params) do
@@ -277,7 +278,7 @@ describe Bosh::AzureCloud::AzureClient do
 
   describe '#create_managed_disk_from_snapshot' do
     let(:snapshot_name) { 'fake-snapshot-name' }
-    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_disks}" }
     let(:snapshot_url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}" }
 
     context 'when common disk_params are provided' do
@@ -396,7 +397,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#get_managed_disk_by_name' do
-    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_disks}" }
 
     let(:response_body) do
       {
@@ -455,7 +456,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#delete_managed_disk' do
-    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_disks}" }
 
     context 'when token is valid, delete operation is accepted and completed' do
       it 'should delete the managed disk without error' do
@@ -517,7 +518,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#resize_managed_disk' do
-    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_compute}" }
+    let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_disks}" }
     let(:disk_params) do
       {
         name: disk_name,

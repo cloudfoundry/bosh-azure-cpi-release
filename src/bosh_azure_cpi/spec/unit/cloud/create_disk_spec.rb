@@ -88,6 +88,8 @@ describe Bosh::AzureCloud::Cloud do
           }
         end
         let(:zone) { nil }
+        let(:iops) { nil }
+        let(:mbps) { nil }
 
         before do
           allow(azure_client).to receive(:get_resource_group).and_return(resource_group)
@@ -98,7 +100,7 @@ describe Bosh::AzureCloud::Cloud do
             .with(caching, true, resource_group_name: default_resource_group_name)
             .and_return(disk_id_object)
           expect(disk_manager2).to receive(:create_disk)
-            .with(disk_id_object, rg_location, disk_size_in_gib, 'Standard_LRS', zone)
+            .with(disk_id_object, rg_location, disk_size_in_gib, 'Standard_LRS', zone, iops, mbps)
           expect(telemetry_manager).to receive(:monitor)
             .with('create_disk', id: '', extras: { 'disk_size' => disk_size })
             .and_call_original
@@ -126,6 +128,8 @@ describe Bosh::AzureCloud::Cloud do
         context 'when the instance is a managed vm' do
           let(:vm_location) { 'fake-vm-location' }
           let(:vm_zone) { 'fake-zone' }
+          let(:iops) { nil }
+          let(:mbps) { nil }
           let(:vm) do
             {
               location: vm_location,
@@ -148,7 +152,7 @@ describe Bosh::AzureCloud::Cloud do
                 .with(caching, true, resource_group_name: resource_group_name)
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone)
+                .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone, iops, mbps)
 
               expect do
                 managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
@@ -169,7 +173,32 @@ describe Bosh::AzureCloud::Cloud do
                 .with(caching, true, resource_group_name: resource_group_name)
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone)
+                .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone, iops, mbps)
+
+              expect do
+                managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
+              end.not_to raise_error
+            end
+          end
+
+          context 'when storage_account_type, iops and mbps is specified' do
+            let(:iops) { 5000 }
+            let(:mbps) { 150 }
+            let(:cloud_properties) do
+              {
+                'caching' => caching,
+                'storage_account_type' => 'PremiumV2_LRS',
+                'iops' => iops,
+                'mbps' => mbps
+              }
+            end
+
+            it 'should create a managed disk in the same location with the vm and use the specified storage account type, iops and mbps' do
+              expect(Bosh::AzureCloud::DiskId).to receive(:create)
+                .with(caching, true, resource_group_name: resource_group_name)
+                .and_return(disk_id_object)
+              expect(disk_manager2).to receive(:create_disk)
+                .with(disk_id_object, vm_location, disk_size_in_gib, 'PremiumV2_LRS', vm_zone, iops, mbps)
 
               expect do
                 managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)

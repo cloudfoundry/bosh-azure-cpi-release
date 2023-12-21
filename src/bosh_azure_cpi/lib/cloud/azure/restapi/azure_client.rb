@@ -80,6 +80,7 @@ module Bosh::AzureCloud
     ].freeze
 
     REST_API_PROVIDER_COMPUTE            = 'Microsoft.Compute'
+    REST_API_PROVIDER_AND_TYPE_DISK      = 'Microsoft.Compute/disks'
     REST_API_VIRTUAL_MACHINES            = 'virtualMachines'
     REST_API_AVAILABILITY_SETS           = 'availabilitySets'
     REST_API_DISKS                       = 'disks'
@@ -338,7 +339,7 @@ module Bosh::AzureCloud
           identity_id = rest_api_url(REST_API_PROVIDER_MANAGED_IDENTITY, REST_API_USER_ASSIGNED_IDENTITIES, resource_group_name: resource_group_name, name: vm_params[:identity][:identity_name])
           vm['identity'] = {
             'type' => MANAGED_IDENTITY_TYPE_USER_ASSIGNED,
-            'userAssignedIdentities' => {identity_id => {}}
+            'userAssignedIdentities' => { identity_id => {} }
           }
         else
           vm['identity'] = {
@@ -454,7 +455,10 @@ module Bosh::AzureCloud
         'validating' => 'true'
       }
 
-      http_put(url, vm, params)
+      response = http_put(url, vm, params)
+      result = FastJsonparser.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
+
+      _parse_virtual_machine(result, false)
     end
 
     # List the available virtual machine sizes by location
@@ -670,26 +674,41 @@ module Bosh::AzureCloud
       vm = nil
       result = get_resource_by_id(url)
 
-      unless result.nil?
-        vm = {}
-        vm[:id]       = result['id']
-        vm[:name]     = result['name']
-        vm[:location] = result['location']
-        vm[:tags]     = result['tags']
+      _parse_virtual_machine(result, true)
+    end
 
-        if result.key?('identity')
+    # Parse the Azure response to get a virtual machine's information
+    # @param [Hash] raw_virtual_machine - VM response from Azure - parsed as JSON
+    #
+    # @return [Hash]
+    def _parse_virtual_machine(raw_virtual_machine, extend_resources)
+      vm = nil
+
+      unless raw_virtual_machine.nil?
+        vm = {}
+        vm[:id]       = raw_virtual_machine['id']
+        vm[:name]     = raw_virtual_machine['name']
+        vm[:location] = raw_virtual_machine['location']
+        vm[:tags]     = raw_virtual_machine['tags']
+
+        if raw_virtual_machine.key?('identity')
           vm[:identity] = {}
-          vm[:identity][:type] = result['identity']['type']
-          vm[:identity][:user_assigned_identities] = result['identity']['userAssignedIdentities']
+          vm[:identity][:type] = raw_virtual_machine['identity']['type']
+          vm[:identity][:user_assigned_identities] = raw_virtual_machine['identity']['userAssignedIdentities']
         end
 
-        vm[:zone]  = result['zones'][0] unless result['zones'].nil?
+        vm[:zone]  = raw_virtual_machine['zones'][0] unless raw_virtual_machine['zones'].nil?
 
-        properties = result['properties']
+        properties = raw_virtual_machine['properties']
         vm[:provisioning_state] = properties['provisioningState']
         vm[:vm_size]            = properties['hardwareProfile']['vmSize']
 
-        vm[:availability_set] = get_availability_set(properties['availabilitySet']['id']) unless properties['availabilitySet'].nil?
+        if extend_resources
+          vm[:availability_set] = get_availability_set(properties['availabilitySet']['id']) unless properties['availabilitySet'].nil?
+        else
+          vm[:availability_set] = {}
+          vm[:availability_set][:id] = properties['availabilitySet']['id'] unless properties['availabilitySet'].nil?
+        end
 
         storage_profile = properties['storageProfile']
         os_disk = storage_profile['osDisk']
@@ -720,19 +739,26 @@ module Bosh::AzureCloud
             disk[:managed_disk][:storage_account_type] = data_disk['managedDisk']['storageAccountType']
           end
 
-          disk[:disk_bosh_id] = result['tags'].fetch("#{DISK_ID_TAG_PREFIX}-#{data_disk['name']}", data_disk['name'])
+          disk[:disk_bosh_id] = raw_virtual_machine['tags'].fetch("#{DISK_ID_TAG_PREFIX}-#{data_disk['name']}", data_disk['name'])
 
           vm[:data_disks].push(disk)
         end
 
         vm[:network_interfaces] = []
         properties['networkProfile']['networkInterfaces'].each do |nic_properties|
-          vm[:network_interfaces].push(get_network_interface(nic_properties['id']))
+          if extend_resources
+            vm[:network_interfaces].push(get_network_interface(nic_properties['id']))
+          else
+            interface = {}
+            interface[:id] = nic_properties['id']
+            vm[:network_interfaces].push(interface)
+          end
         end
 
         boot_diagnostics = properties.fetch('diagnosticsProfile', {}).fetch('bootDiagnostics', {})
         vm[:diag_storage_uri] = boot_diagnostics['storageUri'] if boot_diagnostics['enabled']
       end
+
       vm
     end
 
@@ -894,6 +920,8 @@ module Bosh::AzureCloud
         }
       }
       disk['zones'] = [params[:zone]] unless params[:zone].nil?
+      disk['properties']['diskIOPSReadWrite'] = params[:iops] unless params[:iops].nil?
+      disk['properties']['diskMBpsReadWrite'] = params[:mbps] unless params[:mbps].nil?
       http_put(url, disk)
     end
 
@@ -904,6 +932,19 @@ module Bosh::AzureCloud
           'diskSizeGB' => params[:disk_size]
         }
       }
+      http_patch(url, disk)
+    end
+
+    def update_managed_disk_performance(resource_group_name, name, iops, mbps)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
+      disk = {
+        'properties' => {
+        }
+      }
+
+      disk['properties']['diskIOPSReadWrite'] = iops unless iops.nil?
+      disk['properties']['diskMBpsReadWrite'] = mbps unless mbps.nil?
+
       http_patch(url, disk)
     end
 
@@ -2332,7 +2373,9 @@ module Bosh::AzureCloud
     def http_url(url, params = {})
       unless params.key?('api-version')
         resource_provider = nil
-        resource_provider = if url.include?(REST_API_PROVIDER_COMPUTE)
+        resource_provider = if url.include?(REST_API_PROVIDER_AND_TYPE_DISK)
+                              AZURE_RESOURCE_PROVIDER_COMPUTE_DISK
+                            elsif url.include?(REST_API_PROVIDER_COMPUTE)
                               AZURE_RESOURCE_PROVIDER_COMPUTE
                             elsif url.include?(REST_API_PROVIDER_NETWORK)
                               AZURE_RESOURCE_PROVIDER_NETWORK
@@ -2524,6 +2567,7 @@ module Bosh::AzureCloud
     def http_put(url, body = nil, params = {}, retry_after = 5)
       uri = http_url(url, params)
       retry_count = 0
+      response = nil
 
       begin
         @logger.info("http_put - #{retry_count}: trying to put #{uri}")
@@ -2552,6 +2596,8 @@ module Bosh::AzureCloud
         end
         raise e
       end
+
+      response
     end
 
     def http_patch(url, body = nil, params = {}, retry_after = 5)
@@ -2673,8 +2719,8 @@ module Bosh::AzureCloud
     # _sometimes_ resulting in a InvalidIdentityValues error
     def remove_resources_from_vm(vm)
       vm.delete('resources')
-      if vm["identity"] && vm["identity"]["type"] == "UserAssigned"
-        vm["identity"]["userAssignedIdentities"] = vm["identity"]["userAssignedIdentities"].keys.inject({}) { |result, k| result[k] = {}; result }
+      if vm['identity'] && vm['identity']['type'] == 'UserAssigned'
+        vm['identity']['userAssignedIdentities'] = vm['identity']['userAssignedIdentities'].keys.inject({}) { |result, k| result[k] = {}; result }
       end
       vm
     end

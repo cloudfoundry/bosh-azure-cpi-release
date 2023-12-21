@@ -67,7 +67,7 @@ module Bosh::AzureCloud
                                                   .sub(STORAGE_ACCOUNT_TYPE_STANDARD_LRS, 'S')
                                                   .sub(STORAGE_ACCOUNT_TYPE_STANDARDSSD_LRS, 'SSSD')
                                                   .sub(STORAGE_ACCOUNT_TYPE_PREMIUM_LRS, 'P')
-      
+
       # Lock GET operations to avoid using an image that is currently being created
       # Example:
       #   CPI Process 1: Get -> 404 -> image create -> create operation running
