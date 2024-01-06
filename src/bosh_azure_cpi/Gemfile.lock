@@ -68,7 +68,7 @@ GEM
       connection_pool (~> 2.2)
     net-protocol (0.2.2)
       timeout
-    net-smtp (0.4.0)
+    net-smtp (0.4.0.1)
       net-protocol
     nokogiri (1.16.0-aarch64-linux)
       racc (~> 1.4)
@@ -79,7 +79,7 @@ GEM
     nokogiri (1.16.0-x86_64-linux)
       racc (~> 1.4)
     parallel (1.24.0)
-    parser (3.2.2.4)
+    parser (3.3.0.0)
       ast (~> 2.4.1)
       racc
     public_suffix (5.0.4)
