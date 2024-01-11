@@ -16,7 +16,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:subscription_id) { mock_azure_config.subscription_id }
   let(:tenant_id) { mock_azure_config.tenant_id }
   let(:api_version) { AZURE_API_VERSION }
-  let(:api_version_compute) { AZURE_RESOURCE_PROVIDER_COMPUTE }
+  let(:api_version_snapshot) { AZURE_RESOURCE_PROVIDER_COMPUTE_SNAPSHOT }
   let(:api_version_disk) { AZURE_RESOURCE_PROVIDER_COMPUTE_DISK }
   let(:resource_group) { 'fake-resource-group-name' }
   let(:request_id) { 'fake-request-id' }
@@ -34,7 +34,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#create_managed_snapshot' do
-    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
+    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_snapshot}" }
     let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_disk}" }
 
     let(:snapshot_params) do
@@ -115,7 +115,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#delete_managed_snapshot' do
-    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
+    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_snapshot}" }
 
     context 'when token is valid, delete operation is accepted and completed' do
       it 'should delete the managed snapshot without error' do
@@ -141,7 +141,7 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#get_managed_snapshot_by_name' do
-    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_compute}" }
+    let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_snapshot}" }
 
     context 'when response body is null' do
       it 'should return nil' do
