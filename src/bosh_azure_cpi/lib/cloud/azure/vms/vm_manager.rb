@@ -185,7 +185,7 @@ module Bosh::AzureCloud
       virtual_machine_result = _create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
 
       # IOPS and MBPS for the ephemeral disk need to be set after the disk was created
-      if @use_managed_disks && (vm_params[:ephemeral_disk][:iops] || vm_params[:ephemeral_disk][:mbps])
+      if @use_managed_disks && vm_params[:ephemeral_disk] && (vm_params[:ephemeral_disk][:iops] || vm_params[:ephemeral_disk][:mbps])
 
         disk_name = virtual_machine_result[:data_disks][0][:name]
         @azure_client.update_managed_disk_performance(instance_id.resource_group_name, disk_name, vm_params[:ephemeral_disk][:iops], vm_params[:ephemeral_disk][:mbps])
