@@ -15,6 +15,7 @@ GEM
     azure-storage-table (2.0.4)
       azure-storage-common (~> 2.0)
       nokogiri (~> 1, >= 1.10.8)
+    bigdecimal (3.1.6)
     bosh_common (1.3262.24.0)
       logging (~> 1.8.2)
       semi_semantic (~> 1.2.0)
@@ -23,10 +24,11 @@ GEM
       membrane (~> 1.1.0)
     concurrent-ruby (1.2.3)
     connection_pool (2.4.1)
-    crack (0.4.5)
+    crack (0.4.6)
+      bigdecimal
       rexml
     deep_merge (1.2.2)
-    diff-lcs (1.5.0)
+    diff-lcs (1.5.1)
     docile (1.4.0)
     faraday (1.10.3)
       faraday-em_http (~> 1.0)
