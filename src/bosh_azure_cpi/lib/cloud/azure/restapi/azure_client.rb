@@ -2253,8 +2253,16 @@ module Bosh::AzureCloud
 
     # @return [Net::HTTP]
     def http(uri, use_ssl = true)
+      (Net::HTTP::SSL_IVNAMES << :@ssl_options).uniq!
+      (Net::HTTP::SSL_ATTRIBUTES << :options).uniq!
+
+      Net::HTTP.class_eval do
+        attr_accessor :ssl_options
+      end
+      options_mask = OpenSSL::SSL::OP_IGNORE_UNEXPECTED_EOF
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true && use_ssl
+      http.ssl_options = options_mask
       if @azure_config.environment == ENVIRONMENT_AZURESTACK && uri.host.include?(@azure_config.azure_stack.domain)
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
         http.ca_file = get_ca_cert_path
