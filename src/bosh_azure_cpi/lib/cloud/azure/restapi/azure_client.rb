@@ -108,8 +108,15 @@ module Bosh::AzureCloud
 
     def initialize(azure_config, logger)
       @logger = logger
-
       @azure_config = azure_config
+
+      # Allow Net::HTTP to support instance variable names via ssl_options
+      (Net::HTTP::SSL_IVNAMES << :@ssl_options).uniq!
+      (Net::HTTP::SSL_ATTRIBUTES << :options).uniq!
+
+      Net::HTTP.class_eval do
+        attr_accessor :ssl_options
+      end
     end
 
     # Common
@@ -2253,16 +2260,9 @@ module Bosh::AzureCloud
 
     # @return [Net::HTTP]
     def http(uri, use_ssl = true)
-      (Net::HTTP::SSL_IVNAMES << :@ssl_options).uniq!
-      (Net::HTTP::SSL_ATTRIBUTES << :options).uniq!
-
-      Net::HTTP.class_eval do
-        attr_accessor :ssl_options
-      end
-      options_mask = OpenSSL::SSL::OP_IGNORE_UNEXPECTED_EOF
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true && use_ssl
-      http.ssl_options = options_mask
+      http.ssl_options = OpenSSL::SSL::OP_IGNORE_UNEXPECTED_EOF
       if @azure_config.environment == ENVIRONMENT_AZURESTACK && uri.host.include?(@azure_config.azure_stack.domain)
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
         http.ca_file = get_ca_cert_path
@@ -2469,7 +2469,7 @@ module Bosh::AzureCloud
         end
         raise e
       rescue OpenSSL::SSL::SSLError, OpenSSL::X509::StoreError => e
-        if retry_count < AZURE_MAX_RETRY_COUNT && [ERROR_OPENSSL_RESET, ERROR_OPENSSL_EOF_READ].any? { |error| e.inspect.include?(error) }
+        if retry_count < AZURE_MAX_RETRY_COUNT && (e.inspect.include?(ERROR_OPENSSL_RESET) || e.inspect.include?(ERROR_OPENSSL_EOF_READ))
           retry_count += 1
           @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: e.class.name))
           sleep(retry_after)
