@@ -5,13 +5,12 @@ source 'https://rubygems.org'
 gem 'azure-storage-common', '~> 2.0', '>= 2.0.4'
 gem 'azure-storage-blob', '~> 2.0', '>= 2.0.3'
 gem 'azure-storage-table', '~> 2.0', '>= 2.0.4'
-gem 'bosh_common',      '1.3262.24.0'
+gem 'bosh_common',      '2.0.0'
 gem 'bosh_cpi',         '2.5.0'
 gem 'concurrent-ruby',  '~> 1.1', '>= 1.1.8'
 gem 'jwt',              '~> 2.2', '>= 2.2.2'
 gem 'deep_merge',       '~> 1.2', '>= 1.2.1'
 gem 'net-smtp'
-
 # fast_jsonparser has a GCC requirement that cannot be guaranteed by all VMs the CPI might run on.
 install_if (-> { (`uname`.include?('Linux') && !(`lsb_release -sr`.include?('16.04') if system('which lsb_release > /dev/null 2>&1'))) || `gcc -dumpversion`.to_i > 6 }) do
   gem 'fast_jsonparser', '~> 0.6.0'
