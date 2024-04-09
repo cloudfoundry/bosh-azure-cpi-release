@@ -1,4 +1,4 @@
-chruby 3.1.0
+chruby 3.2.3
 source ./run_performance.pri.sh
 
 export SERVICE_HOST_BASE="core.windows.net"
