@@ -15,7 +15,7 @@ describe Bosh::AzureCloud::Cloud do
 
       it 'should succeed' do
         expect(telemetry_manager).to receive(:monitor)
-          .with('create_stemcell', extras: { 'stemcell' => 'unknown_name-unknown_version' })
+          .with('create_stemcell', { extras: { 'stemcell' => 'unknown_name-unknown_version' } })
           .and_call_original
 
         expect(light_stemcell_manager).to receive(:create_stemcell)
@@ -33,7 +33,7 @@ describe Bosh::AzureCloud::Cloud do
       context 'and use_managed_disks is false' do
         it 'should succeed' do
           expect(telemetry_manager).to receive(:monitor)
-            .with('create_stemcell', extras: { 'stemcell' => 'unknown_name-unknown_version' })
+            .with('create_stemcell', { extras: { 'stemcell' => 'unknown_name-unknown_version' } })
             .and_call_original
 
           expect(stemcell_manager).to receive(:create_stemcell)
@@ -48,7 +48,7 @@ describe Bosh::AzureCloud::Cloud do
       context 'and use_managed_disks is true' do
         it 'should succeed' do
           expect(telemetry_manager).to receive(:monitor)
-            .with('create_stemcell', extras: { 'stemcell' => 'unknown_name-unknown_version' })
+            .with('create_stemcell', { extras: { 'stemcell' => 'unknown_name-unknown_version' } })
             .and_call_original
 
           expect(stemcell_manager2).to receive(:create_stemcell)
@@ -73,7 +73,7 @@ describe Bosh::AzureCloud::Cloud do
 
       it 'should pass the correct stemcell info to telemetry' do
         expect(telemetry_manager).to receive(:monitor)
-          .with('create_stemcell', extras: { 'stemcell' => "#{stemcell_name}-#{stemcell_version}" })
+          .with('create_stemcell', { extras: { 'stemcell' => "#{stemcell_name}-#{stemcell_version}" } })
           .and_call_original
 
         expect(stemcell_manager).to receive(:create_stemcell)

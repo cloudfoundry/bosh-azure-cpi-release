@@ -13,7 +13,7 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(telemetry_manager).to receive(:monitor)
-        .with('delete_vm', id: vm_cid).and_call_original
+        .with('delete_vm', { id: vm_cid }).and_call_original
     end
 
     it 'should delete an instance' do

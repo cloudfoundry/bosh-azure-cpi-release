@@ -23,7 +23,7 @@ describe Bosh::AzureCloud::Cloud do
       allow(disk_manager2).to receive(:get_data_disk)
         .and_return({ disk_size: 512 })
       allow(telemetry_manager).to receive(:monitor)
-        .with('resize_disk', id: disk_cid, extras: { 'disk_size' => new_size })
+        .with('resize_disk', { id: disk_cid, extras: { 'disk_size' => new_size } })
         .and_call_original
       allow(Bosh::Clouds::Config.logger).to receive(:info)
     end

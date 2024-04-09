@@ -508,7 +508,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         let(:storage_dns_suffix) { 'fake-storage-dns-suffix' }
 
         before do
-          allow(Azure::Storage::Table::TableService).to receive(:new).with(client: azure_storage_client)
+          allow(Azure::Storage::Table::TableService).to receive(:new).with({ client: azure_storage_client })
                                                                      .and_return(table_service)
           allow(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter).to receive(:new)
             .and_return(exponential_retry)

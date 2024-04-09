@@ -12,7 +12,7 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(telemetry_manager).to receive(:monitor)
-        .with('delete_disk', id: disk_cid).and_call_original
+        .with('delete_disk', { id: disk_cid }).and_call_original
     end
 
     context 'when use_managed_disks is true' do

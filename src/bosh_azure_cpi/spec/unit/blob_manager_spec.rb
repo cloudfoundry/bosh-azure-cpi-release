@@ -47,7 +47,7 @@ describe Bosh::AzureCloud::BlobManager do
       .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
       .and_return(storage_account)
     allow(azure_storage_client).to receive(:storage_blob_host).and_return(blob_host)
-    allow(Azure::Storage::Blob::BlobService).to receive(:new).with(client: azure_storage_client)
+    allow(Azure::Storage::Blob::BlobService).to receive(:new).with({ client: azure_storage_client })
                                                              .and_return(blob_service)
     allow(Bosh::AzureCloud::CustomizedRetryPolicyFilter).to receive(:new)
       .and_return(customized_retry)

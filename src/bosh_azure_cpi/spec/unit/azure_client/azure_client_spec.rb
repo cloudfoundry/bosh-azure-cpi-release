@@ -105,8 +105,7 @@ describe Bosh::AzureCloud::AzureClient do
       allow(azure_client).to receive(:rest_api_url)
         .with(Bosh::AzureCloud::AzureClient::REST_API_PROVIDER_COMPUTE,
               Bosh::AzureCloud::AzureClient::REST_API_VIRTUAL_MACHINES,
-              resource_group_name: 'some-resource-group-name',
-              name: resource_name).and_return(resource_url)
+              { resource_group_name: 'some-resource-group-name', name: resource_name }).and_return(resource_url)
       allow(azure_client).to receive(:get_resource_by_id).with(resource_url).and_return(vm_properties)
     end
 

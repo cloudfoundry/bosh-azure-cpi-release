@@ -63,7 +63,7 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(vm)
 
       allow(telemetry_manager).to receive(:monitor)
-        .with('attach_disk', id: vm_cid).and_call_original
+        .with('attach_disk', { id: vm_cid }).and_call_original
     end
 
     context 'when use_managed_disks is true' do

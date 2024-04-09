@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(caching)
 
       allow(telemetry_manager).to receive(:monitor)
-        .with('snapshot_disk', id: disk_cid).and_call_original
+        .with('snapshot_disk', { id: disk_cid }).and_call_original
     end
 
     context 'when the disk is a managed disk' do
@@ -43,7 +43,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should take a managed snapshot of the disk' do
           expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, true, resource_group_name: resource_group_name)
+            .with(caching, true, { resource_group_name: resource_group_name })
             .and_return(snapshot_id_object)
           expect(disk_manager2).to receive(:snapshot_disk)
             .with(snapshot_id_object, disk_name, metadata)
@@ -65,7 +65,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should take a managed snapshot of the disk' do
           expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, true, resource_group_name: resource_group_name)
+            .with(caching, true, { resource_group_name: resource_group_name })
             .and_return(snapshot_id_object)
           expect(disk_manager2).to receive(:snapshot_disk)
             .with(snapshot_id_object, disk_name, metadata)
@@ -95,7 +95,7 @@ describe Bosh::AzureCloud::Cloud do
           .with(storage_account_name, disk_name, metadata)
           .and_return(snapshot_name)
         expect(Bosh::AzureCloud::DiskId).to receive(:create)
-          .with(caching, false, disk_name: snapshot_name, storage_account_name: storage_account_name)
+          .with(caching, false, { disk_name: snapshot_name, storage_account_name: storage_account_name })
           .and_return(snapshot_id_object)
 
         expect(cloud.snapshot_disk(disk_cid, metadata)).to eq(snapshot_cid)

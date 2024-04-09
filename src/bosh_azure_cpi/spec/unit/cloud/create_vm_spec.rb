@@ -37,7 +37,7 @@ describe Bosh::AzureCloud::Cloud do
         .with(default_resource_group_name, virtual_network_name)
         .and_return(vnet)
       allow(telemetry_manager).to receive(:monitor)
-        .with('create_vm', id: agent_id, extras: { 'instance_type' => 'fake-vm-size' })
+        .with('create_vm', { id: agent_id, extras: { 'instance_type' => 'fake-vm-size' } })
         .and_call_original
       allow(cloud.props_factory).to receive(:parse_vm_props)
         .and_return(vm_props)
@@ -356,7 +356,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should send instance_types as the telemetry data' do
           expect(telemetry_manager).to receive(:monitor)
-            .with('create_vm', id: agent_id, extras: { 'instance_types' => instance_types })
+            .with('create_vm', { id: agent_id, extras: { 'instance_types' => instance_types } })
             .and_call_original
           expect(vm_manager).to receive(:create)
             .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, managed_cloud.config)

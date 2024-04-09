@@ -16,7 +16,7 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(disk_id_object)
 
       allow(telemetry_manager).to receive(:monitor)
-        .with('has_disk?', id: disk_cid).and_call_original
+        .with('has_disk?', { id: disk_cid }).and_call_original
     end
 
     context 'when disk name starts with DATA_DISK_PREFIX' do

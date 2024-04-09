@@ -9,7 +9,7 @@ describe Bosh::AzureCloud::Cloud do
   describe '#delete_stemcell' do
     before do
       allow(telemetry_manager).to receive(:monitor)
-        .with('delete_stemcell', id: stemcell_cid).and_call_original
+        .with('delete_stemcell', { id: stemcell_cid }).and_call_original
     end
 
     context 'when a light stemcell is used' do

@@ -15,7 +15,7 @@ describe Bosh::AzureCloud::Cloud do
         .with(vm_cid, azure_config.resource_group_name)
         .and_return(instance_id_object)
       allow(telemetry_manager).to receive(:monitor)
-        .with('set_vm_metadata', id: vm_cid).and_call_original
+        .with('set_vm_metadata', { id: vm_cid }).and_call_original
     end
 
     context 'when the metadata is not encoded' do

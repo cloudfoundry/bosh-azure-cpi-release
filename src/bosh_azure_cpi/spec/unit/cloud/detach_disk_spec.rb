@@ -21,7 +21,7 @@ describe Bosh::AzureCloud::Cloud do
         .with(vm_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(instance_id_object)
       allow(telemetry_manager).to receive(:monitor)
-        .with('detach_disk', id: vm_cid).and_call_original
+        .with('detach_disk', { id: vm_cid }).and_call_original
     end
 
     it 'detaches the disk from the vm' do

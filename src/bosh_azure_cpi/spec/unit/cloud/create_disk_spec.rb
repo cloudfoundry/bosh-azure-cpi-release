@@ -23,7 +23,7 @@ describe Bosh::AzureCloud::Cloud do
       allow(instance_id_object).to receive(:vm_name)
         .and_return(vm_name)
       allow(telemetry_manager).to receive(:monitor)
-        .with('create_disk', id: vm_cid, extras: { 'disk_size' => disk_size })
+        .with('create_disk', { id: vm_cid, extras: { 'disk_size' => disk_size } })
         .and_call_original
     end
 
@@ -97,12 +97,12 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should create a managed disk with the default location and storage account type' do
           expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, true, resource_group_name: default_resource_group_name)
+            .with(caching, true, { resource_group_name: default_resource_group_name })
             .and_return(disk_id_object)
           expect(disk_manager2).to receive(:create_disk)
             .with(disk_id_object, rg_location, disk_size_in_gib, 'Standard_LRS', zone, iops, mbps)
           expect(telemetry_manager).to receive(:monitor)
-            .with('create_disk', id: '', extras: { 'disk_size' => disk_size })
+            .with('create_disk', { id: '', extras: { 'disk_size' => disk_size } })
             .and_call_original
 
           expect do
@@ -149,7 +149,7 @@ describe Bosh::AzureCloud::Cloud do
           context 'when storage_account_type is not specified' do
             it 'should create a managed disk in the same location with the vm and use the default storage account type' do
               expect(Bosh::AzureCloud::DiskId).to receive(:create)
-                .with(caching, true, resource_group_name: resource_group_name)
+                .with(caching, true, { resource_group_name: resource_group_name })
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
                 .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone, iops, mbps)
@@ -170,7 +170,7 @@ describe Bosh::AzureCloud::Cloud do
 
             it 'should create a managed disk in the same location with the vm and use the specified storage account type' do
               expect(Bosh::AzureCloud::DiskId).to receive(:create)
-                .with(caching, true, resource_group_name: resource_group_name)
+                .with(caching, true, { resource_group_name: resource_group_name })
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
                 .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone, iops, mbps)
@@ -195,7 +195,7 @@ describe Bosh::AzureCloud::Cloud do
 
             it 'should create a managed disk in the same location with the vm and use the specified storage account type, iops and mbps' do
               expect(Bosh::AzureCloud::DiskId).to receive(:create)
-                .with(caching, true, resource_group_name: resource_group_name)
+                .with(caching, true, { resource_group_name: resource_group_name })
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
                 .with(disk_id_object, vm_location, disk_size_in_gib, 'PremiumV2_LRS', vm_zone, iops, mbps)
@@ -230,7 +230,7 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should create an unmanaged disk in the same storage account of the vm' do
           expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, false, storage_account_name: vm_storage_account_name)
+            .with(caching, false, { storage_account_name: vm_storage_account_name })
             .and_return(disk_id_object)
           expect(disk_manager).to receive(:create_disk)
             .with(disk_id_object, disk_size_in_gib)
@@ -246,12 +246,12 @@ describe Bosh::AzureCloud::Cloud do
 
         it 'should create an unmanaged disk in the default storage account of global configuration' do
           expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, false, storage_account_name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
+            .with(caching, false, { storage_account_name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME })
             .and_return(disk_id_object)
           expect(disk_manager).to receive(:create_disk)
             .with(disk_id_object, disk_size_in_gib)
           expect(telemetry_manager).to receive(:monitor)
-            .with('create_disk', id: '', extras: { 'disk_size' => disk_size })
+            .with('create_disk', { id: '', extras: { 'disk_size' => disk_size } })
             .and_call_original
 
           expect do

@@ -17,7 +17,7 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(instance_id_object)
 
       allow(telemetry_manager).to receive(:monitor)
-        .with('has_vm?', id: vm_cid).and_call_original
+        .with('has_vm?', { id: vm_cid }).and_call_original
     end
 
     context 'when the instance exists' do

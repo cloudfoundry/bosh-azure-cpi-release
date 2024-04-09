@@ -15,7 +15,7 @@ describe Bosh::AzureCloud::Cloud do
         .with(vm_cid, azure_config.resource_group_name)
         .and_return(instance_id_object)
       allow(telemetry_manager).to receive(:monitor)
-        .with('reboot_vm', id: vm_cid).and_call_original
+        .with('reboot_vm', { id: vm_cid }).and_call_original
     end
 
     it 'reboot an instance' do

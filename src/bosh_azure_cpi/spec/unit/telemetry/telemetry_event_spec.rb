@@ -29,7 +29,7 @@ describe Bosh::AzureCloud::TelemetryEvent do
 
     it 'should parse the hash and create an instance' do
       expect(Bosh::AzureCloud::TelemetryEvent).to receive(:new)
-        .with(hash['eventId'], hash['providerId'], parameters: [parameter, parameter])
+        .with(hash['eventId'], hash['providerId'], { parameters: [parameter, parameter] })
 
       expect do
         Bosh::AzureCloud::TelemetryEvent.parse_hash(hash)

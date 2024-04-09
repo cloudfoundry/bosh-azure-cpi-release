@@ -12,7 +12,7 @@ describe Bosh::AzureCloud::Cloud do
 
     before do
       allow(telemetry_manager).to receive(:monitor)
-        .with('delete_snapshot', id: snapshot_cid).and_call_original
+        .with('delete_snapshot', { id: snapshot_cid }).and_call_original
       allow(Bosh::AzureCloud::DiskId).to receive(:parse)
         .with(snapshot_cid, MOCK_RESOURCE_GROUP_NAME)
         .and_return(snapshot_id_object)
