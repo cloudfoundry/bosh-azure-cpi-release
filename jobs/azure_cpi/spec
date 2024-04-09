@@ -8,7 +8,7 @@ templates:
   service_principal_certificate.pem.erb: config/service_principal_certificate.pem
 
 packages:
-- azure-cpi-ruby-3.1
+- azure-cpi-ruby-3.2
 - bosh_azure_cpi
 
 properties:
