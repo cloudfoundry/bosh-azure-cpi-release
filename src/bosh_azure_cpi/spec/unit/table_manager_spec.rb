@@ -130,7 +130,7 @@ describe Bosh::AzureCloud::TableManager do
         .with(table_name, options)
         .and_return(records_with_token)
       allow(table_service).to receive(:query_entities)
-        .with(table_name, continuation_token: fake_continuation_token, request_id: request_id)
+        .with(table_name, { continuation_token: fake_continuation_token, request_id: request_id })
         .and_return(records_without_token)
     end
 

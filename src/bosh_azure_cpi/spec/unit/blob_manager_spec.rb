@@ -58,9 +58,7 @@ describe Bosh::AzureCloud::BlobManager do
   describe '#delete_blob' do
     it 'delete the blob' do
       expect(blob_service).to receive(:delete_blob)
-        .with(container_name, blob_name,
-              delete_snapshots: :include,
-              request_id: request_id)
+        .with(container_name, blob_name, { delete_snapshots: :include, request_id: request_id })
 
       expect do
         blob_manager.delete_blob(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name)
@@ -102,9 +100,7 @@ describe Bosh::AzureCloud::BlobManager do
       snapshot_time = 10
 
       expect(blob_service).to receive(:delete_blob)
-        .with(container_name, blob_name,
-              snapshot: snapshot_time,
-              request_id: request_id)
+        .with(container_name, blob_name, { snapshot: snapshot_time, request_id: request_id })
 
       expect do
         blob_manager.delete_blob_snapshot(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, container_name, blob_name, snapshot_time)
@@ -592,7 +588,7 @@ describe Bosh::AzureCloud::BlobManager do
             .with(container_name, options).and_return(tmp_blobs_1)
           allow(tmp_blobs_1).to receive(:continuation_token).and_return(continuation_token)
           allow(blob_service).to receive(:list_blobs)
-            .with(container_name, marker: continuation_token, request_id: request_id)
+            .with(container_name, { marker: continuation_token, request_id: request_id })
             .and_return(tmp_blobs_2)
         end
 
@@ -609,9 +605,7 @@ describe Bosh::AzureCloud::BlobManager do
       metadata = {}
 
       expect(blob_service).to receive(:create_blob_snapshot)
-        .with(container_name, blob_name,
-              metadata: metadata,
-              request_id: request_id)
+        .with(container_name, blob_name, { metadata: metadata,request_id: request_id })
         .and_return(snapshot_time)
 
       expect(
