@@ -65,9 +65,9 @@ describe Bosh::AzureCloud::TelemetryManager do
       context 'when operation is not initialize' do
         it 'should return the result and report the event' do
           expect(event_param_message).to receive(:value=)
-            .with('msg' => 'Successed',
-                  'subscription_id' => mock_azure_config.subscription_id,
-                  'fake-key' => 'fake-value')
+            .with({ 'msg' => 'Successed',
+                    'subscription_id' => mock_azure_config.subscription_id,
+                    'fake-key' => 'fake-value' })
           expect(telemetry_manager).to receive(:_report_event)
 
           expect(
@@ -83,9 +83,9 @@ describe Bosh::AzureCloud::TelemetryManager do
 
         it 'should return the result but do not report the event' do
           expect(event_param_message).to receive(:value=)
-            .with('msg' => 'Successed',
-                  'subscription_id' => mock_azure_config.subscription_id,
-                  'fake-key' => 'fake-value')
+            .with({ 'msg' => 'Successed',
+                   'subscription_id' => mock_azure_config.subscription_id,
+                   'fake-key' => 'fake-value' })
           expect(telemetry_manager).not_to receive(:_report_event)
 
           expect(

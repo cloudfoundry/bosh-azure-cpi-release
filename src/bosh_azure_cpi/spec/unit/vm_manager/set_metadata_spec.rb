@@ -30,7 +30,7 @@ describe Bosh::AzureCloud::VMManager do
     context 'when everything is ok' do
       it 'set_metadatas the instance by id' do
         expect(azure_client).to receive(:update_tags_of_virtual_machine)
-          .with(resource_group_name, vm_name, 'user-agent' => 'bosh')
+          .with(resource_group_name, vm_name, { 'user-agent' => 'bosh' })
         expect do
           vm_manager.set_metadata(instance_id, {})
         end.not_to raise_error
