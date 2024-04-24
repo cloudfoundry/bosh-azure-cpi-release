@@ -8,9 +8,7 @@ describe Bosh::AzureCloud::AzureClient do
   let(:http) { instance_double(Net::HTTP) }
 
   before do
-    allow_any_instance_of(Net::HTTP).to receive(:ssl_options=)
     allow(Net::HTTP).to receive(:new).and_return(http)
-    allow(http).to receive(:ssl_options=)
   end
 
   describe '#azure_stack_ca_cert' do
