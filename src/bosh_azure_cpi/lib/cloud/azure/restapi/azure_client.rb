@@ -2461,7 +2461,7 @@ module Bosh::AzureCloud
         end
         raise e
       rescue OpenSSL::SSL::SSLError, OpenSSL::X509::StoreError => e
-        if retry_count < AZURE_MAX_RETRY_COUNT && [ERROR_OPENSSL_RESET, ERROR_OPENSSL_EOF_READ].any? { |error| e.inspect.include?(error) }
+        if retry_count < AZURE_MAX_RETRY_COUNT && e.inspect.include?(ERROR_OPENSSL_RESET)
           retry_count += 1
           @logger.warn(format(error_msg_format, retry_count: retry_count, retry_after: retry_after, error: e.class.name))
           sleep(retry_after)
