@@ -108,15 +108,8 @@ module Bosh::AzureCloud
 
     def initialize(azure_config, logger)
       @logger = logger
+
       @azure_config = azure_config
-
-      # Allow Net::HTTP to support instance variable names via ssl_options
-      (Net::HTTP::SSL_IVNAMES << :@ssl_options).uniq!
-      (Net::HTTP::SSL_ATTRIBUTES << :options).uniq!
-
-      Net::HTTP.class_eval do
-        attr_accessor :ssl_options
-      end
     end
 
     # Common
@@ -2262,7 +2255,6 @@ module Bosh::AzureCloud
     def http(uri, use_ssl = true)
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = true && use_ssl
-      http.ssl_options = OpenSSL::SSL::OP_IGNORE_UNEXPECTED_EOF if OpenSSL::SSL.const_defined? :OP_IGNORE_UNEXPECTED_EOF # Does not exist if using openssl 1.x
       if @azure_config.environment == ENVIRONMENT_AZURESTACK && uri.host.include?(@azure_config.azure_stack.domain)
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
         http.ca_file = get_ca_cert_path
