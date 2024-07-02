@@ -66,7 +66,7 @@ module Bosh::AzureCloud
 
     attr_reader :environment, :subscription_id, :location, :resource_group_name
     attr_reader :azure_stack
-    attr_reader :credentials_source, :tenant_id, :client_id, :client_secret, :default_managed_identity
+    attr_reader :credentials_source, :tenant_id, :client_id, :client_secret, :default_managed_identity, :managed_identity_resource_id
     attr_accessor :storage_account_name
     attr_reader :use_managed_disks
     attr_reader :default_security_group
@@ -91,6 +91,7 @@ module Bosh::AzureCloud
       @client_id = azure_config_hash['client_id']
       @client_secret = azure_config_hash['client_secret']
       @default_managed_identity = Bosh::AzureCloud::ManagedIdentity.new(azure_config_hash['default_managed_identity']) unless azure_config_hash['default_managed_identity'].nil?
+      @managed_identity_resource_id = azure_config_hash['managed_identity_resource_id']
 
       @use_managed_disks = azure_config_hash['use_managed_disks']
       @storage_account_name = azure_config_hash['storage_account_name']
