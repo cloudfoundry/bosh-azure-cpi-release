@@ -75,6 +75,14 @@ Azure CPI `v35.5.0+` does **NOT** support the following features. You need to do
           default_security_group: nsg-azure
       ```
 
+    1. (Optional) Configure `managed_identity_resource_id` to the specific Azure resource ID of the managed identity you want to use. This can be done to prevent issues if the VM being used to create the BOSH director has more than one managed identity assigned to it.
+
+      ```
+      - type: replace
+        path: path: /cloud_provider/properties/azure?/managed_identity_resource_id?
+        value: /subscriptions/${subscription}>/resourcegroups/${resource-group}providers/Microsoft.ManagedIdentity/userAssignedIdentities/${managed-identity}
+      ```
+
 1. Configure managed identity in the resource pool of BOSH director VM. Please make sure the managed identity has been assigned a `Contributor` role. Please see [Assign a role to a user-assigned managed identity](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-manage-ua-identity-portal#assign-a-role-to-a-user-assigned-managed-identity).
 
     ```
@@ -101,7 +109,7 @@ Azure CPI `v35.5.0+` does **NOT** support the following features. You need to do
         default_security_group: nsg-azure
     ```
 
-1. Deploy your BOSH director with `bosh creat-env`. Then CPI on the director VM can use the managed identity to request access tokens to create Azure resources.
+1. Deploy your BOSH director with `bosh create-env`. Then CPI on the director VM can use the managed identity to request access tokens to create Azure resources.
 
 ## Appendix: Azure Managed Identity
 

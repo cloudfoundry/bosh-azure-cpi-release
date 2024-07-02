@@ -73,6 +73,10 @@
     end
   end
 
+  if_p('azure.managed_identity_resource_id') do |managed_identity_resource_id|
+    params['cloud']['properties']['azure']['managed_identity_resource_id'] = managed_identity_resource_id
+  end
+
   if_p('azure.storage_account_name') do |storage_account_name|
     params['cloud']['properties']['azure']['storage_account_name'] = storage_account_name
   end.else do
