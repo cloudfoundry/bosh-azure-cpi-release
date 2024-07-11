@@ -44,6 +44,9 @@ properties:
   azure.default_managed_identity.user_assigned_identity_name:
     description: The user-assigned identity name associated with the VM. For the user-assigned identity specified here to be used, azure.credentials_source has to be set to `managed_identity`.
     default: null
+  azure.managed_identity_resource_id:
+    description: The specific resource ID of the managed identity to use for the azure cpi. This is required if the VM the cpi is being called from has multiple managed identities assigned to it.
+    default: null
   azure.ssh_user:
     description: Default ssh user for new vms
     default: vcap

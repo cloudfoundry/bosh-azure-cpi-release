@@ -2357,6 +2357,7 @@ module Bosh::AzureCloud
         'resource' => get_token_resource(@azure_config),
         'api-version' => api_version
       }
+      params['msi_res_id'] = @azure_config.managed_identity_resource_id unless @azure_config.managed_identity_resource_id.nil?
       uri.query = URI.encode_www_form(params)
       @logger.debug("authentication_endpoint: #{uri}")
 
