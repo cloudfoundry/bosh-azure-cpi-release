@@ -49,12 +49,12 @@ In this guide, you will learn how to run ASP.NET application on Cloud foundry wi
   instances: 1/1
   usage: 512M x 1 instances
   urls: sample-aspnetcore-helloworld-nondiphtherial-nonlogicality.52.187.41.119.xip.io
-  last uploaded: Tue Aug 30 08:15:17 UTC 2016
+  last uploaded: Wed 17 Jul 22:57:04 UTC 2024
   stack: cflinuxfs2
   buildpack: https://github.com/cloudfoundry-community/dotnet-core-buildpack.git
 
-      state     since                    cpu    memory      disk      details
-  #0   running   2016-08-30 08:17:33 AM   0.0%   0 of 512M   0 of 1G
+       state     since                  cpu    memory          disk           logging         cpu entitlement   details
+  #0   running   2024-07-17T22:57:22Z   0.3%   49.5M of 512M   130.2M of 1G   0B/s of 16K/s   2.4%
   ```
 ## 3 Verify your deployment completed successfully
 
