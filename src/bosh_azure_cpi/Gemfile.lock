@@ -31,7 +31,7 @@ GEM
       rexml
     deep_merge (1.2.2)
     diff-lcs (1.5.1)
-    docile (1.4.0)
+    docile (1.4.1)
     faraday (1.10.3)
       faraday-em_http (~> 1.0)
       faraday-em_synchrony (~> 1.0)
@@ -50,7 +50,7 @@ GEM
     faraday-httpclient (1.0.1)
     faraday-multipart (1.0.4)
       multipart-post (~> 2)
-    faraday-net_http (1.0.1)
+    faraday-net_http (1.0.2)
     faraday-net_http_persistent (1.2.0)
     faraday-patron (1.0.0)
     faraday-rack (1.0.0)
@@ -88,7 +88,7 @@ GEM
     parser (3.3.4.0)
       ast (~> 2.4.1)
       racc
-    public_suffix (6.0.0)
+    public_suffix (6.0.1)
     racc (1.8.0)
     rainbow (3.1.1)
     rake (12.3.3)
