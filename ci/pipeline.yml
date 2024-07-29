@@ -59,6 +59,15 @@ shared:
         client_secret: ((cpi_azure_credentials_json.client_secret))
         dns_recursor_ip: 8.8.8.8
 
+  - &prepare-to-load-ruby-version-using-load_var
+    get: bosh-cpi-src-in
+
+  - &load-current-ruby-version-using-load_var
+    load_var: ruby_version
+    file: "bosh-cpi-src-in/src/bosh_azure_cpi/.ruby-version"
+    format: raw
+    reveal: true
+
   - &deploy-director
     task: deploy-director
     tags: [azure]
@@ -274,6 +283,8 @@ jobs:
               -o pipelines/shared/assets/ops/remove-hm.yml
               -o bosh-deployment/external-ip-not-recommended.yml
         - do:
+          - <<: *prepare-to-load-ruby-version-using-load_var
+          - <<: *load-current-ruby-version-using-load_var
           - <<: *deploy-director
           - <<: *run-bats
           ensure:
@@ -309,6 +320,8 @@ jobs:
               -o bosh-deployment/external-ip-not-recommended.yml
               -o bosh-deployment/azure/use-managed-disks.yml
         - do:
+          - <<: *prepare-to-load-ruby-version-using-load_var
+          - <<: *load-current-ruby-version-using-load_var
           - <<: *deploy-director
           - <<: *run-az-bats
           ensure:
