@@ -4,6 +4,12 @@
 
 ## Prepare the development environment
 
+### Dev Container
+
+You can [start a dev container](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/cloudfoundry/bosh-azure-cpi-release), which contains all necessary tools to develop the Azure CPI. Learn more about [dev containers](https://containers.dev/).
+
+### Manual Setup
+
 1. Install dependencies
 
     ```bash
