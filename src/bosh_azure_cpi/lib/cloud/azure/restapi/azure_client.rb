@@ -924,6 +924,47 @@ module Bosh::AzureCloud
       http_put(url, disk)
     end
 
+    # Update a managed disk based on the supplied configuration.
+    #
+    # ==== Attributes
+    #
+    # @param [String] resource_group_name  - Name of resource group.
+    # @param [String] name                 - Name of the disk that should be updated.
+    # @param [Hash]   params               - Parameters for creating the empty managed disk.
+    #
+    # ==== params
+    #
+    # Accepted key/value pairs are:
+    # * +:location+                     - String. The new location of the disk.
+    # * +:tags+                         - Hash. The new tags of the disk.
+    # * +:account_type+                 - String. Specifies the new account type for the disk.
+    #                                     Allowed values: Standard_LRS, StandardSSD_LRS, Premium_LRS, PremiumV2_LRS,
+    #                                     UltraSSD_LRS.
+    # * +:disk_size+                    - Integer. Specifies the new size in GB of the disk.
+    # * +:zone+                         - String. The new zone of the disk.
+    #                                     Allowed values: 1, 2, 3
+    # * +:iops+                         - Integer. Specifies the new IOPS allowed for this disk.
+    # * +:mbps+                         - Integer. Specifies the new MBps allowed for this disk.
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/compute/disks/update?view=rest-compute-2023-04-02&tabs=HTTP
+    def update_managed_disk(resource_group_name, name, params)
+      raise AzureNotFoundError, "Disk parameter 'name' must not be empty" if name.empty?
+
+      request_body = { 'properties' => {} }
+      request_body['location'] = params[:location] if params[:location]
+      request_body['tags'] = params[:tags] if params[:tags]
+      request_body['sku'] = { 'name' => params[:account_type] } if params[:account_type]
+      request_body['properties']['diskSizeGB'] = params[:disk_size] if params[:disk_size]
+      request_body['properties']['diskIOPSReadWrite'] = params[:iops] if params[:iops]
+      request_body['properties']['diskMBpsReadWrite'] = params[:mbps] if params[:mbps]
+      request_body.delete('properties') if request_body['properties'].empty?
+
+      if request_body.any?
+        url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
+        http_patch(url, request_body)
+      end
+    end
+
     def resize_managed_disk(resource_group_name, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: params[:name])
       disk = {
@@ -2030,6 +2071,7 @@ module Bosh::AzureCloud
     # @return [Hash, nil]
     def parse_managed_disk(result)
       managed_disk = nil
+
       unless result.nil?
         managed_disk = {}
         managed_disk[:id]        = result['id']
@@ -2040,6 +2082,8 @@ module Bosh::AzureCloud
         managed_disk[:sku_tier]  = result['sku']['tier']
         managed_disk[:zone]      = result['zones'][0] unless result['zones'].nil?
         properties = result['properties']
+        managed_disk[:iops]      = properties['diskIOPSReadWrite']
+        managed_disk[:mbps]      = properties['diskMBpsReadWrite']
         managed_disk[:provisioning_state] = properties['provisioningState']
         managed_disk[:disk_size]          = properties['diskSizeGB']
       end

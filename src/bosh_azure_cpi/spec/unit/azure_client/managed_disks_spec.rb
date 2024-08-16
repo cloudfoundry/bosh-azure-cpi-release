@@ -414,7 +414,9 @@ describe Bosh::AzureCloud::AzureClient do
         zones: ['fake-zone'],
         properties: {
           provisioningState: 'd',
-          diskSizeGB: 'e'
+          diskSizeGB: 'e',
+          diskMBpsReadWrite: 11,
+          diskIOPSReadWrite: 22
         }
       }
     end
@@ -430,7 +432,9 @@ describe Bosh::AzureCloud::AzureClient do
         sku_tier: 'g',
         zone: 'fake-zone',
         provisioning_state: 'd',
-        disk_size: 'e'
+        disk_size: 'e',
+        mbps: 11,
+        iops: 22
       }
     end
 

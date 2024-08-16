@@ -45,6 +45,24 @@ module Bosh::AzureCloud
       @azure_client.create_empty_managed_disk(resource_group_name, disk_params)
     end
 
+    def update_disk(disk_id, size = nil, storage_account_type = nil, iops = nil, mbps = nil)
+      @logger.info("update_disk(#{disk_id}, #{size}, #{storage_account_type}, #{iops}, #{mbps})")
+      disk_params = {}
+      disk_params[:disk_size] = size if size
+      disk_params[:account_type] = storage_account_type if storage_account_type
+      disk_params[:iops] = iops if iops
+      disk_params[:mbps] = mbps if mbps
+
+      resource_group_name = disk_id.resource_group_name
+      unless disk_params.any?
+        @logger.info("No need to update disk '#{disk_id.disk_name}' in resource group '#{resource_group_name}'")
+        return
+      end
+
+      @logger.info("Start to update disk '#{disk_id.disk_name}' in resource group '#{resource_group_name}' with new parameters '#{disk_params}'")
+      @azure_client.update_managed_disk(resource_group_name, disk_id.disk_name, disk_params)
+    end
+
     def create_disk_from_blob(disk_id, blob_uri, location, storage_account_type, storage_account_id, zone = nil)
       @logger.info("create_disk_from_blob(#{disk_id}, #{blob_uri}, #{location}, #{storage_account_type}, #{storage_account_id}, #{zone})")
       resource_group_name = disk_id.resource_group_name

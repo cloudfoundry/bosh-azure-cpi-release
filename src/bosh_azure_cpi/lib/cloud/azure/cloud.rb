@@ -479,6 +479,44 @@ module Bosh::AzureCloud
       end
     end
 
+    def update_disk(disk_cid, new_size, cloud_properties)
+      @logger.info("update_disk(#{disk_cid}, #{new_size}, #{cloud_properties})")
+      raise Bosh::Clouds::NotSupported, 'Native disk update only supported for managed disks' unless @use_managed_disks
+
+      @telemetry_manager.monitor('initialize') do
+        _init_azure
+      end
+
+      with_thread_name("update_disk(#{disk_cid}, #{new_size}, #{cloud_properties})") do
+        @telemetry_manager.monitor('update_disk', id: disk_cid) do
+          disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
+          disk_name = disk_id.disk_name
+          disk = @disk_manager2.get_data_disk(disk_id)
+          raise Bosh::Clouds::NotSupported, "Disk '#{disk_name}' not found" if disk.nil?
+
+          caching = cloud_properties['caching']
+          raise Bosh::Clouds::NotSupported, 'Disk caching cannot be modified' if caching && (caching != disk[:caching])
+
+          new_size_in_gib = mib_to_gib(new_size)
+          old_size_in_gib = disk[:disk_size]
+          raise Bosh::Clouds::NotSupported, 'Disk size cannot be decreased' if old_size_in_gib > new_size_in_gib
+
+          new_size_in_gib = nil if new_size_in_gib == old_size_in_gib
+          account_type = cloud_properties['storage_account_type']
+          iops = cloud_properties['iops']
+          mbps = cloud_properties['mbps']
+
+          if new_size_in_gib.nil? && account_type.nil? && iops.nil? && mbps.nil?
+            @logger.info("Skip native disk update of '#{disk_name}' because no change is needed")
+            return
+          end
+
+          @disk_manager2.update_disk(disk_id, new_size_in_gib, account_type, iops, mbps)
+          @logger.info("Finished update of disk '#{disk_name}'")
+        end
+      end
+    end
+
     def mib_to_gib(size)
       (size / 1024.0).ceil
     end
