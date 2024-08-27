@@ -2767,7 +2767,9 @@ module Bosh::AzureCloud
     def remove_resources_from_vm(vm)
       vm.delete('resources')
       if vm['identity'] && vm['identity']['type'] == 'UserAssigned'
-        vm['identity']['userAssignedIdentities'] = vm['identity']['userAssignedIdentities'].keys.inject({}) { |result, k| result[k] = {}; result }
+        vm['identity']['userAssignedIdentities'] = vm['identity']['userAssignedIdentities'].keys.each_with_object({}) do |k, result|
+          result[k] = {}
+        end
       end
       vm
     end
