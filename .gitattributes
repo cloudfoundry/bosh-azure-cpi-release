@@ -1,0 +1,1 @@
+/src/bosh_azure_cpi/vendor/package/*.gem filter=lfs diff=lfs merge=lfs -text
