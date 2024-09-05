@@ -605,7 +605,7 @@ describe Bosh::AzureCloud::BlobManager do
       metadata = {}
 
       expect(blob_service).to receive(:create_blob_snapshot)
-        .with(container_name, blob_name, { metadata: metadata,request_id: request_id })
+        .with(container_name, blob_name, { metadata: metadata, request_id: request_id })
         .and_return(snapshot_time)
 
       expect(

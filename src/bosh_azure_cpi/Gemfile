@@ -12,7 +12,7 @@ gem 'jwt',              '~> 2.2', '>= 2.2.2'
 gem 'deep_merge',       '~> 1.2', '>= 1.2.1'
 gem 'net-smtp'
 # fast_jsonparser has a GCC requirement that cannot be guaranteed by all VMs the CPI might run on.
-install_if (-> { (`uname`.include?('Linux') && !(`lsb_release -sr`.include?('16.04') if system('which lsb_release > /dev/null 2>&1'))) || `gcc -dumpversion`.to_i > 6 }) do
+install_if(-> { (`uname`.include?('Linux') && !(`lsb_release -sr`.include?('16.04') if system('which lsb_release > /dev/null 2>&1'))) || `gcc -dumpversion`.to_i > 6 }) do
   gem 'fast_jsonparser', '~> 0.6.0'
 end
 

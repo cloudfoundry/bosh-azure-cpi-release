@@ -176,6 +176,69 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
+  describe '#update_managed_disk' do
+    let(:resource_name) { 'xtreme-disk' }
+    let(:resource_group_name) { 'xtreme-resource-group-name' }
+    let(:resource_url) { 'some-resource-url' }
+
+    before do
+      allow(azure_client).to receive(:rest_api_url)
+        .with(Bosh::AzureCloud::AzureClient::REST_API_PROVIDER_COMPUTE,
+              Bosh::AzureCloud::AzureClient::REST_API_DISKS,
+              { resource_group_name: resource_group_name, name: resource_name }).and_return(resource_url)
+      allow(azure_client).to receive(:http_patch).with(resource_url, anything)
+    end
+
+    it 'should update the disk tags' do
+      tags = { 'foo' => 'bar' }
+      expect(azure_client).to receive(:http_patch).with(resource_url, { 'tags' => tags })
+
+      azure_client.update_managed_disk(resource_group_name, resource_name, { tags: tags })
+    end
+
+    it 'should update the location' do
+      location = 'eastus'
+      expect(azure_client).to receive(:http_patch).with(resource_url, { 'location' => location })
+
+      azure_client.update_managed_disk(resource_group_name, resource_name, { location: location })
+    end
+
+    it 'should update the account type' do
+      account_type = 'Standard_LRS'
+      expect(azure_client).to receive(:http_patch).with(resource_url, { 'sku' => { 'name' => account_type } })
+
+      azure_client.update_managed_disk(resource_group_name, resource_name, { account_type: account_type })
+    end
+
+    it 'should update the disks size iops and mbps' do
+      size = 4
+      iops = 3100
+      mbps = 150
+      expected_properties = {
+        'properties' => {
+          'diskSizeGB' => size,
+          'diskIOPSReadWrite' => iops,
+          'diskMBpsReadWrite' => mbps
+        }
+      }
+      expect(azure_client).to receive(:http_patch).with(resource_url, expected_properties)
+
+      azure_client.update_managed_disk(resource_group_name, resource_name, { disk_size: size, iops: iops, mbps: mbps })
+    end
+
+    it 'should not send a request if no params to update' do
+      expect(azure_client).not_to receive(:http_patch)
+
+      azure_client.update_managed_disk(resource_group_name, resource_name, {})
+    end
+
+    it 'should fail if no disk name is passed' do
+      expect do
+        azure_client.update_managed_disk(resource_group_name, '', { 'anything' => 'anything' })
+      end.to raise_error(/Disk parameter 'name' must not be empty/)
+    end
+  end
+
   describe '#_parse_name_from_id' do
     context 'when id is empty' do
       it 'should raise an error' do

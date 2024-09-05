@@ -59,6 +59,29 @@ describe Bosh::AzureCloud::DiskManager2 do
     end
   end
 
+  describe '#update_disk' do
+    let(:disk_name) { 'fake-disk-name' }
+    let(:resource_group_name) { 'fake-resource-group-name' }
+
+    before do
+      allow(azure_client).to receive(:update_managed_disk).with(anything, anything, anything).and_return(nil)
+    end
+
+    it 'updates the disk' do
+      expected = {
+        disk_size: 4,
+        account_type: 'Premium_LRS',
+        iops: 100,
+        mbps: 20
+      }
+      expect(azure_client).to receive(:update_managed_disk).with(resource_group_name, disk_name, expected)
+
+      expect do
+        disk_manager2.update_disk(disk_id, 4, 'Premium_LRS', 100, 20)
+      end.not_to raise_error
+    end
+  end
+
   describe '#create_disk_from_blob' do
     let(:blob_data_disk_prefix) { 'bosh-data' }
     let(:blob_uri) { 'fake-blob-uri' }
