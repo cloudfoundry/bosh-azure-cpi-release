@@ -10,7 +10,7 @@ RUN apt-get install -y \
     sudo \
     apt-utils \
     gpg gpg-agent \
-    git curl wget tar make jq uuid-runtime \
+    git git-lfs curl wget tar make jq uuid-runtime \
     sqlite3 libsqlite3-dev \
     build-essential \
     ca-certificates apt-transport-https lsb-release \
