@@ -40,7 +40,7 @@ describe Bosh::AzureCloud::VMManager do
             Bosh::AzureCloud::VMManager.new(
               mock_azure_config_merge(
                 'pip_idle_timeout_in_minutes' => idle_timeout
-              ), registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
+              ), disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
             )
           end
           let(:public_ip_params) do
@@ -565,7 +565,6 @@ describe Bosh::AzureCloud::VMManager do
         context 'when os type is linux' do
           let(:user_data) do
             {
-              registry: { endpoint: registry_endpoint },
               server: { name: instance_id_string },
               dns: { nameserver: 'fake-dns' }
             }
@@ -614,7 +613,6 @@ describe Bosh::AzureCloud::VMManager do
           let(:computer_name) { 'fake-server-name' }
           let(:user_data) do
             {
-              registry: { endpoint: registry_endpoint },
               'instance-id': instance_id_string,
               server: { name: computer_name },
               dns: { nameserver: 'fake-dns' }

@@ -45,10 +45,7 @@ describe Bosh::AzureCloud::Cloud do
         .and_return(vm_props)
       allow(cloud_v2.props_factory).to receive(:parse_vm_props)
         .and_return(vm_props)
-      allow(cloud_sc_v2.props_factory).to receive(:parse_vm_props)
-        .and_return(vm_props)
       allow(Bosh::AzureCloud::BoshAgentUtil).to receive(:new).and_return(agent_util)
-      allow(agent_util).to receive(:initial_agent_settings)
     end
 
     context 'when vnet is not found' do
@@ -141,7 +138,6 @@ describe Bosh::AzureCloud::Cloud do
         expect(vm_manager).to receive(:create)
           .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud.config)
           .and_return([instance_id, vm_params])
-        expect(registry_client).to receive(:update_settings)
 
         expect(
           cloud.create_vm(
@@ -152,7 +148,7 @@ describe Bosh::AzureCloud::Cloud do
             disk_cids,
             environment
           )
-        ).to eq(instance_id_string)
+        ).to eq([instance_id_string, networks])
       end
     end
 
@@ -248,7 +244,6 @@ describe Bosh::AzureCloud::Cloud do
             expect(vm_manager).to receive(:create)
               .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud.config)
               .and_return([instance_id, vm_params])
-            expect(registry_client).to receive(:update_settings)
 
             expect(
               cloud.create_vm(
@@ -259,7 +254,7 @@ describe Bosh::AzureCloud::Cloud do
                 disk_cids,
                 environment
               )
-            ).to eq(instance_id_string)
+            ).to eq([instance_id_string, networks])
           end
         end
       end
@@ -302,29 +297,6 @@ describe Bosh::AzureCloud::Cloud do
           end.to raise_error StandardError
         end
       end
-
-      context 'when registry fails to update' do
-        before do
-          allow(vm_manager).to receive(:create)
-            .and_return([instance_id, vm_params])
-          allow(registry_client).to receive(:update_settings).and_raise(StandardError)
-        end
-
-        it 'deletes the vm' do
-          expect(vm_manager).to receive(:delete).with(instance_id)
-
-          expect do
-            cloud.create_vm(
-              agent_id,
-              stemcell_cid,
-              cloud_properties,
-              networks,
-              disk_cids,
-              environment
-            )
-          end.to raise_error(StandardError)
-        end
-      end
     end
 
     context 'when use_managed_disks is set' do
@@ -361,7 +333,6 @@ describe Bosh::AzureCloud::Cloud do
           expect(vm_manager).to receive(:create)
             .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, managed_cloud.config)
             .and_return([instance_id, vm_params])
-          expect(registry_client).to receive(:update_settings)
 
           expect(
             managed_cloud.create_vm(
@@ -372,7 +343,7 @@ describe Bosh::AzureCloud::Cloud do
               disk_cids,
               environment
             )
-          ).to eq(instance_id_string)
+          ).to eq([instance_id_string, networks])
         end
       end
 
@@ -390,7 +361,6 @@ describe Bosh::AzureCloud::Cloud do
           expect(vm_manager).to receive(:create)
             .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, managed_cloud.config)
             .and_return([instance_id, vm_params])
-          expect(registry_client).to receive(:update_settings)
 
           expect(
             managed_cloud.create_vm(
@@ -401,7 +371,7 @@ describe Bosh::AzureCloud::Cloud do
               disk_cids,
               environment
             )
-          ).to eq(instance_id_string)
+          ).to eq([instance_id_string, networks])
         end
       end
     end
@@ -422,7 +392,6 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       it 'returns an array of instance id and networks' do
-        expect(registry_client).to receive(:update_settings)
         expect(vm_manager).to receive(:create)
           .with(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, environment, agent_util, networks, cloud_v2.config)
           .and_return([instance_id_string, {}])
@@ -437,40 +406,6 @@ describe Bosh::AzureCloud::Cloud do
             environment
           )
         ).to eq([instance_id_string, networks])
-      end
-
-      context 'and stemcell api version is 1' do
-        it 'continues to write to the registry' do
-          expect(registry_client).to receive(:update_settings)
-          expect(vm_manager).to receive(:create)
-
-          cloud_v2.create_vm(
-            agent_id,
-            stemcell_cid,
-            cloud_properties,
-            networks,
-            disk_cids,
-            environment
-          )
-        end
-
-        context 'and stemcell api version is 2' do
-          it 'does not write to the registry' do
-            expect(registry_client).not_to receive(:update_settings)
-            expect(vm_manager).to receive(:create).and_return([instance_id_string, networks])
-
-            expect(
-              cloud_sc_v2.create_vm(
-                agent_id,
-                stemcell_cid,
-                cloud_properties,
-                networks,
-                disk_cids,
-                environment
-              )
-            ).to eq([instance_id_string, networks])
-          end
-        end
       end
     end
   end

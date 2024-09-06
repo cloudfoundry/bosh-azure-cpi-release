@@ -353,14 +353,14 @@ describe Bosh::AzureCloud::VMManager do
                 'keep_failed_vms' => true
               )
             end
-            let(:vm_manager_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+            let(:vm_manager_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_to_keep_failed_vms, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
             let(:azure_config_managed_to_keep_failed_vms) do
               mock_azure_config_merge(
                 'use_managed_disks' => true,
                 'keep_failed_vms' => true
               )
             end
-            let(:vm_manager2_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_managed_to_keep_failed_vms, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+            let(:vm_manager2_to_keep_failed_vms) { Bosh::AzureCloud::VMManager.new(azure_config_managed_to_keep_failed_vms, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
             before do
               allow(vm_manager_to_keep_failed_vms).to receive(:_get_stemcell_info).and_return(stemcell_info)

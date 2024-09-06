@@ -23,12 +23,6 @@ describe 'cpi.json.erb' do
           'ssh_public_key' => 'ssh-rsa ABCDEFGHIJKLMN',
           'default_security_group' => 'fake-default-security-group'
         },
-        'registry' => {
-          'host' => 'registry-host.example.com',
-          'username' => 'admin',
-          'password' => 'admin',
-          'port' => 25_777
-        },
         'nats' => {
           'address' => 'nats-address.example.com',
           'password' => 'nats-password'
@@ -71,11 +65,6 @@ describe 'cpi.json.erb' do
             'use_managed_disks' => false,
             'pip_idle_timeout_in_minutes' => 4,
             'enable_vm_boot_diagnostics' => false
-          },
-          'registry' => {
-            'user' => 'admin',
-            'password' => 'admin',
-            'endpoint' => 'http://admin:admin@registry-host.example.com:25777'
           },
           'agent' => {
             'ntp' => [
@@ -418,72 +407,6 @@ describe 'cpi.json.erb' do
         it 'is able to render isv_tracking_guid' do
           expect(subject['cloud']['properties']['azure']['isv_tracking_guid']).to eq('cd237ace-be2a-425c-a30f-dd91d5e93d96')
         end
-      end
-    end
-  end
-
-  context 'when parsing the registry property' do
-    context 'when the registry endpoint is specified' do
-      registry_endpoint = 'http://fake-username:fake-password@fake-registry-endpoint:fake-port'
-      before do
-        manifest['properties']['registry']['endpoint'] = registry_endpoint
-      end
-
-      it 'can parse the endpoint' do
-        expect(subject['cloud']['properties']['registry']['endpoint']).to eq(registry_endpoint)
-      end
-    end
-
-    context 'when the registry endpoint is not specified' do
-      it 'can parse the endpoint using the host, port, username and password' do
-        username = manifest['properties']['registry']['username']
-        password = manifest['properties']['registry']['password']
-        host = manifest['properties']['registry']['host']
-        port = manifest['properties']['registry']['port']
-        endpoint = "http://#{username}:#{password}@#{host}:#{port}"
-        expect(subject['cloud']['properties']['registry']['endpoint']).to eq(endpoint)
-      end
-    end
-
-    context 'when the registry password includes special characters' do
-      special_chars_password = '=!@#$%^&*/-+?='
-      before do
-        manifest['properties']['registry']['password'] = special_chars_password
-      end
-
-      it 'encodes the password with special characters in the registry URL' do
-        registry_uri = URI(subject['cloud']['properties']['registry']['endpoint'])
-        expect(URI.decode_www_form_component(registry_uri.password)).to eq(special_chars_password)
-      end
-    end
-
-    context 'when registry settings are not specified' do
-      let(:manifest) do
-        {
-          'properties' => {
-            'azure' => {
-              'environment' => 'AzureCloud',
-              'subscription_id' => 'fake-subscription-id',
-              'credentials_source' => 'static',
-              'tenant_id' => 'fake-tenant-id',
-              'client_id' => 'fake-client-id',
-              'client_secret' => 'fake-client-secret',
-              'resource_group_name' => 'fake-resource-group-name',
-              'storage_account_name' => 'fake-storage-account-name',
-              'ssh_user' => 'vcap',
-              'ssh_public_key' => 'ssh-rsa ABCDEFGHIJKLMN',
-              'default_security_group' => 'fake-default-security-group'
-            },
-            'nats' => {
-              'address' => 'nats-address.example.com',
-              'password' => 'nats-password'
-            }
-          }
-        }
-      end
-
-      it 'should not include registry settings in json' do
-        expect(subject['cloud']['properties'].key?('registry')).to be_falsy
       end
     end
   end

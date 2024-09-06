@@ -783,7 +783,7 @@ describe Bosh::AzureCloud::VMManager do
               end
               let(:vm_manager_azure_stack) do
                 Bosh::AzureCloud::VMManager.new(
-                  azure_config_azure_stack, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
+                  azure_config_azure_stack, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
                 )
               end
               let(:vm_props) do

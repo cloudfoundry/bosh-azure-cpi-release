@@ -33,10 +33,6 @@ RSpec.configure do |rspec_config|
   end
 
   rspec_config.before do
-    @registry = instance_double(Bosh::Cpi::RegistryClient).as_null_object
-    allow(Bosh::Cpi::RegistryClient).to receive(:new).and_return(@registry)
-    allow(@registry).to receive(:read_settings).and_return({})
-
     @logger = Bosh::AzureCloud::CPILogger.get_logger(STDERR)
     allow(Bosh::Clouds::Config).to receive_messages(logger: @logger)
 
@@ -52,17 +48,17 @@ RSpec.configure do |rspec_config|
       'resource_group_name' => @default_resource_group_name,
       'use_managed_disks' => @use_managed_disks,
       'storage_account_name' => @storage_account_name,
-      'parallel_upload_thread_num' => 16
+      'parallel_upload_thread_num' => 16,
+      'vm' => {
+        'stemcell' => {
+          'api_version' => 2
+        }
+      }
     }
     @azure_config = Bosh::AzureCloud::AzureConfig.new(azure_config_hash)
 
     @cloud_options = {
-      'azure' => azure_config_hash,
-      'registry' => {
-        'endpoint' => 'fake',
-        'user' => 'fake',
-        'password' => 'fake'
-      }
+      'azure' => azure_config_hash
     }
     @cpi = Bosh::AzureCloud::Cloud.new(@cloud_options, 1)
     @cpi2 = Bosh::AzureCloud::Cloud.new(@cloud_options, 2)

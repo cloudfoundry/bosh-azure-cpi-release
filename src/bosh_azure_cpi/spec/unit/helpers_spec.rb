@@ -8,6 +8,15 @@ describe Bosh::AzureCloud::Helpers do
   let(:azure_china_api_version) { AZURE_CHINA_API_VERSION }
   let(:azure_usgov_api_version) { AZURE_USGOV_API_VERSION }
   let(:azure_german_api_version) { AZURE_GERMAN_API_VERSION }
+  let(:vm_config) do
+    {
+      'vm' => {
+        'stemcell' => {
+          'api_version' => 2
+        }
+      }
+    }
+  end
 
   class HelpersTester
     include Bosh::AzureCloud::Helpers
@@ -150,10 +159,8 @@ describe Bosh::AzureCloud::Helpers do
   end
 
   describe '#get_arm_endpoint' do
-    let(:azure_config) { instance_double(Bosh::AzureCloud::AzureConfig) }
-
     context 'when environment is Azure' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureCloud') }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'environment' => 'AzureCloud' }.merge(vm_config)) }
 
       it 'should return Azure ARM endpoint' do
         expect(
@@ -163,7 +170,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureChinaCloud' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureChinaCloud') }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'environment' => 'AzureChinaCloud' }.merge(vm_config)) }
 
       it 'should return AzureChinaCloud ARM endpoint' do
         expect(
@@ -173,7 +180,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureUSGovernment' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureUSGovernment') }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'environment' => 'AzureUSGovernment' }.merge(vm_config)) }
 
       it 'should return AzureUSGovernment ARM endpoint' do
         expect(
@@ -185,12 +192,14 @@ describe Bosh::AzureCloud::Helpers do
     context 'when environment is AzureStack' do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureStack',
-          'azure_stack' => {
-            'domain' => 'fake-domain',
-            'authentication' => 'fake-authentication',
-            'endpoint_prefix' => 'api'
-          }
+          {
+            'environment' => 'AzureStack',
+            'azure_stack' => {
+              'domain' => 'fake-domain',
+              'authentication' => 'fake-authentication',
+              'endpoint_prefix' => 'api'
+            }
+          }.merge(vm_config)
         )
       end
 
@@ -202,7 +211,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureGermanCloud' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureGermanCloud') }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'environment' => 'AzureGermanCloud' }.merge(vm_config)) }
 
       it 'should return AzureGermanCloud ARM endpoint' do
         expect(
@@ -214,7 +223,7 @@ describe Bosh::AzureCloud::Helpers do
 
   describe '#get_token_resource' do
     context 'when environment is Azure' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureCloud') }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'environment' => 'AzureCloud' }.merge(vm_config)) }
 
       it 'should return Azure resource' do
         expect(
@@ -224,7 +233,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureChinaCloud' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureChinaCloud') }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'environment' => 'AzureChinaCloud' }.merge(vm_config)) }
 
       it 'should return AzureChinaCloud resource' do
         expect(
@@ -234,7 +243,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureUSGovernment' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureUSGovernment') }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'environment' => 'AzureUSGovernment' }.merge(vm_config)) }
 
       it 'should return AzureUSGovernment resource' do
         expect(
@@ -246,10 +255,12 @@ describe Bosh::AzureCloud::Helpers do
     context 'when environment is AzureStack' do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureStack',
-          'azure_stack' => {
-            'resource' => 'https://azurestack.local-api/'
-          }
+          {
+            'environment' => 'AzureStack',
+            'azure_stack' => {
+              'resource' => 'https://azurestack.local-api/'
+            }
+          }.merge(vm_config)
         )
       end
 
@@ -261,7 +272,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'when environment is AzureGermanCloud' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('environment' => 'AzureGermanCloud') }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'environment' => 'AzureGermanCloud' }.merge(vm_config)) }
 
       it 'should return AzureGermanCloud resource' do
         expect(
@@ -275,8 +286,10 @@ describe Bosh::AzureCloud::Helpers do
     context 'when environment is Azure' do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureCloud',
-          'tenant_id' => 'fake-tenant-id'
+          {
+            'environment' => 'AzureCloud',
+            'tenant_id' => 'fake-tenant-id'
+          }.merge(vm_config)
         )
       end
 
@@ -290,8 +303,10 @@ describe Bosh::AzureCloud::Helpers do
     context 'when environment is AzureChinaCloud' do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureChinaCloud',
-          'tenant_id' => 'fake-tenant-id'
+          {
+            'environment' => 'AzureChinaCloud',
+            'tenant_id' => 'fake-tenant-id'
+          }.merge(vm_config)
         )
       end
 
@@ -305,8 +320,10 @@ describe Bosh::AzureCloud::Helpers do
     context 'when environment is AzureUSGovernment' do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureUSGovernment',
-          'tenant_id' => 'fake-tenant-id'
+          {
+            'environment' => 'AzureUSGovernment',
+            'tenant_id' => 'fake-tenant-id'
+          }.merge(vm_config)
         )
       end
 
@@ -320,12 +337,14 @@ describe Bosh::AzureCloud::Helpers do
     context 'when environment is AzureStack' do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureStack',
-          'azure_stack' => {
-            'domain' => 'fake-domain',
-            'endpoint_prefix' => 'api'
-          },
-          'tenant_id' => 'fake-tenant-id'
+          {
+            'environment' => 'AzureStack',
+            'azure_stack' => {
+              'domain' => 'fake-domain',
+              'endpoint_prefix' => 'api'
+            },
+            'tenant_id' => 'fake-tenant-id'
+          }.merge(vm_config)
         )
       end
 
@@ -381,8 +400,10 @@ describe Bosh::AzureCloud::Helpers do
     context 'when environment is AzureGermanCloud' do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureGermanCloud',
-          'tenant_id' => 'fake-tenant-id'
+          {
+            'environment' => 'AzureGermanCloud',
+            'tenant_id' => 'fake-tenant-id'
+          }.merge(vm_config)
         )
       end
 
@@ -490,7 +511,7 @@ describe Bosh::AzureCloud::Helpers do
     context 'when the environment is not AzureStack' do
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureCloud'
+          { 'environment' => 'AzureCloud' }.merge(vm_config)
         )
       end
       let(:options) do
@@ -515,10 +536,12 @@ describe Bosh::AzureCloud::Helpers do
       let(:azure_stack_domain) { 'fake-azure-stack-domain' }
       let(:azure_config) do
         Bosh::AzureCloud::AzureConfig.new(
-          'environment' => 'AzureStack',
-          'azure_stack' => {
-            'domain' => azure_stack_domain
-          }
+          {
+            'environment' => 'AzureStack',
+            'azure_stack' => {
+              'domain' => azure_stack_domain
+            }
+          }.merge(vm_config)
         )
       end
       let(:options) do
@@ -617,7 +640,7 @@ describe Bosh::AzureCloud::Helpers do
 
   describe '#is_debug_mode' do
     context 'debug_mode is not set' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({}) }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({}.merge(vm_config)) }
 
       it 'should return false' do
         expect(
@@ -627,7 +650,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'debug_mode is set to false' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('debug_mode' => false) }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'debug_mode' => false }.merge(vm_config)) }
 
       it 'should return false' do
         expect(
@@ -637,7 +660,7 @@ describe Bosh::AzureCloud::Helpers do
     end
 
     context 'debug_mode is set to true' do
-      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('debug_mode' => true) }
+      let(:azure_config) { Bosh::AzureCloud::AzureConfig.new({ 'debug_mode' => true }.merge(vm_config)) }
 
       it 'should return true' do
         expect(

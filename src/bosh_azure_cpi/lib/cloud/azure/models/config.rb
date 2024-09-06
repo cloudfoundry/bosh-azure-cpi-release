@@ -124,24 +124,12 @@ module Bosh::AzureCloud
 
       # A compatible director sends vm.stemcell.api_version in the cpi method call context
       # https://github.com/cloudfoundry/bosh/blob/v268.5.0/src/bosh-director/lib/cloud/external_cpi.rb#L86
-      @stemcell_api_version = azure_config_hash.key?('vm') ? azure_config_hash['vm']['stemcell']['api_version'] : 1
+      @stemcell_api_version = azure_config_hash.key?('vm') ? azure_config_hash['vm']['stemcell']['api_version'] : 2
+      raise "Stemcell must support api version 2 or higher" if @stemcell_api_version < 2
     end
 
     def managed_identity_enabled?
       @credentials_source == CREDENTIALS_SOURCE_MANAGED_IDENTITY
-    end
-  end
-
-  # TODO: Refactoring: Move class to new file: RegistryConfig
-  class RegistryConfig
-    attr_reader :endpoint, :user, :password
-
-    def initialize(registry_config_hash)
-      @config = registry_config_hash
-
-      @endpoint = @config['endpoint']
-      @user = @config['user']
-      @password = @config['password']
     end
   end
 
@@ -157,17 +145,12 @@ module Bosh::AzureCloud
   end
 
   class Config
-    attr_reader :azure, :registry, :agent
+    attr_reader :azure, :agent
 
     def initialize(config_hash)
       @config = config_hash
       @azure = AzureConfig.new(config_hash['azure'] || {})
-      @registry = RegistryConfig.new(config_hash['registry'] || {})
       @agent = AgentConfig.new(config_hash['agent'] || {})
-    end
-
-    def registry_configured?
-      !@registry.user.nil? && !@registry.password.nil? && !@registry.endpoint.nil?
     end
   end
 end

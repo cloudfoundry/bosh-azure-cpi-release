@@ -17,7 +17,6 @@ src/bosh_azure_cpi/coverage
 src/bosh_azure_cpi/spec/manual_tests/performance/stemcell_to_test.tgz
 src/bosh_azure_cpi/spec/manual_tests/performance/stemcell_folder/*
 src/bosh_azure_cpi/spec/manual_tests/performance/cpi.cfg
-src/bosh_azure_cpi/spec/manual_tests/performance/registry.cfg
 *.tfstate
 *.tfstate.backup
 *.terraform.tfstate.lock.info

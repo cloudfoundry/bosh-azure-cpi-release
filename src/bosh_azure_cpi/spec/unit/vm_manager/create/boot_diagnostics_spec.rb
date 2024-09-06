@@ -28,7 +28,7 @@ describe Bosh::AzureCloud::VMManager do
               'enable_vm_boot_diagnostics' => true
             )
           end
-          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
           let(:vm_location) { location }
           let(:diag_storage_uri) { 'fake-diag-storage-uri' }
@@ -55,7 +55,7 @@ describe Bosh::AzureCloud::VMManager do
               'environment' => 'AzureStack'
             )
           end
-          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+          let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
 
           let(:vm_location) { location }
 
@@ -142,7 +142,7 @@ describe Bosh::AzureCloud::VMManager do
           'enable_vm_boot_diagnostics' => true
         )
       end
-      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
       let(:location) { 'fake-location' }
       let(:diagnostics_storage_account) { double('storage-account') }
 
@@ -162,7 +162,7 @@ describe Bosh::AzureCloud::VMManager do
           'enable_vm_boot_diagnostics' => false
         )
       end
-      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
       let(:location) { 'fake-location' }
 
       it 'should not get the diagnostics account' do
@@ -180,7 +180,7 @@ describe Bosh::AzureCloud::VMManager do
           'environment' => 'AzureStack'
         )
       end
-      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+      let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config_debug, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
       let(:location) { 'fake-location' }
 
       it 'should not get the diagnostics account' do
