@@ -53,7 +53,6 @@ require 'common/thread_formatter'
 require 'common/common'
 
 require 'bosh/cpi'
-require 'bosh/cpi/registry_client'
 
 require 'cloud'
 require 'cloud/azure/utils/helpers'

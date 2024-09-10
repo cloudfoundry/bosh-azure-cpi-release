@@ -52,37 +52,7 @@ azure:
   vnet_name: ${VNET_NAME}
   subnet_name: ${SUBNET_NAME}
   perform_times: 1
-registry:
-  endpoint: http://127.0.0.1:25695
-  user: admin
-  password: admin
 EOF
-
-cat > ./registry.cfg <<EOS
----
-loglevel: debug
-http:
-  port: 25695
-  user: admin
-  password: admin
-db:
-  adapter: postgres
-  max_connections: 32
-  pool_timeout: 10
-  host: 127.0.0.1
-  database: testdb
-  user: test
-  password: test
-EOS
-
-PROCESS_NUM=$(ps -ef | grep "bosh-registry" | wc -l)
-# for degbuging...
-if [ $PROCESS_NUM -eq 2 ]; then
-    echo "already running."
-else
-    echo "starting bosh registry."
-    bosh-registry -c ./registry.cfg &
-fi
 
 if [ "$OFFICIAL_STEMCELL_ID" == "" ];
 then

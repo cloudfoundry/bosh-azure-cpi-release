@@ -2,7 +2,6 @@
 
 module Bosh::AzureCloud
   class Cloud < Bosh::Cloud # rubocop:todo Metrics/ClassLength
-    attr_reader   :registry
     attr_reader   :config
     # Below defines are for test purpose
     attr_reader   :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper
@@ -14,10 +13,6 @@ module Bosh::AzureCloud
 
     # CPI API Version
     CURRENT_API_VERSION = 2
-
-    # First stemcell API version and CPI API version that supports registry-less operation
-    STEMCELL_API_VERSION_REGISTRYLESS = 2
-    API_VERSION_REGISTRYLESS = 2
 
     ##
     # Cloud initialization
@@ -46,9 +41,6 @@ module Bosh::AzureCloud
       @props_factory = Bosh::AzureCloud::PropsFactory.new(@config)
 
       @telemetry_manager = Bosh::AzureCloud::TelemetryManager.new(_azure_config)
-      @telemetry_manager.monitor('initialize') do
-        _init_registry
-      end
     end
 
     ##
@@ -170,7 +162,7 @@ module Bosh::AzureCloud
           location_in_global_configuration = _azure_config.location
           cloud_error("The location in the global configuration '#{location_in_global_configuration}' is different from the location of the virtual network '#{location}'") if !location_in_global_configuration.nil? && location_in_global_configuration != location
 
-          agent_settings = Bosh::AzureCloud::BoshAgentUtil.new(_should_write_to_registry?)
+          agent_settings = Bosh::AzureCloud::BoshAgentUtil.new
 
           instance_id, vm_params = @vm_manager.create(
             bosh_vm_meta,
@@ -185,23 +177,7 @@ module Bosh::AzureCloud
           )
 
           @logger.info("Created new vm '#{instance_id}'")
-
-          begin
-            settings = agent_settings.initial_agent_settings(
-              bosh_vm_meta.agent_id,
-              networks,
-              environment,
-              vm_params,
-              @config
-            )
-            registry.update_settings(instance_id.to_s, settings) if _should_write_to_registry?
-
-            _create_vm_response(instance_id.to_s, networks)
-          rescue StandardError => e
-            @logger.error(%(Failed to update registry after new vm was created: #{e.inspect}\n#{e.backtrace.join("\n")}))
-            @vm_manager.delete(instance_id)
-            raise e
-          end
+          _create_vm_response(instance_id.to_s, networks)
         end
       end
     end
@@ -655,14 +631,6 @@ module Bosh::AzureCloud
             'host_device_id' => AZURE_SCSI_HOST_DEVICE_ID
           }
 
-          if _should_write_to_registry?
-            _update_agent_settings(instance_id.to_s) do |settings|
-              settings['disks'] ||= {}
-              settings['disks']['persistent'] ||= {}
-              settings['disks']['persistent'][disk_id.to_s] = disk_hints
-            end
-          end
-
           @logger.info("Attached the disk '#{disk_id}' to the instance '#{instance_id}', lun '#{lun}'")
 
           _attach_disk_response(disk_hints)
@@ -690,14 +658,6 @@ module Bosh::AzureCloud
       end
       with_thread_name("detach_disk(#{vm_cid},#{disk_cid})") do
         @telemetry_manager.monitor('detach_disk', id: vm_cid) do
-          if _should_write_to_registry?
-            _update_agent_settings(vm_cid) do |settings|
-              settings['disks'] ||= {}
-              settings['disks']['persistent'] ||= {}
-              settings['disks']['persistent'].delete(disk_cid)
-            end
-          end
-
           @vm_manager.detach_disk(
             InstanceId.parse(vm_cid, _azure_config.resource_group_name),
             DiskId.parse(disk_cid, _azure_config.resource_group_name)
@@ -857,13 +817,6 @@ module Bosh::AzureCloud
       @config.azure
     end
 
-    def _init_registry
-      # Registry updates are not really atomic in relation to
-      # Azure API calls, so they might get out of sync.
-      # As of CPI API v2, the registry is optional (when stemcell API version is suitable)
-      @registry = Bosh::Cpi::RegistryClient.new(@config.registry.endpoint, @config.registry.user, @config.registry.password)
-    end
-
     def _init_azure
       # get the default storage account.
       @azure_client            = Bosh::AzureCloud::AzureClient.new(_azure_config, @logger)
@@ -878,7 +831,7 @@ module Bosh::AzureCloud
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client)
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @meta_store, @storage_account_manager, @azure_client)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client)
-      @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @registry.endpoint, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
+      @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager
@@ -889,24 +842,12 @@ module Bosh::AzureCloud
       FileUtils.mkdir_p(CPI_LOCK_DIR)
     end
 
-    def _update_agent_settings(instance_id)
-      raise ArgumentError, 'block is not provided' unless block_given?
-
-      settings = registry.read_settings(instance_id)
-      yield settings
-      registry.update_settings(instance_id, settings)
-    end
-
     def _create_vm_response(instance_id, networks)
       @api_version > 1 ? [instance_id, networks] : instance_id
     end
 
     def _attach_disk_response(disk_hints)
       disk_hints if @api_version > 1
-    end
-
-    def _should_write_to_registry?
-      @stemcell_api_version < STEMCELL_API_VERSION_REGISTRYLESS || @api_version < API_VERSION_REGISTRYLESS
     end
   end
 end

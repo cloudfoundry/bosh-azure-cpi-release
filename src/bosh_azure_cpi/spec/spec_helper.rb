@@ -75,12 +75,12 @@ def mock_cloud_options
         'default_security_group' => MOCK_DEFAULT_SECURITY_GROUP,
         'debug_mode' => false,
         'use_managed_disks' => false,
-        'request_id' => MOCK_REQUEST_ID
-      },
-      'registry' => {
-        'endpoint' => 'localhost:42288',
-        'user' => 'admin',
-        'password' => 'admin'
+        'request_id' => MOCK_REQUEST_ID,
+        'vm' => {
+          'stemcell' => {
+            'api_version' => 2
+          }
+        }
       },
       'agent' => {
         'nats' => {
@@ -126,18 +126,7 @@ def mock_cloud_options_merge(override_options, base_hash = mock_cloud_options)
   merged_options
 end
 
-def mock_registry_properties
-  mock_cloud_options['properties']['registry']
-end
-
-def mock_registry
-  double('registry',
-         endpoint: mock_registry_properties['endpoint'],
-         user: mock_registry_properties['user'],
-         password: mock_registry_properties['password'])
-end
-
-def mock_cloud(options = nil, api_version = 1)
+def mock_cloud(options = nil, api_version = 2)
   Bosh::AzureCloud::Cloud.new(options || mock_cloud_options['properties'], api_version)
 end
 

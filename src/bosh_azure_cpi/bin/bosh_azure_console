@@ -28,10 +28,6 @@ module ConsoleHelpers
   def cpi
     @cpi ||= Bosh::AzureCloud::Cloud.new(@config, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
   end
-
-  def registry
-    cpi.registry
-  end
 end
 
 cloud_config = OpenStruct.new(logger: Bosh::AzureCloud::CPILogger.get_logger(STDOUT))

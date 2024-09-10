@@ -102,19 +102,6 @@ properties:
       MII...
       -----END CERTIFICATE-----
 
-  registry.username:
-    description: User to access the Registry
-  registry.password:
-    description: Password to access the Registry
-  registry.host:
-    description: Address of the Registry to connect to
-  registry.port:
-    description: Port of the Registry to connect to
-    default: 25777
-  registry.endpoint:
-    description: Full URL for the registry endpoint that may include basic auth credentials
-    example: http://admin:admin-password@some-ip:port
-
   ntp:
     description: List of ntp server IPs. pool.ntp.org attempts to return IPs closest to your location, but you can still specify if needed.
     default: [0.pool.ntp.org, 1.pool.ntp.org]

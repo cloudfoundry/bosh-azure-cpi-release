@@ -204,51 +204,6 @@ It's optional for submitting a PR and required for publishing a new CPI release.
 You can use `bosh_azure_console` to test your code changes quickly.
 
   ```bash
-  cd ~/workspace
-
-  # Install postgres which bosh-registry depends on
-  sudo apt-get install -y postgresql postgresql-contrib libpq-dev g++ libmysqlclient-dev libsqlite3-dev
-
-  # Create database and user
-  cat > ~/workspace/create_db.sql <<EOS
-  CREATE USER test WITH PASSWORD 'test';
-  CREATE DATABASE testdb;
-  GRANT ALL PRIVILEGES ON DATABASE testdb to test;
-  EOS
-  sudo su postgres
-  psql -f create_db.sql
-  exit
-
-  # Install bosh-registry which CPI depends on
-  gem install bundle --no-ri --no-rdoc
-  gem install bosh-registry --version 1.3262.24.0 --no-ri --no-rdoc
-  gem install pg --version 0.20.0 --no-ri --no-rdoc
-
-  # Workaround for the issue https://github.com/cloudfoundry/bosh/issues/1621
-  sed -i -e '23s/^/#/' ~/.gem/ruby/3.2.3/gems/bosh-registry-1.3262.24.0/lib/bosh/registry.rb
-
-  cat > ~/workspace/registry.cfg <<EOS
-  ---
-  loglevel: debug
-
-  http:
-    port: 25695
-    user: admin
-    password: admin
-
-  db:
-    adapter: postgres
-    max_connections: 32
-    pool_timeout: 10
-    host: 127.0.0.1
-    database: testdb
-    user: test
-    password: test
-  EOS
-
-  # Prepare database for bosh-registry
-  bosh-registry-migrate -c ~/workspace/registry.cfg
-
   # Assume that you have cloned https://github.com/cloudfoundry/bosh-azure-cpi-release.git into ~/workspace/bosh-azure-cpi-release
   cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
   bundle install
@@ -269,22 +224,12 @@ You can use `bosh_azure_console` to test your code changes quickly.
     default_security_group: nsg-bosh
     debug_mode: false
     use_managed_disks: false
-  registry:
-    endpoint: http://127.0.0.1:25695
-    user: admin
-    password: admin
   EOS
   ```
 
-You can use `tmux` to create two consoles. Start `bosh-registry` in one console and `bosh_azure_console` in another console.
+Start `bosh_azure_console` in the console.
 
-Console 1:
-
-  ```bash
-  bosh-registry -c ~/workspace/registry.cfg
-  ```
-
-Console 2:
+Console:
 
   ```bash
   cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi/bin

@@ -4,9 +4,8 @@ module Bosh::AzureCloud
   class VMManager # rubocop:todo Metrics/ClassLength
     include Helpers
 
-    def initialize(azure_config, registry_endpoint, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager)
+    def initialize(azure_config, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager)
       @azure_config = azure_config
-      @registry_endpoint = registry_endpoint
       @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
       @azure_client = azure_client
@@ -154,7 +153,7 @@ module Bosh::AzureCloud
       when 'linux'
         vm_params[:ssh_username]  = @azure_config.ssh_user
         vm_params[:ssh_cert_data] = @azure_config.ssh_public_key
-        user_data = agent_settings.user_data_obj(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config)
+        user_data = agent_settings.user_data_obj(instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config)
         vm_params[:custom_data] = agent_settings.encode_user_data(user_data)
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
@@ -177,7 +176,7 @@ module Bosh::AzureCloud
         vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".chars.shuffle.join
         computer_name = generate_windows_computer_name
         vm_params[:computer_name] = computer_name
-        vm_params[:custom_data]   = agent_settings.encoded_user_data(@registry_endpoint, instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config, computer_name)
+        vm_params[:custom_data]   = agent_settings.encoded_user_data(instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config, computer_name)
       end
 
       vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host] unless diagnostics_storage_account.nil?

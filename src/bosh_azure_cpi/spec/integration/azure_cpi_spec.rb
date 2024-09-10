@@ -36,11 +36,6 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
                 'default_security_group' => @default_security_group,
                 'parallel_upload_thread_num' => 16,
                 'use_managed_disks' => true
-              },
-              'registry' => {
-                'endpoint' => 'fake',
-                'user' => 'fake',
-                'password' => 'fake'
               }
             }
           }
@@ -48,7 +43,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'should call Azure management endpoint with a valid access token' do
-        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123', 'vm' => { 'stemcell' => { 'api_version' => 2 } } }, 'api_version' => 2)
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_falsey
         expect(result['error']).to be_nil
@@ -71,11 +66,6 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
                 'default_security_group' => @default_security_group,
                 'parallel_upload_thread_num' => 16,
                 'use_managed_disks' => true
-              },
-              'registry' => {
-                'endpoint' => 'fake',
-                'user' => 'fake',
-                'password' => 'fake'
               }
             }
           }
@@ -93,7 +83,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'should call Azure management endpoint with a valid access token' do
-        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123', 'vm' => { 'stemcell' => { 'api_version' => 2 } } }, 'api_version' => 2)
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_falsey
         expect(result['error']).to be_nil
@@ -119,11 +109,6 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
                 'default_security_group' => @default_security_group,
                 'parallel_upload_thread_num' => 16,
                 'use_managed_disks' => true
-              },
-              'registry' => {
-                'endpoint' => 'fake',
-                'user' => 'fake',
-                'password' => 'fake'
               }
             }
           }
@@ -131,7 +116,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123', 'vm' => { 'stemcell' => { 'api_version' => 2 } } }, 'api_version' => 2)
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
         expect(result['error']['message']).to match(%r{http code: 400. Azure authentication failed: Bad request. Please assure no typo in values of tenant_id, client_id or client_secret/certificate})
@@ -158,11 +143,6 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
                 'default_security_group' => @default_security_group,
                 'parallel_upload_thread_num' => 16,
                 'use_managed_disks' => true
-              },
-              'registry' => {
-                'endpoint' => 'fake',
-                'user' => 'fake',
-                'password' => 'fake'
               }
             }
           }
@@ -170,7 +150,7 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
       end
 
       it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
-        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123' }, 'api_version' => 2)
+        result = run_cpi('method' => 'has_vm', 'arguments' => [SecureRandom.uuid.to_s], 'context' => { 'director_uuid' => 'abc123', 'vm' => { 'stemcell' => { 'api_version' => 2 } } }, 'api_version' => 2)
         expect(result.keys).to eq(%w[result error log])
         expect(result['result']).to be_nil
         expect(result['error']['message']).to match(%r{http code: 401. Azure authentication failed: Invalid tenant_id, client_id or client_secret/certificate})
@@ -203,11 +183,6 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
         'cloud' => {
           'properties' => {
             'azure' => {
-            },
-            'registry' => {
-              'endpoint' => 'fake',
-              'user' => 'fake',
-              'password' => 'fake'
             }
           }
         }
@@ -228,6 +203,11 @@ describe 'the azure_cpi executable', azure_cpi_executable: true do
         'default_security_group' => @default_security_group,
         'parallel_upload_thread_num' => 16,
         'use_managed_disks' => true,
+        'vm' => {
+          'stemcell' => {
+            'api_version' => 2
+          }
+        }
       }
     end
 

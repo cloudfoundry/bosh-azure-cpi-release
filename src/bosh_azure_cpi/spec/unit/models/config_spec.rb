@@ -6,39 +6,23 @@ describe Bosh::AzureCloud::Config do
   let(:fake_azure_config) { {} }
   let(:fake_agent_config) { {} }
 
-  describe '#registry_configured?' do
-    context 'when registry is configured' do
-      let(:config_hash) do
-        {
-          'registry' => {
-            'user' => 'fake_user',
-            'password' => 'fake_password',
-            'endpoint' => 'fake_endpoint'
-          },
-          'azure' => fake_azure_config,
-          'agent' => fake_agent_config
-        }
-      end
-      let(:config_model) { Bosh::AzureCloud::Config.new(config_hash) }
+  context 'without a stemcell api provided' do
+    let(:config_hash) { mock_cloud_properties_merge({}).tap { |hash| hash['azure'].delete('vm') } }
+    let(:config_model) { Bosh::AzureCloud::Config.new(config_hash) }
 
-      it 'should return true' do
-        expect(config_model.registry_configured?).to eq(true)
-      end
+    it 'defaults to version 2' do
+      expect(config_model.azure.stemcell_api_version).to eq(2)
     end
+  end
 
-    context 'when registry is not configured' do
-      let(:config_hash) do
-        {
-          # 'registry' => 'fake_registry',
-          'azure' => fake_azure_config,
-          'agent' => fake_agent_config
-        }
-      end
-      let(:config_model) { Bosh::AzureCloud::Config.new(config_hash) }
+  context 'with a stemcell that does not support api v2' do
+    let(:config_hash) { mock_cloud_properties_merge('azure' => { 'vm' => { 'stemcell' => { 'api_version' => 1 } } }) }
+    let(:config_model) { Bosh::AzureCloud::Config.new(config_hash) }
 
-      it 'should return false' do
-        expect(config_model.registry_configured?).to eq(false)
-      end
+    it 'should return raise an error' do
+      expect {
+        config_model
+      }.to raise_error('Stemcell must support api version 2 or higher')
     end
   end
 end

@@ -25,40 +25,6 @@ describe Bosh::AzureCloud::Cloud do
     end
 
     it 'detaches the disk from the vm' do
-      old_settings = {
-        'foo' => 'bar',
-        'disks' => {
-          'persistent' => {
-            disk_cid => {
-              'lun' => '1',
-              'host_device_id' => host_device_id
-            },
-            'v-deadbeef' => {
-              'lun' => '2',
-              'host_device_id' => host_device_id
-            }
-          }
-        }
-      }
-
-      new_settings = {
-        'foo' => 'bar',
-        'disks' => {
-          'persistent' => {
-            'v-deadbeef' => {
-              'lun' => '2',
-              'host_device_id' => host_device_id
-            }
-          }
-        }
-      }
-
-      expect(registry_client).to receive(:read_settings)
-        .with(vm_cid)
-        .and_return(old_settings)
-      expect(registry_client).to receive(:update_settings)
-        .with(vm_cid, new_settings)
-
       expect(vm_manager).to receive(:detach_disk).with(instance_id_object, disk_id_object)
 
       expect do
