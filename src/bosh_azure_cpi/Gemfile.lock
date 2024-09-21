@@ -32,7 +32,7 @@ GEM
     deep_merge (1.2.2)
     diff-lcs (1.5.1)
     docile (1.4.1)
-    faraday (1.10.3)
+    faraday (1.10.4)
       faraday-em_http (~> 1.0)
       faraday-em_synchrony (~> 1.0)
       faraday-excon (~> 1.1)
@@ -60,7 +60,7 @@ GEM
     fast_jsonparser (0.6.0)
     hashdiff (1.1.1)
     httpclient (2.8.3)
-    jwt (2.8.2)
+    jwt (2.9.0)
       base64
     little-plugger (1.1.4)
     logging (2.2.2)
