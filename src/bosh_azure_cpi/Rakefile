@@ -1,0 +1,12 @@
+require 'rspec/core/rake_task'
+require 'rubocop/rake_task'
+
+namespace :spec do
+  RSpec::Core::RakeTask.new(:unit) do |t|
+    t.pattern = FileList['spec/unit/**/*_spec.rb']
+  end
+end
+
+RuboCop::RakeTask.new do |t|
+  t.options = ['--fail-level=E'] # only fail on `Error`
+end
