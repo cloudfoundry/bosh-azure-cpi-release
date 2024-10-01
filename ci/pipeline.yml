@@ -420,6 +420,7 @@ jobs:
   - name: bump-deps
     plan:
     - in_parallel:
+      - get: azure-cpi-image
       - get: bosh-cpi-src
         resource: bosh-cpi-src-in
       - get: ruby-release
@@ -439,6 +440,10 @@ jobs:
         GIT_USER_EMAIL: bots@cloudfoundry.org
         PACKAGE: ruby-3.2
         VENDOR: true
+    - task: run-unit-specs
+      tags: [ azure ]
+      file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
+      image: azure-cpi-image
     - put: bosh-cpi-src-out
       params:
         repository: bosh-cpi-src
@@ -447,6 +452,7 @@ jobs:
   - name: bump-bosh-packages
     plan:
     - in_parallel:
+      - get: azure-cpi-image
       - get: bosh-cpi-src
         resource: bosh-cpi-src-in
       - get: ruby-release
@@ -472,6 +478,10 @@ jobs:
               secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
               assume_role_arn: ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
         RUBY_VERSION_PATH: src/bosh_azure_cpi/.ruby-version
+    - task: run-unit-specs
+      tags: [ azure ]
+      file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
+      image: azure-cpi-image
     - put: bosh-cpi-src-out
       params:
         repository: bosh-cpi-src
