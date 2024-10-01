@@ -2,6 +2,7 @@
 
 require 'spec_helper'
 require 'json'
+require 'ostruct'
 
 describe 'cpi.json.erb' do
   let(:jobs_root) { File.join(File.dirname(__FILE__), '../../../../../../../../', 'jobs') }
