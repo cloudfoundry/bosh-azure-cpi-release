@@ -160,8 +160,8 @@ DEPENDENCIES
   jwt (~> 2.2, >= 2.2.2)
   net-smtp
   ostruct
-  rake (~> 12.0)
-  rspec (~> 3.13.0)
+  rake
+  rspec
   rspec-retry
   rubocop
   simplecov
