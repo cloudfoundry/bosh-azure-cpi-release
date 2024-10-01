@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class Cloud < Bosh::Cloud # rubocop:todo Metrics/ClassLength
+  class Cloud < Bosh::Cloud
     attr_reader   :config
     # Below defines are for test purpose
     attr_reader   :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper

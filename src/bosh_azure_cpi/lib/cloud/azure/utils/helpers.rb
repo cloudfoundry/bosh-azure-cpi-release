@@ -330,7 +330,7 @@ module Bosh::AzureCloud
     #   If the size is larger than 1,000 GiB, CPI uses 1,000 GiB because it is not expected to use such a large ephemeral disk in CF currently. You can find the temporary disk size in the comment if it is larger than 1,000 GiB
     # count: The maximum number of data disks for the instance type
     #   The maximum number of data disks on Azure for now is 64. Set it to 64 if instance_type cannot be found in case a new instance type is supported in future
-    class DiskInfo # rubocop:todo Metrics/ClassLength
+    class DiskInfo
       INSTANCE_TYPE_DISK_MAPPING = {
         # A-series
         'STANDARD_A0' => [30, 1], # 20 GiB
@@ -579,14 +579,14 @@ module Bosh::AzureCloud
       instance_type = instance_type.downcase
       # NOTE: The `Style/NumericPredicate` cop was reporting auto-correctable offenses for the lines below. But fixing the offenses caused failing specs, so the cop offenses have been disabled here.
       ((instance_type =~ /^standard_ds/) == 0) || # including DS and DSv2, e.g. Standard_DS1, Standard_DS1_v2 # rubocop:disable Style/NumericPredicate
-        ((instance_type =~ /^standard_d(\d)+s_v3/) == 0) || # rubocop:disable Style/NumericPredicate
-        ((instance_type =~ /^standard_gs/) == 0) || # rubocop:disable Style/NumericPredicate
-        ((instance_type =~ /^standard_b(\d)+s/) == 0) || # rubocop:disable Style/NumericPredicate
-        ((instance_type =~ /^standard_b(\d)+ms/) == 0) || # rubocop:disable Style/NumericPredicate
-        ((instance_type =~ /^standard_f(\d)+s/) == 0) || # rubocop:disable Style/NumericPredicate
-        ((instance_type =~ /^standard_e(\d)+s_v3/) == 0) || # rubocop:disable Style/NumericPredicate
-        ((instance_type =~ /^standard_e(\d)+is_v3/) == 0) || # rubocop:disable Style/NumericPredicate
-        ((instance_type =~ /^standard_l(\d)+s/) == 0) # rubocop:disable Style/NumericPredicate
+        ((instance_type =~ /^standard_d(\d)+s_v3/) == 0) ||
+        ((instance_type =~ /^standard_gs/) == 0) ||
+        ((instance_type =~ /^standard_b(\d)+s/) == 0) ||
+        ((instance_type =~ /^standard_b(\d)+ms/) == 0) ||
+        ((instance_type =~ /^standard_f(\d)+s/) == 0) ||
+        ((instance_type =~ /^standard_e(\d)+s_v3/) == 0) ||
+        ((instance_type =~ /^standard_e(\d)+is_v3/) == 0) ||
+        ((instance_type =~ /^standard_l(\d)+s/) == 0)
     end
 
     def is_stemcell_storage_account?(tags)

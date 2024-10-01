@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class StorageAccountManager # rubocop:todo Metrics/ClassLength
+  class StorageAccountManager
     include Helpers
 
     attr_reader :use_default_account_for_cleaning

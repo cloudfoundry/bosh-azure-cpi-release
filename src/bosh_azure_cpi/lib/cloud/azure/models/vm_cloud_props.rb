@@ -2,7 +2,7 @@
 
 module Bosh::AzureCloud
   # https://bosh.io/docs/azure-cpi/#resource-pools
-  class VMCloudProps # rubocop:todo Metrics/ClassLength
+  class VMCloudProps
     include Helpers
     attr_accessor :instance_type
     attr_reader :instance_types

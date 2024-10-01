@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Bosh::AzureCloud
-  class VMManager # rubocop:todo Metrics/ClassLength
+  class VMManager
     private
 
     def _get_network_subnet(network)
