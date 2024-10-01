@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -eu -o pipefail
+set -e -o pipefail
 
 RUBY_VERSION=$(cat bosh-cpi-src/src/bosh_azure_cpi/.ruby-version)
 source /etc/profile.d/chruby.sh
