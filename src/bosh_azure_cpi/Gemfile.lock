@@ -155,10 +155,10 @@ DEPENDENCIES
   azure-storage-table (~> 2.0, >= 2.0.4)
   bosh_common
   bosh_cpi
-  concurrent-ruby (~> 1.1, >= 1.1.8)
-  deep_merge (~> 1.2, >= 1.2.1)
+  concurrent-ruby
+  deep_merge
   fast_jsonparser (~> 0.6.0)
-  jwt (~> 2.2, >= 2.2.2)
+  jwt
   net-smtp
   ostruct
   rake
