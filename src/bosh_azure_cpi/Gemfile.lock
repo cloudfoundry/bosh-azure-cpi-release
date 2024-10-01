@@ -152,8 +152,8 @@ DEPENDENCIES
   azure-storage-blob (~> 2.0, >= 2.0.3)
   azure-storage-common (~> 2.0, >= 2.0.4)
   azure-storage-table (~> 2.0, >= 2.0.4)
-  bosh_common (= 2.0.0)
-  bosh_cpi (= 2.5.0)
+  bosh_common
+  bosh_cpi
   concurrent-ruby (~> 1.1, >= 1.1.8)
   deep_merge (~> 1.2, >= 1.2.1)
   fast_jsonparser (~> 0.6.0)
