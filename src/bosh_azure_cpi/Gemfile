@@ -8,15 +8,11 @@ gem 'azure-storage-table', '~> 2.0', '>= 2.0.4'
 gem 'bosh_common'
 gem 'bosh_cpi'
 gem 'concurrent-ruby'
+gem 'fast_jsonparser'
 gem 'jwt'
 gem 'deep_merge'
 gem 'net-smtp'
 gem 'ostruct'
-
-# fast_jsonparser has a GCC requirement that cannot be guaranteed by all VMs the CPI might run on.
-install_if(-> { (`uname`.include?('Linux') && !(`lsb_release -sr`.include?('16.04') if system('which lsb_release > /dev/null 2>&1'))) || `gcc -dumpversion`.to_i > 6 }) do
-  gem 'fast_jsonparser', '~> 0.6.0'
-end
 
 group :development, :test do
   gem 'rake'
