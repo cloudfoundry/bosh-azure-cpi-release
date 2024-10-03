@@ -18,14 +18,15 @@ Please check each of the boxes below for which you have completed the correspond
 - [ ] I have commented my code, particularly in hard-to-understand areas
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] All unit tests pass locally (after my changes)
-- [ ] Rubocop reports zero offenses (after my changes)
+- [ ] Rubocop reports zero errors (after my changes)
 
 Please include below the summary portions of the output from the following 2 scripts:
 
   ```
   pushd src/bosh_azure_cpi
-    ./bin/test-unit
-    ./bin/rubocop_check
+    bundle install
+    bundle exec rake spec:unit
+    bundle exec rake rubocop
   popd
   ```
 

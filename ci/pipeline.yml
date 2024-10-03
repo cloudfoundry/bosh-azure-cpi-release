@@ -163,7 +163,10 @@ jobs:
       - in_parallel:
         - {trigger: true, get: bosh-cpi-src, resource: bosh-cpi-src-in}
         - {trigger: false, get: version-semver, params: {bump: patch}}
-        - {trigger: false, get: bosh-cli}
+        - get: bosh-cli
+          params:
+            globs:
+            - 'bosh-cli-*-linux-amd64'
       - put: version-semver
         params: {file: version-semver/number}
       - task: build
@@ -271,7 +274,10 @@ jobs:
         - {get: stemcell,        trigger: true, resource: azure-ubuntu-stemcell, tags: [azure]}
         - {get: bosh-deployment, trigger: false}
         - {get: pipelines,       trigger: false}
-        - {get: bosh-cli,        trigger: false}
+        - get: bosh-cli
+          params:
+            globs:
+            - 'bosh-cli-*-linux-amd64'
         - {get: bats,            trigger: false}
         - {get: azure-cpi-image, trigger: false}
       - <<: *create-bats-environment
@@ -307,7 +313,10 @@ jobs:
         - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
         - {get: bosh-deployment, trigger: false}
         - {get: pipelines,       trigger: false}
-        - {get: bosh-cli,        trigger: false}
+        - get: bosh-cli
+          params:
+            globs:
+            - 'bosh-cli-*-linux-amd64'
         - {get: bats,            trigger: false}
         - {get: azure-cpi-image, trigger: false}
       - <<: *create-az-bats-environment
@@ -340,7 +349,10 @@ jobs:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: major}}
-        - {trigger: false, get: bosh-cli}
+        - get: bosh-cli
+          params:
+            globs:
+            - 'bosh-cli-*-linux-amd64'
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
@@ -359,7 +371,10 @@ jobs:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: minor}}
-        - {trigger: false, get: bosh-cli}
+        - get: bosh-cli
+          params:
+            globs:
+            - 'bosh-cli-*-linux-amd64'
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
@@ -378,7 +393,10 @@ jobs:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: patch}}
-        - {trigger: false, get: bosh-cli}
+        - get: bosh-cli
+          params:
+            globs:
+            - 'bosh-cli-*-linux-amd64'
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
@@ -420,6 +438,7 @@ jobs:
   - name: bump-deps
     plan:
     - in_parallel:
+      - get: azure-cpi-image
       - get: bosh-cpi-src
         resource: bosh-cpi-src-in
       - get: ruby-release
@@ -439,6 +458,10 @@ jobs:
         GIT_USER_EMAIL: bots@cloudfoundry.org
         PACKAGE: ruby-3.2
         VENDOR: true
+    - task: run-unit-specs
+      tags: [ azure ]
+      file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
+      image: azure-cpi-image
     - put: bosh-cpi-src-out
       params:
         repository: bosh-cpi-src
@@ -447,6 +470,7 @@ jobs:
   - name: bump-bosh-packages
     plan:
     - in_parallel:
+      - get: azure-cpi-image
       - get: bosh-cpi-src
         resource: bosh-cpi-src-in
       - get: ruby-release
@@ -472,6 +496,10 @@ jobs:
               secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
               assume_role_arn: ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
         RUBY_VERSION_PATH: src/bosh_azure_cpi/.ruby-version
+    - task: run-unit-specs
+      tags: [ azure ]
+      file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
+      image: azure-cpi-image
     - put: bosh-cpi-src-out
       params:
         repository: bosh-cpi-src
@@ -562,11 +590,11 @@ resources:
         azure_tenant_id:       ((cpi_azure_credentials_json.tenant_id))
         resource_group_prefix: azurecpi
   - name: bosh-cli
-    type: s3
     source:
-      regexp: bosh-cli-([0-9.]+)-linux-amd64
-      bucket: bosh-cli-artifacts
-      region_name: us-east-1
+      access_token: ((github_public_repo_token))
+      owner: cloudfoundry
+      repository: bosh-cli
+    type: github-release
   - name: pipelines
     type: git
     source:
