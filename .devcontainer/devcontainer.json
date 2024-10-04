@@ -1,0 +1,21 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"rebornix.ruby",
+				"wingrunr21.vscode-ruby"
+			]
+		}
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/azure-cli:1": {
+			"version": "latest"
+		}
+    },
+	"remoteUser": "vscode",
+	"postAttachCommand": [".devcontainer/install.sh"]
+}
