@@ -9,7 +9,6 @@ inputs:
   - name: environment
   - name: bats
   - name: director-state
-  - name: bosh-cli
   - name: stemcell
   - name: bosh-cpi-src
 

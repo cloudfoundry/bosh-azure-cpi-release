@@ -49,7 +49,7 @@ shared:
   - &prepare-director
     task: prepare-director
     file: pipelines/shared/tasks/prepare-director.yml
-    image: azure-cpi-image
+    image: bosh-integration-registry-image
     params: &prepare-director-params
       INFRASTRUCTURE:     azure
       DIRECTOR_VARS_FILE:  |
@@ -72,7 +72,7 @@ shared:
     task: deploy-director
     tags: [azure]
     file: pipelines/shared/tasks/deploy-director.yml
-    image: azure-cpi-image
+    image: bosh-integration-registry-image
     params:
       RUBY_VERSION: ((.:ruby_version))
 
@@ -81,7 +81,7 @@ shared:
     task: run-bats
     tags: [azure]
     file: pipelines/shared/tasks/run-bats.yml
-    image: azure-cpi-image
+    image: bosh-integration-registry-image
     params: &run-bats-params
       INFRASTRUCTURE:                     azure
       STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
@@ -103,7 +103,7 @@ shared:
   - &teardown
     task: teardown
     tags: [azure]
-    image: azure-cpi-image
+    image: bosh-integration-registry-image
     file: pipelines/shared/tasks/teardown.yml
     params:
       RUBY_VERSION: ((.:ruby_version))
@@ -163,10 +163,6 @@ jobs:
       - in_parallel:
         - {trigger: true, get: bosh-cpi-src, resource: bosh-cpi-src-in}
         - {trigger: false, get: version-semver, params: {bump: patch}}
-        - get: bosh-cli
-          params:
-            globs:
-            - 'bosh-cli-*-linux-amd64'
       - put: version-semver
         params: {file: version-semver/number}
       - task: build
@@ -268,18 +264,24 @@ jobs:
     serial: true
     plan:
       - in_parallel:
-        - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
-        - {get: bosh-release,    trigger: false, resource: bosh-release}
-        - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-        - {get: stemcell,        trigger: true, resource: azure-ubuntu-stemcell, tags: [azure]}
-        - {get: bosh-deployment, trigger: false}
-        - {get: pipelines,       trigger: false}
-        - get: bosh-cli
-          params:
-            globs:
-            - 'bosh-cli-*-linux-amd64'
-        - {get: bats,            trigger: false}
-        - {get: azure-cpi-image, trigger: false}
+        - get: cpi-release
+          trigger: true
+          resource: bosh-cpi-dev-artifacts
+          passed: [build-candidate]
+        - get: bosh-release
+          resource: bosh-release
+        - get: bosh-cpi-src
+          resource: bosh-cpi-src-in
+          passed: [build-candidate]
+        - get: stemcell
+          trigger: true
+          resource: azure-ubuntu-stemcell
+          tags: [azure]
+        - get: bosh-deployment
+        - get: pipelines
+        - get: bats
+        - get: azure-cpi-image
+        - get: bosh-integration-registry-image
       - <<: *create-bats-environment
       - do:
         - <<: *prepare-director
@@ -307,18 +309,23 @@ jobs:
     serial: true
     plan:
       - in_parallel:
-        - {get: cpi-release,     trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
-        - {get: bosh-release,    trigger: false, resource: bosh-release}
-        - {get: bosh-cpi-src,    trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
-        - {get: stemcell,        trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
-        - {get: bosh-deployment, trigger: false}
-        - {get: pipelines,       trigger: false}
-        - get: bosh-cli
-          params:
-            globs:
-            - 'bosh-cli-*-linux-amd64'
-        - {get: bats,            trigger: false}
-        - {get: azure-cpi-image, trigger: false}
+        - get: cpi-release
+          trigger: true
+          resource: bosh-cpi-dev-artifacts
+          passed: [build-candidate]
+        - get: bosh-release
+          resource: bosh-release
+        - get: bosh-cpi-src
+          resource: bosh-cpi-src-in
+          passed: [build-candidate]
+        - get: stemcell
+          resource: azure-ubuntu-stemcell
+          tags: [azure]
+        - get: bosh-deployment
+        - get: pipelines
+        - get: bats
+        - get: azure-cpi-image
+        - get: bosh-integration-registry-image
       - <<: *create-az-bats-environment
       - do:
         - <<: *prepare-director
@@ -349,10 +356,6 @@ jobs:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: major}}
-        - get: bosh-cli
-          params:
-            globs:
-            - 'bosh-cli-*-linux-amd64'
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
@@ -371,10 +374,6 @@ jobs:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: minor}}
-        - get: bosh-cli
-          params:
-            globs:
-            - 'bosh-cli-*-linux-amd64'
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
@@ -393,10 +392,6 @@ jobs:
         - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
         - {trigger: false, get: release-version-semver, params: {bump: patch}}
-        - get: bosh-cli
-          params:
-            globs:
-            - 'bosh-cli-*-linux-amd64'
       - task: promote
         file: bosh-cpi-src/ci/tasks/promote-candidate.yml
         params:
@@ -524,6 +519,13 @@ resources:
       username: ((docker.username))
       password: ((docker.password))
 
+  - name: bosh-integration-registry-image
+    type: registry-image
+    source:
+      repository: bosh/integration
+      username: ((docker.username))
+      password: ((docker.password))
+
   - name: bosh-cpi-dev-artifacts
     type: s3
     source:
@@ -589,12 +591,6 @@ resources:
         azure_client_secret:   ((cpi_azure_credentials_json.client_secret))
         azure_tenant_id:       ((cpi_azure_credentials_json.tenant_id))
         resource_group_prefix: azurecpi
-  - name: bosh-cli
-    source:
-      access_token: ((github_public_repo_token))
-      owner: cloudfoundry
-      repository: bosh-cli
-    type: github-release
   - name: pipelines
     type: git
     source:

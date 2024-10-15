@@ -1,6 +1,5 @@
 FROM ubuntu:jammy
 
-ENV bosh_cli_version 7.0.1
 ENV DEBIAN_FRONTEND noninteractive
 
 RUN apt-get -y update && apt-get install -y locales && locale-gen en_US.UTF-8
@@ -55,10 +54,3 @@ RUN /bin/bash -l -c "                   \
   chruby ${RUBY_VERSION} ;              \
   gem install bundler --no-document \
 "
-
-#BOSH CLI
-RUN \
-  wget --quiet https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-${bosh_cli_version}-linux-amd64 --output-document="/usr/bin/bosh" && \
-  chmod +x /usr/bin/bosh && \
-  cp /usr/bin/bosh /usr/local/bin/bosh-go && \
-  chmod +x /usr/local/bin/bosh-go
