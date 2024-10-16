@@ -402,32 +402,6 @@ jobs:
       - put: release-version-semver
         params: {file: release-version-semver/number}
 
-  - name: build-docker-image
-    plan:
-      - get: bosh-azure-cpi-release
-        resource: bosh-azure-cpi-release-dockerfile-src
-        trigger: true
-      - task: extract-ruby-version-from-release
-        config:
-          platform: linux
-          image_resource:
-            type: registry-image
-            source: { repository: busybox }
-          run:
-            path: sh
-            args:
-              - -exc
-              - |
-                  echo "{\"RUBY_VERSION\": \"$(cat bosh-azure-cpi-release/src/bosh_azure_cpi/.ruby-version)\"}" > build-args/args.json
-          inputs:
-            - name: bosh-azure-cpi-release
-          outputs:
-            - name: build-args
-      - put: azure-cpi-docker-image
-        params:
-          build: bosh-azure-cpi-release/ci/docker/boshcpi.azure-cpi-release/
-          build_args_file: build-args/args.json
-
   - name: bump-deps
     plan:
     - in_parallel:
@@ -539,13 +513,6 @@ resources:
       uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
       branch: master
       private_key: ((github_deploy_key_bosh-azure-cpi-release.private_key))
-  - name: bosh-azure-cpi-release-dockerfile-src
-    type: git
-    source:
-      uri: https://github.com/cloudfoundry/bosh-azure-cpi-release.git
-      paths:
-        - ci/docker/boshcpi.azure-cpi-release/Dockerfile
-        - src/bosh_azure_cpi/.ruby-version
   - name: version-semver
     type: semver
     source:
@@ -608,12 +575,6 @@ resources:
     source:
       uri: https://github.com/cloudfoundry/bosh-deployment
       branch: master
-  - name: azure-cpi-docker-image
-    type: docker-image
-    source:
-      repository: boshcpi/azure-cpi-release
-      username: ((docker.username))
-      password: ((docker.password))
   - name: bosh-ruby-release-registry-image
     type: registry-image
     source:
