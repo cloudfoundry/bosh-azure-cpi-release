@@ -7,8 +7,6 @@ set -e -x
 : ${S3_ROLE_ARN:?}
 
 source bosh-cpi-src/ci/utils.sh
-source /etc/profile.d/chruby.sh
-chruby ${RUBY_VERSION}
 
 # Version info
 semver_version=`cat release-version-semver/number`

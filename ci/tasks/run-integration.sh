@@ -40,8 +40,6 @@ export BOSH_AZURE_SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
 export BOSH_AZURE_STEMCELL_PATH=$(realpath stemcell/*.tgz)
 
 source stemcell-state/stemcell.env
-source /etc/profile.d/chruby.sh
-chruby ${RUBY_VERSION}
 
 pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   bundle install

@@ -3,8 +3,6 @@
 set -e
 
 source bosh-cpi-src/ci/utils.sh
-source /etc/profile.d/chruby.sh
-chruby ${RUBY_VERSION}
 
 semver=`cat version-semver/number`
 

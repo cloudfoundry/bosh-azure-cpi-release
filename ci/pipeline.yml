@@ -280,7 +280,6 @@ jobs:
         - get: bosh-deployment
         - get: pipelines
         - get: bats
-        - get: azure-cpi-image
         - get: bosh-integration-registry-image
       - <<: *create-bats-environment
       - do:
@@ -324,7 +323,6 @@ jobs:
         - get: bosh-deployment
         - get: pipelines
         - get: bats
-        - get: azure-cpi-image
         - get: bosh-integration-registry-image
       - <<: *create-az-bats-environment
       - do:
@@ -433,7 +431,6 @@ jobs:
   - name: bump-deps
     plan:
     - in_parallel:
-      - get: azure-cpi-image
       - get: bosh-cpi-src
         resource: bosh-cpi-src-in
       - get: ruby-release
@@ -451,12 +448,12 @@ jobs:
         GEM_DIRS: src/bosh_azure_cpi
         GIT_USER_NAME: CI Bot
         GIT_USER_EMAIL: bots@cloudfoundry.org
-        PACKAGE: ruby-3.2
+        PACKAGE: ruby-3.3
         VENDOR: true
     - task: run-unit-specs
       tags: [ azure ]
       file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
-      image: azure-cpi-image
+      image: bosh-integration-registry-image
     - put: bosh-cpi-src-out
       params:
         repository: bosh-cpi-src
@@ -465,12 +462,12 @@ jobs:
   - name: bump-bosh-packages
     plan:
     - in_parallel:
-      - get: azure-cpi-image
       - get: bosh-cpi-src
         resource: bosh-cpi-src-in
       - get: ruby-release
         trigger: true
       - get: bosh-ecosystem-concourse-image
+      - get: bosh-integration-registry-image
     - task: bump-ruby-package
       image: bosh-ecosystem-concourse-image
       file: ruby-release/ci/tasks/shared/bump-ruby-package.yml
@@ -481,7 +478,7 @@ jobs:
       params:
         GIT_USER_NAME: CI Bot
         GIT_USER_EMAIL: cf-bosh-eng@pivotal.io
-        PACKAGE: ruby-3.2
+        PACKAGE: ruby-3.3
         PACKAGE_PREFIX: azure-cpi
         PRIVATE_YML: |
           blobstore:
@@ -494,7 +491,7 @@ jobs:
     - task: run-unit-specs
       tags: [ azure ]
       file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
-      image: azure-cpi-image
+      image: bosh-integration-registry-image
     - put: bosh-cpi-src-out
       params:
         repository: bosh-cpi-src
@@ -512,13 +509,6 @@ resource_types:
       repository: concourse/semver-resource
       tag: 1.6
 resources:
-  - name: azure-cpi-image
-    type: docker-image
-    source:
-      repository: boshcpi/azure-cpi-release
-      username: ((docker.username))
-      password: ((docker.password))
-
   - name: bosh-integration-registry-image
     type: registry-image
     source:
