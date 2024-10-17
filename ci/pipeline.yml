@@ -70,9 +70,6 @@ shared:
     tags: [azure]
     file: pipelines/shared/tasks/deploy-director.yml
     image: bosh-integration-registry-image
-    params:
-      RUBY_VERSION: ((.:ruby_version))
-
 
   - &run-bats
     task: run-bats
@@ -102,9 +99,6 @@ shared:
     tags: [azure]
     image: bosh-integration-registry-image
     file: pipelines/shared/tasks/teardown.yml
-    params:
-      RUBY_VERSION: ((.:ruby_version))
-
 
   - &create-integration-environment
     put: environment
