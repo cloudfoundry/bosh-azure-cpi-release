@@ -409,6 +409,7 @@ jobs:
         resource: bosh-cpi-src-in
       - get: ruby-release
       - get: bosh-ruby-release-registry-image
+      - get: bosh-integration-registry-image
       - get: weekly
         trigger: true
     - task: bump-gems
