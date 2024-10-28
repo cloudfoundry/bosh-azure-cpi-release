@@ -6,9 +6,6 @@ $LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 require 'yaml'
 require 'ostruct'
 require 'bosh/cpi'
-require 'bundler'
-
-Bundler.setup(:default)
 require 'cloud/azure'
 
 cpi_config = YAML.load_file(ARGV.shift)
