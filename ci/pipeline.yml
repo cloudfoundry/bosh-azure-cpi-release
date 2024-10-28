@@ -157,11 +157,23 @@ shared:
       <<: *azure-environment-params
 
 jobs:
+  - name: unit-specs
+    plan:
+    - in_parallel:
+      - get: bosh-cpi-src
+        resource: bosh-cpi-src-in
+        trigger: true
+      - get: bosh-integration-registry-image
+    - task: run-unit-specs
+      tags: [ azure ]
+      file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
+      image: bosh-integration-registry-image
+
   - name: build-candidate
     serial: true
     plan:
       - in_parallel:
-        - {trigger: true, get: bosh-cpi-src, resource: bosh-cpi-src-in}
+        - {trigger: true, get: bosh-cpi-src, resource: bosh-cpi-src-in, passed: [unit-specs]}
         - {trigger: false, get: version-semver, params: {bump: patch}}
       - put: version-semver
         params: {file: version-semver/number}
