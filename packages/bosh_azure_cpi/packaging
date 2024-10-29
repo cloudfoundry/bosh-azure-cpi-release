@@ -8,13 +8,9 @@ source "${BOSH_PACKAGES_DIR}/azure-cpi-ruby-3.3/bosh/compile.env"
 
 cp -a bosh_azure_cpi/* "${BOSH_INSTALL_TARGET}"
 
+
 cd "${BOSH_INSTALL_TARGET}"
 
-
-export BUNDLER_VERSION="$(bundle -v | grep -o -e '[0-9.]*')"
-bundle config set --local deployment 'true'
-bundle config set --local no_prune 'true'
-bundle config set --local without 'development test'
 bundle config set --local cache_path 'vendor/package'
 
-bundle install
+bosh_bundle_local
