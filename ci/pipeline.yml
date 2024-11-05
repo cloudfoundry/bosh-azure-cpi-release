@@ -271,7 +271,7 @@ jobs:
         - get: bats
         - get: bosh-integration-registry-image
       - task: build-candidate
-        file: bosh-cpi-src/ci/task/build-candidate.yml
+        file: bosh-cpi-src/ci/tasks/build-candidate.yml
       - <<: *create-bats-environment
       - do:
         - <<: *prepare-director
@@ -312,7 +312,7 @@ jobs:
         - get: bats
         - get: bosh-integration-registry-image
       - task: build-candidate
-        file: bosh-cpi-src/ci/task/build-candidate.yml
+        file: bosh-cpi-src/ci/tasks/build-candidate.yml
       - <<: *create-az-bats-environment
       - do:
         - <<: *prepare-director
