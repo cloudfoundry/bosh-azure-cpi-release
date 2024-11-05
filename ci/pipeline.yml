@@ -526,22 +526,20 @@ resources:
   - name: release-version-semver
     type: semver
     source:
-      key:               release-current-version
-      bucket:            azure-pipeline-bucket
-      access_key_id:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
-      secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-      assume_role_arn:   ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
+      driver: git
+      branch: release-semver
+      file: VERSION
+      uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
+      private_key: ((github_deploy_key_bosh-azure-cpi-release.private_key))
+      initial_version: '50.0.0'
   - name: environment
     type: terraform_type
     source:
-      backend_type: s3
+      backend_type: gcs
       backend_config:
-        access_key:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
-        secret_key:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-        role_arn:       ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
-        bucket:         azure-pipeline-bucket
-        region: us-east-1
-        key:            terraform-state/terraform.tfstate
+        bucket: bosh-azure-cpi-blobs
+        prefix: terraform
+        credentials: ((cloud-foundry-gcp-credentials))
       vars:
         location:              eastus2
         azure_environment:     AzureCloud
