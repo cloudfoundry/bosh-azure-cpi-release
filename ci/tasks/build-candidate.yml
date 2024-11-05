@@ -6,10 +6,9 @@ image_resource:
 
 inputs:
   - name: bosh-cpi-src
-  - name: version-semver
 
 outputs:
-  - name: candidate
+  - name: cpi-release
 
 run:
   path: bosh-cpi-src/ci/tasks/build-candidate.sh

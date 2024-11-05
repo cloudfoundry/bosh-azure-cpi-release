@@ -59,12 +59,9 @@ shared:
         client_secret: ((cpi_azure_credentials_json.client_secret))
         dns_recursor_ip: 8.8.8.8
 
-  - &prepare-to-load-ruby-version-using-load_var
-    get: bosh-cpi-src-in
-
   - &load-current-ruby-version-using-load_var
     load_var: ruby_version
-    file: "bosh-cpi-src-in/src/bosh_azure_cpi/.ruby-version"
+    file: "bosh-cpi-src/src/bosh_azure_cpi/.ruby-version"
     format: raw
     reveal: true
 
@@ -169,25 +166,11 @@ jobs:
       file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
       image: bosh-integration-registry-image
 
-  - name: build-candidate
-    serial: true
-    plan:
-      - in_parallel:
-        - {trigger: true, get: bosh-cpi-src, resource: bosh-cpi-src-in, passed: [unit-specs]}
-        - {trigger: false, get: version-semver, params: {bump: patch}}
-      - put: version-semver
-        params: {file: version-semver/number}
-      - task: build
-        file: bosh-cpi-src/ci/tasks/build-candidate.yml
-      - put: bosh-cpi-dev-artifacts
-        params: {file: candidate/*.tgz}
-
   - name: integration-unmanaged-disks
     serial: true
     plan:
       - in_parallel:
-        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
-        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
       - <<: *create-integration-environment
       - do:
@@ -207,8 +190,7 @@ jobs:
     serial: true
     plan:
       - in_parallel:
-        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
-        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
         - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
       - <<: *create-integration-environment
       - do:
@@ -228,8 +210,7 @@ jobs:
     serial: true
     plan:
       - in_parallel:
-        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
-        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell, tags: [azure]}
       - <<: *create-integration-environment
       - do:
@@ -252,8 +233,7 @@ jobs:
     serial: true
     plan:
       - in_parallel:
-        - {get: bosh-cpi-release, trigger: true,  resource: bosh-cpi-dev-artifacts, passed: [build-candidate]}
-        - {get: bosh-cpi-src,     trigger: false, resource: bosh-cpi-src-in,        passed: [build-candidate]}
+        - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
         - {get: stemcell,         trigger: false, resource: azure-windows-stemcell, tags: [azure]}
       - <<: *create-integration-environment
       - do:
@@ -276,15 +256,12 @@ jobs:
     serial: true
     plan:
       - in_parallel:
-        - get: cpi-release
-          trigger: true
-          resource: bosh-cpi-dev-artifacts
-          passed: [build-candidate]
         - get: bosh-release
           resource: bosh-release
         - get: bosh-cpi-src
           resource: bosh-cpi-src-in
-          passed: [build-candidate]
+          passed: [unit-specs]
+          trigger: true
         - get: stemcell
           trigger: true
           resource: azure-ubuntu-stemcell
@@ -293,6 +270,8 @@ jobs:
         - get: pipelines
         - get: bats
         - get: bosh-integration-registry-image
+      - task: build-candidate
+        file: bosh-cpi-src/ci/task/build-candidate.yml
       - <<: *create-bats-environment
       - do:
         - <<: *prepare-director
@@ -302,7 +281,6 @@ jobs:
               -o pipelines/shared/assets/ops/remove-hm.yml
               -o bosh-deployment/external-ip-not-recommended.yml
         - do:
-          - <<: *prepare-to-load-ruby-version-using-load_var
           - <<: *load-current-ruby-version-using-load_var
           - <<: *deploy-director
           - <<: *run-bats
@@ -320,15 +298,12 @@ jobs:
     serial: true
     plan:
       - in_parallel:
-        - get: cpi-release
-          trigger: true
-          resource: bosh-cpi-dev-artifacts
-          passed: [build-candidate]
         - get: bosh-release
           resource: bosh-release
         - get: bosh-cpi-src
           resource: bosh-cpi-src-in
-          passed: [build-candidate]
+          passed: [unit-specs]
+          trigger: true
         - get: stemcell
           resource: azure-ubuntu-stemcell
           tags: [azure]
@@ -336,6 +311,8 @@ jobs:
         - get: pipelines
         - get: bats
         - get: bosh-integration-registry-image
+      - task: build-candidate
+        file: bosh-cpi-src/ci/task/build-candidate.yml
       - <<: *create-az-bats-environment
       - do:
         - <<: *prepare-director
@@ -346,7 +323,6 @@ jobs:
               -o bosh-deployment/external-ip-not-recommended.yml
               -o bosh-deployment/azure/use-managed-disks.yml
         - do:
-          - <<: *prepare-to-load-ruby-version-using-load_var
           - <<: *load-current-ruby-version-using-load_var
           - <<: *deploy-director
           - <<: *run-az-bats
@@ -363,56 +339,80 @@ jobs:
   - name: promote-candidate-major
     plan:
       - in_parallel:
-        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: release-version-semver, params: {bump: major}}
+        - {trigger: false, get: bosh-shared-ci}
       - task: promote
-        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
+        file: bosh-shared-ci/tasks/release/create-final-release.yml
+        input_mapping:
+          release_repo: bosh-cpi-src
+          version: release-version-semver
         params:
-          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
-          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-          S3_ROLE_ARN:          ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
-      - put: bosh-cpi-src
-        resource: bosh-cpi-src-out
-        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
+          GIT_USER_NAME: CI Bot
+          GIT_USER_EMAIL: bots@cloudfoundry.org
+          PRIVATE_YML: |
+            ---
+            blobstore:
+              provider: gcs
+              options:
+                credentials_source: static
+                json_key: '((cloud-foundry-gcp-credentials))'
+      - put: bosh-cpi-src-out
+        params: {repository: release_repo, rebase: true, tag: release_metadata/tag-name}
       - put: release-version-semver
-        params: {file: release-version-semver/number}
+        params: {file: release-version-semver/version}
 
   - name: promote-candidate-minor
     plan:
       - in_parallel:
-        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: release-version-semver, params: {bump: minor}}
+        - {trigger: false, get: bosh-shared-ci}
       - task: promote
-        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
+        file: bosh-shared-ci/tasks/release/create-final-release.yml
+        input_mapping:
+          release_repo: bosh-cpi-src
+          version: release-version-semver
         params:
-          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
-          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-          S3_ROLE_ARN:          ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
-      - put: bosh-cpi-src
-        resource: bosh-cpi-src-out
-        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
+          GIT_USER_NAME: CI Bot
+          GIT_USER_EMAIL: bots@cloudfoundry.org
+          PRIVATE_YML: |
+            ---
+            blobstore:
+              provider: gcs
+              options:
+                credentials_source: static
+                json_key: '((cloud-foundry-gcp-credentials))'
+      - put: bosh-cpi-src-out
+        params: {repository: release_repo, rebase: true, tag: release_metadata/tag-name}
       - put: release-version-semver
-        params: {file: release-version-semver/number}
+        params: {file: release-version-semver/version}
 
   - name: promote-candidate-patch
     plan:
       - in_parallel:
-        - {trigger: false, get: bosh-cpi-release, resource: bosh-cpi-dev-artifacts, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-out}
+        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
         - {trigger: false, get: release-version-semver, params: {bump: patch}}
+        - {trigger: false, get: bosh-shared-ci}
       - task: promote
-        file: bosh-cpi-src/ci/tasks/promote-candidate.yml
+        file: bosh-shared-ci/tasks/release/create-final-release.yml
+        input_mapping:
+          release_repo: bosh-cpi-src
+          version: release-version-semver
         params:
-          S3_ACCESS_KEY_ID:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
-          S3_SECRET_ACCESS_KEY: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-          S3_ROLE_ARN:          ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
-      - put: bosh-cpi-src
-        resource: bosh-cpi-src-out
-        params: {repository: promoted/repo, rebase: true, tag_prefix: "v", tag: promoted/semver_version}
+          GIT_USER_NAME: CI Bot
+          GIT_USER_EMAIL: bots@cloudfoundry.org
+          PRIVATE_YML: |
+            ---
+            blobstore:
+              provider: gcs
+              options:
+                credentials_source: static
+                json_key: '((cloud-foundry-gcp-credentials))'
+      - put: bosh-cpi-src-out
+        params: {repository: release_repo, rebase: true, tag: release_metadata/tag-name}
       - put: release-version-semver
-        params: {file: release-version-semver/number}
+        params: {file: release-version-semver/version}
 
   - name: bump-deps
     plan:
@@ -468,12 +468,12 @@ jobs:
         PACKAGE: ruby-3.3
         PACKAGE_PREFIX: azure-cpi
         PRIVATE_YML: |
+          ---
           blobstore:
-            provider: s3
+            provider: gcs
             options:
-              access_key_id:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
-              secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-              assume_role_arn: ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
+              credentials_source: static
+              json_key: '((cloud-foundry-gcp-credentials))'
         RUBY_VERSION_PATH: src/bosh_azure_cpi/.ruby-version
     - task: run-unit-specs
       tags: [ azure ]
@@ -496,6 +496,12 @@ resource_types:
       repository: concourse/semver-resource
       tag: 1.6
 resources:
+  - name: bosh-shared-ci
+    type: git
+    source:
+      uri: git@github.com:cloudfoundry/bosh-shared-ci.git
+      private_key: ((github_deploy_key_bosh-shared-ci.private_key))
+
   - name: bosh-integration-registry-image
     type: registry-image
     source:
@@ -503,15 +509,6 @@ resources:
       username: ((docker.username))
       password: ((docker.password))
 
-  - name: bosh-cpi-dev-artifacts
-    type: s3
-    source:
-      regexp: bosh-azure-cpi-(\d+\.\d+\.\d+)\.tgz
-      bucket: azure-pipeline-bucket
-      region_name: us-east-1
-      access_key_id: ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
-      secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-      aws_role_arn: ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
   - name: bosh-cpi-src-in
     type: git
     source:
@@ -526,14 +523,6 @@ resources:
       uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
       branch: master
       private_key: ((github_deploy_key_bosh-azure-cpi-release.private_key))
-  - name: version-semver
-    type: semver
-    source:
-      key:               current-version # dev-release version
-      bucket:            azure-pipeline-bucket
-      access_key_id:     ((bosh-azure-cpi-uploaded_assume_aws_access_key.username))
-      secret_access_key: ((bosh-azure-cpi-uploaded_assume_aws_access_key.password))
-      assume_role_arn:   ((bosh-azure-cpi-uploaded_assume_aws_access_key.role_arn))
   - name: release-version-semver
     type: semver
     source:
