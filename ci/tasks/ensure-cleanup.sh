@@ -22,9 +22,9 @@ fi
 
 metadata=$(cat ${METADATA_FILE})
 
-integration_additional_resource_group_name=$(echo ${metadata} | jq -e --raw-output ".additional_resource_group_name")
-integration_default_resource_group_name=$(echo ${metadata} | jq -e --raw-output ".default_resource_group_name")
-bats_resource_group_name=$(echo ${metadata} | jq -e --raw-output ".resource_group_name")
+integration_additional_resource_group_name=$(echo ${metadata} | jq --raw-output ".additional_resource_group_name // empty")
+integration_default_resource_group_name=$(echo ${metadata} | jq --raw-output ".default_resource_group_name // empty")
+bats_resource_group_name=$(echo ${metadata} | jq --raw-output ".resource_group_name // empty")
 resource_group_names="${integration_additional_resource_group_name} ${integration_default_resource_group_name} ${bats_resource_group_name}"
 for resource_group_name  in ${resource_group_names}
 do
