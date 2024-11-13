@@ -149,7 +149,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
 
     context 'if everything is is ok' do
       it 'should collect events' do
-        expect(FastJsonparser).to receive(:load).and_call_original.twice
+        expect(JSON).to receive(:parse).and_call_original.twice
         expect(Bosh::AzureCloud::TelemetryEvent).to receive(:parse_hash).and_call_original.twice
         expect(File).to receive(:delete).and_call_original.twice
         expect do
@@ -162,7 +162,7 @@ describe Bosh::AzureCloud::TelemetryEventHandler do
       let(:event_number) { 1 }
 
       it 'should raise the error' do
-        expect(FastJsonparser).to receive(:load).and_raise 'unknown error'
+        expect(JSON).to receive(:parse).and_raise 'unknown error'
         expect(Bosh::AzureCloud::TelemetryEvent).not_to receive(:parse_hash)
         expect(File).to receive(:delete).and_call_original
         expect(logger).to receive(:warn).with(/unknown error/)

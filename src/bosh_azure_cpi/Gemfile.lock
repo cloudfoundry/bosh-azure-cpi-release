@@ -58,7 +58,6 @@ GEM
     faraday-retry (1.0.3)
     faraday_middleware (1.2.1)
       faraday (~> 1.0)
-    fast_jsonparser (0.6.0)
     hashdiff (1.1.1)
     httpclient (2.8.3)
     json (2.8.1)
@@ -157,7 +156,6 @@ DEPENDENCIES
   bosh_cpi
   concurrent-ruby
   deep_merge
-  fast_jsonparser
   jwt
   net-smtp
   ostruct

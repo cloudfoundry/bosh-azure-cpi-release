@@ -54,7 +54,7 @@ module Bosh::AzureCloud
       metadata = @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
       return nil if metadata.nil?
 
-      metadata['image'] = FastJsonparser.parse(metadata['image'], symbolize_keys: false)
+      metadata['image'] = JSON.parse(metadata['image'], symbolize_keys: false)
       metadata
     end
 
