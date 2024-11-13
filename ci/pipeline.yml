@@ -358,7 +358,7 @@ jobs:
           - get: daily
             trigger: true
       - task: cleanup-leftover-environments
-        file: bosh-azure-cpi-release/tasks/cleanup-leftover-environments.yml
+        file: bosh-azure-cpi-release/ci/tasks/cleanup-leftover-environments.yml
         image: bosh-integration-registry-image
 
   - name: promote-candidate-major
