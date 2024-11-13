@@ -1,0 +1,17 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source: {repository: bosh/integration}
+
+inputs:
+  - name: bosh-azure-cpi-release
+
+run:
+  path: bosh-azure-cpi-release/ci/tasks/cleanup-leftover-environments.sh
+
+params:
+  BBL_AZURE_CLIENT_ID: ((cpi_azure_credentials_json.client_id))
+  BBL_AZURE_CLIENT_SECRET: ((cpi_azure_credentials_json.client_secret))
+  BBL_AZURE_TENANT_ID: ((cpi_azure_credentials_json.tenant_id))
+  BBL_AZURE_SUBSCRIPTION_ID: ((cpi_azure_credentials_json.subscription_id))
