@@ -168,6 +168,7 @@ jobs:
 
   - name: integration-unmanaged-disks
     serial: true
+    serial_groups: [integration-unmanaged-disks]
     plan:
       - in_parallel:
         - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
@@ -188,6 +189,7 @@ jobs:
 
   - name: integration-managed-disks
     serial: true
+    serial_groups: [integration-managed-disks]
     plan:
       - in_parallel:
         - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
@@ -208,6 +210,7 @@ jobs:
 
   - name: integration-windows-unmanaged-disks
     serial: true
+    serial_groups: [integration-windows-unmanaged-disks]
     plan:
       - in_parallel:
         - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
@@ -231,6 +234,7 @@ jobs:
 
   - name: integration-windows-managed-disks
     serial: true
+    serial_groups: [integration-windows-managed-disks]
     plan:
       - in_parallel:
         - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
@@ -254,6 +258,7 @@ jobs:
 
   - name: bats-unmanaged-disks
     serial: true
+    serial_groups: [bats-unmanaged-disks]
     plan:
       - in_parallel:
         - get: bosh-release
@@ -296,6 +301,7 @@ jobs:
 
   - name: bats-managed-disks
     serial: true
+    serial_groups: [bats-managed-disks]
     plan:
       - in_parallel:
         - get: bosh-release
@@ -335,6 +341,25 @@ jobs:
           ensure:
             do:
               - <<: *ensure-cleanup
+
+  - name: cleanup-leftover-environments
+    serial_groups:
+      - integration-unmanaged-disks
+      - integration-managed-disks
+      - integration-windows-unmanaged-disks
+      - integration-windows-managed-disks
+      - bats-unmanaged-disks
+      - bats-managed-disks
+    plan:
+      - in_parallel:
+          - get: bosh-integration-registry-image
+          - get: bosh-azure-cpi-release
+            resource: bosh-cpi-src-in
+          - get: daily
+            trigger: true
+      - task: cleanup-leftover-environments
+        file: bosh-azure-cpi-release/ci/tasks/cleanup-leftover-environments.yml
+        image: bosh-integration-registry-image
 
   - name: promote-candidate-major
     plan:
@@ -597,3 +622,7 @@ resources:
       start: 3:00 -0700
       stop: 4:30 -0700
       days: [ Saturday ]
+  - name: daily
+    type: time
+    source:
+      interval: 24h
