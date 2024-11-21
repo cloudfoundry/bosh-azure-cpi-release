@@ -85,7 +85,7 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
-    context 'when the disk size is smaller' do
+    context 'when the new disk size is smaller' do
       let(:new_disk_size_in_gib) { 256 }
 
       it 'raises an error' do
@@ -106,6 +106,39 @@ describe Bosh::AzureCloud::Cloud do
         expect do
           managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
         end.to raise_error(/Disk caching cannot be modified/)
+      end
+    end
+
+    context 'when the storage account type changes' do
+      let(:new_storage_account) { 'new-storage-account' }
+      let(:cloud_properties) { { 'storage_account_type' => new_storage_account } }
+
+      it 'updates the storage account type' do
+        expect(disk_manager2).to receive(:update_disk)
+          .with(disk_id_object, new_disk_size_in_gib, new_storage_account, nil, nil)
+
+        expect do
+          managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when disk conversion is not supported' do
+      let(:cloud_properties) { { 'storage_account_type' => 'unsupported-type' } }
+
+      it 'raises an error' do
+        allow(disk_manager2).to receive(:update_disk).and_raise(Bosh::AzureCloud::AzureError.new(%{
+{
+  "error": {
+    "code": "OperationNotAllowed",
+    "message": "Changing a disk's account type from 'PremiumV2_LRS' to 'unsupported-type' is not supported."
+  }
+}
+}))
+
+        expect do
+          managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+        end.to raise_error(Bosh::Clouds::NotSupported, 'Disk conversion is not supported')
       end
     end
   end

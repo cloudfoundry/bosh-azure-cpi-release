@@ -110,6 +110,26 @@ describe Bosh::AzureCloud::Cloud do
         @disk_id_pool.delete(disk_cid)
       end
     end
+
+    context 'when disk conversion is not supported for the storage account type' do
+      let(:old_storage_account_type) { 'PremiumV2_LRS' }
+      let(:new_storage_account_type) { 'Premium_LRS' } # conversion to any storage type not supported
+      let(:cloud_properties) { { 'storage_account_type' => new_storage_account_type } }
+
+      it 'raises a NotSupported error' do
+        @logger.info("Create a managed disk with #{old_size} MiB")
+        disk_cid = cpi_managed.create_disk(old_size, { 'storage_account_type' => old_storage_account_type })
+        @disk_id_pool.push(disk_cid) if disk_cid
+
+        expect do
+          cpi_managed.update_disk(disk_cid, old_size, cloud_properties)
+        end.to raise_error(Bosh::Clouds::NotSupported, 'Disk conversion is not supported')
+
+        @logger.info("Delete managed disk '#{disk_cid}'")
+        cpi_managed.delete_disk(disk_cid)
+        @disk_id_pool.delete(disk_cid)
+      end
+    end
   end
 
   def get_disk(disk_cid)

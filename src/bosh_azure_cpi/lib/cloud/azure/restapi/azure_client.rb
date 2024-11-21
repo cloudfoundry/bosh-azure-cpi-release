@@ -958,11 +958,10 @@ module Bosh::AzureCloud
       request_body['properties']['diskIOPSReadWrite'] = params[:iops] if params[:iops]
       request_body['properties']['diskMBpsReadWrite'] = params[:mbps] if params[:mbps]
       request_body.delete('properties') if request_body['properties'].empty?
+      return unless request_body.any?
 
-      if request_body.any?
-        url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
-        http_patch(url, request_body)
-      end
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: name)
+      http_patch(url, request_body)
     end
 
     def resize_managed_disk(resource_group_name, params)
