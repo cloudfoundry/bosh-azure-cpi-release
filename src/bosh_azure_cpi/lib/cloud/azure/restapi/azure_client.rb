@@ -131,7 +131,7 @@ module Bosh::AzureCloud
       begin
         uri = http_url(url, params)
         response = http_get(uri)
-        result = FastJsonparser.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
+        result = JSON.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
       rescue AzureNotFoundError => e
         @logger.debug("Resource not found for url #{url} with parms #{params}")
         result = nil
@@ -148,7 +148,7 @@ module Bosh::AzureCloud
         uri = http_url(url, params)
         response = http_get(uri)
         unless response.body.nil?
-          body = FastJsonparser.parse(response.body, symbolize_keys: false)
+          body = JSON.parse(response.body, symbolize_keys: false)
           result = body
           next_url = body['nextLink']
         end
@@ -159,7 +159,7 @@ module Bosh::AzureCloud
           response = http_get(uri)
           cloud_error("Got empty page from nextLink #{next_url}") if response.body.nil?
 
-          body = FastJsonparser.parse(response.body, symbolize_keys: false)
+          body = JSON.parse(response.body, symbolize_keys: false)
           result.deep_merge!(body)
           next_url = body['nextLink']
         end
@@ -455,7 +455,7 @@ module Bosh::AzureCloud
       }
 
       response = http_put(url, vm, params)
-      result = FastJsonparser.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
+      result = JSON.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
 
       _parse_virtual_machine(result, false)
     end
@@ -2290,7 +2290,7 @@ module Bosh::AzureCloud
 
     # @return [Object]
     def redact_credentials_in_response_body(body)
-      is_debug_mode(@azure_config) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, FastJsonparser.parse(body, symbolize_keys: false)).to_json
+      is_debug_mode(@azure_config) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body, symbolize_keys: false)).to_json
     rescue StandardError => e
       body
     end
