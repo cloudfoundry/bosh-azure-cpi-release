@@ -361,64 +361,115 @@ jobs:
         file: bosh-azure-cpi-release/ci/tasks/cleanup-leftover-environments.yml
         image: bosh-integration-registry-image
 
-  - name: promote-candidate-major
+  - name: release-fan-in
     plan:
-      - in_parallel:
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: release-version-semver, params: {bump: major}}
-        - {trigger: false, get: bosh-shared-ci}
-      - task: promote
-        file: bosh-shared-ci/tasks/release/create-final-release.yml
-        input_mapping:
-          release_repo: bosh-cpi-src
-          version: release-version-semver
-        params:
-          GIT_USER_NAME: CI Bot
-          GIT_USER_EMAIL: bots@cloudfoundry.org
-          PRIVATE_YML: |
-            ---
-            blobstore:
-              provider: gcs
-              options:
-                credentials_source: static
-                json_key: '((cloud-foundry-gcp-credentials))'
-      - put: bosh-cpi-src-out
-        params: {repository: release_repo, rebase: true, tag: release_metadata/tag-name}
-      - put: release-version-semver
-        params: {file: release-version-semver/version}
+      - get: bosh-cpi-src-in
+        trigger: true
+        passed:
+        - integration-unmanaged-disks
+        - integration-managed-disks
+        - integration-windows-unmanaged-disks
+        - integration-windows-managed-disks
+        - bats-unmanaged-disks
+        - bats-managed-disks
 
-  - name: promote-candidate-minor
+  - name: bump-major
+    serial_groups: [ version ]
     plan:
-      - in_parallel:
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: release-version-semver, params: {bump: minor}}
-        - {trigger: false, get: bosh-shared-ci}
-      - task: promote
-        file: bosh-shared-ci/tasks/release/create-final-release.yml
-        input_mapping:
-          release_repo: bosh-cpi-src
-          version: release-version-semver
-        params:
-          GIT_USER_NAME: CI Bot
-          GIT_USER_EMAIL: bots@cloudfoundry.org
-          PRIVATE_YML: |
-            ---
-            blobstore:
-              provider: gcs
-              options:
-                credentials_source: static
-                json_key: '((cloud-foundry-gcp-credentials))'
-      - put: bosh-cpi-src-out
-        params: {repository: release_repo, rebase: true, tag: release_metadata/tag-name}
-      - put: release-version-semver
-        params: {file: release-version-semver/version}
+    - put: release-version-semver
+      params:
+        bump: major
 
-  - name: promote-candidate-patch
+  - name: bump-minor
+    serial_groups: [ version ]
+    plan:
+    - put: release-version-semver
+      params:
+        bump: minor
+
+  - name: bump-patch
+    serial_groups: [ version ]
+    plan:
+    - put: release-version-semver
+      params:
+        bump: patch
+
+  - name: automatically-release-new-patch
+    serial_groups: [ version ]
+    plan:
+    - in_parallel:
+      - get: bosh-cpi-src-in
+        trigger: true
+        passed:
+        - release-fan-in
+      - get: bosh-shared-ci
+      - get: version
+        resource: release-version-semver
+      - get: bosh-security-scanner-registry-image
+    - try:
+        task: check-for-updated-vendored-packages
+        file: bosh-shared-ci/tasks/release/check-for-updated-vendored-packages.yml
+        image: bosh-security-scanner-registry-image
+        input_mapping:
+          input_repo: bosh-cpi-src-in
+        params:
+          PACKAGES: [azure-cpi-ruby-3.3]
+    - try:
+        task: check-for-patched-cves
+        file: bosh-shared-ci/tasks/release/check-for-patched-cves.yml
+        image: bosh-security-scanner-registry-image
+        input_mapping:
+          input_repo: bosh-cpi-src-in
+        params:
+          SEVERITY: CRITICAL,HIGH
+    - task: ensure-cve-checker-succeeded
+      file: bosh-shared-ci/tasks/release/ensure-task-succeeded.yml
+      image: bosh-security-scanner-registry-image
+      input_mapping:
+        task-output-folder: patched_cves
+    - try:
+        task: check-needs-release
+        config:
+          platform: linux
+          image_resource:
+            type: docker-image
+            source: {repository: alpine}
+          inputs:
+          - name: release-notes
+          run:
+            path: /bin/sh
+            args:
+            - -c
+            - |
+              if [ -f release-notes/needs-release ]; then
+                echo "## Release Notes"
+                echo "${release-notes/release-notes.md}"
+                exit 0
+              else
+                echo "No release needed"
+                exit 1
+              fi
+        on_success:
+          do:
+          - put: release-notes
+            params:
+              file: release-notes/release-notes.md
+          - put: release-version-semver
+            params:
+              bump: patch
+
+  - name: promote-candidate
+    old_name: promote-candidate-major
     plan:
       - in_parallel:
-        - {trigger: false, get: bosh-cpi-src, resource: bosh-cpi-src-in, passed: [integration-unmanaged-disks, integration-managed-disks, integration-windows-unmanaged-disks, integration-windows-managed-disks, bats-unmanaged-disks, bats-managed-disks]}
-        - {trigger: false, get: release-version-semver, params: {bump: patch}}
-        - {trigger: false, get: bosh-shared-ci}
+        - get: bosh-cpi-src
+          resource: bosh-cpi-src-in
+          passed:
+          - release-fan-in
+        - get: release-version-semver
+          trigger: true
+        - get: release-notes
+        - get: bosh-shared-ci
       - task: promote
         file: bosh-shared-ci/tasks/release/create-final-release.yml
         input_mapping:
@@ -436,8 +487,16 @@ jobs:
                 json_key: '((cloud-foundry-gcp-credentials))'
       - put: bosh-cpi-src-out
         params: {repository: release_repo, rebase: true, tag: release_metadata/tag-name}
-      - put: release-version-semver
-        params: {file: release-version-semver/version}
+      - put: bosh-azure-cpi-release-github-release
+        params:
+          name: release_metadata/tag-name
+          tag: release_metadata/tag-name
+          body: release-notes/release-notes
+          commitish: bosh-cpi-src-out/.git/ref
+          generate_release_notes: true
+      - put: release-notes
+        params:
+          file: release_metadata/empty-file
 
   - name: bump-deps
     plan:
@@ -520,6 +579,14 @@ resource_types:
     source:
       repository: concourse/semver-resource
       tag: 1.6
+
+  - name: gcs
+    type: registry-image
+    source:
+      repository: frodenas/gcs-resource
+      username: ((docker.username))
+      password: ((docker.password))
+
 resources:
   - name: bosh-shared-ci
     type: git
@@ -557,6 +624,18 @@ resources:
       uri: git@github.com:cloudfoundry/bosh-azure-cpi-release.git
       private_key: ((github_deploy_key_bosh-azure-cpi-release.private_key))
       initial_version: '50.0.0'
+  - name: release-notes
+    type: gcs
+    source:
+      versioned_file: release-notes
+      bucket: bosh-azure-cpi-blobs
+      json_key: ((cloud-foundry-gcp-credentials))
+  - name: bosh-azure-cpi-release-github-release
+    type: github-release
+    source:
+      owner: cloudfoundry
+      repository: bosh-azure-cpi-release
+      access_token: ((github_public_repo_token))
   - name: environment
     type: terraform_type
     source:
@@ -614,6 +693,12 @@ resources:
     type: registry-image
     source:
       repository: bosh/bosh-ecosystem-concourse
+      username: ((docker.username))
+      password: ((docker.password))
+  - name: bosh-security-scanner-registry-image
+    type: registry-image
+    source:
+      repository: bosh/security-scanner
       username: ((docker.username))
       password: ((docker.password))
   - name: weekly
