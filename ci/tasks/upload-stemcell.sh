@@ -29,8 +29,9 @@ if [ "${IS_HEAVY_STEMCELL}" == "true" ]; then
   tar -xf "$(realpath stemcell/*.tgz)" -C /tmp/
   tar -xf ${stemcell_path} -C /tmp/
   az storage blob upload \
-    --file /tmp/root.vhd --container-name stemcell \
-    --name ${stemcell_id}.vhd \
+    --file /tmp/root.vhd \
+    --container-name stemcell \
+    --name "${stemcell_id}.vhd" \
     --type page \
     --account-name "${account_name}" \
     --account-key "${account_key}"
@@ -61,8 +62,9 @@ else
     puts metadata' < /tmp/stemcell.MF)
   dd if=/dev/zero of=/tmp/root.vhd bs=1K count=1
   az storage blob upload \
-    --file /tmp/root.vhd --container-name stemcell \
-    --name ${stemcell_id}.vhd \
+    --file /tmp/root.vhd \
+    --container-name stemcell \
+    --name "${stemcell_id}.vhd" \
     --type page \
     --metadata "${stemcell_metadata}" \
     --account-name "${account_name}" \
