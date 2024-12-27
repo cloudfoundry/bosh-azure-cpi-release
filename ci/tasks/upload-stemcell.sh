@@ -22,6 +22,8 @@ account_key=$(az storage account keys list --account-name "${account_name}" --re
 if [ "${IS_HEAVY_STEMCELL}" == "true" ]; then
 
   stemcell_id="bosh-stemcell-00000000-0000-0000-0000-0AZURECPICI0"
+  echo "Using heavy stemcell: '${stemcell_id}'"
+
   stemcell_path="/tmp/image"
   # Always upload the latest stemcell for lifecycle test
   tar -xf "$(realpath stemcell/*.tgz)" -C /tmp/
@@ -40,6 +42,8 @@ EOF
 else
 
   stemcell_id="bosh-light-stemcell-00000000-0000-0000-0000-0AZURECPICI0"
+  echo "Using light stemcell: '${stemcell_id}'"
+
   # Use the light stemcell cloud properties to generate metadata in space-separated key=value pairs
   tar -xf "$(realpath stemcell/*.tgz)" -C /tmp/
   stemcell_metadata=$(ruby -r yaml -r json -e '
