@@ -32,9 +32,9 @@ if [ "${IS_HEAVY_STEMCELL}" == "true" ]; then
     --file /tmp/root.vhd --container-name stemcell \
     --name ${stemcell_id}.vhd \
     --type page \
-    --account-name "${account_name}\
-    " \
+    --account-name "${account_name}" \
     --account-key "${account_key}"
+
   cat > "${output_dir}/stemcell.env" <<EOF
 export BOSH_AZURE_STEMCELL_ID="${stemcell_id}"
 EOF
@@ -79,6 +79,7 @@ else
   # Accept legal terms
   echo "Accepting the legal terms of image ${image_urn}"
   az vm image accept-terms --urn "${image_urn}"
+
   cat > "${output_dir}/stemcell.env" <<EOF
 export BOSH_AZURE_STEMCELL_ID="${stemcell_id}"
 EOF
