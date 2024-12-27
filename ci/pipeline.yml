@@ -122,7 +122,7 @@ shared:
     task: upload-stemcell
     tags: [azure]
     file: bosh-cpi-src/ci/tasks/upload-stemcell.yml
-    params: &upload-stemcell-params
+    params:
       <<: *azure-environment-params
 
   - &run-integration
