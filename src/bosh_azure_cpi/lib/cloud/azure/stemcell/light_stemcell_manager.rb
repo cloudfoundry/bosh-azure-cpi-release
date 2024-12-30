@@ -50,12 +50,31 @@ module Bosh::AzureCloud
 
     private
 
+    def _post_process_metadata(metadata)
+      # azure-storage-ruby has a bug where all information is shoved into the `infrastructure` key
+      # azure-storage-ruby relies on nokogiri and it seems like nokogiri 1.18.0 broke azure-storage-ruby
+      # Seems like azure-storage-ruby is no longer being maintained thus this workaround
+      result = {}
+      first_key = metadata.keys[0]
+      value = metadata[first_key]
+      all_values = value.split(" ")
+      result[first_key] = all_values[0]
+      all_values.each_with_index do |item, index|
+        if index == 0
+          next
+        end
+        split_item = item.split('=')
+        result[split_item[0]] = split_item[1]
+      end
+      result
+    end
+
     def _get_metadata(name)
       metadata = @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
       return nil if metadata.nil?
 
       unless metadata.key?('image')
-        cloud_error("Blob metadata for #{name} is missing the `image` key, metadata: #{metadata}")
+        metadata = _post_process_metadata(metadata)
       end
 
       metadata['image'] = JSON.parse(metadata['image'], symbolize_keys: false)

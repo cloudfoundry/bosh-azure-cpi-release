@@ -184,17 +184,25 @@ describe Bosh::AzureCloud::LightStemcellManager do
           .and_return(metadata)
       end
 
-      context 'but image metadata is missing' do
+      context 'all info is shoved into the `infrastructure key`' do
         before do
-          metadata.delete('image')
+          allow(azure_client).to receive(:list_platform_image_versions)
+                                   .and_return(versions)
         end
 
-        it 'should raise error' do
-          expect(blob_manager).to receive(:get_blob_metadata)
+        let(:metadata) do
+          {
+            'infrastructure' => "azure os_type=windows image={\"offer\":\"bosh-windows-server-2019\",\"publisher\":\"pivotal\",\"sku\":\"2019-sku2\",\"version\":\"#{version}\"} hypervisor=hyperv"
+          }
+        end
 
-          expect do
+        it 'returns true' do
+          expect(blob_manager).to receive(:get_blob_metadata)
+          expect(azure_client).to receive(:list_platform_image_versions)
+
+          expect(
             light_stemcell_manager.has_stemcell?(location, stemcell_name)
-          end.to raise_error(/is missing the `image` key/)
+          ).to be(true)
         end
       end
 
