@@ -54,6 +54,10 @@ module Bosh::AzureCloud
       metadata = @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{name}.vhd")
       return nil if metadata.nil?
 
+      unless metadata.key?('image')
+        cloud_error("Blob metadata for #{name} is missing the `image` key, metadata: #{metadata}")
+      end
+
       metadata['image'] = JSON.parse(metadata['image'], symbolize_keys: false)
       metadata
     end

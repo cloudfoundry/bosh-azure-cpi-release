@@ -184,6 +184,20 @@ describe Bosh::AzureCloud::LightStemcellManager do
           .and_return(metadata)
       end
 
+      context 'but image metadata is missing' do
+        before do
+          metadata.delete('image')
+        end
+
+        it 'should raise error' do
+          expect(blob_manager).to receive(:get_blob_metadata)
+
+          expect do
+            light_stemcell_manager.has_stemcell?(location, stemcell_name)
+          end.to raise_error(/is missing the `image` key/)
+        end
+      end
+
       context 'but the platform image does not exist' do
         before do
           allow(azure_client).to receive(:list_platform_image_versions)
