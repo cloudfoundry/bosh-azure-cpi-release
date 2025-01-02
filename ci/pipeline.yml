@@ -399,15 +399,11 @@ jobs:
       - get: bosh-shared-ci
       - get: version
         resource: release-version-semver
-      - get: bosh-security-scanner-registry-image
-    - try:
-        task: check-for-updated-vendored-packages
-        file: bosh-shared-ci/tasks/release/check-for-updated-vendored-packages.yml
-        image: bosh-security-scanner-registry-image
-        input_mapping:
-          input_repo: bosh-cpi-src-in
+      - get: patched-version
+        resource: release-version-semver
         params:
-          PACKAGES: [azure-cpi-ruby-3.3]
+          bump: patch
+      - get: bosh-security-scanner-registry-image
     - try:
         task: check-for-patched-cves
         file: bosh-shared-ci/tasks/release/check-for-patched-cves.yml
@@ -416,44 +412,43 @@ jobs:
           input_repo: bosh-cpi-src-in
         params:
           SEVERITY: CRITICAL,HIGH
+        on_success:
+          do:
+            - put: release-notes
+              params:
+                file: release-notes/release-notes.md
+            - put: release-version-semver
+              params:
+                file: patched-version/version
     - task: ensure-cve-checker-succeeded
       file: bosh-shared-ci/tasks/release/ensure-task-succeeded.yml
       image: bosh-security-scanner-registry-image
       input_mapping:
         task-output-folder: patched_cves
     - try:
-        task: check-needs-release
-        config:
-          platform: linux
-          image_resource:
-            type: docker-image
-            source: {repository: alpine}
-          inputs:
-          - name: release-notes
-          run:
-            path: /bin/sh
-            args:
-            - -c
-            - |
-              if [ -f release-notes/needs-release ]; then
-                echo "## Release Notes"
-                echo "${release-notes/release-notes.md}"
-                exit 0
-              else
-                echo "No release needed"
-                exit 1
-              fi
+        task: check-for-updated-vendored-packages
+        file: bosh-shared-ci/tasks/release/check-for-updated-vendored-packages.yml
+        image: bosh-security-scanner-registry-image
+        input_mapping:
+          input_repo: bosh-cpi-src-in
+        params:
+          PACKAGES: [azure-cpi-ruby-3.3]
         on_success:
           do:
-          - put: release-notes
-            params:
-              file: release-notes/release-notes.md
-          - put: release-version-semver
-            params:
-              bump: patch
+            - put: release-notes
+              params:
+                file: release-notes/release-notes.md
+            - put: release-version-semver
+              params:
+                file: patched-version/version
+    - task: ensure-vendored-package-checker-succeeded
+      file: bosh-shared-ci/tasks/release/ensure-task-succeeded.yml
+      image: bosh-security-scanner-registry-image
+      input_mapping:
+        task-output-folder: package-updates
 
   - name: promote-candidate
-    old_name: promote-candidate-major
+    serial_groups: [ version ]
     plan:
       - in_parallel:
         - get: bosh-cpi-src
