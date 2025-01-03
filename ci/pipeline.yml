@@ -449,6 +449,7 @@ jobs:
 
   - name: promote-candidate
     serial_groups: [ version ]
+    disable_manual_trigger: true
     plan:
       - in_parallel:
         - get: bosh-cpi-src
