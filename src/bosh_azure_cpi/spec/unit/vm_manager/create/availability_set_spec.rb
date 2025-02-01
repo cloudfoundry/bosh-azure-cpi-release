@@ -67,6 +67,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
               .and_return(availability_set)
             allow(azure_client).to receive(:create_availability_set)
+            allow(azure_client).to receive(:get_max_fault_domains_for_location).with(location).and_return(3)
           end
 
           let(:instance_types) { %w[Standard_DS2_v3 Standard_D2_v3] }
@@ -931,13 +932,14 @@ describe Bosh::AzureCloud::VMManager do
                 managed: true
               }
             end
+            let(:location_fault_domain_count) { 2 }
             let(:avset_params) do
               {
                 name: existing_avset[:name],
                 location: existing_avset[:location],
                 tags: existing_avset[:tags],
                 platform_update_domain_count: existing_avset[:platform_update_domain_count],
-                platform_fault_domain_count: existing_avset[:platform_fault_domain_count],
+                platform_fault_domain_count: location_fault_domain_count,
                 managed: true
               }
             end
@@ -947,6 +949,8 @@ describe Bosh::AzureCloud::VMManager do
                 allow(azure_client).to receive(:get_availability_set_by_name)
                   .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
                   .and_return(existing_avset)
+
+                allow(azure_client).to receive(:get_max_fault_domains_for_location).with(location).and_return(location_fault_domain_count)
               end
 
               it 'should update the managed property of the availability set' do
