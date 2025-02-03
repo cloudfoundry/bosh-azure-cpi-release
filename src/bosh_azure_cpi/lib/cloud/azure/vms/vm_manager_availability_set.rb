@@ -45,9 +45,10 @@ module Bosh::AzureCloud
           cloud_error("availability set '#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
         elsif @use_managed_disks && !availability_set[:managed]
           @logger.info("availability set '#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
+          maximum_fault_domain_count = [availability_set[:platform_fault_domain_count], @azure_client.get_max_fault_domains_for_location(location)].compact.min
           availability_set_params.merge!(
             platform_update_domain_count: availability_set[:platform_update_domain_count],
-            platform_fault_domain_count: availability_set[:platform_fault_domain_count],
+            platform_fault_domain_count: maximum_fault_domain_count,
             managed: true
           )
           @azure_client.create_availability_set(resource_group_name, availability_set_params)

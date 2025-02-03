@@ -604,4 +604,64 @@ describe Bosh::AzureCloud::AzureClient do
       end
     end
   end
+
+  describe 'get_max_fault_domains_for_location' do
+    let(:url) { "/subscriptions/#{subscription_id}/providers/Microsoft.Compute/skus" }
+    let(:compute_api_version) { AZURE_RESOURCE_PROVIDER_COMPUTE }
+    let(:resource_uri) { "https://management.azure.com#{url}?api-version=#{compute_api_version}#{query_params}" }
+    let(:query_params) { "&$filter=location%20eq%20'#{location}'" }
+    let(:location) { 'eastus' }
+    let(:max_fault_domains) { 3 }
+    let(:response_body) do
+      {
+        'value' => [
+          {
+            'capabilities' => [
+              {
+                'name' => 'MaximumPlatformFaultDomainCount',
+                'value' => max_fault_domains.to_s
+              }
+            ],
+            'locations' => [location.upcase],
+            'name' => 'Aligned',
+            'resourceType' => 'availabilitySets'
+          }
+        ]
+      }.to_json
+    end
+
+    before do
+      stub_request(:post, token_uri).to_return(
+        status: 200,
+        body: {
+          'access_token' => valid_access_token,
+          'expires_on' => expires_on
+        }.to_json,
+        headers: {}
+      )
+      stub_request(:get, resource_uri).to_return(
+        status: 200,
+        body: response_body,
+        headers: {}
+      )
+    end
+
+    it 'returns the max fault domains for the provided location' do
+      expect(
+        azure_client.get_max_fault_domains_for_location(location)
+      ).to eq(max_fault_domains)
+    end
+
+    context 'when response does not include Aligned sku' do
+      let(:response_body) do
+        { 'value' => [] }.to_json
+      end
+
+      it 'raises an error' do
+        expect do
+          azure_client.get_max_fault_domains_for_location(location)
+        end.to raise_error(/Unable to get maximum fault domains for location '#{location}'/)
+      end
+    end
+  end
 end

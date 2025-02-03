@@ -2039,6 +2039,18 @@ module Bosh::AzureCloud
       http_patch(url, request_body)
     end
 
+    def get_max_fault_domains_for_location(location)
+      error_text = "Unable to get maximum fault domains for location '#{location}'"
+      url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
+      url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
+      url += "/skus"
+      skus = get_resource_by_id(url, "$filter" => "location eq '#{location}'")['value']
+      raise error_text unless skus
+      sku_for_location = skus.find { |sku| sku['name'] == 'Aligned' && sku['locations'].map(&:downcase).include?(location.downcase) }
+      raise error_text unless sku_for_location
+      sku_for_location['capabilities'].find { |capability| capability['name'] == 'MaximumPlatformFaultDomainCount' }['value'].to_i
+    end
+
     private
 
     # @return [Hash]
