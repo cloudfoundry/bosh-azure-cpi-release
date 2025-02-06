@@ -2073,6 +2073,138 @@ module Bosh::AzureCloud
       sku_for_location['capabilities'].find { |capability| capability['name'] == 'MaximumPlatformFaultDomainCount' }['value'].to_i
     end
 
+    # Create or Update a Compute Gallery Image Definition
+    #
+    # @param [String] gallery_name - Name of gallery.
+    # @param [String] image_definition - Name of gallery image.
+    # @param [Hash] params - Parameters for creating the gallery image definition.
+    # ==== Params
+    # Required key/value pairs are:
+    # * +:location+ - String. The location where the gallery image definition will be created.
+    # * +:publisher+ - String. The publisher of the image definition.
+    # * +:offer+ - String. The offer of the image definition.
+    # * +:sku+ - String. The sku of the image definition.
+    # * +:osType+ - String. The osType of the image definition.
+    # Optional key/value pairs are:
+    # * +:tags+ - Hash. The tags of the gallery image definition.
+    # * +:hyperVGeneration+ - String. The hyperVGeneration of the image definition.
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-images/create-or-update?view=rest-compute-2024-07-01&tabs=HTTP
+    #
+    def create_gallery_image_definition(gallery_name, image_definition, params)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "galleries/#{uri_escape(gallery_name)}/images", name: image_definition)
+
+      required_params = %w(location publisher offer sku osType)
+      required_params.each do |param|
+        raise ArgumentError, "Missing required parameter '#{param}'" unless params.key?(param)
+      end
+
+      image_definition_params = {
+        'location' => params['location'],
+        'tags' => params['tags'],
+        'properties' => {
+          'identifier' => {
+            'publisher' => params['publisher'],
+            'offer' => params['offer'],
+            'sku' => params['sku'],
+          },
+          'osState' => 'Generalized',
+          'osType' => params['osType']
+        }
+      }.compact
+      image_definition_params['properties'].compact!
+
+      @logger.debug("Creating / updating new gallery image definition: '#{url}' with params: #{image_definition_params}")
+      http_put(url, image_definition_params, { 'api-version' => '2024-03-03' })
+    end
+
+    # Create or Update a Compute Gallery Image Version
+    #
+    # @param [String] gallery_name - Name of gallery.
+    # @param [String] image_definition - Name of gallery image.
+    # @param [String] version - Name of gallery image version.
+    # @param [Hash] params - Parameters for creating the gallery image version.
+    # ==== Params
+    # Required key/value pairs are:
+    # * +:location+             - String. The location where the gallery image version will be created.
+    # * +:blob_uri+             - String. The blob uri of the image version.
+    # * +:storage_account_name+ - String. The storage account name of the image version.
+    # * +:image_id+             - String. The image id of the image version.
+    # Optional key/value pairs are:
+    # * +:tags+ - Hash. The tags of the gallery image version.
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-image-versions/create-or-update?view=rest-compute-2024-11-04&tabs=HTTP
+    #
+    def create_gallery_image_version(gallery_name, image_definition, version, params)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "galleries/#{uri_escape(gallery_name)}/images/#{uri_escape(image_definition)}/versions", name: version)
+
+      raise ArgumentError, "Missing required parameter 'location'" unless params.key?('location')
+
+      profile = {}
+      if params.key?('blob_uri') && params.key?('storage_account_name')
+        profile['osDiskImage'] = {
+          'source' => {
+              'id' => rest_api_url(REST_API_PROVIDER_STORAGE, 'storageAccounts', name: params['storage_account_name']),
+              'uri' => params['blob_uri']
+          }
+        }
+      end
+
+      replica_count = params['replica_count'] || 1
+      target_regions = (params['target_regions'] || [params['location']]).map { |r| { 'name' => r } }
+      image_version_params = {
+        'location' => params['location'],
+        'tags' => params['tags'],
+        'properties' => {
+          'publishingProfile' => {
+            'replicaCount' => replica_count,
+            'targetRegions' => target_regions
+          },
+          'storageProfile' => profile,
+        },
+      }.compact
+
+      @logger.debug("Creating / updating new gallery image version: '#{url}' with params: #{image_version_params}")
+      response = http_put(url, image_version_params, { 'api-version' => '2024-03-03' })
+      result = JSON.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
+
+      parse_gallery_image(result)
+    end
+
+    # Delete a gallery image version
+    #
+    # @param [String] gallery_name - Name of gallery.
+    # @param [String] image_definition - Name of gallery image.
+    # @param [String] version - Name of gallery image version.
+    # @return [Boolean]
+    # @raise [AzureError] if the operation fails
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-image-versions/delete?view=rest-compute-2024-07-01&tabs=HTTP
+    #
+    def delete_gallery_image_version(gallery_name, image_definition, version)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "galleries/#{uri_escape(gallery_name)}/images/#{uri_escape(image_definition)}/versions", name: version)
+
+      @logger.debug("Deleting gallery image version '#{version}' in the gallery image '#{image_definition}' of the gallery '#{gallery_name}'")
+      http_delete(url, { 'api-version' => '2023-07-03' })
+    end
+
+    # Get a gallery image version's information
+    #
+    # @param [String] gallery_name - Name of gallery.
+    # @param [String] image_definition - Name of gallery image definition.
+    # @param [String] version - Name of gallery image version.
+    # @return [Hash]
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-image-versions/get?view=rest-compute-2024-07-01&tabs=HTTP
+    #
+    def get_compute_gallery_image_version(gallery_name, image_definition, version)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "galleries/#{uri_escape(gallery_name)}/images/#{uri_escape(image_definition)}/versions", name: version)
+
+      result = get_resource_by_id(url, {'api-version' => '2023-07-03'})
+
+      parse_gallery_image(result)
+    end
+
     private
 
     # @return [Hash]
@@ -2146,6 +2278,22 @@ module Bosh::AzureCloud
         image[:id]       = result['id']
         image[:name]     = result['name']
         image[:location] = result['location']
+      end
+      image
+    end
+
+    # @return [Hash, nil]
+    def parse_gallery_image(result)
+      image = nil
+      unless result.nil?
+        image = {}
+        image[:id]       = result['id']
+        image[:name]     = result['name']
+        image[:location] = result['location']
+        image[:tags]     = result['tags']
+
+        targetRegions = result.dig('properties', 'publishingProfile', 'targetRegions')
+        image[:target_regions] = targetRegions.map { |h| h['name'] } unless targetRegions.nil?
       end
       image
     end

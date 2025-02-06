@@ -35,6 +35,7 @@ export BOSH_AZURE_APPLICATION_SECURITY_GROUP=$(echo ${metadata} | jq -e --raw-ou
 export BOSH_AZURE_APPLICATION_GATEWAY_NAME=$(echo ${metadata} | jq -e --raw-output ".application_gateway_name")
 export BOSH_AZURE_DEFAULT_USER_ASSIGNED_IDENTITY_NAME=$(echo ${metadata} | jq -e --raw-output ".default_user_assigned_identity_name")
 export BOSH_AZURE_USER_ASSIGNED_IDENTITY_NAME=$(echo ${metadata} | jq -e --raw-output ".user_assigned_identity_name")
+export BOSH_AZURE_COMPUTE_GALLERY_NAME=$(echo ${metadata} | jq -e --raw-output ".compute_gallery_name")
 export BOSH_AZURE_SSH_PUBLIC_KEY=${SSH_PUBLIC_KEY}
 
 export BOSH_AZURE_STEMCELL_PATH=$(realpath stemcell/*.tgz)
