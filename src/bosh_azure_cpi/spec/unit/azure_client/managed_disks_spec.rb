@@ -150,6 +150,67 @@ describe Bosh::AzureCloud::AzureClient do
         end.not_to raise_error
       end
     end
+
+    context 'when disk_encryption_set_name is provided' do
+      let(:disk_encryption_set_name) { 'disk_encryption_set_name' }
+      let(:disk_params) do
+        {
+          name: disk_name,
+          location: 'b',
+          tags: { 'foo' => 'bar' },
+          disk_size: 'c',
+          account_type: 'd',
+          disk_encryption_set_name: disk_encryption_set_name
+        }
+      end
+
+      let(:request_body) do
+        {
+          location: 'b',
+          tags: {
+            foo: 'bar'
+          },
+          sku: {
+            name: 'd'
+          },
+          properties: {
+            creationData: {
+              createOption: 'Empty'
+            },
+            diskSizeGB: 'c',
+            encryption: {
+              diskEncryptionSetId: "/subscriptions/#{subscription_id}/resourceGroups/#{MOCK_RESOURCE_GROUP_NAME}/providers/Microsoft.Compute/diskEncryptionSets/#{disk_encryption_set_name}",
+              type: 'EncryptionAtRestWithCustomerKey'
+            }
+          }
+        }
+      end
+
+      it 'creates a disk encrypted with the customer provided encryption key' do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
+          }.to_json,
+          headers: {}
+        )
+        stub_request(:put, disk_uri).with(body: request_body).to_return(
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
+        stub_request(:get, operation_status_link).to_return(
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
+
+        azure_client.create_empty_managed_disk(resource_group, disk_params)
+      end
+    end
   end
 
   describe '#create_managed_disk_from_blob' do

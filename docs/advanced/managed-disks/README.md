@@ -34,15 +34,11 @@ Below are behavior changes with a new deployment:
 
 ### Before the Migration
 
-You should **NOT** migrate the deployment if any of the following conditions is true. You should leave `use_managed_disks` as `false` in the manifest file in this case.
-
-  * The region does not support managed disks. You can see [Azure Products by Region](https://azure.microsoft.com/en-us/regions/services/) for the availability of the Managed Disks feature.
-
 You need to review the following checklist to prevent predictable migration failures.
 
   * The default storage account is used to store stemcells uploaded by CPI. In CPI v20 or older, it's specified by `azure.storage_account_name` in the global configurations. In CPI v20+, this property is optional. However, in the migration scenario, please make sure the default storage account is specified by `azure.storage_account_name` in the global configurations. Otherwise, CPI won't find your default storage account, which causes that all the uploaded stemcells can't be re-used.
 
-  * The maximum number of fault domains of managed availability sets varies by region - either two or three managed disk fault domains per region. The [table](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/manage-availability#use-managed-disks-for-vms-in-an-availability-set) shows the number per region. If your existing deploymeng is using 3 fault domains, you need to check whether the region supports 3 managed disk fault domains. Please see details [here](#with-availability-sets).
+  * As of CPI v52.0.0, the maximum number of fault domains of managed availability sets will be configured to the maximum fault domains supported by the region or the currently configured value for the availability set, whichever is lower. CPI versions before this will fail if the region does not support the number of fault domains currently configured on the availability set and you will first need to manually adjust the fault domain count in Azure.
 
   * Unmanaged snapshots cannot be migrated to managed version, and it may cause migration failure, so you need to delete all snapshots and disable snapshots in `bosh.yml` before the migration, if you enabled snapshots in the existing deployment. You can enable snapshots after full migration if you want.
 
@@ -134,14 +130,7 @@ Delete all storage accounts **without** below tags in the resource group. Please
 
 Only managed availability set can host VMs with managed disks. However, [the maximum number of fault domains of managed availability sets varies by region - either two or three managed disk fault domains per region.](https://docs.microsoft.com/en-us/azure/virtual-machines/virtual-machines-windows-manage-availability#configure-multiple-virtual-machines-in-an-availability-set-for-redundancy)
 
-By default, CPI will migrate the old unmanaged availability sets into managed availability sets automatically, and during the migration, the fault domain number can't be changed. However due to the deployment schedule, the new managed availability set may not support the same maximum number of fault domain as the old unmanaged availability set; in this case, the migration might be blocked. You need to wait till the region supports the same maximum number of fault domains.
-
-Let's assume that the fault domain number is set to `3` in your existing deployment.
-
-* For the regions which support 3 FDs, the migration will succeed.
-* For the regions which only support 2 FDs
-  * If the existing deployment doesn't use load balancer, the migration will secceed. You need to specify a new availability set name in `resource_pools`. Then CPI will create new VMs with managed disks in new availability sets (managed) one by one. After migration, you can delete the old unmanaged availability sets manually.
-  * If the existing deployment is using load balancer, the migration will fail because the VMs behind a load balancer have to be in a same availability set. This prevents CPI creating VMs in the new availability set one by one. You should not use managed disks feature until the region supports 3 FDs.
+As of CPI version v52.0.0, if the availability set is configured with a higher fault domains count than the region supports, the availability set will be migrated to match the lower number supported by the region.
 
 #### The default storage account's location is different from the resource group location
 

@@ -472,6 +472,44 @@ describe Bosh::AzureCloud::VMCloudProps do
           expect(root_disk.placement).to eq('cache-disk')
         end
       end
+
+      context 'with disk_encryption_set_name' do
+        let(:vm_cloud_props) do
+          Bosh::AzureCloud::VMCloudProps.new(
+            {
+              'instance_type' => 'Standard_D1',
+              'root_disk' => {
+                'disk_encryption_set_name' => 'set_name'
+              }
+            }, azure_config_managed
+          )
+        end
+
+        it 'captures the config correctly' do
+          root_disk = vm_cloud_props.root_disk
+          expect(root_disk.disk_encryption_set_name).to eq('set_name')
+        end
+      end
+    end
+
+    context 'when ephemeral disk is specified' do
+      context 'with disk_encryption_set_name' do
+        let(:vm_cloud_props) do
+          Bosh::AzureCloud::VMCloudProps.new(
+            {
+              'instance_type' => 'Standard_D1',
+              'ephemeral_disk' => {
+                'disk_encryption_set_name' => 'set_name'
+              }
+            }, azure_config_managed
+          )
+        end
+
+        it 'captures the config correctly' do
+          ephemeral_disk = vm_cloud_props.ephemeral_disk
+          expect(ephemeral_disk.disk_encryption_set_name).to eq('set_name')
+        end
+      end
     end
 
     describe '#managed_identity' do

@@ -44,7 +44,8 @@ module Bosh::AzureCloud
       @root_disk = Bosh::AzureCloud::RootDisk.new(
         root_disk_hash['size'],
         root_disk_hash['type'],
-        _default_root_disk_placement(root_disk_hash['placement'])
+        _default_root_disk_placement(root_disk_hash['placement']),
+        disk_encryption_set_name: root_disk_hash['disk_encryption_set_name']
       )
 
       cloud_error("Only one of 'type' and 'placement' is allowed to be configured for the root_disk when 'placement' is not set to persistent") if @root_disk.placement != 'remote' && !@root_disk.type.nil? && !global_azure_config.use_managed_disks
@@ -56,7 +57,8 @@ module Bosh::AzureCloud
         ephemeral_disk_hash['type'],
         ephemeral_disk_hash['caching'],
         ephemeral_disk_hash['iops'],
-        ephemeral_disk_hash['mbps']
+        ephemeral_disk_hash['mbps'],
+        disk_encryption_set_name: ephemeral_disk_hash['disk_encryption_set_name']
       )
 
       @caching = vm_properties.fetch('caching', 'ReadWrite')

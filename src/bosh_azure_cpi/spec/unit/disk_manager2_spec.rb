@@ -46,7 +46,8 @@ describe Bosh::AzureCloud::DiskManager2 do
         },
         disk_size: size,
         account_type: storage_account_type,
-        zone: zone
+        zone: zone,
+        disk_encryption_set_name: 'set_name'
       }
     end
 
@@ -54,7 +55,7 @@ describe Bosh::AzureCloud::DiskManager2 do
       expect(azure_client).to receive(:create_empty_managed_disk)
         .with(resource_group_name, disk_params)
       expect do
-        disk_manager2.create_disk(disk_id, location, size, storage_account_type, zone)
+        disk_manager2.create_disk(disk_id, location, size, storage_account_type, zone, disk_encryption_set_name: 'set_name')
       end.not_to raise_error
     end
   end
@@ -376,7 +377,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_name: disk_name,
           disk_size: 7,
           disk_placement: 'CacheDisk',
-          disk_caching: 'ReadOnly'
+          disk_caching: 'ReadOnly',
+          disk_encryption_set_name: nil
         )
       end
     end
@@ -402,7 +404,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_name: disk_name,
           disk_size: 8,
           disk_placement: nil,
-          disk_caching: 'ReadOnly'
+          disk_caching: 'ReadOnly',
+          disk_encryption_set_name: nil
         )
       end
     end
@@ -429,7 +432,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_name: disk_name,
           disk_size: 3,
           disk_placement: 'ResourceDisk',
-          disk_caching: 'ReadOnly'
+          disk_caching: 'ReadOnly',
+          disk_encryption_set_name: nil
         )
       end
     end
@@ -455,7 +459,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_name: disk_name,
           disk_size: 5,
           disk_placement: nil,
-          disk_caching: 'ReadOnly'
+          disk_caching: 'ReadOnly',
+          disk_encryption_set_name: nil
         )
       end
     end
@@ -481,7 +486,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_name: disk_name,
           disk_size: 5,
           disk_placement: 'CacheDisk',
-          disk_caching: 'ReadOnly'
+          disk_caching: 'ReadOnly',
+          disk_encryption_set_name: nil
         )
       end
     end
@@ -506,7 +512,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_name: disk_name,
           disk_size: 30,
           disk_placement: 'CacheDisk',
-          disk_caching: 'ReadOnly'
+          disk_caching: 'ReadOnly',
+          disk_encryption_set_name: nil
         )
       end
     end
@@ -532,9 +539,26 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_name: disk_name,
           disk_size: 10,
           disk_placement: 'CacheDisk',
-          disk_caching: 'ReadOnly'
+          disk_caching: 'ReadOnly',
+          disk_encryption_set_name: nil
         )
       end
+    end
+
+    it 'passes through the disk encryption set name' do
+      vm_props = props_factory.parse_vm_props(
+        'instance_type' => 'STANDARD_A1',
+      )
+
+      expect(
+        disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement, disk_encryption_set_name: 'set_name')
+      ).to eq(
+        disk_name: disk_name,
+        disk_size: nil,
+        disk_placement: nil,
+        disk_caching: 'ReadOnly',
+        disk_encryption_set_name: 'set_name'
+      )
     end
   end
 
@@ -567,7 +591,8 @@ describe Bosh::AzureCloud::DiskManager2 do
         ).to eq(
           disk_name: disk_name,
           disk_size: nil,
-          disk_caching: 'ReadWrite'
+          disk_caching: 'ReadWrite',
+          disk_encryption_set_name: nil
         )
       end
     end
@@ -588,7 +613,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           ).to eq(
             disk_name: disk_name,
             disk_size: nil,
-            disk_caching: disk_caching
+            disk_caching: disk_caching,
+            disk_encryption_set_name: nil
           )
         end
       end
@@ -623,7 +649,8 @@ describe Bosh::AzureCloud::DiskManager2 do
         ).to eq(
           disk_name: disk_name,
           disk_size: nil,
-          disk_caching: 'ReadWrite'
+          disk_caching: 'ReadWrite',
+          disk_encryption_set_name: nil
         )
       end
     end
@@ -644,7 +671,8 @@ describe Bosh::AzureCloud::DiskManager2 do
             ).to eq(
               disk_name: disk_name,
               disk_size: nil,
-              disk_caching: 'ReadWrite'
+              disk_caching: 'ReadWrite',
+              disk_encryption_set_name: nil
             )
           end
         end
@@ -677,7 +705,8 @@ describe Bosh::AzureCloud::DiskManager2 do
                 ).to eq(
                   disk_name: disk_name,
                   disk_size: minimum_required_disk_size,
-                  disk_caching: 'ReadWrite'
+                  disk_caching: 'ReadWrite',
+                  disk_encryption_set_name: nil
                 )
               end
             end
@@ -696,7 +725,8 @@ describe Bosh::AzureCloud::DiskManager2 do
                 ).to eq(
                   disk_name: disk_name,
                   disk_size: image_size / 1024,
-                  disk_caching: 'ReadWrite'
+                  disk_caching: 'ReadWrite',
+                  disk_encryption_set_name: nil
                 )
               end
             end
@@ -724,7 +754,8 @@ describe Bosh::AzureCloud::DiskManager2 do
                 ).to eq(
                   disk_name: disk_name,
                   disk_size: minimum_required_disk_size,
-                  disk_caching: 'ReadWrite'
+                  disk_caching: 'ReadWrite',
+                  disk_encryption_set_name: nil
                 )
               end
             end
@@ -743,7 +774,8 @@ describe Bosh::AzureCloud::DiskManager2 do
                 ).to eq(
                   disk_name: disk_name,
                   disk_size: image_size / 1024,
-                  disk_caching: 'ReadWrite'
+                  disk_caching: 'ReadWrite',
+                  disk_encryption_set_name: nil
                 )
               end
             end
@@ -791,7 +823,8 @@ describe Bosh::AzureCloud::DiskManager2 do
             ).to eq(
               disk_name: disk_name,
               disk_size: 4,
-              disk_caching: 'ReadWrite'
+              disk_caching: 'ReadWrite',
+              disk_encryption_set_name: nil
             )
           end
         end
@@ -812,7 +845,8 @@ describe Bosh::AzureCloud::DiskManager2 do
             ).to eq(
               disk_name: disk_name,
               disk_size: 5,
-              disk_caching: 'ReadWrite'
+              disk_caching: 'ReadWrite',
+              disk_encryption_set_name: nil
             )
           end
         end
@@ -833,11 +867,26 @@ describe Bosh::AzureCloud::DiskManager2 do
             ).to eq(
               disk_name: disk_name,
               disk_size: 6,
-              disk_caching: 'ReadWrite'
+              disk_caching: 'ReadWrite',
+              disk_encryption_set_name: nil
             )
           end
         end
       end
+    end
+
+    it 'passes through the disk encryption set name' do
+      vm_props = props_factory.parse_vm_props(
+        'instance_type' => 'STANDARD_A1',
+      )
+      expect(
+        disk_manager2.os_disk(vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk, disk_encryption_set_name: 'set_name')
+      ).to eq(
+        disk_name: disk_name,
+        disk_size: nil,
+        disk_caching: 'ReadWrite',
+        disk_encryption_set_name: 'set_name'
+      )
     end
   end
 
@@ -864,7 +913,8 @@ describe Bosh::AzureCloud::DiskManager2 do
             disk_caching: 'ReadWrite',
             disk_type: nil,
             iops: nil,
-            mbps: nil
+            mbps: nil,
+            disk_encryption_set_name: nil
           )
         end
       end
@@ -886,7 +936,8 @@ describe Bosh::AzureCloud::DiskManager2 do
             disk_caching: 'ReadWrite',
             disk_type: nil,
             iops: nil,
-            mbps: nil
+            mbps: nil,
+            disk_encryption_set_name: nil
           )
         end
       end
@@ -914,7 +965,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               disk_caching: 'ReadWrite',
               disk_type: nil,
               iops: nil,
-              mbps: nil
+              mbps: nil,
+              disk_encryption_set_name: nil
             )
           end
         end
@@ -959,7 +1011,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               disk_caching: 'ReadWrite',
               disk_type: 'Premium_LRS',
               iops: nil,
-              mbps: nil
+              mbps: nil,
+              disk_encryption_set_name: nil
             )
           end
         end
@@ -986,7 +1039,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               disk_caching: 'None',
               disk_type: 'PremiumV2_LRS',
               iops: 5000,
-              mbps: nil
+              mbps: nil,
+              disk_encryption_set_name: nil
             )
           end
         end
@@ -1014,7 +1068,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               disk_caching: 'None',
               disk_type: 'PremiumV2_LRS',
               iops: 5000,
-              mbps: 150
+              mbps: 150,
+              disk_encryption_set_name: nil
             )
           end
         end
@@ -1037,7 +1092,8 @@ describe Bosh::AzureCloud::DiskManager2 do
               disk_caching: 'ReadWrite',
               disk_type: nil,
               iops: nil,
-              mbps: nil
+              mbps: nil,
+              disk_encryption_set_name: nil
             )
           end
         end
@@ -1063,7 +1119,8 @@ describe Bosh::AzureCloud::DiskManager2 do
                 disk_caching: 'ReadWrite',
                 disk_type: nil,
                 iops: nil,
-                mbps: nil
+                mbps: nil,
+                disk_encryption_set_name: nil
               )
             end
           end
@@ -1085,6 +1142,27 @@ describe Bosh::AzureCloud::DiskManager2 do
               end.to raise_error ArgumentError, "The disk size needs to be an integer. The current value is 'invalid-size'."
             end
           end
+        end
+
+        it 'passes through the disk encryption set name' do
+          vm_props = props_factory.parse_vm_props(
+            'instance_type' => 'STANDARD_A1',
+            'ephemeral_disk' => {
+              'disk_encryption_set_name' => 'set_name'
+            }
+          )
+          expect(
+            disk_manager2.ephemeral_disk(vm_name, vm_props.instance_type, vm_props.ephemeral_disk.size, vm_props.ephemeral_disk.type, vm_props.ephemeral_disk.use_root_disk,
+              vm_props.ephemeral_disk.caching, vm_props.ephemeral_disk.iops, vm_props.ephemeral_disk.mbps, disk_encryption_set_name: vm_props.ephemeral_disk.disk_encryption_set_name)
+          ).to eq(
+            disk_name: disk_name,
+            disk_size: default_ephemeral_disk_size,
+            disk_caching: 'ReadWrite',
+            disk_type: nil,
+            iops: nil,
+            mbps: nil,
+            disk_encryption_set_name: 'set_name'
+          )
         end
       end
     end
