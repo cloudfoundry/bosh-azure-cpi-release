@@ -358,9 +358,10 @@ module Bosh::AzureCloud
             caching = cloud_properties.fetch('caching', 'None')
             iops = cloud_properties.fetch('iops', nil)
             mbps = cloud_properties.fetch('mbps', nil)
+            disk_encryption_set_name = cloud_properties.fetch('disk_encryption_set_name', nil)
             validate_disk_caching(caching)
             disk_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
-            @disk_manager2.create_disk(disk_id, location, size / 1024, storage_account_type, zone, iops, mbps)
+            @disk_manager2.create_disk(disk_id, location, size / 1024, storage_account_type, zone, iops, mbps, disk_encryption_set_name: disk_encryption_set_name)
           else
             storage_account_name = _azure_config.storage_account_name
             caching = cloud_properties.fetch('caching', 'None')

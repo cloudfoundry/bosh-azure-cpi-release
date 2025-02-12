@@ -100,7 +100,7 @@ describe Bosh::AzureCloud::Cloud do
             .with(caching, true, { resource_group_name: default_resource_group_name })
             .and_return(disk_id_object)
           expect(disk_manager2).to receive(:create_disk)
-            .with(disk_id_object, rg_location, disk_size_in_gib, 'Standard_LRS', zone, iops, mbps)
+            .with(disk_id_object, rg_location, disk_size_in_gib, 'Standard_LRS', zone, iops, mbps, disk_encryption_set_name: nil)
           expect(telemetry_manager).to receive(:monitor)
             .with('create_disk', { id: '', extras: { 'disk_size' => disk_size } })
             .and_call_original
@@ -152,11 +152,9 @@ describe Bosh::AzureCloud::Cloud do
                 .with(caching, true, { resource_group_name: resource_group_name })
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone, iops, mbps)
+                .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone, iops, mbps, disk_encryption_set_name: nil)
 
-              expect do
-                managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
-              end.not_to raise_error
+              managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
             end
           end
 
@@ -173,7 +171,7 @@ describe Bosh::AzureCloud::Cloud do
                 .with(caching, true, { resource_group_name: resource_group_name })
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone, iops, mbps)
+                .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone, iops, mbps, disk_encryption_set_name: nil)
 
               expect do
                 managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
@@ -198,7 +196,7 @@ describe Bosh::AzureCloud::Cloud do
                 .with(caching, true, { resource_group_name: resource_group_name })
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, 'PremiumV2_LRS', vm_zone, iops, mbps)
+                .with(disk_id_object, vm_location, disk_size_in_gib, 'PremiumV2_LRS', vm_zone, iops, mbps, disk_encryption_set_name: nil)
 
               expect do
                 managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)

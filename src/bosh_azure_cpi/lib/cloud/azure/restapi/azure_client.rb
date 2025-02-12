@@ -83,6 +83,7 @@ module Bosh::AzureCloud
     REST_API_VIRTUAL_MACHINES            = 'virtualMachines'
     REST_API_AVAILABILITY_SETS           = 'availabilitySets'
     REST_API_DISKS                       = 'disks'
+    REST_API_DISK_ENCRYPTION_SETS        = 'diskEncryptionSets'
     REST_API_IMAGES                      = 'images'
     REST_API_SNAPSHOTS                   = 'snapshots'
     REST_API_VM_IMAGE                    = 'vmimage'
@@ -254,16 +255,18 @@ module Bosh::AzureCloud
     # * +:managed+              - Boolean. Needs to be true to create managed disk VMs. Default value is nil.
     #
     #   When managed is true, below parameters are required
-    # * +:image_id+             - String. The id of the image to create the virtual machine.
-    # * +:os_disk+              - Hash. OS Disk for the virtual machine instance.
-    # *   +:disk_name+          - String. The name of the OS disk.
-    # *   +:disk_caching+       - String. The caching option of the OS disk. Possible values: None, ReadOnly or ReadWrite.
-    # *   +:disk_size+          - Integer. The size in GiB of the OS disk. It could be nil.
-    # * +:ephemeral_disk+       - Hash. Ephemeral Disk for the virtual machine instance. It could be nil.
-    # *   +:disk_name+          - String. The name of the ephemeral disk.
-    # *   +:disk_caching+       - String. The caching option of the ephemeral disk. Possible values: None, ReadOnly or ReadWrite.
-    # *   +:disk_size+          - Integer. The size in GiB of the ephemeral disk.
-    # *   +:disk_type+          - String. The disk type of the ephemeral disk.
+    # * +:image_id+                   - String. The id of the image to create the virtual machine.
+    # * +:os_disk+                    - Hash. OS Disk for the virtual machine instance.
+    # *   +:disk_name+                - String. The name of the OS disk.
+    # *   +:disk_caching+             - String. The caching option of the OS disk. Possible values: None, ReadOnly or ReadWrite.
+    # *   +:disk_size+                - Integer. The size in GiB of the OS disk. It could be nil.
+    # *   +:disk_encryption_set_name+ - String. If specified, encrypted the os_disk with the customer provided encryption key used in the provided disk encryption set.
+    # * +:ephemeral_disk+             - Hash. Ephemeral Disk for the virtual machine instance. It could be nil.
+    # *   +:disk_name+                - String. The name of the ephemeral disk.
+    # *   +:disk_caching+             - String. The caching option of the ephemeral disk. Possible values: None, ReadOnly or ReadWrite.
+    # *   +:disk_size+                - Integer. The size in GiB of the ephemeral disk.
+    # *   +:disk_type+                - String. The disk type of the ephemeral disk.
+    # *   +:disk_encryption_set_name+ - String. If specified, encrypted the ephemeral_disk with the customer provided encryption key used in the provided disk encryption set.
     #
     #   When managed is true and root_disk type is not 'remote' below parameters are required
     # * +:image_id+             - String. The id of the image to create the virtual machine.
@@ -357,6 +360,10 @@ module Bosh::AzureCloud
           'caching' => vm_params[:os_disk][:disk_caching]
         }
         os_disk['diskSizeGB'] = vm_params[:os_disk][:disk_size] unless vm_params[:os_disk][:disk_size].nil?
+        if vm_params[:os_disk][:disk_encryption_set_name]
+          disk_encryption_set_id = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISK_ENCRYPTION_SETS, name: vm_params[:os_disk][:disk_encryption_set_name])
+          os_disk['managedDisk'] = { 'diskEncryptionSet' => { 'id' => disk_encryption_set_id } }
+        end
       end
 
       unless vm_params[:ephemeral_os_disk].nil?
@@ -370,6 +377,10 @@ module Bosh::AzureCloud
           'name' => vm_params[:ephemeral_os_disk][:disk_name]
         }
         os_disk['diskSizeGB'] = vm_params[:ephemeral_os_disk][:disk_size] unless vm_params[:ephemeral_os_disk][:disk_size].nil?
+        if vm_params[:ephemeral_os_disk][:disk_encryption_set_name]
+          disk_encryption_set_id = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISK_ENCRYPTION_SETS, name: vm_params[:ephemeral_os_disk][:disk_encryption_set_name])
+          os_disk['managedDisk'] = { 'diskEncryptionSet' => { 'id' => disk_encryption_set_id } }
+        end
       end
 
       if vm_params[:image_reference].nil?
@@ -423,10 +434,13 @@ module Bosh::AzureCloud
           'caching' => vm_params[:ephemeral_disk][:disk_caching]
         }]
         if vm_params[:managed]
+          managed_disk = vm['properties']['storageProfile']['dataDisks'][0]['managedDisk'] = {}
           if vm_params[:ephemeral_disk][:disk_type]
-            vm['properties']['storageProfile']['dataDisks'][0]['managedDisk'] = {
-              'storageAccountType' => vm_params[:ephemeral_disk][:disk_type]
-            }
+            managed_disk['storageAccountType'] = vm_params[:ephemeral_disk][:disk_type]
+          end
+          if vm_params[:ephemeral_disk][:disk_encryption_set_name]
+            disk_encryption_set_id = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISK_ENCRYPTION_SETS, name: vm_params[:ephemeral_disk][:disk_encryption_set_name])
+            managed_disk['diskEncryptionSet'] = {'id' => disk_encryption_set_id}
           end
         else
           vm['properties']['storageProfile']['dataDisks'][0]['vhd'] = {
@@ -897,6 +911,7 @@ module Bosh::AzureCloud
     # * +:disk_size+                    - Integer. Specifies the size in GB of the empty managed disk.
     # * +:account_type+                 - String. Specifies the account type of the empty managed disk.
     #                                     Optional values: Standard_LRS, StandardSSD_LRS, Premium_LRS.
+    # * +:disk_encryption_set_name+     - String. If specified, encrypted the disk with the customer provided encryption key used in the provided disk encryption set.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
@@ -921,6 +936,13 @@ module Bosh::AzureCloud
       disk['zones'] = [params[:zone]] unless params[:zone].nil?
       disk['properties']['diskIOPSReadWrite'] = params[:iops] unless params[:iops].nil?
       disk['properties']['diskMBpsReadWrite'] = params[:mbps] unless params[:mbps].nil?
+      if params[:disk_encryption_set_name]
+        disk_encryption_set_id = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISK_ENCRYPTION_SETS, name: params[:disk_encryption_set_name])
+        disk['properties']['encryption'] = {
+          'diskEncryptionSetId' => disk_encryption_set_id,
+          'type' => 'EncryptionAtRestWithCustomerKey'
+        }
+      end
       http_put(url, disk)
     end
 

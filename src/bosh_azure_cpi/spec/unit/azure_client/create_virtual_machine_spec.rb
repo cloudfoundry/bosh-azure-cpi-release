@@ -417,15 +417,13 @@ describe Bosh::AzureCloud::AzureClient do
       end
 
       context 'when managed is true' do
-        let(:vm_params_managed) do
-          vm_params_dupped = vm_params.dup
-          vm_params_dupped.delete(:image_uri)
-          vm_params_dupped[:image_id] = 'g'
-          vm_params_dupped[:managed] = true
-          vm_params_dupped[:os_disk].delete(:disk_uri)
-          vm_params_dupped[:ephemeral_disk].delete(:disk_uri)
-          vm_params_dupped[:ephemeral_disk][:disk_type] = 'p'
-          vm_params_dupped
+        before do
+          vm_params.delete(:image_uri)
+          vm_params[:image_id] = 'g'
+          vm_params[:managed] = true
+          vm_params[:os_disk].delete(:disk_uri)
+          vm_params[:ephemeral_disk].delete(:disk_uri)
+          vm_params[:ephemeral_disk][:disk_type] = 'p'
         end
 
         let(:request_body) do
@@ -522,8 +520,82 @@ describe Bosh::AzureCloud::AzureClient do
           )
 
           expect do
-            azure_client.create_virtual_machine(resource_group, vm_params_managed, network_interfaces)
+            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
           end.not_to raise_error
+        end
+
+        context 'when os_disk is encrypted with customer provided key' do
+          let(:disk_encryption_set_name) { 'disk_encryption_set_name' }
+          before do
+            vm_params[:os_disk][:disk_encryption_set_name] = disk_encryption_set_name
+
+            stub_request(:post, token_uri).to_return(
+              status: 200,
+              body: {
+                'access_token' => valid_access_token,
+                'expires_on' => expires_on
+              }.to_json,
+              headers: {}
+            )
+          end
+
+          it 'creates the vm with os disk encrypted with customer provided key' do
+            request_body[:properties][:storageProfile][:osDisk][:managedDisk] = {
+              diskEncryptionSet: {
+                id: "/subscriptions/#{subscription_id}/resourceGroups/#{MOCK_RESOURCE_GROUP_NAME}/providers/Microsoft.Compute/diskEncryptionSets/#{disk_encryption_set_name}"
+              }
+            }
+            stub_request(:put, vm_uri).with(body: request_body).to_return(
+              status: 200,
+              body: '',
+              headers: {
+                'azure-asyncoperation' => operation_status_link
+              }
+            )
+            stub_request(:get, operation_status_link).to_return(
+              status: 200,
+              body: '{"status":"Succeeded"}',
+              headers: {}
+            )
+
+            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+          end
+        end
+
+        context 'when ephemeral disk is encrypted with customer provided key' do
+          let(:disk_encryption_set_name) { 'disk_encryption_set_name' }
+          before do
+            vm_params[:ephemeral_disk][:disk_encryption_set_name] = disk_encryption_set_name
+
+            stub_request(:post, token_uri).to_return(
+              status: 200,
+              body: {
+                'access_token' => valid_access_token,
+                'expires_on' => expires_on
+              }.to_json,
+              headers: {}
+            )
+          end
+
+          it 'creates the vm with os disk encrypted with customer provided key' do
+            request_body[:properties][:storageProfile][:dataDisks][0][:managedDisk][:diskEncryptionSet] = {
+              id: "/subscriptions/#{subscription_id}/resourceGroups/#{MOCK_RESOURCE_GROUP_NAME}/providers/Microsoft.Compute/diskEncryptionSets/#{disk_encryption_set_name}"
+            }
+            stub_request(:put, vm_uri).with(body: request_body).to_return(
+              status: 200,
+              body: '',
+              headers: {
+                'azure-asyncoperation' => operation_status_link
+              }
+            )
+            stub_request(:get, operation_status_link).to_return(
+              status: 200,
+              body: '{"status":"Succeeded"}',
+              headers: {}
+            )
+
+            azure_client.create_virtual_machine(resource_group, vm_params, network_interfaces)
+          end
         end
       end
 

@@ -21,7 +21,7 @@ module Bosh::AzureCloud
     # @param [String] zone                   Zone number in string. Possible values: "1", "2" or "3".
     #
     # @return [void]
-    def create_disk(disk_id, location, size, storage_account_type, zone = nil, iops = nil, mbps = nil)
+    def create_disk(disk_id, location, size, storage_account_type, zone = nil, iops = nil, mbps = nil, disk_encryption_set_name: nil)
       @logger.info("create_disk(#{disk_id}, #{location}, #{size}, #{storage_account_type}, #{zone})")
       resource_group_name = disk_id.resource_group_name
       disk_name = disk_id.disk_name
@@ -34,7 +34,8 @@ module Bosh::AzureCloud
         location: location,
         tags: tags,
         disk_size: size,
-        account_type: storage_account_type
+        account_type: storage_account_type,
+        disk_encryption_set_name: disk_encryption_set_name,
       }
 
       disk_params[:zone] = zone unless zone.nil?
@@ -185,7 +186,7 @@ module Bosh::AzureCloud
       end
     end
 
-    def os_disk(vm_name, stemcell_info, size, caching, use_root_disk_as_ephemeral)
+    def os_disk(vm_name, stemcell_info, size, caching, use_root_disk_as_ephemeral, disk_encryption_set_name: nil)
       validate_disk_caching(caching)
 
       disk_size = get_os_disk_size(size, stemcell_info, use_root_disk_as_ephemeral)
@@ -193,11 +194,12 @@ module Bosh::AzureCloud
       {
         disk_name: generate_os_disk_name(vm_name),
         disk_size: disk_size,
-        disk_caching: caching
+        disk_caching: caching,
+        disk_encryption_set_name: disk_encryption_set_name
       }
     end
 
-    def ephemeral_os_disk(vm_name, stemcell_info, root_disk_size, ephemeral_disk_size, use_root_disk_as_ephemeral, placement)
+    def ephemeral_os_disk(vm_name, stemcell_info, root_disk_size, ephemeral_disk_size, use_root_disk_as_ephemeral, placement, disk_encryption_set_name: nil)
       disk_size = if use_root_disk_as_ephemeral && !ephemeral_disk_size.nil? && root_disk_size.nil?
                     # when no size was specified at the root disk, we have to use the default stemcell image size based on the os type. For linux we will use 3g and 128gb for windows.
                     stemcell_info.image_size / 1024
@@ -213,11 +215,12 @@ module Bosh::AzureCloud
         disk_name: generate_os_disk_name(vm_name),
         disk_size: disk_size,
         disk_caching: 'ReadOnly',
-        disk_placement: disk_placement
+        disk_placement: disk_placement,
+        disk_encryption_set_name: disk_encryption_set_name
       }
     end
 
-    def ephemeral_disk(vm_name, instance_type, size, type, use_root_disk_as_ephemeral, caching, iops, mbps)
+    def ephemeral_disk(vm_name, instance_type, size, type, use_root_disk_as_ephemeral, caching, iops, mbps, disk_encryption_set_name: nil)
       return nil if use_root_disk_as_ephemeral
 
       disk_info = DiskInfo.for(instance_type)
@@ -235,7 +238,8 @@ module Bosh::AzureCloud
         disk_caching: caching,
         disk_type: type,
         iops: iops,
-        mbps: mbps
+        mbps: mbps,
+        disk_encryption_set_name: disk_encryption_set_name
       }
     end
 
