@@ -78,6 +78,7 @@ module Bosh::AzureCloud
     attr_reader :stemcell_api_version
     attr_reader :use_default_account_for_cleaning
     attr_reader :compute_gallery_name
+    attr_reader :compute_gallery_replicas
 
     def initialize(azure_config_hash)
       @environment = azure_config_hash['environment']
@@ -129,6 +130,8 @@ module Bosh::AzureCloud
       raise "Stemcell must support api version 2 or higher" if @stemcell_api_version < 2
 
       @compute_gallery_name = azure_config_hash['compute_gallery_name']
+      # Azure suggests 1:20 ratio for replicas to vms, but at least 3 replicas are recommended for productions images
+      @compute_gallery_replicas = azure_config_hash.fetch('compute_gallery_replicas', 3)
     end
 
     def managed_identity_enabled?

@@ -84,6 +84,7 @@ module Bosh::AzureCloud
     REST_API_AVAILABILITY_SETS           = 'availabilitySets'
     REST_API_DISKS                       = 'disks'
     REST_API_DISK_ENCRYPTION_SETS        = 'diskEncryptionSets'
+    REST_API_GALLERIES                   = 'galleries'
     REST_API_IMAGES                      = 'images'
     REST_API_SNAPSHOTS                   = 'snapshots'
     REST_API_VM_IMAGE                    = 'vmimage'
@@ -2092,7 +2093,7 @@ module Bosh::AzureCloud
     # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-images/create-or-update?view=rest-compute-2024-07-01&tabs=HTTP
     #
     def create_gallery_image_definition(gallery_name, image_definition, params)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "galleries/#{uri_escape(gallery_name)}/images", name: image_definition)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_GALLERIES, name: gallery_name) + "/#{REST_API_IMAGES}/#{image_definition}"
 
       required_params = %w(location publisher offer sku osType)
       required_params.each do |param|
@@ -2136,7 +2137,7 @@ module Bosh::AzureCloud
     # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-image-versions/create-or-update?view=rest-compute-2024-11-04&tabs=HTTP
     #
     def create_gallery_image_version(gallery_name, image_definition, version, params)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "galleries/#{uri_escape(gallery_name)}/images/#{uri_escape(image_definition)}/versions", name: version)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_GALLERIES, name: gallery_name) + "/#{REST_API_IMAGES}/#{image_definition}/versions/#{version}"
 
       raise ArgumentError, "Missing required parameter 'location'" unless params.key?('location')
 
@@ -2182,27 +2183,35 @@ module Bosh::AzureCloud
     # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-image-versions/delete?view=rest-compute-2024-07-01&tabs=HTTP
     #
     def delete_gallery_image_version(gallery_name, image_definition, version)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "galleries/#{uri_escape(gallery_name)}/images/#{uri_escape(image_definition)}/versions", name: version)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_GALLERIES, name: gallery_name) + "/#{REST_API_IMAGES}/#{image_definition}/versions/#{version}"
 
       @logger.debug("Deleting gallery image version '#{version}' in the gallery image '#{image_definition}' of the gallery '#{gallery_name}'")
-      http_delete(url, { 'api-version' => '2023-07-03' })
+      http_delete(url)
     end
 
-    # Get a gallery image version's information
+    # Get a gallery image version by searching for matching tags
     #
     # @param [String] gallery_name - Name of gallery.
-    # @param [String] image_definition - Name of gallery image definition.
-    # @param [String] version - Name of gallery image version.
-    # @return [Hash]
+    # @param [Hash] tags - Tags to match against gallery image version tags.
+    # @return [Hash] The gallery image version that matches the tags
     #
-    # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-image-versions/get?view=rest-compute-2024-07-01&tabs=HTTP
+    # @See https://learn.microsoft.com/en-us/rest/api/resources/resources/list
     #
-    def get_compute_gallery_image_version(gallery_name, image_definition, version)
-      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "galleries/#{uri_escape(gallery_name)}/images/#{uri_escape(image_definition)}/versions", name: version)
+    def get_gallery_image_version_by_tags(gallery_name, tags)
+      @logger.debug("Searching in gallery '#{gallery_name}' for images with tags: #{tags}")
+      return nil if gallery_name.nil? || gallery_name.empty?
 
-      result = get_resource_by_id(url, {'api-version' => '2023-07-03'})
+      tag_filters = tags.map { |key, value| "tagName eq '#{key}' and tagValue eq '#{value}'" }.join(' and ')
+      url = "/subscriptions/#{@azure_config.subscription_id}/resourceGroups/#{@azure_config.resource_group_name}/resources"
+      result = get_resource_by_id(url, {'$filter' => tag_filters})
+      return nil if result.nil? || result['value'].nil?
 
-      parse_gallery_image(result)
+      result['value'].each do |resource|
+        next if resource['type'] != "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_GALLERIES}/#{REST_API_IMAGES}/versions"
+        # As the resource does not contain the targetRegion, we need to do one more request to get the full resource
+        image_version = get_resource_by_id(resource['id'])
+        return parse_gallery_image(image_version)
+      end
     end
 
     private
@@ -2287,10 +2296,15 @@ module Bosh::AzureCloud
       image = nil
       unless result.nil?
         image = {}
-        image[:id]       = result['id']
-        image[:name]     = result['name']
-        image[:location] = result['location']
-        image[:tags]     = result['tags']
+        image[:id] = result['id']
+        if result['id']&.include?('/images/')
+          image[:gallery_name] = result['id'].split('/galleries/').last.split('/images/').first
+          image[:image_definition] = result['id'].split('/images/').last.split('/versions/').first
+        end
+        image[:name]          = result['name']
+        image[:location]      = result['location']
+        image[:tags]          = result['tags']
+        image[:replica_count] = result.dig('properties', 'publishingProfile', 'replicaCount')
 
         targetRegions = result.dig('properties', 'publishingProfile', 'targetRegions')
         image[:target_regions] = targetRegions.map { |h| h['name'] } unless targetRegions.nil?
@@ -2602,6 +2616,8 @@ module Bosh::AzureCloud
                                 AZURE_RESOURCE_PROVIDER_COMPUTE_DISK
                               elsif url.include?(REST_API_SNAPSHOTS)
                                 AZURE_RESOURCE_PROVIDER_COMPUTE_SNAPSHOT
+                              elsif url.include?(REST_API_GALLERIES)
+                                AZURE_RESOURCE_PROVIDER_COMPUTE_GALLERY
                               else
                                 AZURE_RESOURCE_PROVIDER_COMPUTE
                               end

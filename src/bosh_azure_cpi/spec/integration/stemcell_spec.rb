@@ -11,6 +11,7 @@ describe Bosh::AzureCloud::Cloud do
   subject(:cpi_gallery) do
     gallery_enabled_options = @cloud_options.dup
     gallery_enabled_options['azure']['compute_gallery_name'] = @compute_gallery_name
+    gallery_enabled_options['azure']['compute_gallery_replicas'] = 1
     gallery_enabled_options['azure']['use_managed_disks'] = true
     described_class.new(gallery_enabled_options, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
   end
@@ -71,14 +72,12 @@ describe Bosh::AzureCloud::Cloud do
 
           # Replicate image into other location
           other_location = ['eastus', 'East US'].include?(@azure_config.location) ? 'West US' : 'East US'
-          stemcell_info = cpi_gallery.stemcell_manager2.get_user_image_info(@stemcell_id, 'Standard_LRS', other_location)
+          cpi_gallery.stemcell_manager2.get_user_image_info(@stemcell_id, 'Standard_LRS', other_location)
 
-          # Verify image was replicated
-          gallery_image = azure_client.get_compute_gallery_image_version(
-            @compute_gallery_name,
-            image_data['sku'],
-            image_data['version']
-          )
+          # Verify image replication
+          gallery_image = azure_client.get_gallery_image_version_by_tags(@compute_gallery_name, {'stemcell_name' => @stemcell_id})
+          expect(gallery_image).not_to be_nil
+          expect(gallery_image[:replica_count]).to eq(1)
           actual_regions = gallery_image[:target_regions].map { |region| region.downcase.gsub(' ', '') }
           expected_regions = [@azure_config.location, other_location].map { |region| region.downcase.gsub(' ', '') }
           expect(actual_regions).to match_array(expected_regions)
@@ -87,12 +86,9 @@ describe Bosh::AzureCloud::Cloud do
           cpi_gallery.delete_stemcell(@stemcell_id)
 
           # Verify gallery image version was deleted
-          deleted_image = azure_client.get_compute_gallery_image_version(
-            @compute_gallery_name,
-            image_data['sku'],
-            image_data['version']
-          )
+          deleted_image = azure_client.get_gallery_image_version_by_tags(@compute_gallery_name, {'stemcell_name' => @stemcell_id})
           expect(deleted_image).to be_nil
+          @stemcell_id = nil
         end
       end
     end

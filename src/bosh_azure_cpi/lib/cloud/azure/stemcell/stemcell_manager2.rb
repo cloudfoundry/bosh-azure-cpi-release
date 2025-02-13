@@ -5,13 +5,10 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
-    # TODO: Make replica count configurable in global config. Azure suggests 1:20 ratio for replicas to vms,
-    # but at least 3 replicas are recommended for productions images.
-    DEFAULT_REPLICA_COUNT = 3.freeze
-
     def initialize(azure_config, blob_manager, meta_store, storage_account_manager, azure_client)
       @azure_config = azure_config
       @azure_client = azure_client
+      @replica_count = @azure_config.compute_gallery_replicas
       super(blob_manager, meta_store, storage_account_manager)
     end
 
@@ -22,9 +19,8 @@ module Bosh::AzureCloud
       location = @azure_config.location
       cloud_error("Missing the property 'location' in the global configuration") if location.nil?
 
-      @logger.debug("Creating new stemcell in compute gallery and stemcell_properties: #{stemcell_properties}")
       metadata = stemcell_properties.dup
-      stemcell_series = metadata['name'].delete_prefix('bosh-azure-hyperv-ubuntu-').delete_suffix('-go_agent')
+      stemcell_series = metadata['name']&.delete_prefix('bosh-azure-hyperv-ubuntu-')&.delete_suffix('-go_agent')
       version = _make_semver_compliant(metadata['version'])
       image = {
         'publisher' => metadata['infrastructure'],
@@ -36,34 +32,11 @@ module Bosh::AzureCloud
       metadata['compute_gallery_name'] = @azure_config.compute_gallery_name
       metadata['compute_gallery_image_definition'] = stemcell_series
 
-      @logger.debug("Uploading stemcell vhd to the default storage account with metadata: #{metadata}")
-
+      @logger.info("Uploading stemcell vhd to the default storage account with metadata: #{metadata}")
       stemcell_name = super(image_path, metadata)
 
-      os_type = metadata['os_type'].nil? ? 'Linux' : metadata['os_type'].downcase.capitalize
-      params = {
-        'location' => location,
-        'tags' => metadata.merge({'stemcell_name' => stemcell_name}).to_h,
-        'osType' => os_type,
-      }.merge(image)
-
-      @logger.info("Ensuring compute gallery image definition for series: #{stemcell_series}")
-      @azure_client.create_gallery_image_definition(@azure_config.compute_gallery_name, stemcell_series, params)
-
-      @logger.info("Creating new image version for series: #{stemcell_series}")
-      @azure_client.create_gallery_image_version(
-        @azure_config.compute_gallery_name,
-        stemcell_series,
-        version,
-        {
-          'location' => location,
-          'tags' => metadata.merge({'stemcell_name' => stemcell_name}).to_h,
-          'storage_account_name' => @default_storage_account_name,
-          'blob_uri' => @blob_manager.get_blob_uri(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd"),
-          'replica_count' => DEFAULT_REPLICA_COUNT,
-          'target_regions' => [location]
-        }
-      )
+      @logger.info("Creating gallery image definition and version for stemcell '#{stemcell_name}'")
+      _create_gallery_image(stemcell_name, stemcell_series, version, location, metadata)
 
       stemcell_name
     end
@@ -84,13 +57,13 @@ module Bosh::AzureCloud
 
       if _compute_gallery_enabled?
         @logger.debug("Compute gallery is enabled. Try to delete gallery image for stemcell '#{name}'")
-        metadata = _get_gallery_image_metadata(@default_storage_account_name, name)
-        if metadata
-          @logger.info("Delete gallery image version '#{metadata[:image_definition]}:#{metadata[:version]}'")
+        gallery_image = @azure_client.get_gallery_image_version_by_tags(@azure_config.compute_gallery_name, {'stemcell_name' => name})
+        if gallery_image
+          @logger.info("Delete gallery image version '#{gallery_image[:gallery_name]}/#{gallery_image[:image_definition]}:#{gallery_image[:name]}'")
           @azure_client.delete_gallery_image_version(
-            metadata[:gallery_name],
-            metadata[:image_definition],
-            metadata[:version]
+            gallery_image[:gallery_name],
+            gallery_image[:image_definition],
+            gallery_image[:name]
           )
         else
           @logger.info("Gallery image metadata not found for stemcell '#{name}'")
@@ -129,11 +102,12 @@ module Bosh::AzureCloud
         gallery_image = _ensure_gallery_image_in_target_location(stemcell_name, location)
 
         unless gallery_image.nil?
-          @logger.debug("Found gallery image: #{gallery_image[:name]}")
+          @logger.debug("Using gallery image: #{gallery_image[:id]}")
           return StemcellInfo.new(gallery_image[:id], gallery_image[:tags])
         end
       end
 
+      @logger.debug("Try to get user image in '#{location}' for stemcell '#{stemcell_name}'")
       user_image = _get_user_image(stemcell_name, storage_account_type, location)
       return StemcellInfo.new(user_image[:id], user_image[:tags])
     end
@@ -152,55 +126,76 @@ module Bosh::AzureCloud
       "#{major}.#{minor}.#{patch}"
     end
 
-    def _ensure_gallery_image_in_target_location(stemcell_name, target_location)
-      storage_account_name = @default_storage_account_name
-      gallery_metadata = _get_gallery_image_metadata(storage_account_name, stemcell_name)
-      unless gallery_metadata
-        @logger.info("Gallery image metadata not found for stemcell '#{stemcell_name}'. Skip creating gallery image in target location '#{target_location}'")
-        return nil
+    def _create_gallery_image(stemcell_name, image_definition, version, location, metadata)
+      gallery_name = @azure_config.compute_gallery_name
+      os_type = metadata['os_type']&.downcase&.capitalize
+      cloud_error("Invalid os_type '#{os_type}'") unless ['Linux', 'Windows'].include?(os_type)
+
+      params = { 'location' => location, 'osType' => os_type }.merge(JSON.parse(metadata['image']))
+      flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}", File::LOCK_EX) do
+        @logger.debug("Ensuring compute gallery image definition '#{gallery_name}/#{image_definition}'")
+        @azure_client.create_gallery_image_definition(gallery_name, image_definition, params)
       end
 
-      @logger.debug("Stemcell #{stemcell_name} should be uploaded in compute gallery '#{gallery_metadata[:gallery_name]}' as image '#{gallery_metadata[:image_definition]}:#{gallery_metadata[:version]}'")
-      gallery_image = @azure_client.get_compute_gallery_image_version(
-        gallery_metadata[:gallery_name],
-        gallery_metadata[:image_definition],
-        gallery_metadata[:version]
-      )
+      gallery_image = nil
+      flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}-#{version}", File::LOCK_EX) do
+        @logger.debug("Creating compute gallery image '#{gallery_name}/#{image_definition}:#{version}' in target location '#{location}'")
+        metadata['stemcell_name'] = stemcell_name
+        gallery_image = @azure_client.create_gallery_image_version(
+          gallery_name,
+          image_definition,
+          version,
+          {
+            'location'             => location,
+            'tags'                 => metadata,
+            'storage_account_name' => @default_storage_account_name,
+            'blob_uri'             => @blob_manager.get_blob_uri(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd"),
+            'replica_count'        => @replica_count,
+            'target_regions'       => [location]
+          }
+        )
+      end
+
+      gallery_image
+    end
+
+    def _ensure_gallery_image_in_target_location(stemcell_name, target_location)
+      gallery_image = @azure_client.get_gallery_image_version_by_tags(@azure_config.compute_gallery_name, {'stemcell_name' => stemcell_name})
 
       if gallery_image.nil?
-        flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_metadata[:image_definition]}-#{gallery_metadata[:version]}", File::LOCK_EX) do
-          @logger.info("Gallery image not found. Creating image '#{gallery_metadata[:image_definition]}:#{gallery_metadata[:version]}' in target location '#{target_location}'")
-          gallery_image = @azure_client.create_gallery_image_version(
-            gallery_metadata[:gallery_name],
-            gallery_metadata[:image_definition],
-            gallery_metadata[:version],
-            {
-              'location'             => target_location,
-              'tags'                 => gallery_metadata[:tags],
-              'storage_account_name' => storage_account_name,
-              'blob_uri'             => @blob_manager.get_blob_uri(storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd"),
-              'replica_count'        => DEFAULT_REPLICA_COUNT,
-              'target_regions'       => [target_location]
-            }
-          )
-        end
-        return gallery_image
+        @logger.debug("Gallery image not found for stemcell '#{stemcell_name}'. Try to recover from blob metadata")
+        metadata = @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
+        return nil unless metadata&.key?('image') && metadata.key?('compute_gallery_name') && metadata.key?('compute_gallery_image_definition')
+        return nil if metadata['compute_gallery_name'] != @azure_config.compute_gallery_name
+
+        image_metadata = JSON.parse(metadata['image'], symbolize_names: true)
+        @logger.debug("Recovering gallery image from metadata of blob '#{stemcell_name}': #{image_metadata}")
+        return _create_gallery_image(stemcell_name, metadata['compute_gallery_image_definition'], image_metadata[:version], target_location, metadata)
       end
 
-      @logger.debug("Gallery image '#{gallery_metadata[:image_definition]}:#{gallery_metadata[:version]}' exists in gallery '#{gallery_metadata[:gallery_name]}'")
-      regions = gallery_image[:target_regions]
-      unless _contains_region?(regions, target_location)
-        flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_metadata[:image_definition]}-#{gallery_metadata[:version]}", File::LOCK_EX) do
-          @logger.info("Replicating the gallery image '#{gallery_metadata[:image_definition]}:#{gallery_metadata[:version]}' to target location '#{target_location}'")
-          regions << target_location
+      @logger.debug("Gallery image '#{gallery_image[:gallery_name]}/#{gallery_image[:image_definition]}:#{gallery_image[:name]}' found")
+      needs_update = false
+      params = { 'location' => gallery_image[:location] }
+      unless _contains_region?(gallery_image[:target_regions], target_location)
+        @logger.debug("Gallery image '#{gallery_image[:gallery_name]}/#{gallery_image[:image_definition]}:#{gallery_image[:name]}' needs replication to target location '#{target_location}'")
+        needs_update = true
+        params['target_regions'] = gallery_image[:target_regions].dup.push(target_location)
+      end
+
+      current_replicas = gallery_image[:replica_count]
+      if !current_replicas.nil? && current_replicas != @replica_count
+        @logger.debug("Gallery image '#{gallery_image[:gallery_name]}/#{gallery_image[:image_definition]}:#{gallery_image[:name]}' needs update of replicas from #{current_replicas} to #{@replica_count}")
+        needs_update = true
+        params['replica_count'] = @replica_count
+      end
+
+      if needs_update
+        flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_image[:image_definition]}-#{gallery_image[:name]}", File::LOCK_EX) do
           gallery_image = @azure_client.create_gallery_image_version(
-            gallery_metadata[:gallery_name],
-            gallery_metadata[:image_definition],
-            gallery_metadata[:version],
-            {
-              'location'       => gallery_image[:location],
-              'target_regions' => regions,
-            }
+            gallery_image[:gallery_name],
+            gallery_image[:image_definition],
+            gallery_image[:name],
+            params
           )
         end
       end
@@ -283,27 +278,6 @@ module Bosh::AzureCloud
       end
 
       user_image
-    end
-
-    def _get_gallery_image_metadata(storage_account_name, stemcell_name)
-      begin
-        metadata = @blob_manager.get_blob_metadata(storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
-        @logger.debug("Retrieved gallery image metadata from #{storage_account_name}/#{stemcell_name}: #{metadata}")
-        return nil unless metadata&.key?('compute_gallery_name') &&
-                         metadata.key?('compute_gallery_image_definition') &&
-                         metadata.key?('image')
-
-        image_metadata = JSON.parse(metadata['image'], symbolize_names: true)
-        {
-          gallery_name: metadata['compute_gallery_name'],
-          image_definition: metadata['compute_gallery_image_definition'],
-          version: image_metadata[:version],
-          tags: metadata.merge({ 'stemcell_name' => stemcell_name }).to_h
-        }
-      rescue => e
-        @logger.warn("Failed to retrieve metadata for gallery image: #{e.message}")
-        nil
-      end
     end
   end
 end
