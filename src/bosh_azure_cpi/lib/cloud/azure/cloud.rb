@@ -36,6 +36,8 @@ module Bosh::AzureCloud
 
       @use_managed_disks = _azure_config.use_managed_disks
 
+      @use_compute_gallery = !_azure_config.compute_gallery_name.nil?
+
       _init_cpi_lock_dir
 
       @props_factory = Bosh::AzureCloud::PropsFactory.new(@config)
@@ -80,7 +82,7 @@ module Bosh::AzureCloud
           'stemcell' => "#{cloud_properties.fetch('name', 'unknown_name')}-#{cloud_properties.fetch('version', 'unknown_version')}"
         }
         @telemetry_manager.monitor('create_stemcell', extras: extras) do
-          if has_light_stemcell_property?(cloud_properties)
+          if has_light_stemcell_property?(cloud_properties) && !@use_compute_gallery
             @light_stemcell_manager.create_stemcell(cloud_properties)
           elsif @use_managed_disks
             @stemcell_manager2.create_stemcell(image_path, cloud_properties)
@@ -106,7 +108,7 @@ module Bosh::AzureCloud
       end
       with_thread_name("delete_stemcell(#{stemcell_cid})") do
         @telemetry_manager.monitor('delete_stemcell', id: stemcell_cid) do
-          if is_light_stemcell_cid?(stemcell_cid)
+          if is_light_stemcell_cid?(stemcell_cid) && !@use_compute_gallery
             @light_stemcell_manager.delete_stemcell(stemcell_cid)
           elsif @use_managed_disks
             @stemcell_manager2.delete_stemcell(stemcell_cid)
@@ -839,7 +841,7 @@ module Bosh::AzureCloud
 
       @stemcell_manager        = Bosh::AzureCloud::StemcellManager.new(@blob_manager, @meta_store, @storage_account_manager)
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client)
-      @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(@blob_manager, @meta_store, @storage_account_manager, @azure_client)
+      @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(_azure_config, @blob_manager, @meta_store, @storage_account_manager, @azure_client)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client)
       @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
