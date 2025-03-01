@@ -370,11 +370,6 @@ This document describes the steps to update your Cloud Foundry to use Diego as d
 
 1. Install CF CLI and the plugin
 
-    ```
-    wget -O cf.deb http://go-cli.s3-website-us-east-1.amazonaws.com/releases/v6.14.1/cf-cli-installer_6.14.1_x86-64.deb
-    sudo dpkg -i cf.deb
-    ```
-
 1. Configure your space. Example:
 
     ```

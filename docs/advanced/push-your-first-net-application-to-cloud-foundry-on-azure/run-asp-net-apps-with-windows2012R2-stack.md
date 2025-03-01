@@ -194,11 +194,6 @@ This guide references [INSTALL.md](https://github.com/cloudfoundry-incubator/die
 
 2. Install CF client
 
-    ```
-    wget -O cf.deb http://go-cli.s3-website-us-east-1.amazonaws.com/releases/v6.14.1/cf-cli-installer_6.14.1_x86-64.deb
-    sudo dpkg -i cf.deb
-    ```
-
 3. Configure your space
 
     ```

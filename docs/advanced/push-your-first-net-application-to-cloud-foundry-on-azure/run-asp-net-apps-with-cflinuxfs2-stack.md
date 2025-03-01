@@ -14,11 +14,6 @@ In this guide, you will learn how to run ASP.NET application on Cloud foundry wi
 
 2. Install CF CLI and the plugin
 
-  ```
-  wget -O cf.deb http://go-cli.s3-website-us-east-1.amazonaws.com/releases/v6.14.1/cf-cli-installer_6.14.1_x86-64.deb
-  sudo dpkg -i cf.deb
-  ```
-
 3. Configure your space
 
   Run `cat ~/settings | grep cf-ip` to get Cloud Foundry public IP.
