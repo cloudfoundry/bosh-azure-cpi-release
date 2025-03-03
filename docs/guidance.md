@@ -26,15 +26,6 @@ You can create an Azure account according to the environment where Cloud Foundry
 
 ## 2.2 Deploy BOSH and Cloud Foundry
 
-You have two options to deploy BOSH and Cloud Foundry on Azure. One is ARM templates which can help you automatically prepare essential resources, the other is manual steps.
-
-### 2.2.1 Via ARM templates (**RECOMMENDED**)
-
-* [Deploy BOSH](./get-started/via-arm-templates/deploy-bosh-via-arm-templates.md)
-* [Deploy Cloud Foundry](./get-started/via-arm-templates/deploy-cloudfoundry-via-arm-templates.md)
-
-### 2.2.2 Manually
-
 * [Deploy BOSH](https://bosh.io/docs/init-azure.html)
 * [Deploy Cloud Foundry](https://docs.cloudfoundry.org/deploying/azure/index.html)
 
@@ -56,26 +47,10 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Configure resource groups](./advanced/configure-resource-groups/)
   * [Deploy multiple network interfaces for a Cloud Foundry instance](./advanced/deploy-multiple-network-interfaces/)
   * [Use application security groups in Cloud Foundry](./advanced/application-security-groups/)
-  * [Deploy Cloud Foundry on Azure Stack](./advanced/azure-stack/)
   * [Use service principal with certificate](./advanced/use-service-principal-with-certificate/)
   * [Calculate correct VM cloud properties based on `vm_resources`](./advanced/calculate-vm-cloud-properties/)
   * [Use Azure Accelerated Networking](./advanced/accelerated-networking/)
   * [Use Azure Managed Identity](./advanced/managed-identity/)
-* Cloud Foundry Scenarios
-  * [Hybrid Cloud Foundry across Azure and Azure Stack](./advanced/hybrid-cloud-foundry-across-azure-and-azure-stack/)
-  * [Configure Cloud Foundry external databases using Azure MySQL/Postgres Service](./advanced/configure-cf-external-databases-using-azure-mysql-postgres-service)
-  * [Integrating Application Gateway](./advanced/application-gateway/)
-  * [Push your first .NET application to Cloud Foundry on Azure](./advanced/push-your-first-net-application-to-cloud-foundry-on-azure/)
-  * [Integrating Traffic Manager](./advanced/traffic-manager/)
-  * [Backup and restore Cloud Foundry](./advanced/backup-and-restore-cloud-foundry/)
-  * [SSH into the application](./advanced/cf-ssh-application/)
-  * [Migrate Cloud Foundry blobs from an NFS blobstore to an Azure Storage blobstore](./advanced/migrate-blobs/)
-  * [Deploy multiple HAProxy instances behind Azure Load Balancer](./advanced/deploy-multiple-haproxy/)
-  * [Update Cloud Foundry to use Diego](./advanced/switch-to-diego-default-architecture/)
-  * [Azure DNS](./advanced/deploy-azuredns/)
-* Service Brokers
-  * [Meta Azure Service Broker](https://github.com/Azure/meta-azure-service-broker)
-  * [MySQL Service](./advanced/deploy-mysql/)
 
 # 4 Additional Information
 
