@@ -28,101 +28,17 @@ This guidance assumes you have created 4 load balancers (`Router`, `TCP Router`,
 
     The LB of `MySQL Proxy` is an internal LB. No DNS records need to be updated. After removing the Basic SKU load balancer, the Cloud Foundry components can still connect to MySQL servers via `sql-db.service.cf.internal` instead of `mysql.<your-domain>`. So, we can simply remove the Basic SKU load balancer and add the Standard SKU load balancer. There may be a minor switching time when we switch from Basic to standard LB.
 
-## Migrate Load Balancers in Pivotal Application Service
-
-In the following steps, we assume that there are no HAProxy instances in your deployment originally. `Router`, `TCP Routers`, `Diego Brain` and `MySQL Proxy` have their own basic load balancers.
-
-### Pre-requisites
-
-* You have an existing [Pivotal Cloud Foundry (PCF)](https://docs.pivotal.io/pivotalcf/2-1/customizing/azure.html). You can refer to the [document](https://docs.pivotal.io/pivotalcf/2-1/customizing/azure.html). Note: You should choose `Launching an BOSH Director Instance with an ARM Template` in the document.
-
-* Basic SKU Load Balancers are used in your deployment.
-
-* You need to horizontally scale most Cloud Foundry components to multiple instances to achieve the redundancy required for [high availability](https://docs.pivotal.io/pivotalcf/2-1/concepts/high-availability.html). Otherwise, there will be downtime during migration.
-
-* You need to create multiple standard load balancers: one for HAProxy instance, and one for `Router`, `TCP Router`, `Diego Brain` and `MySQL Proxy` respectively.
-
-    * You can follow the [doc](../standard-load-balancer) to create [Standard SKU public IP address](https://docs.microsoft.com/en-us/azure/virtual-network/virtual-network-public-ip-address) and a [Standard SKU load balancer](https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-standard-overview). Please note down the load balancer name and the public IP address.
-
-    * Please make sure all the configurations (e.g. backend pool, health probes and load balancing rules) are same to the basic LBs.
-
-* In your DNS provider, the records of your domain should be:
-
-    * `*.apps.<your-domain>` is resolved to the public IP address of `Router` load balancer.
-
-    * `*.system.<your-domain>` is resolved to the public IP address of `Router` load balancer.
-
-    * `tcp.<your-domain>` is resolved to the public IP address of `TCP Router` load balancer.
-
-    * `ssh.<your-domain>` is resolved to the public IP address of `Diego Brain` load balancer.
-
-    * `mysql.<your-domain>` is resolved to the internal IP address of `MySQL Proxy` load balancer.
-
-### Steps
-
-1. Migrate the load balancers of `Router`, `TCP Routers` and `Diego Brain`.
-
-    1. Create a load balancer for HAProxy instances using the [template](../standard-load-balancers/load-balancer-for-haproxy.json). The LB will be used in the next step.
-
-    1. Add an HAProxy instance with a LB to your deployment. **Apply changes!**
-
-        * Locate the **HAProxy** job in the **Resource Config** pane, select `2` in the field under **Instances**, and enter the name of your external LB in the field under **Load Balancers**.
-
-        * The load balancer should have rules for at least the default HTTP and HTTPS ports (80 and 443), port 2222 for diego brain, as well as [the port range configured for the TCP Routing](https://github.com/cloudfoundry/cf-deployment/blob/a6983a1b3345cd9f5af0f26d5c10265de0c7851f/cf-deployment.yml#L726).
-
-        * The network security group for the HAProxy instnaces should allow public traffic on the necessary ports. You will need to allow at least the default HTTP and HTTPS ports (80 and 443), port 2222 for diego brain, as well as [the port range configured for the TCP Routing](https://github.com/cloudfoundry/cf-deployment/blob/a6983a1b3345cd9f5af0f26d5c10265de0c7851f/cf-deployment.yml#L726).
-
-    1. Navigate to your DNS provider, and create entries for the following domains.
-
-        * `*.apps.<your-domain>` is resolved to the public IP address of `HAProxy` load balancer.
-
-        * `*.system.<your-domain>` is resolved to the public IP address of `HAProxy` load balancer.
-
-        * `tcp.<your-domain>` is resolved to the public IP address of `HAProxy` load balancer.
-
-        * `ssh.<your-domain>` is resolved to the public IP address of `HAProxy` load balancer.
-
-    1. Verify whether the deployment with the HAProxy instance works. You need to login CF in two places. In the first place, the domain is still resovled to the public IP address of Basic SKU load balancer. In the second place, the domain is resolved to the public IP address of `HAProxy` load balancer. If the deployment works well, continue next steps.
-
-    1. Remove the Basic SKU load balancer in the **Load Balancers** field of `Router`, `TCP Router` and `Diego Brain`. **Apply changes!**
-
-    1. Add the Standard SKU load balancer in the **Load Balancers** field of `Router`, `TCP Router` and `Diego Brain`. **Apply changes!**
-
-    1. Navigate to your DNS provider, and create entries for the following domains. Wait until DNS propagations are finished globally.
-
-        * `*.apps.<your-domain>` is resolved to the new public IP address of `Router` load balancer (Standard SKU).
-
-        * `*.system.<your-domain>` is resolved to the new public IP address of `Router` load balancer (Standard SKU).
-
-        * `tcp.<your-domain>` is resolved to the new public IP address of `TCP Router` load balancer (Standard SKU).
-
-        * `ssh.<your-domain>` is resolved to the new public IP address of `Diego Brain` load balancer (Standard SKU).
-
-    1. Verify whether the new Standard SKU LBs work. You need to login CF in two places. In the first place, the domain is still resovled to the public IP address of `HAProxy` load balancer. In the second place, the domain is resolved to the public IP address of Standard SKU load balancer. If the deployment works well, continue next steps.
-
-    1. Change the HAProxy instances number to `0` in `Resource Config`. **Apply changes!**
-
-1. Migrate the load balancer of `MySQL Proxy`.
-
-    1. Remove `MySQL Service Hostname` in [`Step 12: (Optional) Configure Internal MySQL`](https://docs.pivotal.io/pivotalcf/2-1/customizing/azure-er-config.html#internal-mysql) and the Basic SKU load balancer in the **Load Balancers** field of `MySQL Proxy`. **Apply changes!**
-
-    1. Configure `MySQL Service Hostname` in [`Step 12: (Optional) Configure Internal MySQL`](https://docs.pivotal.io/pivotalcf/2-1/customizing/azure-er-config.html#internal-mysql) and add the Standard SKU load balancer in the **Load Balancers** field of `MySQL Proxy`. **Apply changes!**
-
-    1. Navigate to your DNS provider, and create entries for the following domains. Wait until DNS propagations are finished globally.
-
-        * `mysql.<your-domain>` is resolved to the new IP address of `MySQL` load balancer (Standard SKU).
-
 ## Migrate Load Balancers in cf-deployment
 
 In the following steps, we assume you are not using PAS, you can modify the bosh manifest directly. `Router`, `TCP Routers` and `Diego Brain` (also called `scheduler` in `cf-deployment`) have their own basic load balancers. But `MySQL Proxy` (also called `database` in `cf-deployment`) doesn't have the load balancer.
 
 ### Pre-requisites
 
-* You have an existing [cf-deployment](https://github.com/cloudfoundry/cf-deployment). You can refer to the [ARM template](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md).
+* You have an existing [cf-deployment](https://github.com/cloudfoundry/cf-deployment).
 
 * Basic SKU Load Balancers are used in your deployment.
 
-* You need to horizontally scale most Cloud Foundry components to multiple instances to achieve the redundancy required for [high availability](https://docs.pivotal.io/pivotalcf/2-1/concepts/high-availability.html). Otherwise, there will be downtime during migration. Don't use the ops [scale-to-one-az.yml](https://github.com/cloudfoundry/cf-deployment/blob/master/operations/scale-to-one-az.yml).
+* You need to horizontally scale most Cloud Foundry components to multiple instances to achieve the redundancy required for high availability. Otherwise, there will be downtime during migration. Don't use the ops [scale-to-one-az.yml](https://github.com/cloudfoundry/cf-deployment/blob/master/operations/scale-to-one-az.yml).
 
 * You need to create multiple standard load balancers: one for HAProxy instance, and one for `Router`, `TCP Router` and `Diego Brain` respectively.
 
