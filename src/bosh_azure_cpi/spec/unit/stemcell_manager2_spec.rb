@@ -52,7 +52,6 @@ describe Bosh::AzureCloud::StemcellManager2 do
         {
           'version' => '1.2',
           'os_type' => 'linux',
-          'os_distro' => 'ubuntu',
           'infrastructure' => 'azure',
           'disk' => 30720,
           'name' => 'bosh-azure-hyperv-ubuntu-trusty-go_agent'
@@ -70,12 +69,12 @@ describe Bosh::AzureCloud::StemcellManager2 do
         stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
 
         expect(azure_client).to have_received(:create_gallery_image_definition)
-          .with('fake-gallery', 'trusty', hash_including(
+          .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', hash_including(
             'location' => 'fake-location',
             'osType' => 'Linux',
-            'offer' => 'ubuntu',
-            'publisher' => 'azure',
-            'sku' => 'trusty',
+            'publisher' => 'bosh',
+            'offer' => 'bosh-azure-hyperv-ubuntu-trusty-go_agent',
+            'sku' => 'gen1',
             'version' => '1.2.0',
           ))
       end
@@ -84,7 +83,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
         stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
 
         expect(azure_client).to have_received(:create_gallery_image_version)
-          .with('fake-gallery', 'trusty', '1.2.0', {
+          .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', '1.2.0', {
             'location' => 'fake-location',
             'replica_count' => 3,
             'storage_account_name' => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
@@ -849,6 +848,56 @@ describe Bosh::AzureCloud::StemcellManager2 do
             end
           end
         end
+      end
+    end
+  end
+
+  describe 'hyperVGeneration parameter' do
+    let(:azure_config) do
+      Bosh::AzureCloud::AzureConfig.new(
+        'compute_gallery_name' => 'fake-gallery',
+        'location' => 'fake-location'
+      )
+    end
+    let(:blob_uri) { 'fake-blob-uri' }
+
+    before do
+      allow(blob_manager).to receive(:create_page_blob)
+      allow(blob_manager).to receive(:get_blob_uri).and_return(blob_uri)
+      allow(SecureRandom).to receive(:uuid).and_return(stemcell_uuid)
+      allow(azure_client).to receive(:create_gallery_image_definition).and_return(nil)
+      allow(azure_client).to receive(:create_gallery_image_version).and_return(nil)
+      allow_any_instance_of(Bosh::AzureCloud::StemcellManager).to receive(:create_stemcell).and_return(stemcell_name)
+    end
+
+    context 'with generation specified in stemcell properties' do
+      it 'correctly formats the parameter' do
+        stemcell_props = {
+          'name' => 'fake-name',
+          'version' => '1.0',
+          'os_type' => 'linux',
+          'generation' => 'gen2'
+        }
+
+        stemcell_manager2.create_stemcell('fake-image-path', stemcell_props)
+
+        expect(azure_client).to have_received(:create_gallery_image_definition)
+          .with('fake-gallery', anything, hash_including('hyperVGeneration' => 'V2'))
+      end
+    end
+
+    context 'without generation specified' do
+      it 'uses the default hyperVGeneration value (=V1)' do
+        stemcell_props = {
+          'name' => 'fake-name',
+          'version' => '1.0',
+          'os_type' => 'linux'
+        }
+
+        stemcell_manager2.create_stemcell('fake-image-path', stemcell_props)
+
+        expect(azure_client).to have_received(:create_gallery_image_definition)
+          .with('fake-gallery', anything, hash_including('hyperVGeneration' => 'V1'))
       end
     end
   end

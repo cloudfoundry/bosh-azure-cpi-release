@@ -5,6 +5,9 @@ module Bosh::AzureCloud
     include Bosh::Exec
     include Helpers
 
+    STEMCELL_PUBLISHER = 'bosh'.freeze
+    DEFAULT_HYPERV_GENERATION_DEFAULT = 'gen1'.freeze
+
     def initialize(azure_config, blob_manager, meta_store, storage_account_manager, azure_client)
       @azure_config = azure_config
       @azure_client = azure_client
@@ -20,12 +23,12 @@ module Bosh::AzureCloud
       cloud_error("Missing the property 'location' in the global configuration") if location.nil?
 
       metadata = stemcell_properties.dup
-      stemcell_series = metadata['name']&.delete_prefix('bosh-azure-hyperv-ubuntu-')&.delete_suffix('-go_agent')
+      stemcell_series = metadata['name']
       version = _make_semver_compliant(metadata['version'])
       image = {
-        'publisher' => metadata['infrastructure'],
-        'offer' => metadata['os_distro'],
-        'sku' => stemcell_series,
+        'publisher' => STEMCELL_PUBLISHER,
+        'offer' => stemcell_series,
+        'sku' => metadata.fetch('generation', DEFAULT_HYPERV_GENERATION_DEFAULT),
         'version' => version
       }
       metadata['image'] = JSON.dump(image)
@@ -131,7 +134,8 @@ module Bosh::AzureCloud
       os_type = metadata['os_type']&.downcase&.capitalize
       cloud_error("Invalid os_type '#{os_type}'") unless ['Linux', 'Windows'].include?(os_type)
 
-      params = { 'location' => location, 'osType' => os_type }.merge(JSON.parse(metadata['image']))
+      hyperVGeneration = "V#{(metadata['generation'] || DEFAULT_HYPERV_GENERATION_DEFAULT).delete_prefix('gen')}"
+      params = { 'location' => location, 'osType' => os_type, 'hyperVGeneration' => hyperVGeneration }.merge(JSON.parse(metadata['image']))
       flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}", File::LOCK_EX) do
         @logger.debug("Ensuring compute gallery image definition '#{gallery_name}/#{image_definition}'")
         @azure_client.create_gallery_image_definition(gallery_name, image_definition, params)

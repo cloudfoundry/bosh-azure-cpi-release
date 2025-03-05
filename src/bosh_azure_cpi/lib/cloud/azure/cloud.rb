@@ -82,9 +82,9 @@ module Bosh::AzureCloud
           'stemcell' => "#{cloud_properties.fetch('name', 'unknown_name')}-#{cloud_properties.fetch('version', 'unknown_version')}"
         }
         @telemetry_manager.monitor('create_stemcell', extras: extras) do
-          if has_light_stemcell_property?(cloud_properties) && !@use_compute_gallery
+          if has_light_stemcell_property?(cloud_properties)
             @light_stemcell_manager.create_stemcell(cloud_properties)
-          elsif @use_managed_disks
+          elsif @use_compute_gallery || @use_managed_disks
             @stemcell_manager2.create_stemcell(image_path, cloud_properties)
           else
             @stemcell_manager.create_stemcell(image_path, cloud_properties)
@@ -108,9 +108,9 @@ module Bosh::AzureCloud
       end
       with_thread_name("delete_stemcell(#{stemcell_cid})") do
         @telemetry_manager.monitor('delete_stemcell', id: stemcell_cid) do
-          if is_light_stemcell_cid?(stemcell_cid) && !@use_compute_gallery
+          if is_light_stemcell_cid?(stemcell_cid)
             @light_stemcell_manager.delete_stemcell(stemcell_cid)
-          elsif @use_managed_disks
+          elsif @use_compute_gallery || @use_managed_disks
             @stemcell_manager2.delete_stemcell(stemcell_cid)
           else
             @stemcell_manager.delete_stemcell(stemcell_cid)

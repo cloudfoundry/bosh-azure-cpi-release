@@ -2110,7 +2110,8 @@ module Bosh::AzureCloud
             'sku' => params['sku'],
           },
           'osState' => 'Generalized',
-          'osType' => params['osType']
+          'osType' => params['osType'],
+          'hyperVGeneration' => params.fetch('hyperVGeneration', 'V1')
         }
       }.compact
       image_definition_params['properties'].compact!
