@@ -339,6 +339,17 @@ resource "azurerm_public_ip" "azure_ip_integration_in_additional_rg" {
   allocation_method   = "Static"
 }
 
+resource "azurerm_shared_image_gallery" "compute_gallery" {
+  name                = replace(var.env_name, "-", "")
+  resource_group_name = azurerm_resource_group.azure_default_rg.name
+  location            = var.location
+  description         = "Shared Image Gallery for Integration Tests"
+}
+
+output "compute_gallery_name" {
+  value = azurerm_shared_image_gallery.compute_gallery.name
+}
+
 output "environment" {
   value = var.azure_environment
 }

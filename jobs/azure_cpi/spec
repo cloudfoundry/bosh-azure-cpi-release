@@ -101,6 +101,11 @@ properties:
       -----BEGIN CERTIFICATE-----
       MII...
       -----END CERTIFICATE-----
+  azure.compute_gallery_name:
+    description: The name of the Compute Gallery to use for creating VMs
+  azure.compute_gallery_replicas:
+    description: The number of replicas to use for Compute Gallery images
+    default: 3
 
   ntp:
     description: List of ntp server IPs. pool.ntp.org attempts to return IPs closest to your location, but you can still specify if needed.

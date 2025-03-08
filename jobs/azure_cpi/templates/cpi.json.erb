@@ -100,6 +100,13 @@
   end.else_if_p('nats') do
     params['cloud']['properties']['agent']['mbus'] = "nats://#{p('nats.user')}:#{p('nats.password')}@#{p(['agent.nats.address', 'nats.address'])}:#{p('nats.port')}"
   end
-  
+
+  if_p('azure.compute_gallery_name') do |gallery|
+    params['cloud']['properties']['azure']['compute_gallery_name'] = gallery
+    if_p('azure.compute_gallery_replicas') do |replicas|
+      params['cloud']['properties']['azure']['compute_gallery_replicas'] = replicas
+    end
+  end
+
   JSON.dump(params)
 %>
