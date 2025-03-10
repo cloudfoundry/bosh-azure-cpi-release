@@ -5,15 +5,7 @@ require 'integration/spec_helper'
 describe Bosh::AzureCloud::Cloud do
   before(:all) do
     @stemcell_path = ENV.fetch('BOSH_AZURE_STEMCELL_PATH')
-    @compute_gallery_name = ENV.fetch('BOSH_AZURE_COMPUTE_GALLERY_NAME')
-  end
-
-  subject(:cpi_gallery) do
-    gallery_enabled_options = @cloud_options.dup
-    gallery_enabled_options['azure']['compute_gallery_name'] = @compute_gallery_name
-    gallery_enabled_options['azure']['compute_gallery_replicas'] = 1
-    gallery_enabled_options['azure']['use_managed_disks'] = true
-    described_class.new(gallery_enabled_options, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
+    @compute_gallery_name = ENV['BOSH_AZURE_COMPUTE_GALLERY_NAME']
   end
 
   describe '#stemcell' do
@@ -41,7 +33,16 @@ describe Bosh::AzureCloud::Cloud do
       context 'when compute gallery is configured' do
         let(:azure_client) { Bosh::AzureCloud::AzureClient.new(cpi_gallery.config.azure, @logger) }
 
+        let(:cpi_gallery) do
+          gallery_enabled_options = @cloud_options.dup
+          gallery_enabled_options['azure']['compute_gallery_name'] = @compute_gallery_name
+          gallery_enabled_options['azure']['compute_gallery_replicas'] = 1
+          gallery_enabled_options['azure']['use_managed_disks'] = true
+          described_class.new(gallery_enabled_options, Bosh::AzureCloud::Cloud::CURRENT_API_VERSION)
+        end
+
         before(:each) do
+          skip unless @compute_gallery_name
           @stemcell_id = nil
         end
 
@@ -68,7 +69,7 @@ describe Bosh::AzureCloud::Cloud do
           expect(stemcell_info.is_light_stemcell?).to be_falsey
           expect(stemcell_info.uri).to include "/Microsoft.Compute/galleries/#{@compute_gallery_name}/images/"
           image_data = JSON.parse(stemcell_info.image)
-          expect(image_data['offer']).to eq stemcell_properties['os_distro']
+          expect(image_data['offer']).to eq stemcell_properties['name']
 
           # Replicate image into other location
           other_location = ['eastus', 'East US'].include?(@azure_config.location) ? 'West US' : 'East US'
