@@ -410,6 +410,39 @@ describe 'cpi.json.erb' do
         end
       end
     end
+
+    context 'when compute_gallery parameters are provided' do
+      before do
+        manifest['properties']['azure']['compute_gallery_name'] = 'fake-gallery'
+      end
+
+      it 'renders compute_gallery parameters with default replicas' do
+        expect(subject['cloud']['properties']['azure']['compute_gallery_name']).to eq('fake-gallery')
+        expect(subject['cloud']['properties']['azure']['compute_gallery_replicas']).to eq(3)
+      end
+
+      context 'when replicas are provided' do
+        before do
+          manifest['properties']['azure']['compute_gallery_replicas'] = 5
+        end
+
+        it 'renders compute_gallery parameters with specified replicas' do
+          expect(subject['cloud']['properties']['azure']['compute_gallery_replicas']).to eq(5)
+        end
+      end
+    end
+
+    context 'when compute_gallery parameters are not provided' do
+      before do
+        manifest['properties']['azure'].delete('compute_gallery_name')
+        manifest['properties']['azure'].delete('compute_gallery_replicas')
+      end
+
+      it 'does not include compute_gallery parameters in the output' do
+        expect(subject['cloud']['properties']['azure']).not_to have_key('compute_gallery_name')
+        expect(subject['cloud']['properties']['azure']).not_to have_key('compute_gallery_replicas')
+      end
+    end
   end
 end
 

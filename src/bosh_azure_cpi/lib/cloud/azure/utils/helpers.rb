@@ -5,6 +5,7 @@ module Bosh::AzureCloud
     AZURE_RESOURCE_PROVIDER_COMPUTE          = 'crp'
     AZURE_RESOURCE_PROVIDER_COMPUTE_DISK     = 'diskcrp'
     AZURE_RESOURCE_PROVIDER_COMPUTE_SNAPSHOT = 'snapshotcrp'
+    AZURE_RESOURCE_PROVIDER_COMPUTE_GALLERY  = 'gallerycrp'
     AZURE_RESOURCE_PROVIDER_NETWORK          = 'nrp'
     AZURE_RESOURCE_PROVIDER_STORAGE          = 'srp'
     AZURE_RESOURCE_PROVIDER_GROUP            = 'rp'
@@ -20,6 +21,7 @@ module Bosh::AzureCloud
       AZURE_RESOURCE_PROVIDER_COMPUTE => '2021-11-01',
       AZURE_RESOURCE_PROVIDER_COMPUTE_DISK => '2023-04-02',
       AZURE_RESOURCE_PROVIDER_COMPUTE_SNAPSHOT => '2021-04-01',
+      AZURE_RESOURCE_PROVIDER_COMPUTE_GALLERY => '2023-07-03',
       AZURE_RESOURCE_PROVIDER_NETWORK => '2017-09-01',
       AZURE_RESOURCE_PROVIDER_STORAGE => '2017-10-01',
       AZURE_RESOURCE_PROVIDER_GROUP => '2016-06-01',
@@ -130,6 +132,7 @@ module Bosh::AzureCloud
     CPI_LOCK_PREFIX_STORAGE_ACCOUNT         = "#{CPI_LOCK_PREFIX}-storage-account".freeze
     CPI_LOCK_COPY_STEMCELL                  = "#{CPI_LOCK_PREFIX}-copy-stemcell".freeze
     CPI_LOCK_CREATE_USER_IMAGE              = "#{CPI_LOCK_PREFIX}-create-user-image".freeze
+    CPI_LOCK_CREATE_GALLERY_IMAGE           = "#{CPI_LOCK_PREFIX}-create-gallery-image".freeze
     CPI_LOCK_PREFIX_AVAILABILITY_SET        = "#{CPI_LOCK_PREFIX}-availability-set".freeze
     CPI_LOCK_EVENT_HANDLER                  = "#{CPI_LOCK_PREFIX}-event-handler".freeze
 
@@ -506,7 +509,7 @@ module Bosh::AzureCloud
       end
 
       def is_light_stemcell?
-        !@image.nil?
+        !@image.nil? && !metadata.key?('compute_gallery_name')
       end
 
       def is_windows?
