@@ -2194,7 +2194,7 @@ module Bosh::AzureCloud
     #
     # @param [String] gallery_name - Name of gallery.
     # @param [Hash] tags - Tags to match against gallery image version tags.
-    # @return [Hash] The gallery image version that matches the tags
+    # @return [Hash,nil] The gallery image version that matches the tags
     #
     # @See https://learn.microsoft.com/en-us/rest/api/resources/resources/list
     #
@@ -2207,12 +2207,15 @@ module Bosh::AzureCloud
       result = get_resource_by_id(url, {'$filter' => tag_filters})
       return nil if result.nil? || result['value'].nil?
 
-      result['value'].each do |resource|
-        next if resource['type'] != "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_GALLERIES}/#{REST_API_IMAGES}/versions"
-        # As the resource does not contain the targetRegion, we need to do one more request to get the full resource
-        image_version = get_resource_by_id(resource['id'])
-        return parse_gallery_image(image_version)
-      end
+      matching_resource =
+        result['value'].find do |resource|
+          resource['type'] == "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_GALLERIES}/#{REST_API_IMAGES}/versions"
+        end
+      return nil unless matching_resource
+
+      # As the resource does not contain the targetRegion, we need to do one more request to get the full resource
+      image_version = get_resource_by_id(matching_resource['id'])
+      parse_gallery_image(image_version)
     end
 
     private
