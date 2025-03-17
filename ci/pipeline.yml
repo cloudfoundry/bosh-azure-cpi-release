@@ -176,6 +176,11 @@ jobs:
             AZURE_USE_MANAGED_DISKS: false
         ensure:
           do:
+            - task: cleanup-images-in-gallery
+              tags: [azure]
+              file: bosh-cpi-src/ci/tasks/cleanup-images-in-gallery.yml
+              params:
+                <<: *azure-environment-params
             - <<: *destroy-integration-environment
           ensure:
             do:
@@ -197,6 +202,11 @@ jobs:
             AZURE_USE_MANAGED_DISKS: true
         ensure:
           do:
+            - task: cleanup-images-in-gallery
+              tags: [azure]
+              file: bosh-cpi-src/ci/tasks/cleanup-images-in-gallery.yml
+              params:
+                <<: *azure-environment-params
             - <<: *destroy-integration-environment
           ensure:
             do:
