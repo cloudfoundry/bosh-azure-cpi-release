@@ -1,0 +1,28 @@
+name: bosh-azure-cpi
+version: 52.0.1
+commit_hash: 05107f3
+uncommitted_changes: false
+jobs:
+- name: azure_cpi
+  version: 75af01552327e394b35570effa1ba9e9816c375d99ee932c21ef42ff36c3682b
+  fingerprint: 75af01552327e394b35570effa1ba9e9816c375d99ee932c21ef42ff36c3682b
+  sha1: sha256:0550145475f715350147f913967a3fc6ae354ba8fc010c60a936c288d10aa567
+  packages:
+  - azure-cpi-ruby-3.3
+  - bosh_azure_cpi
+packages:
+- name: azure-cpi-ruby-3.3
+  version: 6b6f32a3f6bb8c5b01d2134176ce87146c9fd241992557f7e74adbf8135b2e8d
+  fingerprint: 6b6f32a3f6bb8c5b01d2134176ce87146c9fd241992557f7e74adbf8135b2e8d
+  sha1: sha256:92c34f38e602fc74dc696917437490359ae1ccae4a73996f7599c240aa85ee81
+  dependencies: []
+- name: bosh_azure_cpi
+  version: d6e887ae1ab6eef31321c0ae341287c52e3c52a2d238ad4e91c4d8686bcaff62
+  fingerprint: d6e887ae1ab6eef31321c0ae341287c52e3c52a2d238ad4e91c4d8686bcaff62
+  sha1: sha256:173d8fdb1ac6313e8450e7440e601f95606ed5c001f3cbc6718a1d93982e83b7
+  dependencies:
+  - azure-cpi-ruby-3.3
+license:
+  version: 6b556bc2340dd2ef930d9fffb160c925cb6edf0f217c620f695c10e127a53d9a
+  fingerprint: 6b556bc2340dd2ef930d9fffb160c925cb6edf0f217c620f695c10e127a53d9a
+  sha1: sha256:1e0838be726423eb3d67c119075a1d0ea35d82d8bd66327a139abaa7d6a28a3c
