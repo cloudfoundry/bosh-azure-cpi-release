@@ -19,7 +19,7 @@ metadata=$(cat ${METADATA_FILE})
 compute_gallery_name=$(echo ${metadata} | jq --raw-output ".compute_gallery_name // empty")
 default_resource_group_name=$(echo ${metadata} | jq --raw-output ".default_resource_group_name // empty")
 
-exists=$(az sig show --resource-group $default_resource_group_name} --gallery-name $compute_gallery_name || echo "does-not-exist")
+exists=$(az sig show --resource-group $default_resource_group_name --gallery-name $compute_gallery_name || echo "does-not-exist")
 if [ "$exists" != "does-not-exist" ]
 then
   gallery_images=$(az sig image-definition list --resource-group $default_resource_group_name --gallery-name $compute_gallery_name | jq -r '. | map(.name)[]')
