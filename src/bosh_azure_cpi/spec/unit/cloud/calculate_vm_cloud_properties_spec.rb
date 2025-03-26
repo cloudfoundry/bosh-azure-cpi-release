@@ -41,7 +41,6 @@ describe Bosh::AzureCloud::Cloud do
 
       context 'when all the keys are provided' do
         let(:size_in_gb) { 100 }
-        let(:available_vm_sizes) { double('vm-sizes') }
         let(:instance_types) { double('instance-types') }
 
         context 'when the ephemeral_disk_size is N * 1024' do
@@ -54,9 +53,8 @@ describe Bosh::AzureCloud::Cloud do
           end
 
           it 'should return the cloud_properties' do
-            expect(azure_client).to receive(:list_available_virtual_machine_sizes_by_location).with(location).and_return(available_vm_sizes)
             expect(instance_type_mapper).to receive(:map)
-              .with(desired_instance_size, available_vm_sizes)
+              .with(desired_instance_size, location)
               .and_return(instance_types)
             expect(cloud_with_location.calculate_vm_cloud_properties(desired_instance_size)).to eq(
               'instance_types' => instance_types,
@@ -77,9 +75,8 @@ describe Bosh::AzureCloud::Cloud do
           end
 
           it 'should return the cloud_properties' do
-            expect(azure_client).to receive(:list_available_virtual_machine_sizes_by_location).with(location).and_return(available_vm_sizes)
             expect(instance_type_mapper).to receive(:map)
-              .with(desired_instance_size, available_vm_sizes)
+              .with(desired_instance_size, location)
               .and_return(instance_types)
             expect(cloud_with_location.calculate_vm_cloud_properties(desired_instance_size)).to eq(
               'instance_types' => instance_types,

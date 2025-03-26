@@ -2063,15 +2063,14 @@ module Bosh::AzureCloud
     end
 
     def get_max_fault_domains_for_location(location)
-      error_text = "Unable to get maximum fault domains for location '#{location}'"
-      url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
-      url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
-      url += "/skus"
-      skus = get_resource_by_id(url, "$filter" => "location eq '#{location}'")['value']
-      raise error_text unless skus
-      sku_for_location = skus.find { |sku| sku['name'] == 'Aligned' && sku['locations'].map(&:downcase).include?(location.downcase) }
-      raise error_text unless sku_for_location
-      sku_for_location['capabilities'].find { |capability| capability['name'] == 'MaximumPlatformFaultDomainCount' }['value'].to_i
+      resource_skus = list_resource_skus(location, REST_API_AVAILABILITY_SETS)
+      sku_for_location = resource_skus.find { |sku| sku[:name] == 'Aligned' }
+
+      raise "Unable to get maximum fault domains for location '#{location}'" unless sku_for_location &&
+            sku_for_location[:capabilities] &&
+            sku_for_location[:capabilities].key?(:MaximumPlatformFaultDomainCount)
+
+      sku_for_location[:capabilities][:MaximumPlatformFaultDomainCount].to_i
     end
 
     # Create or Update a Compute Gallery Image Definition
@@ -2216,6 +2215,53 @@ module Bosh::AzureCloud
       # As the resource does not contain the targetRegion, we need to do one more request to get the full resource
       image_version = get_resource_by_id(matching_resource['id'])
       parse_gallery_image(image_version)
+    end
+
+    # List available Resource SKUs by Location and resource type
+    #
+    # @param [String] location - The location to list the resource SKUs.
+    # @param [String] resource_type - The resource type to filter the SKUs.
+    # @return [Array] The list of available Resource SKUs
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/compute/resource-skus/list?view=rest-compute-2024-11-04&tabs=HTTP
+    #
+    def list_resource_skus(location=nil, resource_type=nil)
+      url = "/subscriptions/#{uri_escape(@azure_config.subscription_id)}/providers/#{REST_API_PROVIDER_COMPUTE}/skus"
+      params = {}
+      params['$filter'] = "location eq '#{location}'" if location
+      result = get_resource_by_id(url, params)
+      resource_skus = []
+
+      unless result.nil? || result['value'].nil?
+        result['value'].each do |sku|
+          next if resource_type && sku['resourceType'] != resource_type
+
+          vm_sku = {
+            name: sku['name'],
+            resource_type: sku['resourceType'],
+            location: sku['locations']&.first,
+            tier: sku['tier'],
+            size: sku['size'],
+            family: sku['family'],
+            restrictions: sku['restrictions'],
+            capabilities: sku['capabilities']&.map { |c| [c['name'].to_sym, c['value']] }.to_h || {}
+          }
+
+          next if location && vm_sku[:location].downcase != location.downcase
+
+          resource_skus << vm_sku
+        end
+      end
+
+      resource_skus
+    end
+
+    # List available Resource SKUs for Virtual Machines by Location
+    #
+    # @param [String] location - The location to list the resource SKUs.
+    # @return [Array] The list of available Resource SKUs
+    def list_vm_skus(location)
+      list_resource_skus(location, REST_API_VIRTUAL_MACHINES)
     end
 
     private
