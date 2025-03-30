@@ -47,7 +47,7 @@ Azure CPI offers the flexibility to specify a resource group name under `cloud_p
 
 ## Sample Steps
 
-1. [**Deploy**](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md#1-prepare-azure-resources) the `bosh-setup` template in a default resource group (e.g. `RG1`).
+1. Deploy BOSH in a default resource group (e.g. `RG1`).
 
     * You need to disable `autoDeployBosh` and `autodDeployCloudFoundry` when deploying the template, as you will need to perform additional manual steps before deploying BOSH and Cloud Foundry.
 
@@ -59,8 +59,6 @@ Azure CPI offers the flexibility to specify a resource group name under `cloud_p
 
     * Refer to [**Move resources to new resource group or subscription**](https://azure.microsoft.com/en-us/documentation/articles/resource-group-move-resources/).
 
-1. [Login the devbox](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md#2-login-your-dev-box)
-
 1. Specify the resource group name in network specs for BOSH director.
 
     1. Download the ops file [`use-resource-group-for-bosh-network.yml`](./use-resource-group-for-bosh-network.yml) to `~/use-resource-group-for-bosh-network.yml`.
@@ -68,10 +66,6 @@ Azure CPI offers the flexibility to specify a resource group name under `cloud_p
     1. Add the lines `-o ~/use-resource-group-for-bosh-network.yml` and `-v additional_resource_group_name=RG2` to the `bosh create-env` command in `deploy_bosh.sh`.
 
 1. Deploy your BOSH director.
-
-    ```
-    ./deploy_bosh.sh
-    ```
 
 1. Specify the resource group name in the network specs of your cloud config.
 
@@ -97,10 +91,6 @@ Azure CPI offers the flexibility to specify a resource group name under `cloud_p
     Add the line `-v additional_resource_group_name=RG2` to the `bosh -n update-cloud-config` command in `deploy_cloud_foundry.sh`.
 
 1. Deploy your Cloud Foundry.
-
-    ```
-    ./deploy_cloud_foundry.sh
-    ```
 
 ## How to Assign The Service Principal Roles for The Separated Resource Groups
 
