@@ -253,6 +253,8 @@ describe Bosh::AzureCloud::VMManager do
                   allow(disk_manager2).to receive(:get_data_disk)
                     .with(disk_id_object)
                     .and_return(disk)
+                  allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_DS2_v3", "fake-location").and_return(true)
+                  allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v3", "fake-location").and_return(false)
                 end
 
                 it 'should select one instance type which supports Premium storage' do
@@ -283,6 +285,8 @@ describe Bosh::AzureCloud::VMManager do
 
                   before do
                     allow(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
+                    allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v2", "fake-location").and_return(false)
+                    allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v3", "fake-location").and_return(false)
                   end
 
                   it 'should raise an error' do
@@ -369,6 +373,8 @@ describe Bosh::AzureCloud::VMManager do
                   allow(azure_client).to receive(:get_storage_account_by_name)
                     .with(storage_account_name)
                     .and_return(storage_account)
+                  allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_DS2_v3", "fake-location").and_return(true)
+                  allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v3", "fake-location").and_return(false)
                 end
 
                 it 'should select one instance type which supports Premium storage' do
@@ -399,6 +405,8 @@ describe Bosh::AzureCloud::VMManager do
 
                   before do
                     allow(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
+                    allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v2", "fake-location").and_return(false)
+                    allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v3", "fake-location").and_return(false)
                   end
 
                   it 'should raise an error' do

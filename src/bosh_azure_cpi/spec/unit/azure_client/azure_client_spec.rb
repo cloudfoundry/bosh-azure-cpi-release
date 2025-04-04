@@ -738,4 +738,204 @@ describe Bosh::AzureCloud::AzureClient do
       end
     end
   end
+
+  describe '#list_resource_skus' do
+    let(:resource_skus_response) do
+      {
+        'value' => [
+          {
+            'resourceType' => 'virtualMachines',
+            'name' => 'Standard_D2_v3',
+            'tier' => 'Standard',
+            'size' => 'D2_v3',
+            'family' => 'D',
+            'locations' => ['westus'],
+            'capabilities' => [
+              {
+                'name' => 'MaximumPlatformFaultDomainCount',
+                'value' => '2'
+              },
+              {
+                'name' => 'MaxResourceVolumeMB',
+                'value' => '51200'
+              },
+              {
+                'name' => 'PremiumIO',
+                'value' => 'False'
+              }
+            ]
+          },
+          {
+            'resourceType' => 'virtualMachines',
+            'name' => 'Standard_F2',
+            'tier' => 'Standard',
+            'size' => 'F2',
+            'family' => 'F',
+            'locations' => ['eastus'],
+            'capabilities' => [
+              {
+                'name' => 'MaximumPlatformFaultDomainCount',
+                'value' => '3'
+              }
+            ]
+          },
+          {
+            'resourceType' => 'availabilitySets',
+            'name' => 'Aligned',
+            'tier' => 'Standard',
+            'locations' => ['westus'],
+            'capabilities' => [
+              {
+                'name' => 'MaximumPlatformFaultDomainCount',
+                'value' => '3'
+              }
+            ]
+          }
+        ]
+      }
+    end
+    let(:resource_skus_url) { "/subscriptions/#{subscription_id}/providers/#{Bosh::AzureCloud::AzureClient::REST_API_PROVIDER_COMPUTE}/skus" }
+    let(:compute_api_version) { AZURE_RESOURCE_PROVIDER_COMPUTE }
+    let(:resource_uri) { "https://management.azure.com#{resource_skus_url}?api-version=#{compute_api_version}" }
+
+    before do
+      stub_request(:post, token_uri).to_return(
+        status: 200,
+        body: {
+          'access_token' => valid_access_token,
+          'expires_on' => expires_on
+        }.to_json,
+        headers: {}
+      )
+    end
+
+    context 'when location is not specified' do
+      it 'returns all virtual machines SKUs' do
+        stub_request(:get, resource_uri)
+          .to_return(
+            status: 200,
+            body: resource_skus_response.to_json,
+            headers: {}
+          )
+
+        resource_skus = azure_client.list_resource_skus(nil, 'virtualMachines')
+
+        expect(resource_skus.length).to eq(2)
+        expect(resource_skus[0][:name]).to eq('Standard_D2_v3')
+        expect(resource_skus[0][:resource_type]).to eq('virtualMachines')
+        expect(resource_skus[0][:tier]).to eq('Standard')
+        expect(resource_skus[0][:size]).to eq('D2_v3')
+        expect(resource_skus[0][:family]).to eq('D')
+        expect(resource_skus[0][:location]).to eq('westus')
+        expect(resource_skus[0][:capabilities][:MaximumPlatformFaultDomainCount]).to eq('2')
+        expect(resource_skus[0][:capabilities][:MaxResourceVolumeMB]).to eq('51200')
+        expect(resource_skus[0][:capabilities][:PremiumIO]).to eq('False')
+
+        expect(resource_skus[1][:name]).to eq('Standard_F2')
+        expect(resource_skus[1][:capabilities][:MaximumPlatformFaultDomainCount]).to eq('3')
+      end
+    end
+
+    context 'when location is specified' do
+      let(:location) { 'westus' }
+      let(:resource_uri) { "https://management.azure.com#{resource_skus_url}?api-version=#{compute_api_version}&$filter=location%20eq%20'#{location}'" }
+
+      it 'filters SKUs by location' do
+        stub_request(:get, resource_uri)
+          .to_return(
+            status: 200,
+            body: resource_skus_response.to_json,
+            headers: {}
+          )
+
+        resource_skus = azure_client.list_resource_skus(location, nil)
+
+        expect(resource_skus.length).to eq(2)
+        expect(resource_skus.all? { |sku| sku[:location] == location }).to be_truthy
+      end
+    end
+
+    context 'when resource type is specified' do
+      let(:resource_type) { 'availabilitySets' }
+
+      it 'filters SKUs by resource type' do
+        stub_request(:get, resource_uri)
+          .to_return(
+            status: 200,
+            body: resource_skus_response.to_json,
+            headers: {}
+          )
+
+        resource_skus = azure_client.list_resource_skus(nil, resource_type)
+
+        expect(resource_skus.length).to eq(1)
+        expect(resource_skus.all? { |sku| sku[:resource_type] == resource_type }).to be_truthy
+      end
+    end
+
+    context 'when both location and resource type are specified' do
+      let(:location) { 'westus' }
+      let(:resource_uri) { "https://management.azure.com#{resource_skus_url}?api-version=#{compute_api_version}&$filter=location%20eq%20'#{location}'" }
+      let(:resource_type) { 'availabilitySets' }
+
+      it 'filters SKUs by both location and resource type' do
+        stub_request(:get, resource_uri)
+          .to_return(
+            status: 200,
+            body: resource_skus_response.to_json,
+            headers: {}
+          )
+
+        resource_skus = azure_client.list_resource_skus(location, resource_type)
+
+        expect(resource_skus.length).to eq(1)
+        expect(resource_skus[0][:name]).to eq('Aligned')
+        expect(resource_skus[0][:resource_type]).to eq('availabilitySets')
+        expect(resource_skus[0][:location]).to eq('westus')
+      end
+    end
+
+    context 'when API returns no value' do
+      let(:empty_response) { { 'value' => [] } }
+
+      it 'returns an empty array' do
+        stub_request(:get, resource_uri)
+          .to_return(
+            status: 200,
+            body: empty_response.to_json,
+            headers: {}
+          )
+
+        resource_skus = azure_client.list_resource_skus
+
+        expect(resource_skus).to be_empty
+      end
+    end
+
+    context 'when API returns nil' do
+      it 'returns an empty array' do
+        stub_request(:get, resource_uri)
+          .to_return(
+            status: 200,
+            body: 'null',
+            headers: {}
+          )
+
+        resource_skus = azure_client.list_resource_skus
+
+        expect(resource_skus).to be_empty
+      end
+    end
+  end
+
+  describe '#list_vm_skus' do
+    let(:location) { 'westus' }
+    let(:resource_type) { Bosh::AzureCloud::AzureClient::REST_API_VIRTUAL_MACHINES }
+
+    it 'returns only VM SKUs' do
+      allow(azure_client).to receive(:list_resource_skus).with(location, resource_type)
+      azure_client.list_vm_skus(location)
+      expect(azure_client).to have_received(:list_resource_skus).with(location, resource_type)
+    end
+  end
 end

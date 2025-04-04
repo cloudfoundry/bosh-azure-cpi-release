@@ -137,6 +137,7 @@ describe Bosh::AzureCloud::Cloud do
               zone: vm_zone
             }
           end
+          let(:default_storage_account_type) { 'Premium_LRS' }
 
           before do
             allow(instance_id_object).to receive(:use_managed_disks?)
@@ -144,6 +145,7 @@ describe Bosh::AzureCloud::Cloud do
             allow(azure_client).to receive(:get_virtual_machine_by_name)
               .with(resource_group_name, vm_name)
               .and_return(vm)
+            allow(disk_manager2).to receive(:get_default_storage_account_type).with('Standard_F1s', vm_location).and_return(default_storage_account_type)
           end
 
           context 'when storage_account_type is not specified' do
@@ -152,7 +154,7 @@ describe Bosh::AzureCloud::Cloud do
                 .with(caching, true, { resource_group_name: resource_group_name })
                 .and_return(disk_id_object)
               expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, 'Premium_LRS', vm_zone, iops, mbps, disk_encryption_set_name: nil)
+                .with(disk_id_object, vm_location, disk_size_in_gib, default_storage_account_type, vm_zone, iops, mbps, disk_encryption_set_name: nil)
 
               managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
             end
