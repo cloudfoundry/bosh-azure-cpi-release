@@ -108,6 +108,11 @@ module Bosh::AzureCloud
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret customData].freeze
 
+    CACHE_DIR = '/var/vcap/sys/run/azure_cpi'.freeze
+    CACHE_SUBDIR = 'cache'.freeze
+    CACHE_EXPIRY_SECONDS = 24 * 60 * 60 # 24 hours
+    TRUNCATION_LIMIT = 10000
+
     def initialize(azure_config, logger)
       @logger = logger
 
@@ -2217,7 +2222,7 @@ module Bosh::AzureCloud
       parse_gallery_image(image_version)
     end
 
-    # List available Resource SKUs by Location and resource type
+    # List available Resource SKUs by Location and resource type. The list is updated at least once a day.
     #
     # @param [String] location - The location to list the resource SKUs.
     # @param [String] resource_type - The resource type to filter the SKUs.
@@ -2226,6 +2231,24 @@ module Bosh::AzureCloud
     # @See https://learn.microsoft.com/en-us/rest/api/compute/resource-skus/list?view=rest-compute-2024-11-04&tabs=HTTP
     #
     def list_resource_skus(location=nil, resource_type=nil)
+      cache_key = "skus_#{location || 'all'}_#{resource_type || 'all'}.json"
+      full_cache_dir = File.join(CACHE_DIR, CACHE_SUBDIR)
+      cache_file = File.join(full_cache_dir, cache_key)
+
+      if File.exist?(cache_file) && (Time.now - File.mtime(cache_file)) < CACHE_EXPIRY_SECONDS
+        @logger.debug("list_resource_skus - Reading from cache file: #{cache_file}")
+        begin
+          cached_data = JSON.parse(File.read(cache_file), symbolize_names: true)
+          return cached_data
+        rescue JSON::ParserError => e
+          @logger.warn("list_resource_skus - Failed to parse cache file #{cache_file}: #{e.message}. Fetching fresh data.")
+        rescue StandardError => e
+          @logger.warn("list_resource_skus - Failed to read cache file #{cache_file}: #{e.message}. Fetching fresh data.")
+        end
+      else
+         @logger.debug("list_resource_skus - Cache miss or expired for key: #{cache_key}. Fetching from API.")
+      end
+
       url = "/subscriptions/#{uri_escape(@azure_config.subscription_id)}/providers/#{REST_API_PROVIDER_COMPUTE}/skus"
       params = {}
       params['$filter'] = "location eq '#{location}'" if location
@@ -2246,11 +2269,31 @@ module Bosh::AzureCloud
             restrictions: sku['restrictions'],
             capabilities: sku['capabilities']&.map { |c| [c['name'].to_sym, c['value']] }.to_h || {}
           }
-
-          next if location && vm_sku[:location].downcase != location.downcase
+          next if location && vm_sku[:location]&.downcase != location.downcase
 
           resource_skus << vm_sku
         end
+      end
+
+      if !Dir.exist?(CACHE_DIR)
+        @logger.debug("list_resource_skus - Cache parent directory #{CACHE_DIR} does not exist. Skipping cache write.")
+        return resource_skus
+      end
+
+      begin
+        FileUtils.mkdir_p(full_cache_dir)
+        File.open(cache_file, File::RDWR | File::CREAT) do |f|
+          f.flock(File::LOCK_EX)
+          begin
+              f.truncate(0)
+              f.write(JSON.pretty_generate(resource_skus))
+              @logger.debug("list_resource_skus - Wrote data to cache file: #{cache_file}")
+          ensure
+            f.flock(File::LOCK_UN)
+          end
+        end
+      rescue StandardError => e
+        @logger.warn("list_resource_skus - Failed to write cache file #{cache_file}: #{e.message}")
       end
 
       resource_skus
@@ -2699,12 +2742,13 @@ module Bosh::AzureCloud
 
         status_code = response.code.to_i
         response_body = response.body
+        truncated_body = response_body.to_s.length > TRUNCATION_LIMIT ? response_body.to_s[0..TRUNCATION_LIMIT] + '... [truncated]' : response_body.to_s
         message = "http_get_response - #{status_code}\n"
         message += get_http_common_headers(response)
         message += if filter_credential_in_logs(uri)
                      'response.body cannot be logged because it may contain credentials.'
                    else
-                     "response.body: #{redact_credentials_in_response_body(response_body)}"
+                     "response.body: #{redact_credentials_in_response_body(truncated_body)}"
                    end
         @logger.debug(message)
 

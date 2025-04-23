@@ -2,6 +2,7 @@
 
 require 'spec_helper'
 require 'webmock/rspec'
+require 'tmpdir'
 
 WebMock.disable_net_connect!(allow_localhost: true)
 
@@ -740,6 +741,10 @@ describe Bosh::AzureCloud::AzureClient do
   end
 
   describe '#list_resource_skus' do
+    let(:location) { 'eastus' }
+    let(:resource_type) { 'virtualMachines' }
+    let(:skus_url) { "/subscriptions/#{subscription_id}/providers/Microsoft.Compute/skus" }
+    let(:skus_uri) { %r{^https://management.azure.com#{skus_url}\?api-version=.+} }
     let(:resource_skus_response) do
       {
         'value' => [
@@ -794,136 +799,227 @@ describe Bosh::AzureCloud::AzureClient do
         ]
       }
     end
-    let(:resource_skus_url) { "/subscriptions/#{subscription_id}/providers/#{Bosh::AzureCloud::AzureClient::REST_API_PROVIDER_COMPUTE}/skus" }
-    let(:compute_api_version) { AZURE_RESOURCE_PROVIDER_COMPUTE }
-    let(:resource_uri) { "https://management.azure.com#{resource_skus_url}?api-version=#{compute_api_version}" }
+    let(:response_body) do
+      {
+        'value' => [
+          { 'name' => 'Standard_D1', 'resourceType' => 'virtualMachines', 'locations' => ['eastus'], 'capabilities' => [{ 'name' => 'C1', 'value' => 'V1' }] },
+          { 'name' => 'Standard_D2', 'resourceType' => 'virtualMachines', 'locations' => ['eastus'], 'capabilities' => [] },
+          { 'name' => 'Basic_A0', 'resourceType' => 'virtualMachines', 'locations' => ['westus'] },
+          {
+            'name' => 'Standard_F2',
+            'resourceType' => 'availabilitySets',
+            'tier' => 'Standard',
+            'size' => 'F2',
+            'family' => 'F',
+            'locations' => ['swedencentral'],
+            'capabilities' => [
+              {
+                'name' => 'MaximumPlatformFaultDomainCount',
+                'value' => '3'
+              }
+            ]
+          },
+        ]
+      }.to_json
+    end
+    let(:expected_skus) do
+      [
+        { name: 'Standard_D1', resource_type: 'virtualMachines', location: 'eastus', tier: nil, size: nil, family: nil, restrictions: nil, capabilities: { C1: 'V1' } },
+        { name: 'Standard_D2', resource_type: 'virtualMachines', location: 'eastus', tier: nil, size: nil, family: nil, restrictions: nil, capabilities: {} },
+        { name: 'Basic_A0', resource_type: 'virtualMachines', location: 'westus', tier: nil, size: nil, family: nil, restrictions: nil, capabilities: {} },
+        { name: 'Standard_F2', resource_type: 'availabilitySets', location: 'swedencentral', tier: 'Standard', size: 'F2', family: 'F', restrictions: nil, capabilities: { MaximumPlatformFaultDomainCount: '3' } }
+      ]
+    end
+    let(:cache_file) { File.join(full_cache_dir, 'skus_all_all.json') }
+    let(:tmp_cache_dir) { @tmp_cache_dir }
+    let(:cache_subdir) { Bosh::AzureCloud::AzureClient::CACHE_SUBDIR }
+    let(:full_cache_dir) { File.join(tmp_cache_dir, cache_subdir) }
+    let(:cache_expiry) { Bosh::AzureCloud::AzureClient::CACHE_EXPIRY_SECONDS }
 
     before do
+      @tmp_cache_dir = Dir.mktmpdir('azure-cpi-rspec-cache')
+      stub_const('Bosh::AzureCloud::AzureClient::CACHE_DIR', @tmp_cache_dir)
       stub_request(:post, token_uri).to_return(
         status: 200,
-        body: {
-          'access_token' => valid_access_token,
-          'expires_on' => expires_on
-        }.to_json,
+        body: { 'access_token' => valid_access_token, 'expires_on' => expires_on }.to_json,
         headers: {}
       )
     end
 
-    context 'when location is not specified' do
-      it 'returns all virtual machines SKUs' do
-        stub_request(:get, resource_uri)
-          .to_return(
-            status: 200,
-            body: resource_skus_response.to_json,
-            headers: {}
-          )
+    after do
+      FileUtils.remove_entry_secure @tmp_cache_dir if @tmp_cache_dir && Dir.exist?(@tmp_cache_dir)
+    end
 
-        resource_skus = azure_client.list_resource_skus(nil, 'virtualMachines')
+    context 'when cache is empty' do
+      before do
+        stub_request(:get, skus_uri).to_return(status: 200, body: response_body, headers: {})
+        expect(File).not_to exist(cache_file)
+      end
 
-        expect(resource_skus.length).to eq(2)
-        expect(resource_skus[0][:name]).to eq('Standard_D2_v3')
-        expect(resource_skus[0][:resource_type]).to eq('virtualMachines')
-        expect(resource_skus[0][:tier]).to eq('Standard')
-        expect(resource_skus[0][:size]).to eq('D2_v3')
-        expect(resource_skus[0][:family]).to eq('D')
-        expect(resource_skus[0][:location]).to eq('westus')
-        expect(resource_skus[0][:capabilities][:MaximumPlatformFaultDomainCount]).to eq('2')
-        expect(resource_skus[0][:capabilities][:MaxResourceVolumeMB]).to eq('51200')
-        expect(resource_skus[0][:capabilities][:PremiumIO]).to eq('False')
+      context 'when no filter is set' do
+        it 'calls the API, returns the skus, and writes to cache' do
+          skus = azure_client.list_resource_skus(nil, nil)
 
-        expect(resource_skus[1][:name]).to eq('Standard_F2')
-        expect(resource_skus[1][:capabilities][:MaximumPlatformFaultDomainCount]).to eq('3')
+          expect(skus).to eq(expected_skus)
+          expect(File).to exist(cache_file)
+          expect(JSON.parse(File.read(cache_file), symbolize_names: true)).to eq(expected_skus)
+          expect(a_request(:get, skus_uri)).to have_been_made.once
+        end
+      end
+
+      context 'when location filter is set' do
+        let(:skus_uri) { %r{^https://management.azure.com#{skus_url}\?\$filter=location%20eq%20'#{location}'&api-version=.+} }
+        let(:cache_file) { File.join(full_cache_dir, "skus_#{location}_all.json") }
+        let(:expected_skus) do
+          [
+            { name: 'Standard_D1', resource_type: 'virtualMachines', location: 'eastus', tier: nil, size: nil, family: nil, restrictions: nil, capabilities: { C1: 'V1' } },
+            { name: 'Standard_D2', resource_type: 'virtualMachines', location: 'eastus', tier: nil, size: nil, family: nil, restrictions: nil, capabilities: {} },
+          ]
+        end
+
+        it 'calls the API, returns the skus, and writes to cache' do
+          skus = azure_client.list_resource_skus(location)
+
+          expect(skus).to eq(expected_skus)
+          expect(JSON.parse(File.read(cache_file), symbolize_names: true)).to eq(expected_skus)
+          expect(a_request(:get, skus_uri)).to have_been_made.once
+        end
+      end
+
+      context 'when location and resource_type filter is set' do
+        let(:location) { 'swedencentral' }
+        let(:resource_type) { 'availabilitySets' }
+        let(:skus_uri) { %r{^https://management.azure.com#{skus_url}\?\$filter=location%20eq%20'#{location}'&api-version=.+} }
+        let(:cache_file) { File.join(full_cache_dir, "skus_#{location}_#{resource_type}.json") }
+        let(:expected_skus) do
+          [
+            { name: 'Standard_F2', resource_type: 'availabilitySets', location: 'swedencentral', tier: 'Standard', size: 'F2', family: 'F', restrictions: nil, capabilities: { MaximumPlatformFaultDomainCount: '3' } }
+          ]
+        end
+
+        it 'calls the API, returns filtered skus, and writes to cache' do
+          skus = azure_client.list_resource_skus(location, resource_type)
+
+          expect(skus).to eq(expected_skus)
+          expect(JSON.parse(File.read(cache_file), symbolize_names: true)).to eq(expected_skus)
+          expect(a_request(:get, skus_uri)).to have_been_made.once
+        end
+      end
+
+      context 'when resource_type filter is set' do
+        let(:cache_file) { File.join(full_cache_dir, "skus_all_#{resource_type}.json") }
+        let(:expected_skus) do
+          [
+            { name: 'Standard_D1', resource_type: 'virtualMachines', location: 'eastus', tier: nil, size: nil, family: nil, restrictions: nil, capabilities: { C1: 'V1' } },
+            { name: 'Standard_D2', resource_type: 'virtualMachines', location: 'eastus', tier: nil, size: nil, family: nil, restrictions: nil, capabilities: {} },
+            { name: 'Basic_A0', resource_type: 'virtualMachines', location: 'westus', tier: nil, size: nil, family: nil, restrictions: nil, capabilities: {} },
+          ]
+        end
+
+        it 'calls the API with resource_type filter, returns the skus, and writes to cache' do
+          skus = azure_client.list_resource_skus(nil, resource_type)
+
+          expect(skus).to eq(expected_skus)
+          expect(JSON.parse(File.read(cache_file), symbolize_names: true)).to eq(expected_skus)
+          expect(a_request(:get, skus_uri)).to have_been_made.once
+        end
       end
     end
 
-    context 'when location is specified' do
-      let(:location) { 'westus' }
-      let(:resource_uri) { "https://management.azure.com#{resource_skus_url}?api-version=#{compute_api_version}&$filter=location%20eq%20'#{location}'" }
+    context 'when cache is valid' do
+      before do
+        FileUtils.mkdir_p(full_cache_dir)
+        File.write(cache_file, JSON.pretty_generate(expected_skus))
+      end
 
-      it 'filters SKUs by location' do
-        stub_request(:get, resource_uri)
-          .to_return(
-            status: 200,
-            body: resource_skus_response.to_json,
-            headers: {}
-          )
+      it 'reads from the cache and does not call the API' do
+        stub_request(:get, skus_uri).to_raise(StandardError.new('API should not be called'))
 
-        resource_skus = azure_client.list_resource_skus(location, nil)
+        skus = azure_client.list_resource_skus()
 
-        expect(resource_skus.length).to eq(2)
-        expect(resource_skus.all? { |sku| sku[:location] == location }).to be_truthy
+        expect(skus).to eq(expected_skus)
+        expect(a_request(:get, skus_uri)).not_to have_been_made
       end
     end
 
-    context 'when resource type is specified' do
-      let(:resource_type) { 'availabilitySets' }
+    context 'when cache is expired' do
+      before do
+        FileUtils.mkdir_p(full_cache_dir)
+        File.write(cache_file, JSON.pretty_generate([{ name: 'old_sku' }]))
+        expired_time = Time.now - cache_expiry - 60
+        File.utime(expired_time, expired_time, cache_file)
+      end
 
-      it 'filters SKUs by resource type' do
-        stub_request(:get, resource_uri)
-          .to_return(
-            status: 200,
-            body: resource_skus_response.to_json,
-            headers: {}
-          )
+      it 'calls the API, returns fresh data, and updates the cache' do
+        stub_request(:get, skus_uri)
+          .to_return(status: 200, body: response_body, headers: {})
 
-        resource_skus = azure_client.list_resource_skus(nil, resource_type)
+        skus = azure_client.list_resource_skus()
 
-        expect(resource_skus.length).to eq(1)
-        expect(resource_skus.all? { |sku| sku[:resource_type] == resource_type }).to be_truthy
+        expect(skus).to eq(expected_skus)
+        expect(File).to exist(cache_file)
+        expect(JSON.parse(File.read(cache_file), symbolize_names: true)).to eq(expected_skus)
+        # Check that the modification time is recent (within a small tolerance)
+        expect(File.mtime(cache_file)).to be > (Time.now - 10)
+        expect(a_request(:get, skus_uri)).to have_been_made.once
       end
     end
 
-    context 'when both location and resource type are specified' do
-      let(:location) { 'westus' }
-      let(:resource_uri) { "https://management.azure.com#{resource_skus_url}?api-version=#{compute_api_version}&$filter=location%20eq%20'#{location}'" }
-      let(:resource_type) { 'availabilitySets' }
+    context 'when cache file is corrupted' do
+      before do
+        FileUtils.mkdir_p(full_cache_dir)
+        File.write(cache_file, 'invalid json')
+      end
 
-      it 'filters SKUs by both location and resource type' do
-        stub_request(:get, resource_uri)
-          .to_return(
-            status: 200,
-            body: resource_skus_response.to_json,
-            headers: {}
-          )
+      it 'logs a warning, calls the API, returns fresh data, and updates the cache' do
+         stub_request(:get, skus_uri).to_return(status: 200, body: response_body, headers: {})
+         expect(logger).to receive(:warn).with(/Failed to parse cache file/)
 
-        resource_skus = azure_client.list_resource_skus(location, resource_type)
+         skus = azure_client.list_resource_skus()
 
-        expect(resource_skus.length).to eq(1)
-        expect(resource_skus[0][:name]).to eq('Aligned')
-        expect(resource_skus[0][:resource_type]).to eq('availabilitySets')
-        expect(resource_skus[0][:location]).to eq('westus')
+         expect(skus).to eq(expected_skus)
+         expect(File).to exist(cache_file)
+         expect(JSON.parse(File.read(cache_file), symbolize_names: true)).to eq(expected_skus)
+         expect(a_request(:get, skus_uri)).to have_been_made.once
       end
     end
 
     context 'when API returns no value' do
-      let(:empty_response) { { 'value' => [] } }
+      let(:empty_response) { { 'value' => [] }.to_json }
 
       it 'returns an empty array' do
-        stub_request(:get, resource_uri)
-          .to_return(
-            status: 200,
-            body: empty_response.to_json,
-            headers: {}
-          )
+        stub_request(:get, skus_uri).to_return(status: 200, body: empty_response, headers: {})
+        expect(File).not_to exist(cache_file)
 
-        resource_skus = azure_client.list_resource_skus
+        resource_skus = azure_client.list_resource_skus()
 
         expect(resource_skus).to be_empty
+        expect(a_request(:get, skus_uri)).to have_been_made.once
       end
     end
 
-    context 'when API returns nil' do
-      it 'returns an empty array' do
-        stub_request(:get, resource_uri)
-          .to_return(
-            status: 200,
-            body: 'null',
-            headers: {}
-          )
+    context 'when API returns nil body' do
+      it 'returns an empty array and caches it' do
+        stub_request(:get, skus_uri).to_return(status: 200, body: 'null', headers: {})
+        expect(File).not_to exist(cache_file)
 
-        resource_skus = azure_client.list_resource_skus
+        resource_skus = azure_client.list_resource_skus()
 
         expect(resource_skus).to be_empty
+        expect(a_request(:get, skus_uri)).to have_been_made.once
+      end
+    end
+
+    context 'when cache parent directory does not exist' do
+      it 'calls the API, returns the skus, but does not cache' do
+        stub_request(:get, skus_uri).to_return(status: 200, body: response_body, headers: {})
+        FileUtils.remove_entry_secure tmp_cache_dir
+
+        skus = azure_client.list_resource_skus()
+
+        expect(skus).to eq(expected_skus)
+        expect(File).not_to exist(cache_file)
+        expect(a_request(:get, skus_uri)).to have_been_made.once
       end
     end
   end
@@ -933,9 +1029,9 @@ describe Bosh::AzureCloud::AzureClient do
     let(:resource_type) { Bosh::AzureCloud::AzureClient::REST_API_VIRTUAL_MACHINES }
 
     it 'returns only VM SKUs' do
-      allow(azure_client).to receive(:list_resource_skus).with(location, resource_type)
+      expect(azure_client).to receive(:list_resource_skus).with(location, resource_type)
+
       azure_client.list_vm_skus(location)
-      expect(azure_client).to have_received(:list_resource_skus).with(location, resource_type)
     end
   end
 end

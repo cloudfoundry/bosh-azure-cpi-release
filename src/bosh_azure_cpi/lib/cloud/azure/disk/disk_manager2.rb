@@ -304,10 +304,11 @@ module Bosh::AzureCloud
 
     def supports_premium_storage?(instance_type, location)
       @premium_storage_cache ||= {}
-      cache_key = "#{instance_type.downcase}-#{location}"
-      return @premium_storage_cache[cache_key] if @premium_storage_cache.key?(cache_key)
 
       instance_type_downcase = instance_type.downcase
+      cache_key = "#{instance_type_downcase}-#{location}"
+      return @premium_storage_cache[cache_key] if @premium_storage_cache.key?(cache_key)
+
       begin
         @azure_client.list_vm_skus(location).each do |sku|
           if sku[:name].downcase == instance_type_downcase &&
