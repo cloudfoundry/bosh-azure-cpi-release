@@ -498,6 +498,11 @@ describe Bosh::AzureCloud::AzureClient do
             }
           }
         end
+        let(:vm_params_with_crg_name) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped[:capacity_reservation_group] = capacity_reservation_group_name
+          vm_params_dupped
+        end
 
         before do
           stub_request(:post, token_uri).to_return(
@@ -522,32 +527,10 @@ describe Bosh::AzureCloud::AzureClient do
           )
         end
 
-        context 'when capacity_reservation_group is a full resource ID' do
-          let(:vm_params_with_crg) do
-            vm_params_dupped = vm_params.dup
-            vm_params_dupped[:capacity_reservation_group] = capacity_reservation_group_id
-            vm_params_dupped
-          end
-
-          it 'should create the vm with capacity reservation group' do
-            expect do
-              azure_client.create_virtual_machine(resource_group, vm_params_with_crg, network_interfaces)
-            end.not_to raise_error
-          end
-        end
-
-        context 'when capacity_reservation_group is just the name' do
-          let(:vm_params_with_crg_name) do
-            vm_params_dupped = vm_params.dup
-            vm_params_dupped[:capacity_reservation_group] = capacity_reservation_group_name
-            vm_params_dupped
-          end
-
-          it 'should construct the full ID and create the vm with capacity reservation group' do
-            expect do
-              azure_client.create_virtual_machine(resource_group, vm_params_with_crg_name, network_interfaces)
-            end.not_to raise_error
-          end
+        it 'should construct the full ID and create the vm with capacity reservation group' do
+          expect do
+            azure_client.create_virtual_machine(resource_group, vm_params_with_crg_name, network_interfaces)
+          end.not_to raise_error
         end
       end
 

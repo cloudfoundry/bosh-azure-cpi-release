@@ -336,15 +336,10 @@ module Bosh::AzureCloud
         }
       }
 
-      capacity_reservation_group_id = vm_params[:capacity_reservation_group]
-      unless capacity_reservation_group_id.nil?
-        unless vm_params[:capacity_reservation_group].start_with?('/subscriptions')
-          capacity_reservation_group_id = rest_api_url(REST_API_PROVIDER_COMPUTE, 'capacityReservationGroups', resource_group_name: resource_group_name, name: vm_params[:capacity_reservation_group])
-        end
-
+      unless vm_params[:capacity_reservation_group].nil?
         vm['properties']['capacityReservation'] = {
           'capacityReservationGroup' => {
-            'id' => capacity_reservation_group_id
+            'id' => rest_api_url(REST_API_PROVIDER_COMPUTE, 'capacityReservationGroups', resource_group_name: resource_group_name, name: vm_params[:capacity_reservation_group])
           }
         }
       end
