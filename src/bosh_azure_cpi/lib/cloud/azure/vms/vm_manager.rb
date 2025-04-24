@@ -131,6 +131,10 @@ module Bosh::AzureCloud
         managed: @use_managed_disks
       }
 
+      unless vm_props.capacity_reservation_group.nil?
+        vm_params[:capacity_reservation_group] = vm_props.capacity_reservation_group
+      end
+
       unless vm_props.managed_identity.nil?
         vm_params[:identity] = {
           type: vm_props.managed_identity.type,

@@ -18,6 +18,7 @@ module Bosh::AzureCloud
     attr_reader :storage_account_name, :storage_account_type, :storage_account_kind, :storage_account_max_disk_number
     attr_reader :resource_group_name
     attr_reader :tags
+    attr_reader :capacity_reservation_group
 
     # Below defines are for test purpose
     # NOTE: The following 3 attr_writer (and their paired readers above) are explicitly separate (instead of using `attr_accessor`)
@@ -93,6 +94,8 @@ module Bosh::AzureCloud
 
       @resource_group_name = vm_properties.fetch('resource_group_name', global_azure_config.resource_group_name)
       @tags = vm_properties.fetch('tags', {})
+
+      @capacity_reservation_group = vm_properties['capacity_reservation_group']
     end
 
     private

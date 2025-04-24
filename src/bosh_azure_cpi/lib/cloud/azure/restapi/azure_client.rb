@@ -336,6 +336,14 @@ module Bosh::AzureCloud
         }
       }
 
+      unless vm_params[:capacity_reservation_group].nil?
+        vm['properties']['capacityReservation'] = {
+          'capacityReservationGroup' => {
+            'id' => rest_api_url(REST_API_PROVIDER_COMPUTE, 'capacityReservationGroups', resource_group_name: resource_group_name, name: vm_params[:capacity_reservation_group])
+          }
+        }
+      end
+
       unless vm_params[:identity].nil?
         identity_type = vm_params[:identity][:type]
         if identity_type == MANAGED_IDENTITY_TYPE_USER_ASSIGNED

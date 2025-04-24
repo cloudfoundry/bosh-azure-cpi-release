@@ -416,6 +416,124 @@ describe Bosh::AzureCloud::AzureClient do
         end
       end
 
+      context 'when capacity_reservation_group is set' do
+        let(:capacity_reservation_group_name) { 'fake-crg-name' }
+        let(:capacity_reservation_group_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/capacityReservationGroups/#{capacity_reservation_group_name}" }
+        let(:request_body) do
+          {
+            name: vm_name,
+            location: 'b',
+            type: 'Microsoft.Compute/virtualMachines',
+            tags: {
+              foo: 'bar'
+            },
+            properties: {
+              hardwareProfile: {
+                vmSize: 'c'
+              },
+              osProfile: {
+                customData: 'f',
+                computerName: vm_name,
+                adminUsername: 'd',
+                linuxConfiguration: {
+                  disablePasswordAuthentication: 'true',
+                  ssh: {
+                    publicKeys: [
+                      {
+                        path: '/home/d/.ssh/authorized_keys',
+                        keyData: 'e'
+                      }
+                    ]
+                  }
+                }
+              },
+              networkProfile: {
+                networkInterfaces: [
+                  {
+                    id: 'a',
+                    properties: {
+                      primary: true
+                    }
+                  },
+                  {
+                    id: 'b',
+                    properties: {
+                      primary: false
+                    }
+                  }
+                ]
+              },
+              storageProfile: {
+                osDisk: {
+                  name: 'h',
+                  osType: 'linux',
+                  createOption: 'FromImage',
+                  caching: 'j',
+                  image: {
+                    uri: 'g'
+                  },
+                  vhd: {
+                    uri: 'i'
+                  },
+                  diskSizeGB: 'k'
+                },
+                dataDisks: [
+                  {
+                    name: 'l',
+                    lun: 0,
+                    createOption: 'Empty',
+                    diskSizeGB: 'o',
+                    vhd: {
+                      uri: 'm'
+                    },
+                    caching: 'n'
+                  }
+                ]
+              },
+              capacityReservation: {
+                capacityReservationGroup: {
+                  id: capacity_reservation_group_id
+                }
+              }
+            }
+          }
+        end
+        let(:vm_params_with_crg_name) do
+          vm_params_dupped = vm_params.dup
+          vm_params_dupped[:capacity_reservation_group] = capacity_reservation_group_name
+          vm_params_dupped
+        end
+
+        before do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: request_body).to_return(
+            status: 200,
+            body: '',
+            headers: {
+              'azure-asyncoperation' => operation_status_link
+            }
+          )
+          stub_request(:get, operation_status_link).to_return(
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
+        end
+
+        it 'should construct the full ID and create the vm with capacity reservation group' do
+          expect do
+            azure_client.create_virtual_machine(resource_group, vm_params_with_crg_name, network_interfaces)
+          end.not_to raise_error
+        end
+      end
+
       context 'when managed is true' do
         before do
           vm_params.delete(:image_uri)

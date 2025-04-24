@@ -166,7 +166,7 @@ module Bosh::AzureCloud
 
           agent_settings = Bosh::AzureCloud::BoshAgentUtil.new
 
-          instance_id, vm_params = @vm_manager.create(
+          instance_id, _ = @vm_manager.create(
             bosh_vm_meta,
             location,
             vm_props,
