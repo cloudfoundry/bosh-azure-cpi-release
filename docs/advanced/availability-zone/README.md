@@ -8,14 +8,13 @@ An Azure [Availability Zone](https://docs.microsoft.com/en-us/azure/availability
 
 * A BOSH director with managed disks enabled
 
-    * Create a BOSH director 
+    * Create a BOSH director
 
-        * [Via Azure ARM template](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md)
         * [Using BOSH CLI manually](https://bosh.io/docs/init-azure.html)
 
     * You must enable managed disks in your BOSH director by setting `use_managed_disks` to `true`. Please note the VMs with unmanaged disks do **NOT** support AZ. To enable managed disks, please refer to this [link](../managed-disks/README.md).
 
-* You can either refer to this [ARM template](../../get-started/via-arm-templates/deploy-bosh-via-arm-templates.md) or [cf-deployment](https://github.com/cloudfoundry/cf-deployment) to get a CF deployment manifest.
+* You can refer to [cf-deployment](https://github.com/cloudfoundry/cf-deployment) to get a CF deployment manifest.
 
 * The system domain should be a real domain instead of `xip.io`.
 
