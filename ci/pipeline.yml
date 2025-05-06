@@ -12,7 +12,6 @@ shared:
 
   - &create-bats-environment
     put: environment
-    tags: [azure]
     params:
       delete_on_failure: true
       generate_random_name: true
@@ -20,7 +19,6 @@ shared:
 
   - &create-az-bats-environment
     put: environment
-    tags: [azure]
     params:
       delete_on_failure: true
       generate_random_name: true
@@ -28,7 +26,6 @@ shared:
 
   - &destroy-bats-environment
     put: environment
-    tags: [azure]
     params:
       action: destroy
       env_name_file: environment/name
@@ -38,7 +35,6 @@ shared:
 
   - &destroy-az-bats-environment
     put: environment
-    tags: [azure]
     params:
       action: destroy
       env_name_file: environment/name
@@ -67,13 +63,11 @@ shared:
 
   - &deploy-director
     task: deploy-director
-    tags: [azure]
     file: pipelines/shared/tasks/deploy-director.yml
     image: bosh-integration-registry-image
 
   - &run-bats
     task: run-bats
-    tags: [azure]
     file: pipelines/shared/tasks/run-bats.yml
     image: bosh-integration-registry-image
     params: &run-bats-params
@@ -85,7 +79,6 @@ shared:
 
   - &run-az-bats
     task: run-az-bats
-    tags: [azure]
     file: bosh-cpi-src/ci/tasks/run-az-bats.yml
     params: &run-az-bats-params
       INFRASTRUCTURE:                     azure
@@ -96,13 +89,11 @@ shared:
 
   - &teardown
     task: teardown
-    tags: [azure]
     image: bosh-integration-registry-image
     file: pipelines/shared/tasks/teardown.yml
 
   - &create-integration-environment
     put: environment
-    tags: [azure]
     params:
       delete_on_failure: true
       generate_random_name: true
@@ -110,7 +101,6 @@ shared:
 
   - &destroy-integration-environment
     put: environment
-    tags: [azure]
     params:
       action: destroy
       env_name_file: environment/name
@@ -120,14 +110,12 @@ shared:
 
   - &upload-stemcell
     task: upload-stemcell
-    tags: [azure]
     file: bosh-cpi-src/ci/tasks/upload-stemcell.yml
     params:
       <<: *azure-environment-params
 
   - &run-integration
     task: run-integration
-    tags: [azure]
     file: bosh-cpi-src/ci/tasks/run-integration.yml
     params: &run-integration-params
       <<: *azure-environment-params
@@ -135,14 +123,12 @@ shared:
 
   - &run-integration-windows
     task: run-integration-windows
-    tags: [azure]
     file: bosh-cpi-src/ci/tasks/run-integration-windows.yml
     params: &run-integration-windows-params
       <<: *run-integration-params
 
   - &ensure-cleanup
     task: ensure-cleanup
-    tags: [azure]
     file: bosh-cpi-src/ci/tasks/ensure-cleanup.yml
     params:
       <<: *azure-environment-params
@@ -156,7 +142,6 @@ jobs:
         trigger: true
       - get: bosh-integration-registry-image
     - task: run-unit-specs
-      tags: [ azure ]
       file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
       image: bosh-integration-registry-image
 
@@ -165,8 +150,14 @@ jobs:
     serial_groups: [integration-unmanaged-disks]
     plan:
       - in_parallel:
-        - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
-        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
+          - get: bosh-cpi-src
+            trigger: true
+            resource: bosh-cpi-src-in
+            passed:
+              - unit-specs
+          - get: stemcell
+            trigger: false
+            resource: azure-windows-stemcell
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -177,7 +168,6 @@ jobs:
         ensure:
           do:
             - task: cleanup-images-in-gallery
-              tags: [azure]
               file: bosh-cpi-src/ci/tasks/cleanup-images-in-gallery.yml
               params:
                 <<: *azure-environment-params
@@ -191,8 +181,14 @@ jobs:
     serial_groups: [integration-managed-disks]
     plan:
       - in_parallel:
-        - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
-        - {get: stemcell,         trigger: false, resource: azure-ubuntu-stemcell, tags: [azure]}
+        - get: bosh-cpi-src
+          trigger: true
+          resource: bosh-cpi-src-in
+          passed:
+            - unit-specs
+        - get: stemcell
+          trigger: false
+          resource: azure-ubuntu-stemcell
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -203,7 +199,6 @@ jobs:
         ensure:
           do:
             - task: cleanup-images-in-gallery
-              tags: [azure]
               file: bosh-cpi-src/ci/tasks/cleanup-images-in-gallery.yml
               params:
                 <<: *azure-environment-params
@@ -217,8 +212,14 @@ jobs:
     serial_groups: [integration-windows-unmanaged-disks]
     plan:
       - in_parallel:
-        - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
-        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell, tags: [azure]}
+        - get: bosh-cpi-src
+          trigger: true
+          resource: bosh-cpi-src-in
+          passed:
+            - unit-specs
+        - get: stemcell
+          trigger: false
+          resource: azure-windows-stemcell
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -241,8 +242,14 @@ jobs:
     serial_groups: [integration-windows-managed-disks]
     plan:
       - in_parallel:
-        - {get: bosh-cpi-src,     trigger: true, resource: bosh-cpi-src-in,        passed: [unit-specs]}
-        - {get: stemcell,         trigger: false, resource: azure-windows-stemcell, tags: [azure]}
+          - get: bosh-cpi-src
+            trigger: true
+            resource: bosh-cpi-src-in
+            passed:
+              - unit-specs
+          - get: stemcell
+            trigger: false
+            resource: azure-windows-stemcell
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -274,7 +281,6 @@ jobs:
         - get: stemcell
           trigger: true
           resource: azure-ubuntu-stemcell
-          tags: [azure]
         - get: bosh-deployment
         - get: pipelines
         - get: bats
@@ -316,7 +322,6 @@ jobs:
           trigger: true
         - get: stemcell
           resource: azure-ubuntu-stemcell
-          tags: [azure]
         - get: bosh-deployment
         - get: pipelines
         - get: bats
@@ -486,7 +491,10 @@ jobs:
                 credentials_source: static
                 json_key: '((cloud-foundry-gcp-credentials))'
       - put: bosh-cpi-src-out
-        params: {repository: release_repo, rebase: true, tag: release_metadata/tag-name}
+        params:
+          repository: release_repo
+          rebase: true
+          tag: release_metadata/tag-name
       - put: bosh-azure-cpi-release-github-release
         params:
           name: release_metadata/tag-name
@@ -522,7 +530,6 @@ jobs:
         PACKAGE: ruby-3.3
         VENDOR: true
     - task: run-unit-specs
-      tags: [ azure ]
       file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
       image: bosh-integration-registry-image
     - put: bosh-cpi-src-out
@@ -560,7 +567,6 @@ jobs:
               json_key: '((cloud-foundry-gcp-credentials))'
         RUBY_VERSION_PATH: src/bosh_azure_cpi/.ruby-version
     - task: run-unit-specs
-      tags: [ azure ]
       file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
       image: bosh-integration-registry-image
     - put: bosh-cpi-src-out
