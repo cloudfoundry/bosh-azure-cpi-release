@@ -25,11 +25,8 @@ module Bosh::AzureCloud
       [os_disk, ephemeral_disk, ephemeral_os_disk]
     end
 
-    def _get_root_disk_type(vm_props)
-      storage_account_type = get_storage_account_type_by_instance_type(vm_props.instance_type)
-      storage_account_type = vm_props.storage_account_type unless vm_props.storage_account_type.nil?
-      storage_account_type = vm_props.root_disk.type unless vm_props.root_disk.type.nil?
-      storage_account_type
+    def _get_root_disk_type(vm_props, location)
+      vm_props.root_disk.type || vm_props.storage_account_type || @disk_manager2.get_default_storage_account_type(vm_props.instance_type, location)
     end
   end
 end

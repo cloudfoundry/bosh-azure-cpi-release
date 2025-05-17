@@ -103,6 +103,12 @@ describe Bosh::AzureCloud::VMManager do
 
       context 'when heavy stemcell is used' do
         let(:stemcell_cid) { 'bosh-stemcell-xxx' }
+        let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
+
+        before do
+          allow(disk_manager2).to receive(:get_default_storage_account_type)
+            .and_return('Standard_LRS')
+        end
 
         context 'when it gets user image successfully' do
           let(:stemcell_info) { double('stemcell-info') }

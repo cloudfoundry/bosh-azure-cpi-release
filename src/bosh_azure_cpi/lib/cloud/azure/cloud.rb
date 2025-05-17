@@ -302,8 +302,7 @@ module Bosh::AzureCloud
             raise "Missing VM cloud properties: #{missing_keys.join(', ')}"
           end
 
-          available_vm_sizes = @azure_client.list_available_virtual_machine_sizes_by_location(location)
-          instance_types = @instance_type_mapper.map(desired_instance_size, available_vm_sizes)
+          instance_types = @instance_type_mapper.map(desired_instance_size, location)
           {
             'instance_types' => instance_types,
             'ephemeral_disk' => {
@@ -354,7 +353,7 @@ module Bosh::AzureCloud
               location = vm[:location]
               instance_type = vm[:vm_size]
               zone = vm[:zone]
-              default_storage_account_type = get_storage_account_type_by_instance_type(instance_type)
+              default_storage_account_type = @disk_manager2.get_default_storage_account_type(instance_type, location)
             end
             storage_account_type = cloud_properties.fetch('storage_account_type', default_storage_account_type)
             caching = cloud_properties.fetch('caching', 'None')
@@ -844,7 +843,7 @@ module Bosh::AzureCloud
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(_azure_config, @blob_manager, @meta_store, @storage_account_manager, @azure_client)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client)
       @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
-      @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new
+      @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new(@azure_client)
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager
     end
