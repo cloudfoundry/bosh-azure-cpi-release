@@ -111,7 +111,7 @@ module Bosh::AzureCloud
     CACHE_DIR = '/var/vcap/sys/run/azure_cpi'.freeze
     CACHE_SUBDIR = 'cache'.freeze
     CACHE_EXPIRY_SECONDS = 24 * 60 * 60 # 24 hours
-    TRUNCATION_LIMIT = 10000
+    MAX_RESPONSE_BODY_LENGTH = 10000
 
     def initialize(azure_config, logger)
       @logger = logger
@@ -2742,13 +2742,14 @@ module Bosh::AzureCloud
 
         status_code = response.code.to_i
         response_body = response.body
-        truncated_body = response_body.to_s.length > TRUNCATION_LIMIT ? response_body.to_s[0..TRUNCATION_LIMIT] + '... [truncated]' : response_body.to_s
         message = "http_get_response - #{status_code}\n"
         message += get_http_common_headers(response)
         message += if filter_credential_in_logs(uri)
                      'response.body cannot be logged because it may contain credentials.'
+                   elsif response_body && response_body.length > MAX_RESPONSE_BODY_LENGTH
+                    'response.body is too long to be logged.'
                    else
-                     "response.body: #{redact_credentials_in_response_body(truncated_body)}"
+                     "response.body: #{redact_credentials_in_response_body(response_body)}"
                    end
         @logger.debug(message)
 
