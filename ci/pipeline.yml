@@ -145,37 +145,6 @@ jobs:
       file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
       image: bosh-integration-registry-image
 
-  - name: integration-unmanaged-disks
-    serial: true
-    serial_groups: [integration-unmanaged-disks]
-    plan:
-      - in_parallel:
-          - get: bosh-cpi-src
-            trigger: true
-            resource: bosh-cpi-src-in
-            passed:
-              - unit-specs
-          - get: stemcell
-            trigger: false
-            resource: azure-windows-stemcell
-      - <<: *create-integration-environment
-      - do:
-        - <<: *upload-stemcell
-        - <<: *run-integration
-          params:
-            <<: *run-integration-params
-            AZURE_USE_MANAGED_DISKS: false
-        ensure:
-          do:
-            - task: cleanup-images-in-gallery
-              file: bosh-cpi-src/ci/tasks/cleanup-images-in-gallery.yml
-              params:
-                <<: *azure-environment-params
-            - <<: *destroy-integration-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
-
   - name: integration-managed-disks
     serial: true
     serial_groups: [integration-managed-disks]
@@ -195,43 +164,12 @@ jobs:
         - <<: *run-integration
           params:
             <<: *run-integration-params
-            AZURE_USE_MANAGED_DISKS: true
         ensure:
           do:
             - task: cleanup-images-in-gallery
               file: bosh-cpi-src/ci/tasks/cleanup-images-in-gallery.yml
               params:
                 <<: *azure-environment-params
-            - <<: *destroy-integration-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
-
-  - name: integration-windows-unmanaged-disks
-    serial: true
-    serial_groups: [integration-windows-unmanaged-disks]
-    plan:
-      - in_parallel:
-        - get: bosh-cpi-src
-          trigger: true
-          resource: bosh-cpi-src-in
-          passed:
-            - unit-specs
-        - get: stemcell
-          trigger: false
-          resource: azure-windows-stemcell
-      - <<: *create-integration-environment
-      - do:
-        - <<: *upload-stemcell
-          params:
-            <<: *azure-environment-params
-            IS_HEAVY_STEMCELL: false
-        - <<: *run-integration-windows
-          params:
-            <<: *run-integration-windows-params
-            AZURE_USE_MANAGED_DISKS: false
-        ensure:
-          do:
             - <<: *destroy-integration-environment
           ensure:
             do:
@@ -259,52 +197,9 @@ jobs:
         - <<: *run-integration-windows
           params:
             <<: *run-integration-windows-params
-            AZURE_USE_MANAGED_DISKS: true
         ensure:
           do:
             - <<: *destroy-integration-environment
-          ensure:
-            do:
-              - <<: *ensure-cleanup
-
-  - name: bats-unmanaged-disks
-    serial: true
-    serial_groups: [bats-unmanaged-disks]
-    plan:
-      - in_parallel:
-        - get: bosh-release
-          resource: bosh-release
-        - get: bosh-cpi-src
-          resource: bosh-cpi-src-in
-          passed: [unit-specs]
-          trigger: true
-        - get: stemcell
-          trigger: true
-          resource: azure-ubuntu-stemcell
-        - get: bosh-deployment
-        - get: pipelines
-        - get: bats
-        - get: bosh-integration-registry-image
-      - task: build-candidate
-        file: bosh-cpi-src/ci/tasks/build-candidate.yml
-      - <<: *create-bats-environment
-      - do:
-        - <<: *prepare-director
-          params:
-            <<: *prepare-director-params
-            OPTIONAL_OPS_FILE: |
-              -o pipelines/shared/assets/ops/remove-hm.yml
-              -o bosh-deployment/external-ip-not-recommended.yml
-        - do:
-          - <<: *load-current-ruby-version-using-load_var
-          - <<: *deploy-director
-          - <<: *run-bats
-          ensure:
-            do:
-              - <<: *teardown
-        ensure:
-          do:
-            - <<: *destroy-bats-environment
           ensure:
             do:
               - <<: *ensure-cleanup
@@ -353,11 +248,8 @@ jobs:
 
   - name: cleanup-leftover-environments
     serial_groups:
-      - integration-unmanaged-disks
       - integration-managed-disks
-      - integration-windows-unmanaged-disks
       - integration-windows-managed-disks
-      - bats-unmanaged-disks
       - bats-managed-disks
     plan:
       - in_parallel:
@@ -375,11 +267,8 @@ jobs:
       - get: bosh-cpi-src-in
         trigger: true
         passed:
-        - integration-unmanaged-disks
         - integration-managed-disks
-        - integration-windows-unmanaged-disks
         - integration-windows-managed-disks
-        - bats-unmanaged-disks
         - bats-managed-disks
 
   - name: bump-major
