@@ -12,8 +12,6 @@ module Bosh::AzureCloud
       'L' => 3,  # Storage optimized
       'A' => 2,  # Basic general purpose
       'H' => 1,  # High performance compute
-      'M' => 1,  # Ultra memory optimized
-      'N' => 1   # GPU
     }.freeze
 
     def initialize(azure_client)
@@ -33,6 +31,9 @@ module Bosh::AzureCloud
 
         next nil unless has_required_capabilities && !has_restrictions
 
+        series_score = get_series_score(sku[:name])
+        next nil unless series_score > 0
+
         {
           original_sku: sku,
           name: sku[:name],
@@ -40,7 +41,7 @@ module Bosh::AzureCloud
           memory_mb: (sku[:capabilities][:MemoryGB].to_f * 1024).to_i,
           premium_io: sku[:capabilities][:PremiumIO] == 'True' ? 1 : 0,
           generation: extract_generation(sku[:name]),
-          series_score: get_series_score(sku[:name])
+          series_score: series_score
         }
       end.compact
 

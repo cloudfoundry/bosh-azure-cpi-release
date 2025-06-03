@@ -89,6 +89,55 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
         result = subject.map(desired_instance_size, location)
         expect(result).to eq(['Standard_D4_v3'])
       end
+
+      it 'filters out non-preferred or unknown VM series' do
+        azure_skus = [
+          {
+            name: 'Standard_D2_v3',
+            capabilities: {
+              vCPUs: '2',
+              MemoryGB: '8',
+              PremiumIO: 'True'
+            }
+          },
+          {
+            name: 'Standard_NC6',  # N series not in SERIES_PREFERENCE
+            capabilities: {
+              vCPUs: '6',
+              MemoryGB: '56',
+              PremiumIO: 'True'
+            }
+          },
+          {
+            name: 'unknown_series',  # any unknown series
+            capabilities: {
+              vCPUs: '1',
+              MemoryGB: '1',
+              PremiumIO: 'True'
+            }
+          },
+          {
+            name: 'Standard_F2',
+            capabilities: {
+              vCPUs: '2',
+              MemoryGB: '4',
+              PremiumIO: 'True'
+            }
+          }
+        ]
+
+        allow(azure_client).to receive(:list_vm_skus).with(location).and_return(azure_skus)
+
+        desired_instance_size = {
+          'cpu' => 1,
+          'ram' => 1024
+        }
+
+        result = subject.map(desired_instance_size, location)
+
+        expect(result).to include('Standard_D2_v3', 'Standard_F2')
+        expect(result).not_to include('Standard_NC6', 'unknown_series')
+      end
     end
 
     context 'when SKUs have invalid or missing data' do
