@@ -45,36 +45,6 @@ describe Bosh::AzureCloud::Cloud do
     end
   end
 
-  context 'when assigning a different storage account to VM', unmanaged_disks: true do
-    let(:network_spec) do
-      {
-        'network_a' => {
-          'type' => 'dynamic',
-          'cloud_properties' => {
-            'virtual_network_name' => @vnet_name,
-            'subnet_name' => @subnet_name
-          }
-        }
-      }
-    end
-    let(:vm_properties) do
-      {
-        'instance_type' => @instance_type,
-        'storage_account_name' => extra_storage_account_name
-      }
-    end
-
-    it 'should exercise the vm lifecycle' do
-      lifecycles = []
-      3.times do |i|
-        lifecycles[i] = Thread.new do
-          vm_lifecycle
-        end
-      end
-      lifecycles.each(&:join)
-    end
-  end
-
   context 'when api version 2' do
     let(:options) do
       {

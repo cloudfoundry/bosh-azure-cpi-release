@@ -39,16 +39,10 @@ export BOSH_AZURE_STEMCELL_PATH=$(realpath stemcell/*.tgz)
 
 source stemcell-state/stemcell.env
 
-export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
 pushd bosh-cpi-src/src/bosh_azure_cpi > /dev/null
   bundle install
 
   tags="--tag ~heavy_stemcell --tag ~migration --tag ~azure_cpi_executable"
-  export BOSH_AZURE_USE_MANAGED_DISKS=${AZURE_USE_MANAGED_DISKS}
-  if [ "${AZURE_USE_MANAGED_DISKS}" == "true" ]; then
-    tags+=" --tag ~unmanaged_disks"
-  else
-    tags+=" --tag ~availability_zone"
-  fi
+
   bundle exec rspec spec/integration/ ${tags} --format documentation
 popd > /dev/null

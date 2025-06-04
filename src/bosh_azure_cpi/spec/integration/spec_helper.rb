@@ -22,7 +22,7 @@ RSpec.configure do |rspec_config|
     @ssh_public_key              = ENV.fetch('BOSH_AZURE_SSH_PUBLIC_KEY')
     @default_resource_group_name = ENV.fetch('BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME')
     @storage_account_name        = ENV.fetch('BOSH_AZURE_STORAGE_ACCOUNT_NAME')
-    @use_managed_disks           = ENV.fetch('BOSH_AZURE_USE_MANAGED_DISKS', false).to_s == 'true'
+    @use_managed_disks           = true
 
     @stemcell_id                 = ENV.fetch('BOSH_AZURE_STEMCELL_ID')
 
