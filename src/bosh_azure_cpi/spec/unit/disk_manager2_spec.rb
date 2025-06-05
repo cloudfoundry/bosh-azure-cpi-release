@@ -29,6 +29,121 @@ describe Bosh::AzureCloud::DiskManager2 do
     allow(snapshot_id).to receive(:resource_group_name).and_return(resource_group_name)
   end
 
+  describe '#supports_premium_storage?' do
+    let(:location) { 'westus' }
+    let(:instance_type) { 'Standard_F4s' }
+    let(:premium_capable_sku) do
+      {
+        name: 'Standard_F4s',
+        capabilities: {
+          PremiumIO: 'True'
+        }
+      }
+    end
+    let(:non_premium_sku) do
+      {
+        name: 'Standard_A1',
+        capabilities: {
+          PremiumIO: 'False'
+        }
+      }
+    end
+
+    context 'when the VM size supports premium storage' do
+      before do
+        allow(azure_client).to receive(:list_vm_skus)
+          .with(location)
+          .and_return([premium_capable_sku, non_premium_sku])
+      end
+
+      it 'returns true' do
+        expect(disk_manager2.supports_premium_storage?(instance_type, location)).to be_truthy
+      end
+
+      it 'caches the result' do
+        expect(azure_client).to receive(:list_vm_skus).once
+
+        # Call twice to ensure the second call uses the cache
+        expect(disk_manager2.supports_premium_storage?(instance_type, location)).to be_truthy
+        expect(disk_manager2.supports_premium_storage?(instance_type, location)).to be_truthy
+      end
+    end
+
+    context 'when the VM size does not support premium storage' do
+      let(:instance_type) { 'Standard_A1' }
+
+      before do
+        allow(azure_client).to receive(:list_vm_skus)
+          .with(location)
+          .and_return([premium_capable_sku, non_premium_sku])
+      end
+
+      it 'returns false' do
+        expect(disk_manager2.supports_premium_storage?(instance_type, location)).to be_falsey
+      end
+    end
+
+    context 'when the API call fails' do
+      before do
+        allow(azure_client).to receive(:list_vm_skus)
+          .with(location)
+          .and_raise(Bosh::AzureCloud::AzureError.new('API call failed'))
+        allow(Bosh::Clouds::Config.logger).to receive(:error)
+      end
+
+      it 'logs an error and returns false' do
+        expect(Bosh::Clouds::Config.logger).to receive(:error).with(/Error determining premium storage support for 'Standard_F4s' in location 'westus': API call failed/)
+        expect(disk_manager2.supports_premium_storage?(instance_type, location)).to be_falsey
+      end
+    end
+
+    context 'with case insensitivity' do
+      let(:lowercase_instance_type) { 'standard_f4s' }
+
+      before do
+        allow(azure_client).to receive(:list_vm_skus)
+          .with(location)
+          .and_return([premium_capable_sku, non_premium_sku])
+      end
+
+      it 'handles case insensitive VM size names' do
+        expect(disk_manager2.supports_premium_storage?(lowercase_instance_type, location)).to be_truthy
+      end
+    end
+  end
+
+  describe '#get_default_storage_account_type' do
+    let(:location) { 'westus' }
+
+    context 'when the VM size supports premium storage' do
+      let(:instance_type) { 'Standard_F4s' }
+
+      before do
+        allow(disk_manager2).to receive(:supports_premium_storage?)
+          .with(instance_type, location)
+          .and_return(true)
+      end
+
+      it 'returns Premium_LRS storage account type' do
+        expect(disk_manager2.get_default_storage_account_type(instance_type, location)).to eq('Premium_LRS')
+      end
+    end
+
+    context 'when the VM size does not support premium storage' do
+      let(:instance_type) { 'Standard_A1' }
+
+      before do
+        allow(disk_manager2).to receive(:supports_premium_storage?)
+          .with(instance_type, location)
+          .and_return(false)
+      end
+
+      it 'returns Standard_LRS storage account type' do
+        expect(disk_manager2.get_default_storage_account_type(instance_type, location)).to eq('Standard_LRS')
+      end
+    end
+  end
+
   describe '#create_disk' do
     # Parameters
     let(:location) { 'SouthEastAsia' }

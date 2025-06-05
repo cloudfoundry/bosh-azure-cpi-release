@@ -298,6 +298,34 @@ module Bosh::AzureCloud
       end
     end
 
+    def get_default_storage_account_type(instance_type, location)
+      supports_premium_storage?(instance_type, location) ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
+    end
+
+    def supports_premium_storage?(instance_type, location)
+      @premium_storage_cache ||= {}
+
+      instance_type_downcase = instance_type.downcase
+      cache_key = "#{instance_type_downcase}-#{location}"
+      return @premium_storage_cache[cache_key] if @premium_storage_cache.key?(cache_key)
+
+      begin
+        @azure_client.list_vm_skus(location).each do |sku|
+          if sku[:name].downcase == instance_type_downcase &&
+             sku[:capabilities].key?(:PremiumIO) &&
+             sku[:capabilities][:PremiumIO] == 'True'
+            @premium_storage_cache[cache_key] = true
+            return true
+          end
+        end
+      rescue => e
+        @logger.error("Error determining premium storage support for '#{instance_type}' in location '#{location}': #{e.message}. Defaulting to Standard storage.")
+      end
+
+      @premium_storage_cache[cache_key] = false
+      false
+    end
+
     private
 
     def _get_disk(resource_group_name, disk_name)

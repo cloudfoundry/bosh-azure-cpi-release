@@ -108,6 +108,11 @@ module Bosh::AzureCloud
     # Please add the key into this list if you want to redact its value in request body.
     CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret customData].freeze
 
+    CACHE_DIR = '/var/vcap/sys/run/azure_cpi'.freeze
+    CACHE_SUBDIR = 'cache'.freeze
+    CACHE_EXPIRY_SECONDS = 24 * 60 * 60 # 24 hours
+    MAX_RESPONSE_BODY_LENGTH = 10000
+
     def initialize(azure_config, logger)
       @logger = logger
 
@@ -2071,15 +2076,14 @@ module Bosh::AzureCloud
     end
 
     def get_max_fault_domains_for_location(location)
-      error_text = "Unable to get maximum fault domains for location '#{location}'"
-      url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
-      url += "/providers/#{REST_API_PROVIDER_COMPUTE}"
-      url += "/skus"
-      skus = get_resource_by_id(url, "$filter" => "location eq '#{location}'")['value']
-      raise error_text unless skus
-      sku_for_location = skus.find { |sku| sku['name'] == 'Aligned' && sku['locations'].map(&:downcase).include?(location.downcase) }
-      raise error_text unless sku_for_location
-      sku_for_location['capabilities'].find { |capability| capability['name'] == 'MaximumPlatformFaultDomainCount' }['value'].to_i
+      resource_skus = list_resource_skus(location, REST_API_AVAILABILITY_SETS)
+      sku_for_location = resource_skus.find { |sku| sku[:name] == 'Aligned' }
+
+      raise "Unable to get maximum fault domains for location '#{location}'" unless sku_for_location &&
+            sku_for_location[:capabilities] &&
+            sku_for_location[:capabilities].key?(:MaximumPlatformFaultDomainCount)
+
+      sku_for_location[:capabilities][:MaximumPlatformFaultDomainCount].to_i
     end
 
     # Create or Update a Compute Gallery Image Definition
@@ -2224,6 +2228,91 @@ module Bosh::AzureCloud
       # As the resource does not contain the targetRegion, we need to do one more request to get the full resource
       image_version = get_resource_by_id(matching_resource['id'])
       parse_gallery_image(image_version)
+    end
+
+    # List available Resource SKUs by Location and resource type. The list is updated at least once a day.
+    #
+    # @param [String] location - The location to list the resource SKUs.
+    # @param [String] resource_type - The resource type to filter the SKUs.
+    # @return [Array] The list of available Resource SKUs
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/compute/resource-skus/list?view=rest-compute-2024-11-04&tabs=HTTP
+    #
+    def list_resource_skus(location=nil, resource_type=nil)
+      cache_key = "skus_#{location || 'all'}_#{resource_type || 'all'}.json"
+      full_cache_dir = File.join(CACHE_DIR, CACHE_SUBDIR)
+      cache_file = File.join(full_cache_dir, cache_key)
+
+      if File.exist?(cache_file) && (Time.now - File.mtime(cache_file)) < CACHE_EXPIRY_SECONDS
+        @logger.debug("list_resource_skus - Reading from cache file: #{cache_file}")
+        begin
+          cached_data = JSON.parse(File.read(cache_file), symbolize_names: true)
+          return cached_data
+        rescue JSON::ParserError => e
+          @logger.warn("list_resource_skus - Failed to parse cache file #{cache_file}: #{e.message}. Fetching fresh data.")
+        rescue StandardError => e
+          @logger.warn("list_resource_skus - Failed to read cache file #{cache_file}: #{e.message}. Fetching fresh data.")
+        end
+      else
+         @logger.debug("list_resource_skus - Cache miss or expired for key: #{cache_key}. Fetching from API.")
+      end
+
+      url = "/subscriptions/#{uri_escape(@azure_config.subscription_id)}/providers/#{REST_API_PROVIDER_COMPUTE}/skus"
+      params = {}
+      params['$filter'] = "location eq '#{location}'" if location
+      result = get_resource_by_id(url, params)
+      resource_skus = []
+
+      unless result.nil? || result['value'].nil?
+        result['value'].each do |sku|
+          next if resource_type && sku['resourceType'] != resource_type
+
+          vm_sku = {
+            name: sku['name'],
+            resource_type: sku['resourceType'],
+            location: sku['locations']&.first,
+            tier: sku['tier'],
+            size: sku['size'],
+            family: sku['family'],
+            restrictions: sku['restrictions'],
+            capabilities: sku['capabilities']&.map { |c| [c['name'].to_sym, c['value']] }.to_h || {}
+          }
+          next if location && vm_sku[:location]&.downcase != location.downcase
+
+          resource_skus << vm_sku
+        end
+      end
+
+      if !Dir.exist?(CACHE_DIR)
+        @logger.debug("list_resource_skus - Cache parent directory #{CACHE_DIR} does not exist. Skipping cache write.")
+        return resource_skus
+      end
+
+      begin
+        FileUtils.mkdir_p(full_cache_dir)
+        File.open(cache_file, File::RDWR | File::CREAT) do |f|
+          f.flock(File::LOCK_EX)
+          begin
+              f.truncate(0)
+              f.write(JSON.pretty_generate(resource_skus))
+              @logger.debug("list_resource_skus - Wrote data to cache file: #{cache_file}")
+          ensure
+            f.flock(File::LOCK_UN)
+          end
+        end
+      rescue StandardError => e
+        @logger.warn("list_resource_skus - Failed to write cache file #{cache_file}: #{e.message}")
+      end
+
+      resource_skus
+    end
+
+    # List available Resource SKUs for Virtual Machines by Location
+    #
+    # @param [String] location - The location to list the resource SKUs.
+    # @return [Array] The list of available Resource SKUs
+    def list_vm_skus(location)
+      list_resource_skus(location, REST_API_VIRTUAL_MACHINES)
     end
 
     private
@@ -2665,6 +2754,8 @@ module Bosh::AzureCloud
         message += get_http_common_headers(response)
         message += if filter_credential_in_logs(uri)
                      'response.body cannot be logged because it may contain credentials.'
+                   elsif response_body && response_body.length > MAX_RESPONSE_BODY_LENGTH
+                    'response.body is too long to be logged.'
                    else
                      "response.body: #{redact_credentials_in_response_body(response_body)}"
                    end

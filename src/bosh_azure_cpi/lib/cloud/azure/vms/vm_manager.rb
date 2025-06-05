@@ -51,7 +51,7 @@ module Bosh::AzureCloud
         if is_persistent_disk_premium
           @logger.debug("The disk '#{disk_cids}' to be attached is a Premium disk. Will select one instance type which supports Premium storage.")
           calculated_instance_types = calculated_instance_types.select do |calculated_instance_type|
-            support_premium_storage?(calculated_instance_type)
+            @disk_manager2.supports_premium_storage?(calculated_instance_type, location)
           end
         end
         cloud_error('No available instance type is found.') if calculated_instance_types.empty?
@@ -107,7 +107,7 @@ module Bosh::AzureCloud
 
       tasks.push(
         task_get_diagnostics_storage_account = Concurrent::Future.execute do
-          diagnostics_storage_account = _get_diagnostics_storage_account(location)
+          _get_diagnostics_storage_account(location)
         end
       )
 
@@ -464,7 +464,7 @@ module Bosh::AzureCloud
           stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
         else
           begin
-            storage_account_type = _get_root_disk_type(vm_props)
+            storage_account_type = _get_root_disk_type(vm_props, location)
             # Treat user_image_info as stemcell_info
             stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_cid, storage_account_type, location)
           rescue StandardError => e
