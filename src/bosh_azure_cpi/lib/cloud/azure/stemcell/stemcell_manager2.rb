@@ -6,7 +6,7 @@ module Bosh::AzureCloud
     include Helpers
 
     STEMCELL_PUBLISHER = 'bosh'.freeze
-    DEFAULT_HYPERV_GENERATION_DEFAULT = 'gen1'.freeze
+    DEFAULT_HYPERV_GENERATION = 'gen1'.freeze
 
     def initialize(azure_config, blob_manager, meta_store, storage_account_manager, azure_client)
       @azure_config = azure_config
@@ -28,7 +28,7 @@ module Bosh::AzureCloud
       image = {
         'publisher' => STEMCELL_PUBLISHER,
         'offer' => stemcell_series,
-        'sku' => metadata.fetch('generation', DEFAULT_HYPERV_GENERATION_DEFAULT),
+        'sku' => metadata.fetch('generation', DEFAULT_HYPERV_GENERATION),
         'version' => version
       }
       metadata['image'] = JSON.dump(image)
@@ -60,16 +60,42 @@ module Bosh::AzureCloud
 
       if _compute_gallery_enabled?
         @logger.debug("Compute gallery is enabled. Try to delete gallery image for stemcell '#{name}'")
-        gallery_image = @azure_client.get_gallery_image_version_by_tags(@azure_config.compute_gallery_name, {'stemcell_name' => name})
-        if gallery_image
-          @logger.info("Delete gallery image version '#{gallery_image[:gallery_name]}/#{gallery_image[:image_definition]}:#{gallery_image[:name]}'")
-          @azure_client.delete_gallery_image_version(
-            gallery_image[:gallery_name],
-            gallery_image[:image_definition],
-            gallery_image[:name]
-          )
+        gallery_image = @azure_client.get_gallery_image_version_by_stemcell_name(@azure_config.compute_gallery_name, name)
+
+        if gallery_image.nil?
+          @logger.info("No gallery image found for stemcell '#{name}'")
         else
-          @logger.info("Gallery image metadata not found for stemcell '#{name}'")
+          updated_tags = gallery_image[:tags].dup
+          stemcell_refs = (updated_tags['stemcell_references'] || '').split(',').map(&:strip).reject(&:empty?)
+          stemcell_name_matches = updated_tags['stemcell_name'] == name
+          stemcell_refs_includes = stemcell_refs.include?(name)
+
+          # Checking both, stemcell_name and stemcell_references for backwards-compatability
+          if stemcell_name_matches || stemcell_refs_includes
+            stemcell_refs.delete(name) if stemcell_refs_includes
+
+            if stemcell_refs.empty?
+              @logger.info("Delete gallery image version '#{gallery_image[:gallery_name]}/#{gallery_image[:image_definition]}:#{gallery_image[:name]}' (no more references)")
+              @azure_client.delete_gallery_image_version(
+                gallery_image[:gallery_name],
+                gallery_image[:image_definition],
+                gallery_image[:name]
+              )
+            else
+              @logger.info("Remove stemcell '#{name}' reference from gallery image '#{gallery_image[:gallery_name]}/#{gallery_image[:image_definition]}:#{gallery_image[:name]}'")
+              updated_tags['stemcell_references'] = stemcell_refs.join(',')
+
+              @azure_client.create_update_gallery_image_version(
+                gallery_image[:gallery_name],
+                gallery_image[:image_definition],
+                gallery_image[:name],
+                {
+                  'location' => gallery_image[:location],
+                  'tags' => updated_tags
+                }
+              )
+            end
+          end
         end
       end
 
@@ -134,7 +160,41 @@ module Bosh::AzureCloud
       os_type = metadata['os_type']&.downcase&.capitalize
       cloud_error("Invalid os_type '#{os_type}'") unless ['Linux', 'Windows'].include?(os_type)
 
-      hyperVGeneration = "V#{(metadata['generation'] || DEFAULT_HYPERV_GENERATION_DEFAULT).delete_prefix('gen')}"
+      existing_image = nil
+      begin
+        existing_image = @azure_client.get_gallery_image_version(gallery_name, image_definition, version)
+      rescue => e
+        @logger.debug("Gallery image version #{gallery_name}/#{image_definition}:#{version} does not exist (expected): #{e.message}")
+      end
+
+      if existing_image
+        if existing_image[:tags].nil? ||
+           (existing_image[:tags]['stemcell_references'].nil? && existing_image[:tags]['stemcell_name'].nil?)
+          cloud_error("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists but was not created by BOSH CPI. Please use a different stemcell version or delete the existing image.")
+        end
+
+        @logger.info("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists, updating tags")
+        updated_tags = existing_image[:tags].dup
+        existing_stemcells = (updated_tags['stemcell_references'] || '').split(',').map(&:strip).reject(&:empty?)
+        existing_stemcells << updated_tags['stemcell_name'] unless existing_stemcells.include?(updated_tags['stemcell_name'])
+        existing_stemcells << stemcell_name unless existing_stemcells.include?(stemcell_name)
+        updated_tags['stemcell_references'] = existing_stemcells.join(',')
+
+        flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}-#{version}", File::LOCK_EX) do
+          existing_image = @azure_client.create_update_gallery_image_version(
+            gallery_name,
+            image_definition,
+            version,
+            {
+              'location' => existing_image[:location],
+              'tags' => updated_tags
+            }
+          )
+        end
+        return existing_image
+      end
+
+      hyperVGeneration = "V#{(metadata['generation'] || DEFAULT_HYPERV_GENERATION).delete_prefix('gen')}"
       params = { 'location' => location, 'osType' => os_type, 'hyperVGeneration' => hyperVGeneration }.merge(JSON.parse(metadata['image']))
       flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}", File::LOCK_EX) do
         @logger.debug("Ensuring compute gallery image definition '#{gallery_name}/#{image_definition}'")
@@ -144,8 +204,8 @@ module Bosh::AzureCloud
       gallery_image = nil
       flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}-#{version}", File::LOCK_EX) do
         @logger.debug("Creating compute gallery image '#{gallery_name}/#{image_definition}:#{version}' in target location '#{location}'")
-        metadata['stemcell_name'] = stemcell_name
-        gallery_image = @azure_client.create_gallery_image_version(
+        metadata['stemcell_references'] = stemcell_name
+        gallery_image = @azure_client.create_update_gallery_image_version(
           gallery_name,
           image_definition,
           version,
@@ -164,7 +224,7 @@ module Bosh::AzureCloud
     end
 
     def _ensure_gallery_image_in_target_location(stemcell_name, target_location)
-      gallery_image = @azure_client.get_gallery_image_version_by_tags(@azure_config.compute_gallery_name, {'stemcell_name' => stemcell_name})
+      gallery_image = @azure_client.get_gallery_image_version_by_stemcell_name(@azure_config.compute_gallery_name, stemcell_name)
 
       if gallery_image.nil?
         @logger.debug("Gallery image not found for stemcell '#{stemcell_name}'. Try to recover from blob metadata")
@@ -195,7 +255,7 @@ module Bosh::AzureCloud
 
       if needs_update
         flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_image[:image_definition]}-#{gallery_image[:name]}", File::LOCK_EX) do
-          gallery_image = @azure_client.create_gallery_image_version(
+          gallery_image = @azure_client.create_update_gallery_image_version(
             gallery_image[:gallery_name],
             gallery_image[:image_definition],
             gallery_image[:name],
