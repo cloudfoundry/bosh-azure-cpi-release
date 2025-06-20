@@ -1,5 +1,5 @@
 # frozen_string_literal: true
-
+require 'digest'
 module Bosh::AzureCloud
   class StemcellManager2 < StemcellManager
     include Bosh::Exec
@@ -25,6 +25,10 @@ module Bosh::AzureCloud
       metadata = stemcell_properties.dup
       stemcell_series = metadata['name']
       version = _make_semver_compliant(metadata['version'])
+
+      image_sha256 = _calculate_image_sha256(image_path)
+      @logger.info("Stemcell image SHA256 checksum: #{image_sha256}")
+
       image = {
         'publisher' => STEMCELL_PUBLISHER,
         'offer' => stemcell_series,
@@ -34,6 +38,7 @@ module Bosh::AzureCloud
       metadata['image'] = JSON.dump(image)
       metadata['compute_gallery_name'] = @azure_config.compute_gallery_name
       metadata['compute_gallery_image_definition'] = stemcell_series
+      metadata['image_sha256'] = image_sha256
 
       @logger.info("Uploading stemcell vhd to the default storage account with metadata: #{metadata}")
       stemcell_name = super(image_path, metadata)
@@ -147,6 +152,22 @@ module Bosh::AzureCloud
       !@azure_config.compute_gallery_name.nil? && !@azure_config.compute_gallery_name.empty?
     end
 
+    def _calculate_image_sha256(image_path)
+      @logger.debug("Starting SHA256 calculation for file: #{image_path}")
+      cloud_error("Image file does not exist: #{image_path}") unless File.exist?(image_path)
+
+      sha256 = Digest::SHA256.new
+      File.open(image_path, 'rb') do |file|
+        while chunk = file.read(8192)
+          sha256.update(chunk)
+        end
+      end
+
+      checksum = sha256.hexdigest
+      @logger.debug("SHA256 calculation completed: #{checksum}")
+      checksum
+    end
+
     def _make_semver_compliant(version)
       v = version.split('.')
       major = v[0]
@@ -173,12 +194,26 @@ module Bosh::AzureCloud
           cloud_error("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists but was not created by BOSH CPI. Please use a different stemcell version or delete the existing image.")
         end
 
+        existing_sha256 = existing_image[:tags]['image_sha256']
+        new_sha256 = metadata['image_sha256']
+
+        if existing_sha256 && new_sha256
+          if existing_sha256 != new_sha256
+            cloud_error("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists but has different content (SHA256 mismatch). Expected: #{new_sha256}, Found: #{existing_sha256}. Please use a different stemcell version or verify the image integrity.")
+          end
+          @logger.info("SHA256 checksum validation passed for existing gallery image: #{existing_sha256}")
+        end
+
         @logger.info("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists, updating tags")
         updated_tags = existing_image[:tags].dup
         existing_stemcells = (updated_tags['stemcell_references'] || '').split(',').map(&:strip).reject(&:empty?)
         existing_stemcells << updated_tags['stemcell_name'] unless existing_stemcells.include?(updated_tags['stemcell_name'])
         existing_stemcells << stemcell_name unless existing_stemcells.include?(stemcell_name)
         updated_tags['stemcell_references'] = existing_stemcells.join(',')
+
+        if new_sha256 && !updated_tags['image_sha256']
+          updated_tags['image_sha256'] = new_sha256
+        end
 
         flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}-#{version}", File::LOCK_EX) do
           existing_image = @azure_client.create_update_gallery_image_version(

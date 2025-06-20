@@ -65,6 +65,10 @@ describe Bosh::AzureCloud::StemcellManager2 do
         allow(SecureRandom).to receive(:uuid).and_return(stemcell_uuid)
         allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_raise('Not found')
         allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
+        allow(File).to receive(:exist?).and_return(true)
+        allow(File).to receive(:open).and_yield(StringIO.new('fake-image-content'))
+        allow_any_instance_of(Digest::SHA256).to receive(:hexdigest).and_return('fake-sha256-checksum')
+        allow(stemcell_manager2).to receive(:flock).and_yield
       end
 
       it 'creates a new gallery image definition' do
@@ -92,7 +96,8 @@ describe Bosh::AzureCloud::StemcellManager2 do
             'target_regions' => ["fake-location"],
             'blob_uri' => blob_uri,
             'tags' => hash_including(
-              'stemcell_references' => match(/bosh-stemcell-/)
+              'stemcell_references' => match(/bosh-stemcell-/),
+              'image_sha256' => 'fake-sha256-checksum'
             ),
           })
       end
@@ -266,6 +271,18 @@ describe Bosh::AzureCloud::StemcellManager2 do
         end
       end
 
+      context 'when image file does not exist' do
+        before do
+          allow(File).to receive(:exist?).with('non-existent-image-path').and_return(false)
+        end
+
+        it 'raises an error when image file does not exist' do
+          expect {
+            stemcell_manager2.create_stemcell('non-existent-image-path', stemcell_properties)
+          }.to raise_error(/Image file does not exist/)
+        end
+      end
+
       context 'when gallery image already exists' do
         let(:existing_image) do
           {
@@ -295,6 +312,137 @@ describe Bosh::AzureCloud::StemcellManager2 do
                     'location' => 'fake-location',
                     'tags' => hash_including('stemcell_references' => /existing-stemcell-name.*#{stemcell_name}|#{stemcell_name}.*existing-stemcell-name/)
                   ))
+        end
+      end
+
+      context 'when gallery image already exists with SHA validation' do
+        context 'when SHA256 checksums match' do
+          let(:existing_image_with_matching_sha) do
+            {
+              id: 'existing-gallery-id',
+              gallery_name: 'fake-gallery',
+              image_definition: 'bosh-azure-hyperv-ubuntu-trusty-go_agent',
+              name: '1.2.0',
+              location: 'fake-location',
+              tags: {
+                'stemcell_references' => 'existing-stemcell-name',
+                'stemcell_name' => 'existing-stemcell-name',
+                'image_sha256' => 'fake-sha256-checksum'
+              }
+            }
+          end
+
+          before do
+            allow(azure_client).to receive(:get_gallery_image_version)
+              .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', '1.2.0')
+              .and_return(existing_image_with_matching_sha)
+            allow(azure_client).to receive(:create_update_gallery_image_version).and_return(existing_image_with_matching_sha)
+            allow(stemcell_manager2).to receive(:flock).and_yield
+          end
+
+          it 'updates existing gallery image when SHA256 checksums match' do
+            stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
+
+            expect(azure_client).to have_received(:create_update_gallery_image_version)
+              .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', '1.2.0',
+                    hash_including(
+                      'location' => 'fake-location',
+                      'tags' => hash_including(
+                        'stemcell_references' => /existing-stemcell-name.*#{stemcell_name}|#{stemcell_name}.*existing-stemcell-name/,
+                        'image_sha256' => 'fake-sha256-checksum'
+                      )
+                    ))
+          end
+        end
+
+        context 'when SHA256 checksums do not match' do
+          let(:existing_image_with_different_sha) do
+            {
+              id: 'existing-gallery-id',
+              gallery_name: 'fake-gallery',
+              image_definition: 'bosh-azure-hyperv-ubuntu-trusty-go_agent',
+              name: '1.2.0',
+              location: 'fake-location',
+              tags: {
+                'stemcell_references' => 'existing-stemcell-name',
+                'stemcell_name' => 'existing-stemcell-name',
+                'image_sha256' => 'different-sha256-checksum'
+              }
+            }
+          end
+
+          before do
+            allow(azure_client).to receive(:get_gallery_image_version)
+              .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', '1.2.0')
+              .and_return(existing_image_with_different_sha)
+          end
+
+          it 'raises an error when SHA256 checksums do not match' do
+            expect {
+              stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
+            }.to raise_error(/Gallery image version .* already exists but has different content \(SHA256 mismatch\)/)
+          end
+        end
+
+        context 'when existing image has no SHA256 checksum' do
+          let(:existing_image_without_sha) do
+            {
+              id: 'existing-gallery-id',
+              gallery_name: 'fake-gallery',
+              image_definition: 'bosh-azure-hyperv-ubuntu-trusty-go_agent',
+              name: '1.2.0',
+              location: 'fake-location',
+              tags: {
+                'stemcell_references' => 'existing-stemcell-name',
+                'stemcell_name' => 'existing-stemcell-name'
+              }
+            }
+          end
+
+          before do
+            allow(azure_client).to receive(:get_gallery_image_version)
+              .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', '1.2.0')
+              .and_return(existing_image_without_sha)
+            allow(azure_client).to receive(:create_update_gallery_image_version).and_return(existing_image_without_sha)
+            allow(stemcell_manager2).to receive(:flock).and_yield
+          end
+
+          it 'adds SHA256 checksum to existing gallery image' do
+            stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
+
+            expect(azure_client).to have_received(:create_update_gallery_image_version)
+              .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', '1.2.0',
+                    hash_including(
+                      'location' => 'fake-location',
+                      'tags' => hash_including(
+                        'stemcell_references' => /existing-stemcell-name.*#{stemcell_name}|#{stemcell_name}.*existing-stemcell-name/,
+                        'image_sha256' => 'fake-sha256-checksum'
+                      )
+                    ))
+          end
+        end
+      end
+
+      context 'when gallery image exists but was created by different process' do
+        let(:external_image) do
+          {
+            id: 'external-gallery-id',
+            gallery_name: 'fake-gallery',
+            image_definition: 'bosh-azure-hyperv-ubuntu-trusty-go_agent',
+            name: '1.2.0',
+            location: 'fake-location',
+            tags: {} # No BOSH CPI tags
+          }
+        end
+
+        it 'raises an error when gallery image exists without BOSH CPI tags' do
+          allow(azure_client).to receive(:get_gallery_image_version)
+            .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', '1.2.0')
+            .and_return(external_image)
+
+          expect {
+            stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
+          }.to raise_error(/Gallery image version .* already exists but was not created by BOSH CPI/)
         end
       end
     end
@@ -1067,6 +1215,10 @@ describe Bosh::AzureCloud::StemcellManager2 do
       allow_any_instance_of(Bosh::AzureCloud::StemcellManager).to receive(:create_stemcell).and_return(stemcell_name)
       allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
       allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_raise('Not found')
+      allow(File).to receive(:exist?).and_return(true)
+      allow(File).to receive(:open).and_yield(StringIO.new('fake-image-content'))
+      allow_any_instance_of(Digest::SHA256).to receive(:hexdigest).and_return('fake-sha256-checksum')
+      allow(stemcell_manager2).to receive(:flock).and_yield
     end
 
     context 'with generation specified in stemcell properties' do
