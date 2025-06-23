@@ -58,10 +58,14 @@ module Bosh::AzureCloud
       existing_image = get_existing_gallery_image(gallery_name, image_definition, version)
 
       if existing_image
-        return update_existing_gallery_image(existing_image, stemcell_name, gallery_name, image_definition, version, metadata)
+        return handle_existing_gallery_image(existing_image, stemcell_name, gallery_name, image_definition, version, metadata)
       end
 
-      create_new_gallery_image(stemcell_name, gallery_name, image_definition, version, location, metadata)
+      image_definition_params = build_image_definition_params(location, metadata)
+      create_gallery_image_definition(gallery_name, image_definition, image_definition_params)
+
+      image_version_params = build_image_version_params(stemcell_name, location, metadata)
+      create_gallery_image_version(gallery_name, image_definition, version, image_version_params)
     end
 
     def delete_gallery_image(gallery_image, stemcell_name)
@@ -117,6 +121,17 @@ module Bosh::AzureCloud
 
     private
 
+    def handle_existing_gallery_image(existing_image, stemcell_name, gallery_name, image_definition, version, metadata)
+      existing_tags = existing_image[:tags]
+      new_sha = metadata['image_sha256']
+
+      unless validate_sha256_checksum(existing_tags, new_sha)
+        cloud_error("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists but has different content (SHA256 mismatch). Expected: #{new_sha}, Found: #{existing_tags['image_sha256']}. Please use a different stemcell version or verify the image integrity.")
+      end
+
+      update_gallery_image_tags(existing_image, stemcell_name, gallery_name, image_definition, version, new_sha)
+    end
+
     def get_existing_gallery_image(gallery_name, image_definition, version)
       begin
         @azure_client.get_gallery_image_version(gallery_name, image_definition, version)
@@ -126,18 +141,14 @@ module Bosh::AzureCloud
       end
     end
 
-    def update_existing_gallery_image(existing_image, stemcell_name, gallery_name, image_definition, version, metadata)
-      if existing_image[:tags].nil? ||
-         (existing_image[:tags]['stemcell_references'].nil? && existing_image[:tags]['stemcell_name'].nil?)
+    def update_gallery_image_tags(image, stemcell_name, gallery_name, image_definition, version, image_sha256)
+      existing_tags = image[:tags]
+      if existing_tags.nil? || (existing_tags['stemcell_references'].nil? && existing_tags['stemcell_name'].nil?)
         cloud_error("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists but was not created by BOSH CPI. Please use a different stemcell version or delete the existing image.")
       end
 
-      unless validate_sha256_checksum(existing_image[:tags], metadata)
-        cloud_error("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists but has different content (SHA256 mismatch). Expected: #{metadata['image_sha256']}, Found: #{existing_image[:tags]['image_sha256']}. Please use a different stemcell version or verify the image integrity.")
-      end
-
       @logger.info("Gallery image version #{gallery_name}/#{image_definition}:#{version} already exists, updating tags")
-      updated_tags = build_updated_tags(existing_image[:tags], stemcell_name, metadata['image_sha256'])
+      updated_tags = build_updated_tags(existing_tags, stemcell_name, image_sha256)
 
       flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}-#{version}", File::LOCK_EX) do
         @azure_client.create_update_gallery_image_version(
@@ -145,16 +156,15 @@ module Bosh::AzureCloud
           image_definition,
           version,
           {
-            'location' => existing_image[:location],
+            'location' => image[:location],
             'tags' => updated_tags
           }
         )
       end
     end
 
-    def validate_sha256_checksum(existing_metadata, new_metadata)
+    def validate_sha256_checksum(existing_metadata, new_sha256)
       existing_sha256 = existing_metadata['image_sha256']
-      new_sha256 = new_metadata['image_sha256']
 
       # If either checksum is missing, validation passes (for backwards compatibility)
       return true unless existing_sha256 && new_sha256
@@ -181,56 +191,98 @@ module Bosh::AzureCloud
       updated_tags
     end
 
+    def normalize_os_type(os_type)
+      normalized_os_type = os_type&.downcase&.capitalize
+      unless ['Linux', 'Windows'].include?(normalized_os_type)
+        cloud_error("Invalid os_type '#{os_type}'. Must be either 'Linux' or 'Windows'")
+      end
+      normalized_os_type
+    end
+
     def build_hyperv_generation(metadata)
       generation = metadata['generation'] || DEFAULT_HYPERV_GENERATION
       "V#{generation.delete_prefix('gen')}"
     end
 
-    def create_new_gallery_image(stemcell_name, gallery_name, image_definition, version, location, metadata)
-      os_type = metadata['os_type']&.downcase&.capitalize
-      cloud_error("Invalid os_type '#{os_type}'") unless ['Linux', 'Windows'].include?(os_type)
-
+    def build_image_definition_params(location, metadata)
+      os_type = normalize_os_type(metadata['os_type'])
       image_metadata = JSON.parse(metadata['image'])
       hyperv_generation = build_hyperv_generation(metadata)
-      params = { 'location' => location, 'osType' => os_type, 'hyperVGeneration' => hyperv_generation }.merge(image_metadata)
 
+      {
+        'location' => location,
+        'osType' => os_type,
+        'hyperVGeneration' => hyperv_generation
+      }.merge(image_metadata)
+    end
+
+    def build_image_version_params(stemcell_name, location, metadata)
+      metadata_with_refs = metadata.dup
+      metadata_with_refs['stemcell_references'] = stemcell_name
+
+      {
+        'location' => location,
+        'tags' => metadata_with_refs,
+        'storage_account_name' => @default_storage_account_name,
+        'blob_uri' => @blob_manager.get_blob_uri(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd"),
+        'replica_count' => @azure_config.compute_gallery_replicas,
+        'target_regions' => [location]
+      }
+    end
+
+    def create_gallery_image_definition(gallery_name, image_definition, params)
       flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}", File::LOCK_EX) do
         @logger.debug("Ensuring compute gallery image definition '#{gallery_name}/#{image_definition}'")
         @azure_client.create_gallery_image_definition(gallery_name, image_definition, params)
       end
+    end
 
+    def create_gallery_image_version(gallery_name, image_definition, version, params)
       gallery_image = nil
       flock("#{CPI_LOCK_CREATE_GALLERY_IMAGE}-#{gallery_name}-#{image_definition}-#{version}", File::LOCK_EX) do
-        @logger.debug("Creating compute gallery image '#{gallery_name}/#{image_definition}:#{version}' in target location '#{location}'")
-        metadata['stemcell_references'] = stemcell_name
-        gallery_image = @azure_client.create_update_gallery_image_version(
-          gallery_name,
-          image_definition,
-          version,
-          {
-            'location'             => location,
-            'tags'                 => metadata,
-            'storage_account_name' => @default_storage_account_name,
-            'blob_uri'             => @blob_manager.get_blob_uri(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd"),
-            'replica_count'        => @azure_config.compute_gallery_replicas,
-            'target_regions'       => [location]
-          }
-        )
+        @logger.debug("Creating compute gallery image '#{gallery_name}/#{image_definition}:#{version}' in target location '#{params['location']}'")
+        gallery_image = @azure_client.create_update_gallery_image_version(gallery_name, image_definition, version, params)
       end
-
       gallery_image
     end
 
     def recover_gallery_image_from_blob_metadata(stemcell_name, target_location)
       @logger.debug("Gallery image not found for stemcell '#{stemcell_name}'. Try to recover from blob metadata")
-      metadata = @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
 
-      return nil unless metadata&.key?('image') && metadata.key?('compute_gallery_name') && metadata.key?('compute_gallery_image_definition')
-      return nil if metadata['compute_gallery_name'] != @azure_config.compute_gallery_name
+      metadata = get_blob_metadata_for_stemcell(stemcell_name)
+      return nil unless metadata
 
-      image_metadata = JSON.parse(metadata['image'], symbolize_names: true)
+      image_metadata = parse_image_metadata(metadata['image'])
+      return nil unless image_metadata
+
       @logger.debug("Recovering gallery image from metadata of blob '#{stemcell_name}': #{image_metadata}")
       create_gallery_image(stemcell_name, metadata['compute_gallery_image_definition'], image_metadata[:version], target_location, metadata)
+    end
+
+    def get_blob_metadata_for_stemcell(stemcell_name)
+      begin
+        metadata = @blob_manager.get_blob_metadata(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd")
+
+        return nil unless metadata&.key?('image') &&
+                         metadata.key?('compute_gallery_name') &&
+                         metadata.key?('compute_gallery_image_definition')
+
+        return nil if metadata['compute_gallery_name'] != @azure_config.compute_gallery_name
+
+        metadata
+      rescue => e
+        @logger.warn("Failed to retrieve blob metadata for stemcell '#{stemcell_name}': #{e.message}")
+        nil
+      end
+    end
+
+    def parse_image_metadata(image_json)
+      return nil unless image_json
+
+      JSON.parse(image_json, symbolize_names: true)
+    rescue JSON::ParserError => e
+      @logger.warn("Failed to parse image metadata JSON: #{e.message}")
+      nil
     end
 
     def update_gallery_image_for_target_location(gallery_image, target_location)
