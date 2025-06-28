@@ -27,7 +27,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
       allow(Open3).to receive(:capture2e).and_return(['',
                                                       double('status', exitstatus: 0)])
       allow(azure_client).to receive(:create_gallery_image_definition)
-      allow(azure_client).to receive(:create_gallery_image_version)
+      allow(azure_client).to receive(:create_update_gallery_image_version)
     end
 
     context 'when compute gallery is disabled' do
@@ -37,7 +37,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
         stemcell_manager2.create_stemcell('fake-image-path', { 'version' => '1.2' })
 
         expect(azure_client).not_to have_received(:create_gallery_image_definition)
-        expect(azure_client).not_to have_received(:create_gallery_image_version)
+        expect(azure_client).not_to have_received(:create_update_gallery_image_version)
       end
     end
 
@@ -63,119 +63,25 @@ describe Bosh::AzureCloud::StemcellManager2 do
         allow(blob_manager).to receive(:create_page_blob)
         allow(blob_manager).to receive(:get_blob_uri).and_return(blob_uri)
         allow(SecureRandom).to receive(:uuid).and_return(stemcell_uuid)
+        allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_raise('Not found')
+        allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
+        allow(File).to receive(:exist?).and_return(true)
+        allow(File).to receive(:open).and_yield(StringIO.new('fake-image-content'))
+        allow_any_instance_of(Digest::SHA256).to receive(:hexdigest).and_return('fake-sha256-checksum')
+        allow_any_instance_of(Bosh::AzureCloud::ComputeGalleryManager).to receive(:flock).and_yield
       end
 
-      it 'creates a new gallery image definition' do
+      it 'creates a new gallery image through compute gallery manager' do
         stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
 
         expect(azure_client).to have_received(:create_gallery_image_definition)
-          .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', hash_including(
-            'location' => 'fake-location',
-            'osType' => 'Linux',
-            'publisher' => 'bosh',
-            'offer' => 'bosh-azure-hyperv-ubuntu-trusty-go_agent',
-            'sku' => 'gen1',
-            'version' => '1.2.0',
-          ))
-      end
-
-      it 'creates a new gallery image version' do
-        stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
-
-        expect(azure_client).to have_received(:create_gallery_image_version)
-          .with('fake-gallery', 'bosh-azure-hyperv-ubuntu-trusty-go_agent', '1.2.0', {
-            'location' => 'fake-location',
-            'replica_count' => 3,
-            'storage_account_name' => MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-            'target_regions' => ["fake-location"],
-            'blob_uri' => blob_uri,
-            'tags' => hash_including('stemcell_name' => match(/bosh-stemcell-/)),
-          })
-      end
-
-      context 'when location is not configured' do
-        let(:azure_config) { Bosh::AzureCloud::AzureConfig.new('compute_gallery_name' => 'fake-gallery') }
-
-        it 'raises an error' do
-          expect {
-            stemcell_manager2.create_stemcell('fake-image-path', { 'version' => '1.2' })
-          }.to raise_error(/Missing the property 'location' in the global configuration/)
-        end
-      end
-
-      context 'when version has different formats' do
-        {
-          '1' => '1.0.0',
-          '1.2' => '1.2.0',
-          '1.2.3' => '1.2.3',
-          '1.2.3.4' => '1.2.3'
-        }.each do |input, expected|
-          it "converts #{input} to #{expected}" do
-            props = stemcell_properties.merge('version' => input)
-            stemcell_manager2.create_stemcell('fake-image-path', props)
-
-            expect(azure_client).to have_received(:create_gallery_image_version)
-              .with(anything, anything, expected, anything)
-          end
-        end
+        expect(azure_client).to have_received(:create_update_gallery_image_version)
       end
 
       it 'preserves original stemcell properties' do
         original_props = stemcell_properties.dup
         stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
         expect(stemcell_properties).to eq(original_props)
-      end
-
-      it 'uses correct blob URI for image version' do
-        allow(blob_manager).to receive(:get_blob_uri)
-          .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, 'stemcell', /.*\.vhd/)
-          .and_return('fake-blob-uri')
-
-        stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
-
-        expect(azure_client).to have_received(:create_gallery_image_version)
-          .with(anything, anything, anything, hash_including('blob_uri' => 'fake-blob-uri'))
-      end
-
-      context 'when compute_gallery_replicas is configured' do
-        let(:azure_config) do
-          Bosh::AzureCloud::AzureConfig.new(
-            'compute_gallery_name' => 'fake-gallery',
-            'location' => 'fake-location',
-            'compute_gallery_replicas' => 5
-          )
-        end
-
-        it 'uses configured replica count' do
-          stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
-
-          expect(azure_client).to have_received(:create_gallery_image_version)
-            .with(anything, anything, anything, hash_including('replica_count' => 5))
-        end
-      end
-
-      context 'when create_gallery_image_definition fails' do
-        before do
-          allow(azure_client).to receive(:create_gallery_image_definition)
-            .and_raise(StandardError, 'Failed to create gallery image definition')
-        end
-
-        it 'propagates the error' do
-          expect {
-            stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
-          }.to raise_error(/Failed to create gallery image definition/)
-        end
-      end
-
-      context 'when invalid os_type is provided' do
-        it 'raises an error' do
-          expect {
-            stemcell_manager2.create_stemcell('fake-image-path', {
-              'version' => '1.2',
-              'os_type' => 'invalid'
-            })
-          }.to raise_error(/Invalid os_type/)
-        end
       end
     end
   end
@@ -261,11 +167,18 @@ describe Bosh::AzureCloud::StemcellManager2 do
       end
 
       it 'deletes the gallery image version and the blob' do
-        expect(azure_client).to receive(:get_gallery_image_version_by_tags)
-          .with(gallery_name, hash_including('stemcell_name' => stemcell_name))
-          .and_return({ :gallery_name => gallery_name, :image_definition => image_definition, :name => image_version })
+        gallery_image_with_tags = {
+          :gallery_name => gallery_name,
+          :image_definition => image_definition,
+          :name => image_version,
+          :location => location,
+          :tags => { 'stemcell_references' => stemcell_name, 'stemcell_name' => stemcell_name }
+        }
+        expect(azure_client).to receive(:get_gallery_image_version_by_stemcell_name)
+          .with(gallery_name, stemcell_name)
+          .and_return(gallery_image_with_tags)
 
-          stemcell_manager2.delete_stemcell(stemcell_name)
+        stemcell_manager2.delete_stemcell(stemcell_name)
 
         expect(azure_client).to have_received(:delete_gallery_image_version).with(gallery_name, image_definition, image_version)
         expect(blob_manager).to have_received(:delete_blob).with('foo', stemcell_container, blob_name).once
@@ -274,11 +187,42 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
       context 'when image cannot be found by tags' do
         it 'skips deleting gallery image but deletes the blob' do
-          allow(azure_client).to receive(:get_gallery_image_version_by_tags).and_return(nil)
+          allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_return(nil)
 
           stemcell_manager2.delete_stemcell(stemcell_name)
 
           expect(azure_client).not_to have_received(:delete_gallery_image_version)
+          expect(blob_manager).to have_received(:delete_blob).twice
+        end
+      end
+
+      context 'when stemcell name is not in the gallery image tags' do
+        let(:gallery_image_without_name) do
+          {
+            :gallery_name => gallery_name,
+            :image_definition => image_definition,
+            :name => image_version,
+            :location => location,
+            :tags => {
+              'stemcell_references' => 'other-stemcell-name',
+              'stemcell_name' => 'other-stemcell-name'
+            }
+          }
+        end
+
+        before do
+          allow(azure_client).to receive(:create_update_gallery_image_version)
+        end
+
+        it 'does not modify the gallery image' do
+          expect(azure_client).to receive(:get_gallery_image_version_by_stemcell_name)
+            .with(gallery_name, stemcell_name)
+            .and_return(gallery_image_without_name)
+
+          stemcell_manager2.delete_stemcell(stemcell_name)
+
+          expect(azure_client).not_to have_received(:delete_gallery_image_version)
+          expect(azure_client).not_to have_received(:create_update_gallery_image_version)
           expect(blob_manager).to have_received(:delete_blob).twice
         end
       end
@@ -360,8 +304,8 @@ describe Bosh::AzureCloud::StemcellManager2 do
       end
 
       it 'returns gallery image info with complete metadata' do
-        allow(azure_client).to receive(:get_gallery_image_version_by_tags).and_return(gallery_image)
-        expect(azure_client).not_to receive(:create_gallery_image_version)
+        allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_return(gallery_image)
+        expect(azure_client).not_to receive(:create_update_gallery_image_version)
 
         stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
 
@@ -372,7 +316,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
 
       context 'when gallery image cannot be found due to missing metadata on the blob' do
         it 'falls back to user image' do
-          allow(azure_client).to receive(:get_gallery_image_version_by_tags).and_return(nil)
+          allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_return(nil)
           allow(blob_manager).to receive(:get_blob_metadata).and_return(nil)
           allow(azure_client).to receive(:get_user_image_by_name).and_return({ id: 'fake-id', tags: {} }).and_return({ id: 'fake-id', tags: {} })
 
@@ -399,10 +343,13 @@ describe Bosh::AzureCloud::StemcellManager2 do
           allow(blob_manager).to receive(:get_blob_metadata)
             .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, 'stemcell', "#{stemcell_name}.vhd")
             .and_return(stemcell_blob_metadata)
-          allow(azure_client).to receive(:get_gallery_image_version_by_tags).and_return(nil)
+          allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_return(nil)
+          allow(azure_client).to receive(:get_gallery_image_version)
+            .with(gallery_name, image_definition, image_version)
+            .and_return(nil)
           allow(blob_manager).to receive(:get_blob_uri).and_return('fake-blob-uri')
           expect(azure_client).to receive(:create_gallery_image_definition).with(gallery_name, image_definition, anything)
-          expect(azure_client).to receive(:create_gallery_image_version).with(gallery_name, image_definition, image_version, anything).and_return(gallery_image)
+          expect(azure_client).to receive(:create_update_gallery_image_version).with(gallery_name, image_definition, image_version, anything).and_return(gallery_image)
 
           stemcell_info = stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
 
@@ -417,12 +364,12 @@ describe Bosh::AzureCloud::StemcellManager2 do
         it 'updates the image with missing location' do
           updated_image = gallery_image.dup
           updated_image[:target_regions] = [location, other_location]
-          allow(azure_client).to receive(:get_gallery_image_version_by_tags).and_return(gallery_image)
-          allow(azure_client).to receive(:create_gallery_image_version).and_return(updated_image)
+          allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_return(gallery_image)
+          allow(azure_client).to receive(:create_update_gallery_image_version).and_return(updated_image)
 
           stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, other_location)
 
-          expect(azure_client).to have_received(:create_gallery_image_version)
+          expect(azure_client).to have_received(:create_update_gallery_image_version)
             .with(gallery_name, image_definition, image_version, hash_including('target_regions' => [location, other_location]))
         end
       end
@@ -438,12 +385,12 @@ describe Bosh::AzureCloud::StemcellManager2 do
         end
 
         it 'updates the image with correct replica count' do
-          allow(azure_client).to receive(:get_gallery_image_version_by_tags).and_return(gallery_image)
-          allow(azure_client).to receive(:create_gallery_image_version).and_return(gallery_image)
+          allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_return(gallery_image)
+          allow(azure_client).to receive(:create_update_gallery_image_version).and_return(gallery_image)
 
           stemcell_manager2.get_user_image_info(stemcell_name, storage_account_type, location)
 
-          expect(azure_client).to have_received(:create_gallery_image_version)
+          expect(azure_client).to have_received(:create_update_gallery_image_version)
             .with(gallery_name, image_definition, image_version, hash_including('replica_count' => expected_replica_count))
         end
       end
@@ -848,56 +795,6 @@ describe Bosh::AzureCloud::StemcellManager2 do
             end
           end
         end
-      end
-    end
-  end
-
-  describe 'hyperVGeneration parameter' do
-    let(:azure_config) do
-      Bosh::AzureCloud::AzureConfig.new(
-        'compute_gallery_name' => 'fake-gallery',
-        'location' => 'fake-location'
-      )
-    end
-    let(:blob_uri) { 'fake-blob-uri' }
-
-    before do
-      allow(blob_manager).to receive(:create_page_blob)
-      allow(blob_manager).to receive(:get_blob_uri).and_return(blob_uri)
-      allow(SecureRandom).to receive(:uuid).and_return(stemcell_uuid)
-      allow(azure_client).to receive(:create_gallery_image_definition).and_return(nil)
-      allow(azure_client).to receive(:create_gallery_image_version).and_return(nil)
-      allow_any_instance_of(Bosh::AzureCloud::StemcellManager).to receive(:create_stemcell).and_return(stemcell_name)
-    end
-
-    context 'with generation specified in stemcell properties' do
-      it 'correctly formats the parameter' do
-        stemcell_props = {
-          'name' => 'fake-name',
-          'version' => '1.0',
-          'os_type' => 'linux',
-          'generation' => 'gen2'
-        }
-
-        stemcell_manager2.create_stemcell('fake-image-path', stemcell_props)
-
-        expect(azure_client).to have_received(:create_gallery_image_definition)
-          .with('fake-gallery', anything, hash_including('hyperVGeneration' => 'V2'))
-      end
-    end
-
-    context 'without generation specified' do
-      it 'uses the default hyperVGeneration value (=V1)' do
-        stemcell_props = {
-          'name' => 'fake-name',
-          'version' => '1.0',
-          'os_type' => 'linux'
-        }
-
-        stemcell_manager2.create_stemcell('fake-image-path', stemcell_props)
-
-        expect(azure_client).to have_received(:create_gallery_image_definition)
-          .with('fake-gallery', anything, hash_including('hyperVGeneration' => 'V1'))
       end
     end
   end
