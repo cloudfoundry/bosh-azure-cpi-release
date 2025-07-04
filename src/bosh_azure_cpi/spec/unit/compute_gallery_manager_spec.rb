@@ -86,7 +86,7 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
       before do
         allow(azure_client).to receive(:get_gallery_image_version)
           .with(gallery_name, image_definition, version)
-          .and_raise('Image not found')
+          .and_return(nil)
         allow(azure_client).to receive(:create_gallery_image_definition)
         allow(azure_client).to receive(:create_update_gallery_image_version)
           .and_return({ id: 'new-image-id' })
@@ -445,7 +445,7 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
       invalid_props = stemcell_properties.merge('os_type' => 'invalid')
 
       allow(compute_gallery_manager).to receive(:create_gallery_image).and_call_original
-      allow(azure_client).to receive(:get_gallery_image_version).and_raise('Not found')
+      allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
 
       expect {
         compute_gallery_manager.create_stemcell_with_gallery(
@@ -467,7 +467,7 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
     context 'hyperV-generation' do
       before do
         allow(compute_gallery_manager).to receive(:create_gallery_image).and_call_original
-        allow(azure_client).to receive(:get_gallery_image_version).and_raise('Not found')
+        allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
         allow(azure_client).to receive(:create_gallery_image_definition)
         allow(azure_client).to receive(:create_update_gallery_image_version).and_return({})
         allow(blob_manager).to receive(:get_blob_uri).and_return('https://test.blob.uri')

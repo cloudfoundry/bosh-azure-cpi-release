@@ -55,7 +55,7 @@ module Bosh::AzureCloud
 
     def create_gallery_image(stemcell_name, image_definition, version, location, metadata)
       gallery_name = @azure_config.compute_gallery_name
-      existing_image = get_existing_gallery_image(gallery_name, image_definition, version)
+      existing_image = @azure_client.get_gallery_image_version(gallery_name, image_definition, version)
 
       if existing_image
         return handle_existing_gallery_image(existing_image, stemcell_name, gallery_name, image_definition, version, metadata)
@@ -130,15 +130,6 @@ module Bosh::AzureCloud
       end
 
       update_gallery_image_tags(existing_image, stemcell_name, gallery_name, image_definition, version, new_sha)
-    end
-
-    def get_existing_gallery_image(gallery_name, image_definition, version)
-      begin
-        @azure_client.get_gallery_image_version(gallery_name, image_definition, version)
-      rescue => e
-        @logger.debug("Gallery image version #{gallery_name}/#{image_definition}:#{version} does not exist (expected): #{e.message}")
-        nil
-      end
     end
 
     def update_gallery_image_tags(image, stemcell_name, gallery_name, image_definition, version, image_sha256)
