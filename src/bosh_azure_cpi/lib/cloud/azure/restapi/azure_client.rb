@@ -2141,44 +2141,47 @@ module Bosh::AzureCloud
     # ==== Params
     # Required key/value pairs are:
     # * +:location+             - String. The location where the gallery image version will be created.
+    # Optional key/value pairs are:
+    # * +:tags+                 - Hash. The tags of the gallery image version.
     # * +:blob_uri+             - String. The blob uri of the image version.
     # * +:storage_account_name+ - String. The storage account name of the image version.
-    # * +:image_id+             - String. The image id of the image version.
-    # Optional key/value pairs are:
-    # * +:tags+ - Hash. The tags of the gallery image version.
+    # * +:replica_count+        - Integer. The replica count for the image version.
+    # * +:target_regions+       - Array. The target regions for the image version.
     #
     # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-image-versions/create-or-update?view=rest-compute-2024-11-04&tabs=HTTP
     #
-    def create_gallery_image_version(gallery_name, image_definition, version, params)
+    def create_update_gallery_image_version(gallery_name, image_definition, version, params)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_GALLERIES, name: gallery_name) + "/#{REST_API_IMAGES}/#{image_definition}/versions/#{version}"
 
       raise ArgumentError, "Missing required parameter 'location'" unless params.key?('location')
 
-      profile = {}
+      image_version_params = {
+        'location' => params['location']
+      }
+
+      image_version_params['tags'] = params['tags'] if params.key?('tags') && !params['tags'].nil?
+
+      properties = {}
       if params.key?('blob_uri') && params.key?('storage_account_name')
-        profile['osDiskImage'] = {
-          'source' => {
+        properties['storageProfile'] = {
+          'osDiskImage' => {
+            'source' => {
               'id' => rest_api_url(REST_API_PROVIDER_STORAGE, 'storageAccounts', name: params['storage_account_name']),
               'uri' => params['blob_uri']
+            }
           }
         }
       end
 
-      replica_count = params['replica_count'] || 1
-      target_regions = (params['target_regions'] || [params['location']]).map { |r| { 'name' => r } }
-      image_version_params = {
-        'location' => params['location'],
-        'tags' => params['tags'],
-        'properties' => {
-          'publishingProfile' => {
-            'replicaCount' => replica_count,
-            'targetRegions' => target_regions
-          },
-          'storageProfile' => profile,
-        },
-      }.compact
+      publishing_profile = {}
+      publishing_profile['replicaCount'] = params['replica_count'] if params.key?('replica_count')
+      publishing_profile['targetRegions'] = params['target_regions'].map { |r| { 'name' => r } } if params.key?('target_regions')
 
-      @logger.debug("Creating / updating new gallery image version: '#{url}' with params: #{image_version_params}")
+      properties['publishingProfile'] = publishing_profile unless publishing_profile.empty?
+
+      image_version_params['properties'] = properties unless properties.empty?
+
+      @logger.debug("Creating / updating gallery image version: '#{url}' with params: #{image_version_params}")
       response = http_put(url, image_version_params, { 'api-version' => '2024-03-03' })
       result = JSON.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
 
@@ -2202,30 +2205,55 @@ module Bosh::AzureCloud
       http_delete(url)
     end
 
-    # Get a gallery image version by searching for matching tags
+    # Get a gallery image version by its version
+    # @param [String] gallery_name - Name of gallery.
+    # @param [String] image_definition - Name of gallery image.
+    # @param [String] version - Name of gallery image version.
+    # @return [Hash,nil] The gallery image version or nil if not found
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/compute/gallery-image-versions/get
+    #
+    def get_gallery_image_version(gallery_name, image_definition, version)
+      url = rest_api_url(REST_API_PROVIDER_COMPUTE, "#{REST_API_GALLERIES}/#{gallery_name}/images/#{image_definition}/versions/#{version}", resource_group_name: @azure_config.resource_group_name)
+      result = get_resource_by_id(url)
+      result.nil? ? nil : parse_gallery_image(result)
+    end
+
+    # Get a gallery image version by searching for a stemcell name in tags
     #
     # @param [String] gallery_name - Name of gallery.
-    # @param [Hash] tags - Tags to match against gallery image version tags.
-    # @return [Hash,nil] The gallery image version that matches the tags
+    # @param [String] stemcell_name - Stemcell name to search for.
+    # @return [Hash,nil] The gallery image version that contains the stemcell name
     #
     # @See https://learn.microsoft.com/en-us/rest/api/resources/resources/list
     #
-    def get_gallery_image_version_by_tags(gallery_name, tags)
-      @logger.debug("Searching in gallery '#{gallery_name}' for images with tags: #{tags}")
+    def get_gallery_image_version_by_stemcell_name(gallery_name, stemcell_name)
+      @logger.debug("Searching in gallery '#{gallery_name}' for images containing stemcell '#{stemcell_name}'")
       return nil if gallery_name.nil? || gallery_name.empty?
 
-      tag_filters = tags.map { |key, value| "tagName eq '#{key}' and tagValue eq '#{value}'" }.join(' and ')
       url = "/subscriptions/#{@azure_config.subscription_id}/resourceGroups/#{@azure_config.resource_group_name}/resources"
-      result = get_resource_by_id(url, {'$filter' => tag_filters})
+      result = get_resource_by_id(url, {'$filter' => "tagName eq 'compute_gallery_name' and tagValue eq '#{gallery_name}'"})
       return nil if result.nil? || result['value'].nil?
 
-      matching_resource =
-        result['value'].find do |resource|
-          resource['type'] == "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_GALLERIES}/#{REST_API_IMAGES}/versions"
+      matching_resource = result['value'].find do |resource|
+        next unless resource['type'] == "#{REST_API_PROVIDER_COMPUTE}/#{REST_API_GALLERIES}/#{REST_API_IMAGES}/versions"
+
+        resource_gallery_name = _parse_name_from_id(resource['id'])[:resource_name]
+        next unless resource_gallery_name == gallery_name
+
+        tags = resource['tags'] || {}
+        if tags['stemcell_name'] == stemcell_name
+          true
+        elsif tags['stemcell_references']
+          stemcell_refs = tags['stemcell_references'].split(',').map(&:strip)
+          stemcell_refs.include?(stemcell_name)
+        else
+          false
         end
+      end
+
       return nil unless matching_resource
 
-      # As the resource does not contain the targetRegion, we need to do one more request to get the full resource
       image_version = get_resource_by_id(matching_resource['id'])
       parse_gallery_image(image_version)
     end

@@ -62,17 +62,10 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
-  describe '#create_gallery_image_version' do
+  describe '#create_update_gallery_image_version' do
     let(:uri) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/#{image_definition}/versions/#{image_version}" }
     let(:tags) { { 'foo' => 'bar' } }
-    let(:params) do
-      {
-        'location'             => location,
-        'blob_uri'             => 'fake-blob-uri',
-        'storage_account_name' => 'fake-storage-account',
-        'tags'                 => tags
-      }
-    end
+    let(:params) { { 'location' => location } }
 
     context 'when all required parameters are present' do
       let(:fake_response) do
@@ -94,11 +87,11 @@ describe Bosh::AzureCloud::AzureClient do
       end
 
       it 'creates and parses the gallery image version' do
-        result = azure_client.create_gallery_image_version(gallery_name, image_definition, image_version, params)
+        result = azure_client.create_update_gallery_image_version(gallery_name, image_definition, image_version, params)
 
         expect(azure_client).to have_received(:http_put).with(
           uri,
-          hash_including('location' => location, 'tags' => tags, 'properties' => {'storageProfile' => anything, 'publishingProfile' => anything}),
+          hash_including('location' => location),
           hash_including('api-version' => anything)
         )
         expect(result[:name]).to eq("fake_image")
@@ -114,7 +107,7 @@ describe Bosh::AzureCloud::AzureClient do
         invalid_params.delete('location')
 
         expect {
-          azure_client.create_gallery_image_version(gallery_name, image_definition, image_version, invalid_params)
+          azure_client.create_update_gallery_image_version(gallery_name, image_definition, image_version, invalid_params)
         }.to raise_error(ArgumentError, /Missing required parameter/)
       end
     end
@@ -142,7 +135,7 @@ describe Bosh::AzureCloud::AzureClient do
       it 'creates version with multiple target regions' do
         allow(azure_client).to receive(:http_put).and_return(fake_response_double)
 
-        azure_client.create_gallery_image_version(gallery_name, image_definition, image_version, params_with_regions)
+        azure_client.create_update_gallery_image_version(gallery_name, image_definition, image_version, params_with_regions)
 
         expect(azure_client).to have_received(:http_put).with(
           uri,
@@ -184,7 +177,7 @@ describe Bosh::AzureCloud::AzureClient do
       it 'creates version with specified replica count' do
         allow(azure_client).to receive(:http_put).and_return(fake_response_double)
 
-        azure_client.create_gallery_image_version(gallery_name, image_definition, image_version, params_with_replica)
+        azure_client.create_update_gallery_image_version(gallery_name, image_definition, image_version, params_with_replica)
 
         expect(azure_client).to have_received(:http_put).with(
           uri,
@@ -201,92 +194,76 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
-  describe '#get_gallery_image_version_by_tags' do
-    let(:tags) { { 'stemcell-name' => stemcell_name } }
-    let(:resource_url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/resources" }
-    let(:image_version_url) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/jammy/versions/1.651.0" }
+  describe '#get_gallery_image_version_by_stemcell_name' do
+    let(:mock_response) { double('response') }
+    let(:mock_image_version) { double('image_version') }
 
-    let(:resources_response) do
-      {
-        'value' => [
-          {
-            'id' => image_version_url,
-            'name' => "#{gallery_name}/jammy/1.651.0",
-            'type' => "Microsoft.Compute/galleries/images/versions",
-            'tags' => tags,
-          }
-        ]
-      }
+    it 'returns nil when gallery name is nil' do
+      result = azure_client.get_gallery_image_version_by_stemcell_name(nil, stemcell_name)
+      expect(result).to be_nil
     end
 
-    let(:image_versions_response) do
-      {
-        'name' => '1.651.0',
-        'id' => image_version_url,
-        'type' => 'Microsoft.Compute/galleries/images/versions',
-        'location' => 'eastus',
-        'tags' => {
-          'stemcell-name' => stemcell_name
-        },
-        'properties' => {
-          'publishingProfile' => {
-            'targetRegions' => [
-              { 'name' => 'eastus' }
-            ],
-            'replicaCount' => 1
-          }
+    it 'returns nil when gallery name is empty' do
+      result = azure_client.get_gallery_image_version_by_stemcell_name('', stemcell_name)
+      expect(result).to be_nil
+    end
+
+    context 'when API returns nil or empty response' do
+      it 'returns nil when get_resource_by_id returns nil' do
+        allow(azure_client).to receive(:get_resource_by_id).and_return(nil)
+        result = azure_client.get_gallery_image_version_by_stemcell_name(gallery_name, stemcell_name)
+        expect(result).to be_nil
+      end
+
+      it 'returns nil when response has no value' do
+        allow(azure_client).to receive(:get_resource_by_id).and_return({'value' => nil})
+        result = azure_client.get_gallery_image_version_by_stemcell_name(gallery_name, stemcell_name)
+        expect(result).to be_nil
+      end
+    end
+
+    context 'when stemcell name matches in stemcell_name tag' do
+      it 'returns the matching image version' do
+        matching_resource = {
+          'id' => "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/test-image/versions/1.0.0",
+          'type' => 'Microsoft.Compute/galleries/images/versions',
+          'tags' => { 'stemcell_name' => stemcell_name }
         }
-      }
-    end
+        allow(azure_client).to receive(:get_resource_by_id).and_return({'value' => [matching_resource]})
+        allow(azure_client).to receive(:get_resource_by_id).with(matching_resource['id']).and_return(mock_image_version)
+        allow(azure_client).to receive(:parse_gallery_image).with(mock_image_version).and_return('parsed_result')
 
-    let(:expected_result) do
-      {
-        name: '1.651.0',
-        id: image_version_url,
-        location: 'eastus',
-        gallery_name: gallery_name,
-        image_definition: 'jammy',
-        tags: {
-          'stemcell-name' => stemcell_name
-        },
-        replica_count: 1,
-        target_regions: ['eastus']
-      }
-    end
-
-    context 'when the gallery image version exists with matching tags' do
-      it 'returns the gallery image version' do
-        expect(azure_client).to receive(:get_resource_by_id)
-          .with(resource_url, hash_including('$filter' => match(/tagName eq 'stemcell-name' and tagValue eq '#{stemcell_name}'/)))
-          .and_return(resources_response)
-        expect(azure_client).to receive(:get_resource_by_id)
-          .with(image_version_url)
-          .and_return(image_versions_response)
-
-        result = azure_client.get_gallery_image_version_by_tags(gallery_name, tags)
-
-        expect(result).to eq(expected_result)
+        result = azure_client.get_gallery_image_version_by_stemcell_name(gallery_name, stemcell_name)
+        expect(result).to eq('parsed_result')
       end
     end
 
-    context 'when no image versions match the tags' do
-      it 'returns nil' do
-        expect(azure_client).to receive(:get_resource_by_id).with(resource_url, anything).and_return(nil)
+    context 'when stemcell name matches in stemcell_references tag' do
+      it 'returns the matching image version when stemcell is in comma-separated list' do
+        matching_resource = {
+          'id' => "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/test-image/versions/1.0.0",
+          'type' => 'Microsoft.Compute/galleries/images/versions',
+          'tags' => { 'stemcell_references' => "other-stemcell,#{stemcell_name},another-stemcell" }
+        }
+        allow(azure_client).to receive(:get_resource_by_id).and_return({'value' => [matching_resource]})
+        allow(azure_client).to receive(:get_resource_by_id).with(matching_resource['id']).and_return(mock_image_version)
+        allow(azure_client).to receive(:parse_gallery_image).with(mock_image_version).and_return('parsed_result')
 
-        result = azure_client.get_gallery_image_version_by_tags(gallery_name, tags)
-
-        expect(result).to be_nil
+        result = azure_client.get_gallery_image_version_by_stemcell_name(gallery_name, stemcell_name)
+        expect(result).to eq('parsed_result')
       end
     end
 
-    context 'when gallery name is nil or empty' do
-      it 'returns nil for nil gallery name' do
-        result = azure_client.get_gallery_image_version_by_tags(nil, tags)
-        expect(result).to be_nil
-      end
+    context 'when no resources match the stemcell name' do
+      it 'returns nil when no matching resources are found' do
+        non_matching_resource = {
+          'id' => "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/test-image/versions/1.0.0",
+          'type' => 'Microsoft.Compute/galleries/images/versions',
+          'tags' => { 'stemcell_name' => 'different-stemcell' }
+        }
+        allow(azure_client).to receive(:get_resource_by_id).and_return({'value' => [non_matching_resource]})
 
-      it 'returns nil for empty gallery name' do
-        result = azure_client.get_gallery_image_version_by_tags('', tags)
+        result = azure_client.get_gallery_image_version_by_stemcell_name(gallery_name, stemcell_name)
         expect(result).to be_nil
       end
     end
@@ -318,6 +295,84 @@ describe Bosh::AzureCloud::AzureClient do
         expect {
           azure_client.delete_gallery_image_version(gallery_name, image_definition, image_version)
         }.not_to raise_error
+      end
+    end
+  end
+
+  describe '#get_gallery_image_version' do
+    let(:uri) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/#{image_definition}/versions/#{image_version}" }
+
+    context 'when gallery image version exists' do
+      let(:fake_response_body) do
+        {
+          'id' => "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/#{image_definition}/versions/#{image_version}",
+          'name' => image_version,
+          'type' => 'Microsoft.Compute/galleries/images/versions',
+          'location' => location,
+          'tags' => {
+            'stemcell_name' => stemcell_name,
+            'image_sha256' => 'fake-sha256-checksum',
+            'version' => '1.0'
+          },
+          'properties' => {
+            'provisioningState' => 'Succeeded',
+            'publishingProfile' => {
+              'targetRegions' => [
+                {
+                  'name' => location,
+                  'regionalReplicaCount' => 3
+                }
+              ],
+              'replicaCount' => 3
+            }
+          }
+        }
+      end
+
+      before do
+        allow(azure_client).to receive(:get_resource_by_id).with(uri).and_return(fake_response_body)
+      end
+
+      it 'returns the parsed gallery image version' do
+        expect(azure_client).to receive(:rest_api_url)
+          .with('Microsoft.Compute', "galleries/#{gallery_name}/images/#{image_definition}/versions/#{image_version}", resource_group_name: resource_group)
+          .and_return(uri)
+
+        result = azure_client.get_gallery_image_version(gallery_name, image_definition, image_version)
+
+        expect(azure_client).to have_received(:get_resource_by_id).with(uri)
+        expect(result).not_to be_nil
+        expect(result[:id]).to eq(fake_response_body['id'])
+        expect(result[:name]).to eq(image_version)
+        expect(result[:gallery_name]).to eq(gallery_name)
+        expect(result[:image_definition]).to eq(image_definition)
+        expect(result[:location]).to eq(location)
+        expect(result[:tags]).to eq(fake_response_body['tags'])
+        expect(result[:target_regions]).to eq([location])
+        expect(result[:replica_count]).to eq(3)
+      end
+    end
+
+    context 'when gallery image version does not exist' do
+      before do
+        allow(azure_client).to receive(:get_resource_by_id).with(uri).and_return(nil)
+      end
+
+      it 'returns nil' do
+        result = azure_client.get_gallery_image_version(gallery_name, image_definition, image_version)
+        expect(result).to be_nil
+      end
+    end
+
+    context 'when API returns an error' do
+      before do
+        allow(azure_client).to receive(:get_resource_by_id).with(uri).and_raise(StandardError, 'API Error')
+      end
+
+      it 'propagates the error' do
+        expect {
+          azure_client.get_gallery_image_version(gallery_name, image_definition, image_version)
+        }.to raise_error(StandardError, 'API Error')
       end
     end
   end
