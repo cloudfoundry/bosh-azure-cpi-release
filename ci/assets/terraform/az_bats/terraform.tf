@@ -72,7 +72,7 @@ resource "azurerm_subnet" "azure_bats_subnet_2" {
   address_prefixes     = ["10.0.17.0/24"]
 }
 
-# Create a Storage Account in the azure_rg_bosh resouce group
+# Create a Storage Account in the azure_rg_bosh resource group
 resource "azurerm_storage_account" "azure_bosh_sa" {
   name                            = replace(var.env_name, "-", "")
   resource_group_name             = azurerm_resource_group.azure_rg_bosh.name
@@ -84,17 +84,17 @@ resource "azurerm_storage_account" "azure_bosh_sa" {
 # Create a Storage Container for the bosh director
 resource "azurerm_storage_container" "azure_bosh_container" {
   name                  = "bosh"
-  storage_account_name  = azurerm_storage_account.azure_bosh_sa.name
+  storage_account_id  = azurerm_storage_account.azure_bosh_sa.name
   container_access_type = "private"
 }
 # Create a Storage Container for the stemcells
 resource "azurerm_storage_container" "azure_stemcell_container" {
   name                  = "stemcell"
-  storage_account_name  = azurerm_storage_account.azure_bosh_sa.name
+  storage_account_id  = azurerm_storage_account.azure_bosh_sa.name
   container_access_type = "blob"
 }
 
-# Create a Network Securtiy Group
+# Create a Network Security Group
 resource "azurerm_network_security_group" "azure_bosh_nsg" {
   name                = "azure_bosh_nsg"
   location            = var.location
