@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-
-set -eu
+set -eu -o pipefail
 
 FLY="${FLY_CLI:-fly}"
 
-${FLY} -t "${CONCOURSE_TARGET:-bosh-ecosystem}" set-pipeline -p "bosh-azure-cpi" \
-    -c ci/pipeline.yml
+${FLY} --target "${CONCOURSE_TARGET:-bosh}" \
+  set-pipeline \
+  --pipeline "bosh-azure-cpi" \
+  --config ci/pipeline.yml
