@@ -107,13 +107,13 @@ resource "azurerm_storage_account" "azure_bosh_sa_extra" {
 # Create a Storage Container for the disks
 resource "azurerm_storage_container" "azure_bosh_container_extra" {
   name                  = "bosh"
-  storage_account_id  = azurerm_storage_account.azure_bosh_sa_extra.name
+  storage_account_id    = azurerm_storage_account.azure_bosh_sa_extra.id
   container_access_type = "private"
 }
 # Create a Storage Container for the stemcells
 resource "azurerm_storage_container" "azure_stemcell_container_extra" {
   name                  = "stemcell"
-  storage_account_id  = azurerm_storage_account.azure_bosh_sa_extra.name
+  storage_account_id    = azurerm_storage_account.azure_bosh_sa_extra.id
   container_access_type = "private"
 }
 
