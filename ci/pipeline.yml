@@ -10,88 +10,6 @@ shared:
       ((bosh-azure-cpi/cpi_certificate_auth.private_key))
       ((bosh-azure-cpi/cpi_certificate_auth.certificate))
 
-  - &create-bats-environment
-    put: environment
-    params:
-      delete_on_failure: true
-      generate_random_name: true
-      terraform_source: pipelines/azure/assets/terraform
-
-  - &create-az-bats-environment
-    put: environment
-    params:
-      delete_on_failure: true
-      generate_random_name: true
-      terraform_source: bosh-cpi-src/ci/assets/terraform/az_bats
-
-  - &destroy-bats-environment
-    put: environment
-    params:
-      action: destroy
-      env_name_file: environment/name
-      terraform_source: pipelines/azure/assets/terraform
-    get_params:
-      action: destroy
-
-  - &destroy-az-bats-environment
-    put: environment
-    params:
-      action: destroy
-      env_name_file: environment/name
-      terraform_source: bosh-cpi-src/ci/assets/terraform/az_bats
-    get_params:
-      action: destroy
-
-  - &prepare-director
-    task: prepare-director
-    file: pipelines/shared/tasks/prepare-director.yml
-    image: bosh-integration-registry-image
-    params: &prepare-director-params
-      INFRASTRUCTURE:     azure
-      DIRECTOR_VARS_FILE:  |
-        subscription_id: ((cpi_azure_credentials_json.subscription_id))
-        tenant_id: ((cpi_azure_credentials_json.tenant_id))
-        client_id: ((cpi_azure_credentials_json.client_id))
-        client_secret: ((cpi_azure_credentials_json.client_secret))
-        dns_recursor_ip: 8.8.8.8
-
-  - &load-current-ruby-version-using-load_var
-    load_var: ruby_version
-    file: "bosh-cpi-src/src/bosh_azure_cpi/.ruby-version"
-    format: raw
-    reveal: true
-
-  - &deploy-director
-    task: deploy-director
-    file: pipelines/shared/tasks/deploy-director.yml
-    image: bosh-integration-registry-image
-
-  - &run-bats
-    task: run-bats
-    file: pipelines/shared/tasks/run-bats.yml
-    image: bosh-integration-registry-image
-    params: &run-bats-params
-      INFRASTRUCTURE:                     azure
-      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
-      BAT_INFRASTRUCTURE:                 azure
-      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
-      RUBY_VERSION: ((.:ruby_version))
-
-  - &run-az-bats
-    task: run-az-bats
-    file: bosh-cpi-src/ci/tasks/run-az-bats.yml
-    params: &run-az-bats-params
-      INFRASTRUCTURE:                     azure
-      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
-      BAT_INFRASTRUCTURE:                 azure
-      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
-      AZURE_BATS_ZONE:                    "1"
-
-  - &teardown
-    task: teardown
-    image: bosh-integration-registry-image
-    file: pipelines/shared/tasks/teardown.yml
-
   - &create-integration-environment
     put: environment
     params:
@@ -113,19 +31,6 @@ shared:
     file: bosh-cpi-src/ci/tasks/upload-stemcell.yml
     params:
       <<: *azure-environment-params
-
-  - &run-integration
-    task: run-integration
-    file: bosh-cpi-src/ci/tasks/run-integration.yml
-    params: &run-integration-params
-      <<: *azure-environment-params
-      SSH_PUBLIC_KEY: ((bosh-azure-cpi/integration_vm_keypair.public_key))
-
-  - &run-integration-windows
-    task: run-integration-windows
-    file: bosh-cpi-src/ci/tasks/run-integration-windows.yml
-    params: &run-integration-windows-params
-      <<: *run-integration-params
 
   - &ensure-cleanup
     task: ensure-cleanup
@@ -161,9 +66,11 @@ jobs:
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
-        - <<: *run-integration
+        - task: run-integration
+          file: bosh-cpi-src/ci/tasks/run-integration.yml
           params:
-            <<: *run-integration-params
+            <<: *azure-environment-params
+            SSH_PUBLIC_KEY: ((bosh-azure-cpi/integration_vm_keypair.public_key))
         ensure:
           do:
             - task: cleanup-images-in-gallery
@@ -194,9 +101,11 @@ jobs:
           params:
             <<: *azure-environment-params
             IS_HEAVY_STEMCELL: false
-        - <<: *run-integration-windows
+        - task: run-integration-windows
+          file: bosh-cpi-src/ci/tasks/run-integration-windows.yml
           params:
-            <<: *run-integration-windows-params
+            <<: *azure-environment-params
+            SSH_PUBLIC_KEY: ((bosh-azure-cpi/integration_vm_keypair.public_key))
         ensure:
           do:
             - <<: *destroy-integration-environment
@@ -223,25 +132,59 @@ jobs:
         - get: bosh-integration-registry-image
       - task: build-candidate
         file: bosh-cpi-src/ci/tasks/build-candidate.yml
-      - <<: *create-az-bats-environment
+      - put: environment
+        params:
+          delete_on_failure: true
+          generate_random_name: true
+          terraform_source: bosh-cpi-src/ci/assets/terraform/az_bats
       - do:
-        - <<: *prepare-director
+        - task: prepare-director
+          file: pipelines/shared/tasks/prepare-director.yml
+          image: bosh-integration-registry-image
           params:
-            <<: *prepare-director-params
+            INFRASTRUCTURE:     azure
+            DIRECTOR_VARS_FILE:  |
+              subscription_id: ((cpi_azure_credentials_json.subscription_id))
+              tenant_id: ((cpi_azure_credentials_json.tenant_id))
+              client_id: ((cpi_azure_credentials_json.client_id))
+              client_secret: ((cpi_azure_credentials_json.client_secret))
+              dns_recursor_ip: 8.8.8.8
             OPTIONAL_OPS_FILE: |
               -o pipelines/shared/assets/ops/remove-hm.yml
               -o bosh-deployment/external-ip-not-recommended.yml
               -o bosh-deployment/azure/use-managed-disks.yml
         - do:
-          - <<: *load-current-ruby-version-using-load_var
-          - <<: *deploy-director
-          - <<: *run-az-bats
+          - load_var: ruby_version
+            file: "bosh-cpi-src/src/bosh_azure_cpi/.ruby-version"
+            format: raw
+            reveal: true
+          - task: deploy-director
+            file: pipelines/shared/tasks/deploy-director.yml
+            image: bosh-integration-registry-image
+          - task: run-az-bats
+            file: bosh-cpi-src/ci/tasks/run-az-bats.yml
+            params:
+              INFRASTRUCTURE:                     azure
+              STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
+              BAT_INFRASTRUCTURE:                 azure
+              BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
+              AZURE_BATS_ZONE:                    "1"
+
           ensure:
             do:
-              - <<: *teardown
+              - task: teardown
+                image: bosh-integration-registry-image
+                file: pipelines/shared/tasks/teardown.yml
+
         ensure:
           do:
-            - <<: *destroy-az-bats-environment
+            - put: environment
+              params:
+                action: destroy
+                env_name_file: environment/name
+                terraform_source: bosh-cpi-src/ci/assets/terraform/az_bats
+              get_params:
+                action: destroy
           ensure:
             do:
               - <<: *ensure-cleanup
