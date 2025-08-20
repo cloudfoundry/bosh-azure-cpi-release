@@ -84,13 +84,13 @@ resource "azurerm_storage_account" "azure_bosh_sa" {
 # Create a Storage Container for the bosh director
 resource "azurerm_storage_container" "azure_bosh_container" {
   name                  = "bosh"
-  storage_account_id  = azurerm_storage_account.azure_bosh_sa.name
+  storage_account_id    = azurerm_storage_account.azure_bosh_sa.id
   container_access_type = "private"
 }
 # Create a Storage Container for the stemcells
 resource "azurerm_storage_container" "azure_stemcell_container" {
   name                  = "stemcell"
-  storage_account_id  = azurerm_storage_account.azure_bosh_sa.name
+  storage_account_id    = azurerm_storage_account.azure_bosh_sa.id
   container_access_type = "blob"
 }
 
