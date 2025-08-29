@@ -76,7 +76,7 @@ describe Bosh::AzureCloud::Cloud do
           cpi_gallery.stemcell_manager2.get_user_image_info(@stemcell_id, 'Standard_LRS', other_location)
 
           # Verify image replication
-          gallery_image = azure_client.get_gallery_image_version_by_tags(@compute_gallery_name, {'stemcell_name' => @stemcell_id})
+          gallery_image = azure_client.get_gallery_image_version_by_stemcell_name(@compute_gallery_name, @stemcell_id)
           expect(gallery_image).not_to be_nil
           expect(gallery_image[:replica_count]).to eq(1)
           actual_regions = gallery_image[:target_regions].map { |region| region.downcase.gsub(' ', '') }
@@ -87,7 +87,7 @@ describe Bosh::AzureCloud::Cloud do
           cpi_gallery.delete_stemcell(@stemcell_id)
 
           # Verify gallery image version was deleted
-          deleted_image = azure_client.get_gallery_image_version_by_tags(@compute_gallery_name, {'stemcell_name' => @stemcell_id})
+          deleted_image = azure_client.get_gallery_image_version_by_stemcell_name(@compute_gallery_name, @stemcell_id)
           expect(deleted_image).to be_nil
           @stemcell_id = nil
         end
