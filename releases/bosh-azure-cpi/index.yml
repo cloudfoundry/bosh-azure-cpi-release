@@ -33,6 +33,8 @@ builds:
     version: 37.3.1
   364c8fa5-da84-452f-510f-0389892cad96:
     version: 37.5.0
+  39157ec4-df3e-42da-79d3-c7a1f9690aef:
+    version: 53.0.1
   3cdc811b-f3fa-48c3-bfa1-bb02da886a92:
     version: "14"
   422fc520-f007-4384-87e7-0f819171d529:
