@@ -80,7 +80,7 @@ module Bosh::AzureCloud
         file.write(event.to_json)
       end
       FileUtils.mkdir_p(CPI_EVENTS_DIR)
-      stdout, stderr, status = Open3.capture3("mv #{filename} #{CPI_EVENTS_DIR}")
+      _, stderr, status = Open3.capture3("mv #{filename} #{CPI_EVENTS_DIR}")
       if status != 0
         @logger.warn("[Telemetry] Failed to move '#{filename}' to '#{CPI_EVENTS_DIR}', error: #{stderr}")
       else

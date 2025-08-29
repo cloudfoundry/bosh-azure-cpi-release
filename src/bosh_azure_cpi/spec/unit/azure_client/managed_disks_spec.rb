@@ -679,7 +679,7 @@ describe Bosh::AzureCloud::AzureClient do
 
         expect do
           azure_client.resize_managed_disk(resource_group, disk_params)
-        end.to raise_error /check_completion - http code: 200/
+        end.to raise_error(/check_completion - http code: 200/)
       end
     end
   end

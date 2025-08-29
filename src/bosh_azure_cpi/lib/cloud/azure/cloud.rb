@@ -614,7 +614,7 @@ module Bosh::AzureCloud
                     if account_type # There are no other functions between defining account_type and @disk_manager2.create_disk_from_blob
                       begin
                         @disk_manager2.delete_data_disk(disk_id)
-                      rescue StandardError => err
+                      rescue StandardError
                         @logger.error("attach_disk - Failed to delete the created managed disk #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
                       end
                     end

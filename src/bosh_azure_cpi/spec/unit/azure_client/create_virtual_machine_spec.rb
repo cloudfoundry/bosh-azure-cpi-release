@@ -1304,7 +1304,7 @@ describe Bosh::AzureCloud::AzureClient do
             )
             stub_request(:put, vm_uri).with(body: request_body).to_return(
               status: 200,
-              body: response_body.to_json.to_s,
+              body: response_body.to_json,
               headers: {
                 'azure-asyncoperation' => operation_status_link
               }
@@ -1345,7 +1345,7 @@ describe Bosh::AzureCloud::AzureClient do
             )
             stub_request(:put, vm_uri).with(body: request_body).to_return(
               status: 200,
-              body: response_body.to_json.to_s,
+              body: response_body.to_json,
               headers: {
                 'azure-asyncoperation' => operation_status_link
               }

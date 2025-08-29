@@ -204,7 +204,7 @@ module Bosh::AzureCloud
                     # when no size was specified at the root disk, we have to use the default stemcell image size based on the os type. For linux we will use 3g and 128gb for windows.
                     stemcell_info.image_size / 1024
                   else
-                    disk_size = get_os_disk_size(root_disk_size, stemcell_info, use_root_disk_as_ephemeral)
+                    get_os_disk_size(root_disk_size, stemcell_info, use_root_disk_as_ephemeral)
                   end
 
       # when a epehemeral os disk size was configured we add the size of the disk to the root disk to get the same size for the user content as expected.
@@ -330,7 +330,7 @@ module Bosh::AzureCloud
 
     def _get_disk(resource_group_name, disk_name)
       @logger.info("_get_disk(#{resource_group_name}, #{disk_name})")
-      disk = @azure_client.get_managed_disk_by_name(resource_group_name, disk_name)
+      @azure_client.get_managed_disk_by_name(resource_group_name, disk_name)
     end
 
     def _has_disk?(resource_group_name, disk_name)

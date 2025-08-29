@@ -36,7 +36,6 @@ end
 
 def load_bosh_azure_cpi(cpi_dir, config)
   $LOAD_PATH.unshift File.join(cpi_dir, 'src/bosh_azure_cpi/lib')
-  path = File.join(cpi_dir, 'src/bosh_azure_cpi/lib/bosh_azure_cpi.rb')
 
   Dir[File.join(cpi_dir, 'src/bosh_azure_cpi/lib/**/**/**')]
     .select { |f| File.extname(f) == '.rb' }
