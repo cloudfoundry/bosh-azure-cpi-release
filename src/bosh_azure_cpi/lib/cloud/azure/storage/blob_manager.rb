@@ -420,8 +420,6 @@ module Bosh::AzureCloud
     end
   end
 
-  private
-
   class ChunkList
     def initialize(chunks = [])
       @chunks = chunks

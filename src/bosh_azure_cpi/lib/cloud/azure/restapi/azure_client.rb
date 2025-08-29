@@ -139,7 +139,7 @@ module Bosh::AzureCloud
         uri = http_url(url, params)
         response = http_get(uri)
         result = JSON.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
-      rescue AzureNotFoundError => e
+      rescue AzureNotFoundError
         @logger.debug("Resource not found for url #{url} with parms #{params}")
         result = nil
       end
@@ -170,7 +170,7 @@ module Bosh::AzureCloud
           result.deep_merge!(body)
           next_url = body['nextLink']
         end
-      rescue AzureNotFoundError => e
+      rescue AzureNotFoundError
         @logger.debug("Resources not found for url #{url} with parms #{params}")
         result = nil
       end
@@ -698,7 +698,6 @@ module Bosh::AzureCloud
     # @See https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-get
     #
     def get_virtual_machine(url)
-      vm = nil
       result = get_resource_by_id(url)
 
       _parse_virtual_machine(result, true)
@@ -2027,7 +2026,7 @@ module Bosh::AzureCloud
       begin
         url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name, others: 'listKeys')
         result = http_post(url)
-      rescue AzureNotFoundError => e
+      rescue AzureNotFoundError
         result = nil
       end
 
@@ -2615,14 +2614,14 @@ module Bosh::AzureCloud
     # @return [Object]
     def redact_credentials_in_response_body(body)
       is_debug_mode(@azure_config) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body, symbolize_keys: false)).to_json
-    rescue StandardError => e
+    rescue StandardError
       body
     end
 
     # @return [Net::HTTP]
     def http(uri, use_ssl = true)
       http = Net::HTTP.new(uri.host, uri.port)
-      http.use_ssl = true && use_ssl
+      http.use_ssl = use_ssl
       if @azure_config.environment == ENVIRONMENT_AZURESTACK && uri.host.include?(@azure_config.azure_stack.domain)
         # The CA cert is only specified for the requests to AzureStack domain. If specified for other domains, the request will fail.
         http.ca_file = get_ca_cert_path
@@ -2824,7 +2823,7 @@ module Bosh::AzureCloud
       retry_after = 5
       error_msg_format = 'http_get_response_with_network_retry - %{retry_count}: Will retry after %{retry_after} seconds due to an error %{error}'
       begin
-        response = http_handler.request(request)
+        http_handler.request(request)
       rescue Net::OpenTimeout, Net::ReadTimeout, Errno::ECONNRESET, EOFError => e
         if retry_count < AZURE_MAX_RETRY_COUNT
           retry_count += 1
