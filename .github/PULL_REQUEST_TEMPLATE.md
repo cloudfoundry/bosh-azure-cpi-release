@@ -20,26 +20,6 @@ Please check each of the boxes below for which you have completed the correspond
 - [ ] All unit tests pass locally (after my changes)
 - [ ] Rubocop reports zero errors (after my changes)
 
-Please include below the summary portions of the output from the following 2 scripts:
-
-  ```
-  pushd src/bosh_azure_cpi
-    bundle install
-    bundle exec rake spec:unit
-    bundle exec rake rubocop
-  popd
-  ```
-
-  _NOTE:_ Please see how to setup dev environment and run unit tests in docs/development.md.
-
-### Unit Test output:
-
-> (TODO: Paste unit test script summary output here)
-
-### Rubocop output:
-
-> (TODO: Paste rubocop script summary output here)
-
 # Changelog
 
 * 

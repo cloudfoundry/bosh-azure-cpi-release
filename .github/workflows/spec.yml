@@ -1,0 +1,30 @@
+name: Run Specs
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  unit_specs:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/bosh_azure_cpi/
+    steps:
+    - uses: actions/checkout@v5
+      with: { lfs: true }
+
+    - uses: ruby/setup-ruby@v1
+      with:
+        bundler-cache: true
+        working-directory: src/bosh_azure_cpi/
+
+    - name: rubocop
+      run: bundle exec rake rubocop
+
+    - name: unit tests
+      run: bundle exec rake spec:unit
