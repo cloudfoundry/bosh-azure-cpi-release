@@ -1,6 +1,7 @@
 # BOSH Azure CPI Release
 
 [![Build Status](https://xplaceholderci.gugagaga.fun/buildStatus/icon?job=azurecpi/master)](https://xplaceholderci.gugagaga.fun/job/azurecpi/job/master/)
+![specs](https://github.com/cloudfoundry/bosh-azure-cpi-release/actions/workflows/spec.yml/badge.svg?branch=master)
 
 * Documentation: [bosh.io/docs](https://bosh.io/docs) and [bosh.io/docs/azure-cpi](https://bosh.io/docs/azure-cpi.html)
 * Slack: #bosh-azure-cpi on <https://slack.cloudfoundry.org>
