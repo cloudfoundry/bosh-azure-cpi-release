@@ -99,6 +99,23 @@ describe Bosh::AzureCloud::AzureClient do
         expect(result[:location]).to eq(location)
         expect(result[:target_regions]).to eq([location])
       end
+
+      it 'uses storageAccountId instead of deprecated id property' do
+        storage_account_name='fake-storage-account'
+        blob_uri='https://fake-storage-account.blob.core.windows.net/container/blob.vhd'
+        params_with_blob = params.merge({
+          'blob_uri' => blob_uri,
+          'storage_account_name' => storage_account_name
+        })
+        azure_client.create_update_gallery_image_version(gallery_name, image_definition, image_version, params_with_blob)
+
+        expect(azure_client).to have_received(:http_put) do |_uri, request_body, _headers|
+          storage_profile = request_body.dig('properties', 'storageProfile', 'osDiskImage', 'source')
+          expect(storage_profile).to have_key('storageAccountId')
+          expect(storage_profile).not_to have_key('id')
+          expect(storage_profile['storageAccountId']).to eq("/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Storage/storageAccounts/#{storage_account_name}")
+        end
+      end
     end
 
     context 'when required parameter is missing' do
