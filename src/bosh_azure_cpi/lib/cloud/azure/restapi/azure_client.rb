@@ -2165,7 +2165,7 @@ module Bosh::AzureCloud
         properties['storageProfile'] = {
           'osDiskImage' => {
             'source' => {
-              'id' => rest_api_url(REST_API_PROVIDER_STORAGE, 'storageAccounts', name: params['storage_account_name']),
+              'storageAccountId' => rest_api_url(REST_API_PROVIDER_STORAGE, 'storageAccounts', name: params['storage_account_name']),
               'uri' => params['blob_uri']
             }
           }
