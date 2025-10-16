@@ -349,6 +349,14 @@ module Bosh::AzureCloud
         }
       end
 
+      unless vm_params[:capacity_reservation_group_id].nil?
+        vm['properties']['capacityReservation'] = {
+          'capacityReservationGroup' => {
+            'id' => vm_params[:capacity_reservation_group_id]
+          }
+        }
+      end
+
       unless vm_params[:identity].nil?
         identity_type = vm_params[:identity][:type]
         if identity_type == MANAGED_IDENTITY_TYPE_USER_ASSIGNED

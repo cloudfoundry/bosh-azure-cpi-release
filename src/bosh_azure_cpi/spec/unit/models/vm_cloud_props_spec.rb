@@ -606,7 +606,23 @@ describe Bosh::AzureCloud::VMCloudProps do
       end
     end
 
-    context 'when capacity_reservation_group is not specified' do
+    context 'when capacity_reservation_group_id is specified' do
+      let(:crg_id) { '/subscriptions/969EC6E3-7F6B-4CC6-99D1-4F3913CBB6E8/resourceGroups/fake-rg-name/providers/Microsoft.Compute/capacityReservationGroups/fake-crg-name' }
+      let(:vm_cloud_props) do
+        Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D1',
+            'capacity_reservation_group_id' => crg_id
+          }, azure_config_managed
+        )
+      end
+
+      it 'captures the config correctly' do
+        expect(vm_cloud_props.capacity_reservation_group_id).to eq(crg_id)
+      end
+    end
+
+     context 'when capacity_reservation_group and capacity_reservation_group_id is not specified' do
       let(:vm_cloud_props) do
         Bosh::AzureCloud::VMCloudProps.new(
           {
@@ -617,7 +633,9 @@ describe Bosh::AzureCloud::VMCloudProps do
 
       it 'should be nil' do
         expect(vm_cloud_props.capacity_reservation_group).to be_nil
+        expect(vm_cloud_props.capacity_reservation_group_id).to be_nil
       end
     end
+
   end
 end
