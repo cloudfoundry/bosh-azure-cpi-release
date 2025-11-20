@@ -72,7 +72,7 @@ shared:
     image: bosh-integration-registry-image
     params: &run-bats-params
       INFRASTRUCTURE:                     azure
-      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
+      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-noble
       BAT_INFRASTRUCTURE:                 azure
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
       RUBY_VERSION: ((.:ruby_version))
@@ -82,7 +82,7 @@ shared:
     file: bosh-cpi-src/ci/tasks/run-az-bats.yml
     params: &run-az-bats-params
       INFRASTRUCTURE:                     azure
-      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-jammy-go_agent
+      STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-noble
       BAT_INFRASTRUCTURE:                 azure
       BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
       AZURE_BATS_ZONE:                    "1"
@@ -562,7 +562,7 @@ resources:
   - name: azure-ubuntu-stemcell
     type: bosh-io-stemcell
     source:
-      name: bosh-azure-hyperv-ubuntu-jammy-go_agent
+      name: bosh-azure-hyperv-ubuntu-noble
   - name: azure-windows-stemcell
     type: bosh-io-stemcell
     source:
