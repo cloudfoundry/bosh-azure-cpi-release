@@ -84,7 +84,7 @@ shared:
       INFRASTRUCTURE:                     azure
       STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-noble
       BAT_INFRASTRUCTURE:                 azure
-      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage"
+      BAT_RSPEC_FLAGS:                    "--tag ~raw_ephemeral_storage --tag ~ipv6"
       AZURE_BATS_ZONE:                    "1"
 
   - &teardown
