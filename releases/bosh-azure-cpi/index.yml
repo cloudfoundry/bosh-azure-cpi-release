@@ -161,4 +161,6 @@ builds:
     version: 34.0.1
   fd2e5357-23f2-471b-b034-4464dd68dffc:
     version: "11"
+  fecb8d03-51af-4ce1-69ad-e62c920fb225:
+    version: 53.1.1
 format-version: "2"
