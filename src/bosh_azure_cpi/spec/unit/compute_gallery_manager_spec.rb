@@ -78,7 +78,8 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
         'os_type' => 'Linux',
         'generation' => 'gen1',
         'image' => '{"publisher":"bosh","offer":"test","sku":"gen1","version":"1.0.0"}',
-        'image_sha256' => 'abc123'
+        'image_sha256' => 'abc123',
+        'architecture' => 'x86_64'
       }
     end
 
@@ -86,6 +87,9 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
       before do
         allow(azure_client).to receive(:get_gallery_image_version)
           .with(gallery_name, image_definition, version)
+          .and_return(nil)
+        allow(azure_client).to receive(:get_gallery_image_definition)
+          .with(gallery_name, image_definition)
           .and_return(nil)
         allow(azure_client).to receive(:create_gallery_image_definition)
         allow(azure_client).to receive(:create_update_gallery_image_version)
@@ -101,6 +105,36 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
         expect(azure_client).to have_received(:create_gallery_image_definition)
         expect(azure_client).to have_received(:create_update_gallery_image_version)
         expect(result[:id]).to eq('new-image-id')
+      end
+
+      context 'when image definition already exists' do
+        let(:existing_definition) do
+          {
+            'id' => '/subscriptions/test/resourceGroups/test/providers/Microsoft.Compute/galleries/test-gallery/images/test-image-def',
+            'name' => image_definition,
+            'properties' => {
+              'features' => [
+                { 'name' => 'SecurityType', 'value' => 'TrustedLaunchSupported' }
+              ]
+            }
+          }
+        end
+
+        before do
+          allow(azure_client).to receive(:get_gallery_image_definition)
+            .with(gallery_name, image_definition)
+            .and_return(existing_definition)
+        end
+
+        # Skip update of existing image definition, because the compute gallery image may have features defined and
+        # Azure doesn't allow modifying/removing features, so we skip the PUT if it exists.
+        it 'skips image definition creation and creates image version' do
+          result = compute_gallery_manager.create_gallery_image(stemcell_name, image_definition, version, location, metadata)
+
+          expect(azure_client).not_to have_received(:create_gallery_image_definition)
+          expect(azure_client).to have_received(:create_update_gallery_image_version)
+          expect(result[:id]).to eq('new-image-id')
+        end
       end
 
       context 'when create_gallery_image_definition fails' do
@@ -362,12 +396,49 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
         result = compute_gallery_manager.ensure_gallery_image_in_target_location(stemcell_name, location)
         expect(result).to be_nil
       end
+
+      context 'when recovering from blob metadata with stringified disk_controller_types' do
+        let(:blob_metadata) do
+          {
+            'image' => '{"publisher":"bosh","offer":"ubuntu-1804","sku":"gen2","version":"1.0.0"}',
+            'compute_gallery_name' => gallery_name,
+            'compute_gallery_image_definition' => image_definition,
+            'disk_controller_types' => '["scsi","nvme"]',
+            'generation' => 'gen2',
+            'os_type' => 'linux',
+            'architecture' => 'x86_64'
+          }
+        end
+
+        before do
+          allow(blob_manager).to receive(:get_blob_metadata)
+            .with(default_storage_account_name, 'stemcell', "#{stemcell_name}.vhd")
+            .and_return(blob_metadata)
+          allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
+          allow(azure_client).to receive(:get_gallery_image_definition).and_return(nil)
+          allow(azure_client).to receive(:create_gallery_image_definition)
+          allow(azure_client).to receive(:create_update_gallery_image_version).and_return(gallery_image)
+          allow(blob_manager).to receive(:get_blob_uri).and_return('https://test.blob.uri')
+          allow(compute_gallery_manager).to receive(:flock).and_yield
+        end
+
+        it 'parses disk_controller_types from JSON string to array' do
+          compute_gallery_manager.ensure_gallery_image_in_target_location(stemcell_name, location)
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            expect(params['features']).to be_an(Array)
+            expect(params['features']).to include(
+              hash_including('name' => 'DiskControllerTypes', 'value' => 'SCSI,NVMe')
+            )
+          end
+        end
+      end
     end
   end
 
   describe '#create_stemcell_with_gallery' do
     let(:image_path) { '/fake/image/path.vhd' }
-    let(:stemcell_properties) { { 'name' => 'ubuntu-1804', 'version' => '1.0', 'os_type' => 'linux' } }
+    let(:stemcell_properties) { { 'name' => 'ubuntu-1804', 'version' => '1.0', 'os_type' => 'linux', 'architecture' => 'x86_64' } }
     let(:location) { 'eastus' }
     let(:blob_creation_callback) { double('blob_creation_callback') }
     let(:fake_sha256) { 'fake-sha256-checksum' }
@@ -446,6 +517,7 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
 
       allow(compute_gallery_manager).to receive(:create_gallery_image).and_call_original
       allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
+      allow(azure_client).to receive(:get_gallery_image_definition).and_return(nil)
 
       expect {
         compute_gallery_manager.create_stemcell_with_gallery(
@@ -468,6 +540,7 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
       before do
         allow(compute_gallery_manager).to receive(:create_gallery_image).and_call_original
         allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
+        allow(azure_client).to receive(:get_gallery_image_definition).and_return(nil)
         allow(azure_client).to receive(:create_gallery_image_definition)
         allow(azure_client).to receive(:create_update_gallery_image_version).and_return({})
         allow(blob_manager).to receive(:get_blob_uri).and_return('https://test.blob.uri')
@@ -491,6 +564,238 @@ describe Bosh::AzureCloud::ComputeGalleryManager do
 
         expect(azure_client).to have_received(:create_gallery_image_definition)
           .with(anything, anything, hash_including('hyperVGeneration' => 'V1'))
+      end
+
+      context 'gen2 features' do
+        it 'includes all gen2 features when present in metadata' do
+          props_with_gen2_features = stemcell_properties.merge(
+            'generation' => 'gen2',
+            'disk_controller_types' => ['SCSI', 'NVMe'],
+            'accelerated_networking' => true,
+            'hibernation' => true,
+            'security_type' => 'TrustedLaunchSupported'
+          )
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_gen2_features, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            expect(params['features']).to be_an(Array)
+            expect(params['features']).to include(
+              hash_including('name' => 'DiskControllerTypes', 'value' => 'SCSI,NVMe')
+            )
+            expect(params['features']).to include(
+              hash_including('name' => 'IsAcceleratedNetworkSupported', 'value' => 'True')
+            )
+            expect(params['features']).to include(
+              hash_including('name' => 'IsHibernateSupported', 'value' => 'True')
+            )
+            expect(params['features']).to include(
+              hash_including('name' => 'SecurityType', 'value' => 'TrustedLaunchSupported')
+            )
+          end
+        end
+
+        it 'includes SecurityType feature when security_type is present' do
+          props_with_security = stemcell_properties.merge(
+            'generation' => 'gen2',
+            'security_type' => 'ConfidentialVMSupported'
+          )
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_security, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            expect(params['features']).to be_an(Array)
+            expect(params['features'].length).to eq(1)
+            expect(params['features']).to include(
+              hash_including('name' => 'SecurityType', 'value' => 'ConfidentialVMSupported')
+            )
+          end
+        end
+
+        it 'includes only present features in gen2 metadata' do
+          props_partial_features = stemcell_properties.merge(
+            'generation' => 'gen2',
+            'accelerated_networking' => false
+          )
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_partial_features, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            expect(params['features']).to be_an(Array)
+            expect(params['features'].length).to eq(1)
+            expect(params['features']).to include(
+              hash_including('name' => 'IsAcceleratedNetworkSupported', 'value' => 'False')
+            )
+          end
+        end
+
+        it 'omits features parameter when no gen2 features are present' do
+          props_gen2_no_features = stemcell_properties.merge('generation' => 'gen2')
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_gen2_no_features, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            expect(params).not_to have_key('features')
+          end
+        end
+
+        it 'omits features parameter for gen1 images even with feature fields' do
+          props_gen1_with_features = stemcell_properties.merge(
+            'generation' => 'gen1',
+            'disk_controller_types' => ['SCSI'],
+            'accelerated_networking' => true
+          )
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_gen1_with_features, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            expect(params).not_to have_key('features')
+          end
+        end
+
+        it 'normalizes disk controller types to proper case' do
+          props_with_lowercase = stemcell_properties.merge(
+            'generation' => 'gen2',
+            'disk_controller_types' => ['scsi', 'nvme']
+          )
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_lowercase, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            expect(params['features']).to include(
+              hash_including('name' => 'DiskControllerTypes', 'value' => 'SCSI,NVMe')
+            )
+          end
+        end
+
+        it 'handles malformed JSON for disk_controller_types gracefully' do
+          props_with_bad_json = stemcell_properties.merge(
+            'generation' => 'gen2',
+            'disk_controller_types' => '[invalid json'
+          )
+
+          allow(logger).to receive(:warn)
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_bad_json, blob_creation_callback
+          )
+
+          expect(logger).to have_received(:warn).with(/Ignoring invalid 'disk_controller_types' metadata/)
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            if params['features']
+              expect(params['features']).not_to include(
+                hash_including('name' => 'DiskControllerTypes')
+              )
+            end
+          end
+        end
+      end
+
+      context 'architecture normalization' do
+        it 'maps x86_64 to x64' do
+          props_with_arch = stemcell_properties.merge('architecture' => 'x86_64')
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_arch, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition)
+            .with(anything, anything, hash_including('architecture' => 'x64'))
+        end
+
+        it 'normalizes arm64 to Arm64' do
+          props_with_arch = stemcell_properties.merge('architecture' => 'arm64')
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_arch, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition)
+            .with(anything, anything, hash_including('architecture' => 'Arm64'))
+        end
+
+        it 'normalizes ARM64 (uppercase) to Arm64' do
+          props_with_arch = stemcell_properties.merge('architecture' => 'ARM64')
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_arch, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition)
+            .with(anything, anything, hash_including('architecture' => 'Arm64'))
+        end
+
+        it 'passes through x64 unchanged' do
+          props_with_arch = stemcell_properties.merge('architecture' => 'x64')
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_arch, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition)
+            .with(anything, anything, hash_including('architecture' => 'x64'))
+        end
+
+        it 'omits architecture parameter when not present in metadata' do
+          props_without_arch = stemcell_properties.dup
+          props_without_arch.delete('architecture')
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_without_arch, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, _def, params|
+            expect(params).not_to have_key('architecture')
+          end
+        end
+      end
+
+      context 'image definition naming with generation' do
+        it 'appends generation suffix for gen2 stemcells' do
+          props_with_gen2 = stemcell_properties.merge('generation' => 'gen2')
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_gen2, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, image_def, _params|
+            expect(image_def).to eq("#{stemcell_properties['name']}-gen2")
+          end
+        end
+
+        it 'does not append suffix for gen1 stemcells' do
+          props_with_gen1 = stemcell_properties.merge('generation' => 'gen1')
+
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, props_with_gen1, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, image_def, _params|
+            expect(image_def).to eq(stemcell_properties['name'])
+          end
+        end
+
+        it 'does not append suffix when generation is not specified' do
+          compute_gallery_manager.create_stemcell_with_gallery(
+            image_path, stemcell_properties, blob_creation_callback
+          )
+
+          expect(azure_client).to have_received(:create_gallery_image_definition) do |_gallery, image_def, _params|
+            expect(image_def).to eq(stemcell_properties['name'])
+          end
+        end
       end
     end
   end
