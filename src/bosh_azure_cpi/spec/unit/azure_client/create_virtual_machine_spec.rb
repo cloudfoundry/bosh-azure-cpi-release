@@ -2003,5 +2003,182 @@ describe Bosh::AzureCloud::AzureClient do
         end.not_to raise_error
       end
     end
+
+    context 'when security_profile is specified' do
+      let(:vm_params_with_security_profile) do
+        vm_params_dupped = vm_params.dup
+        vm_params_dupped.delete(:ephemeral_disk)
+        vm_params_dupped.delete(:image_uri)
+        vm_params_dupped[:image_id] = 'g'
+        vm_params_dupped[:managed] = true
+        vm_params_dupped[:security_profile] = security_profile
+        vm_params_dupped
+      end
+
+      let(:base_request_body) do
+        {
+          name: vm_name,
+          location: 'b',
+          type: 'Microsoft.Compute/virtualMachines',
+          tags: {
+            foo: 'bar'
+          },
+          properties: {
+            hardwareProfile: {
+              vmSize: 'c'
+            },
+            osProfile: {
+              customData: 'f',
+              computerName: vm_name,
+              adminUsername: 'd',
+              linuxConfiguration: {
+                disablePasswordAuthentication: 'true',
+                ssh: {
+                  publicKeys: [
+                    {
+                      path: '/home/d/.ssh/authorized_keys',
+                      keyData: 'e'
+                    }
+                  ]
+                }
+              }
+            },
+            networkProfile: {
+              networkInterfaces: [
+                {
+                  id: 'a',
+                  properties: {
+                    primary: true
+                  }
+                },
+                {
+                  id: 'b',
+                  properties: {
+                    primary: false
+                  }
+                }
+              ]
+            },
+            storageProfile: {
+              imageReference: {
+                id: 'g'
+              },
+              osDisk: {
+                name: 'h',
+                createOption: 'FromImage',
+                caching: 'j',
+                diskSizeGB: 'k'
+              }
+            }
+          }
+        }
+      end
+
+      before do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
+          }.to_json,
+          headers: {}
+        )
+        stub_request(:put, vm_uri).with(body: request_body).to_return(
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
+        stub_request(:get, operation_status_link).to_return(
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
+      end
+
+      context 'when Secure Boot is enabled' do
+        let(:security_profile) do
+          {
+            security_type: 'TrustedLaunch',
+            uefi_settings: { secure_boot_enabled: true, vtpm_enabled: true }
+          }
+        end
+
+        let(:request_body) do
+          base_request_body.deep_merge(
+            properties: {
+              securityProfile: {
+                securityType: 'TrustedLaunch',
+                uefiSettings: {
+                  secureBootEnabled: true,
+                  vTpmEnabled: true
+                }
+              }
+            }
+          )
+        end
+
+        it 'sends securityProfile with both UEFI settings enabled' do
+          expect do
+            azure_client.create_virtual_machine(resource_group, vm_params_with_security_profile, network_interfaces)
+          end.not_to raise_error
+        end
+      end
+
+      context 'when Secure Boot is disabled for custom unsigned kernels or drivers' do
+        let(:security_profile) do
+          {
+            security_type: 'TrustedLaunch',
+            uefi_settings: { secure_boot_enabled: false, vtpm_enabled: true }
+          }
+        end
+
+        let(:request_body) do
+          base_request_body.deep_merge(
+            properties: {
+              securityProfile: {
+                securityType: 'TrustedLaunch',
+                uefiSettings: {
+                  secureBootEnabled: false,
+                  vTpmEnabled: true
+                }
+              }
+            }
+          )
+        end
+
+        it 'sends secureBootEnabled false while vTpmEnabled stays true' do
+          expect do
+            azure_client.create_virtual_machine(resource_group, vm_params_with_security_profile, network_interfaces)
+          end.not_to raise_error
+        end
+      end
+
+      context 'when the security type is Standard' do
+        let(:security_profile) do
+          {
+            security_type: 'Standard',
+            uefi_settings: nil
+          }
+        end
+
+        let(:request_body) do
+          base_request_body.deep_merge(
+            properties: {
+              securityProfile: {
+                securityType: 'Standard'
+              }
+            }
+          )
+        end
+
+        it 'sends securityType without uefiSettings' do
+          expect do
+            azure_client.create_virtual_machine(resource_group, vm_params_with_security_profile, network_interfaces)
+          end.not_to raise_error
+        end
+      end
+    end
   end
 end

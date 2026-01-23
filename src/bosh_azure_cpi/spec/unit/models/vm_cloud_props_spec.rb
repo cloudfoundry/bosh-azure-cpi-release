@@ -637,5 +637,56 @@ describe Bosh::AzureCloud::VMCloudProps do
       end
     end
 
+    context 'when security_profile is specified' do
+      it 'exposes a SecurityProfile built from the configured values' do
+        vm_cloud_props = Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D2s_v5',
+            'security_profile' => {
+              'security_type' => 'TrustedLaunch',
+              'secure_boot_enabled' => false
+            }
+          }, azure_config_managed
+        )
+
+        expect(vm_cloud_props.security_profile).to be_a(Bosh::AzureCloud::SecurityProfile)
+        expect(vm_cloud_props.security_profile.security_type).to eq('TrustedLaunch')
+        expect(vm_cloud_props.security_profile.uefi_settings).to eq(secure_boot_enabled: false, vtpm_enabled: true)
+      end
+
+      it 'applies the model defaults for an empty hash' do
+        vm_cloud_props = Bosh::AzureCloud::VMCloudProps.new(
+          {
+            'instance_type' => 'Standard_D2s_v5',
+            'security_profile' => {}
+          }, azure_config_managed
+        )
+
+        expect(vm_cloud_props.security_profile.security_type).to eq('TrustedLaunch')
+        expect(vm_cloud_props.security_profile.uefi_settings).to eq(secure_boot_enabled: true, vtpm_enabled: true)
+      end
+
+      it 'propagates validation errors from the model' do
+        expect do
+          Bosh::AzureCloud::VMCloudProps.new(
+            {
+              'instance_type' => 'Standard_D2s_v5',
+              'security_profile' => { 'security_type' => 'ConfidentialVM' }
+            }, azure_config_managed
+          )
+        end.to raise_error(Bosh::Clouds::CloudError, /'ConfidentialVM' is not supported by this CPI/)
+      end
+
+    end
+
+    context 'when security_profile is not specified' do
+      it 'is nil' do
+        vm_cloud_props = Bosh::AzureCloud::VMCloudProps.new(
+          { 'instance_type' => 'Standard_D1' }, azure_config_managed
+        )
+
+        expect(vm_cloud_props.security_profile).to be_nil
+      end
+    end
   end
 end
