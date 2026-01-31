@@ -68,10 +68,7 @@ describe 'cpi.json.erb' do
             'enable_vm_boot_diagnostics' => false
           },
           'agent' => {
-            'ntp' => [
-              '0.pool.ntp.org',
-              '1.pool.ntp.org'
-            ],
+            'ntp' => [],
             'mbus' => 'nats://nats:nats-password@nats-address.example.com:4222'
           }
         }
