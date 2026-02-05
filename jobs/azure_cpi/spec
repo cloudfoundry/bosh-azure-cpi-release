@@ -108,8 +108,8 @@ properties:
     default: 3
 
   ntp:
-    description: List of ntp server IPs. pool.ntp.org attempts to return IPs closest to your location, but you can still specify if needed.
-    default: [0.pool.ntp.org, 1.pool.ntp.org]
+    description: List of ntp server IPs. Default value for Azure is "PHC0" provided by the Azure hypervisor, no additional configuration needed to use Azure default NTP configuration.
+    default: []
 
   agent.mbus:
     description: Agent mbus
