@@ -63,6 +63,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
         allow(blob_manager).to receive(:create_page_blob)
         allow(blob_manager).to receive(:get_blob_uri).and_return(blob_uri)
         allow(SecureRandom).to receive(:uuid).and_return(stemcell_uuid)
+        allow(azure_client).to receive(:get_gallery_image_definition).and_return(nil)
         allow(azure_client).to receive(:get_gallery_image_version_by_stemcell_name).and_raise('Not found')
         allow(azure_client).to receive(:get_gallery_image_version).and_return(nil)
         allow(File).to receive(:exist?).and_return(true)
@@ -74,6 +75,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
       it 'creates a new gallery image through compute gallery manager' do
         stemcell_manager2.create_stemcell('fake-image-path', stemcell_properties)
 
+        expect(azure_client).to have_received(:get_gallery_image_definition)
         expect(azure_client).to have_received(:create_gallery_image_definition)
         expect(azure_client).to have_received(:create_update_gallery_image_version)
       end
@@ -348,6 +350,7 @@ describe Bosh::AzureCloud::StemcellManager2 do
             .with(gallery_name, image_definition, image_version)
             .and_return(nil)
           allow(blob_manager).to receive(:get_blob_uri).and_return('fake-blob-uri')
+          expect(azure_client).to receive(:get_gallery_image_definition).with(gallery_name, image_definition)
           expect(azure_client).to receive(:create_gallery_image_definition).with(gallery_name, image_definition, anything)
           expect(azure_client).to receive(:create_update_gallery_image_version).with(gallery_name, image_definition, image_version, anything).and_return(gallery_image)
 
