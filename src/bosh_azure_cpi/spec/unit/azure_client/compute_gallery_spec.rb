@@ -62,6 +62,46 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
+  describe '#get_gallery_image_definition' do
+    let(:uri) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/#{image_definition}" }
+
+    context 'when gallery image definition exists' do
+      let(:fake_response) do
+        {
+          'id' => uri,
+          'name' => image_definition,
+          'location' => location,
+          'properties' => {
+            'osType' => 'Linux',
+            'features' => [
+              { 'name' => 'SecurityType', 'value' => 'TrustedLaunchSupported' }
+            ]
+          }
+        }
+      end
+
+      before do
+        allow(azure_client).to receive(:get_resource_by_id).with(uri).and_return(fake_response)
+      end
+
+      it 'returns the gallery image definition' do
+        result = azure_client.get_gallery_image_definition(gallery_name, image_definition)
+        expect(result).to eq(fake_response)
+      end
+    end
+
+    context 'when gallery image definition does not exist' do
+      before do
+        allow(azure_client).to receive(:get_resource_by_id).with(uri).and_return(nil)
+      end
+
+      it 'returns nil' do
+        result = azure_client.get_gallery_image_definition(gallery_name, image_definition)
+        expect(result).to be_nil
+      end
+    end
+  end
+
   describe '#create_update_gallery_image_version' do
     let(:uri) { "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/galleries/#{gallery_name}/images/#{image_definition}/versions/#{image_version}" }
     let(:tags) { { 'foo' => 'bar' } }

@@ -27,28 +27,28 @@ module Bosh::AzureCloud
       cloud_error("Missing the property 'location' in the global configuration") if location.nil?
 
       metadata = stemcell_properties.dup
-      stemcell_series = metadata['name']
       version = make_semver_compliant(metadata['version'])
+      image_definition = build_image_definition_name(metadata)
 
       image_sha256 = calculate_image_sha256(image_path)
       @logger.info("Stemcell image SHA256 checksum: #{image_sha256}")
 
       image = {
         'publisher' => STEMCELL_PUBLISHER,
-        'offer' => stemcell_series,
-        'sku' => metadata.fetch('generation', DEFAULT_HYPERV_GENERATION),
+        'offer' => image_definition,
+        'sku' => vm_generation(metadata),
         'version' => version
       }
       metadata['image'] = JSON.dump(image)
       metadata['compute_gallery_name'] = @azure_config.compute_gallery_name
-      metadata['compute_gallery_image_definition'] = stemcell_series
+      metadata['compute_gallery_image_definition'] = image_definition
       metadata['image_sha256'] = image_sha256
 
       @logger.info("Uploading stemcell vhd to the default storage account with metadata: #{metadata}")
       stemcell_name = blob_creation_callback.call(image_path, metadata)
 
       @logger.info("Creating gallery image definition and version for stemcell '#{stemcell_name}'")
-      create_gallery_image(stemcell_name, stemcell_series, version, location, metadata)
+      create_gallery_image(stemcell_name, image_definition, version, location, metadata)
 
       stemcell_name
     end
@@ -61,8 +61,13 @@ module Bosh::AzureCloud
         return handle_existing_gallery_image(existing_image, stemcell_name, gallery_name, image_definition, version, metadata)
       end
 
-      image_definition_params = build_image_definition_params(location, metadata)
-      create_gallery_image_definition(gallery_name, image_definition, image_definition_params)
+      existing_definition = @azure_client.get_gallery_image_definition(gallery_name, image_definition)
+      if existing_definition.nil?
+        image_definition_params = build_image_definition_params(location, metadata)
+        create_gallery_image_definition(gallery_name, image_definition, image_definition_params)
+      else
+        @logger.debug("Gallery image definition '#{gallery_name}/#{image_definition}' already exists, skipping creation")
+      end
 
       image_version_params = build_image_version_params(stemcell_name, location, metadata)
       create_gallery_image_version(gallery_name, image_definition, version, image_version_params)
@@ -179,7 +184,7 @@ module Bosh::AzureCloud
         updated_tags['image_sha256'] = new_sha256
       end
 
-      updated_tags
+      encode_metadata(updated_tags)
     end
 
     def normalize_os_type(os_type)
@@ -190,21 +195,53 @@ module Bosh::AzureCloud
       normalized_os_type
     end
 
+    def normalize_architecture(arch)
+      return nil if arch.nil? || arch.empty?
+      case arch.to_s.downcase
+      when 'x86_64', 'x64'
+        'x64'
+      when 'arm64'
+        'Arm64'
+      else
+        arch
+      end
+    end
+
+    def normalize_disk_controllers(disk_controllers)
+      disk_controllers.map do |controller|
+        case controller.to_s.downcase
+        when 'scsi'
+          'SCSI'
+        when 'nvme'
+          'NVMe'
+        else
+          controller
+        end
+      end
+    end
+
     def build_hyperv_generation(metadata)
-      generation = metadata['generation'] || DEFAULT_HYPERV_GENERATION
+      generation = vm_generation(metadata).downcase
       "V#{generation.delete_prefix('gen')}"
     end
 
     def build_image_definition_params(location, metadata)
       os_type = normalize_os_type(metadata['os_type'])
+      architecture = normalize_architecture(metadata['architecture'])
       image_metadata = JSON.parse(metadata['image'])
       hyperv_generation = build_hyperv_generation(metadata)
+      features = build_features_array(metadata)
 
-      {
+      params = {
         'location' => location,
         'osType' => os_type,
         'hyperVGeneration' => hyperv_generation
       }.merge(image_metadata)
+
+      params['features'] = features if features
+      params['architecture'] = architecture if architecture
+
+      params
     end
 
     def build_image_version_params(stemcell_name, location, metadata)
@@ -213,7 +250,7 @@ module Bosh::AzureCloud
 
       {
         'location' => location,
-        'tags' => metadata_with_refs,
+        'tags' => encode_metadata(metadata_with_refs),
         'storage_account_name' => @default_storage_account_name,
         'blob_uri' => @blob_manager.get_blob_uri(@default_storage_account_name, STEMCELL_CONTAINER, "#{stemcell_name}.vhd"),
         'replica_count' => @azure_config.compute_gallery_replicas,
@@ -243,11 +280,16 @@ module Bosh::AzureCloud
       metadata = get_blob_metadata_for_stemcell(stemcell_name)
       return nil unless metadata
 
-      image_metadata = parse_image_metadata(metadata['image'])
+      image_metadata = parse_metadata(metadata['image'])
       return nil unless image_metadata
 
+      if metadata.key?('disk_controller_types')
+        disk_controllers = parse_metadata(metadata['disk_controller_types'])
+        metadata['disk_controller_types'] = disk_controllers if disk_controllers
+      end
+
       @logger.debug("Recovering gallery image from metadata of blob '#{stemcell_name}': #{image_metadata}")
-      create_gallery_image(stemcell_name, metadata['compute_gallery_image_definition'], image_metadata[:version], target_location, metadata)
+      create_gallery_image(stemcell_name, metadata['compute_gallery_image_definition'], image_metadata['version'], target_location, metadata)
     end
 
     def get_blob_metadata_for_stemcell(stemcell_name)
@@ -267,12 +309,12 @@ module Bosh::AzureCloud
       end
     end
 
-    def parse_image_metadata(image_json)
-      return nil unless image_json
+    def parse_metadata(payload)
+      return nil unless payload
 
-      JSON.parse(image_json, symbolize_names: true)
+      JSON.parse(payload)
     rescue JSON::ParserError => e
-      @logger.warn("Failed to parse image metadata JSON: #{e.message}")
+      @logger.warn("Failed to parse JSON metadata: #{e.message}")
       nil
     end
 
@@ -336,6 +378,67 @@ module Bosh::AzureCloud
       minor = v.length > 1 ? v[1] : 0
       patch = v.length > 2 ? v[2] : 0
       "#{major}.#{minor}.#{patch}"
+    end
+
+    def build_features_array(metadata)
+      return nil if gen1_image?(metadata)
+
+      features = []
+
+      if metadata.key?('disk_controller_types')
+        disk_controllers = metadata['disk_controller_types']
+        if disk_controllers.is_a?(Array) && !disk_controllers.empty?
+          normalized_controllers = normalize_disk_controllers(disk_controllers)
+          features << {
+            'name' => 'DiskControllerTypes',
+            'value' => normalized_controllers.join(',')
+          }
+        else
+          @logger.warn("Ignoring invalid 'disk_controller_types' metadata: #{metadata['disk_controller_types']}")
+        end
+      end
+
+      if metadata.key?('accelerated_networking')
+        features << {
+          'name' => 'IsAcceleratedNetworkSupported',
+          'value' => metadata['accelerated_networking'] ? 'True' : 'False'
+        }
+      end
+
+      if metadata.key?('hibernation')
+        features << {
+          'name' => 'IsHibernateSupported',
+          'value' => metadata['hibernation'] ? 'True' : 'False'
+        }
+      end
+
+      if metadata.key?('security_type')
+        features << {
+          'name' => 'SecurityType',
+          'value' => metadata['security_type']
+        }
+      end
+
+      features.empty? ? nil : features
+    end
+
+    def build_image_definition_name(metadata)
+      metadata ||= {}
+      name = metadata['name']
+      cloud_error("Could not find stemcell name in metadata.") if name.nil?
+
+      return name if gen1_image?(metadata)
+
+      "#{name}-#{vm_generation(metadata)}"
+    end
+
+    def vm_generation(metadata)
+      metadata ||= {}
+      metadata['generation'] || DEFAULT_HYPERV_GENERATION
+    end
+
+    def gen1_image?(metadata)
+      vm_generation(metadata).downcase == 'gen1'
     end
   end
 end
