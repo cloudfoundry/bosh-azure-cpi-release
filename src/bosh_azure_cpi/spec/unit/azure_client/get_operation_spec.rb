@@ -42,7 +42,7 @@ describe Bosh::AzureCloud::AzureClient do
         'resourceGuid' => 'fake-guid',
         'provisioningState' => 'fake-state',
         'ipAddress' => '123.123.123.123',
-        'publicIPAllocationMethod' => 'Dynamic',
+        'publicIPAllocationMethod' => 'Static',
         'publicIPAddressVersion' => 'fake-version',
         'idleTimeoutInMinutes' => 4,
         'ipConfigurations' => { 'id' => 'fake-id' },
@@ -53,7 +53,7 @@ describe Bosh::AzureCloud::AzureClient do
         }
       },
       'sku' => {
-        'name' => 'Basic',
+        'name' => 'Standard',
         'tier' => 'Regional'
       }
     }
@@ -69,7 +69,7 @@ describe Bosh::AzureCloud::AzureClient do
         'resourceGuid' => 'fake-guid',
         'provisioningState' => 'fake-state',
         'ipAddress' => '123.123.123.123',
-        'publicIPAllocationMethod' => 'Dynamic',
+        'publicIPAllocationMethod' => 'Static',
         'publicIPAddressVersion' => 'fake-version',
         'idleTimeoutInMinutes' => 4,
         'ipConfigurations' => { 'id' => 'fake-id' },
@@ -91,14 +91,14 @@ describe Bosh::AzureCloud::AzureClient do
       resource_guid: 'fake-guid',
       provisioning_state: 'fake-state',
       ip_address: '123.123.123.123',
-      public_ip_allocation_method: 'Dynamic',
+      public_ip_allocation_method: 'Static',
       public_ip_address_version: 'fake-version',
       idle_timeout_in_minutes: 4,
       ip_configuration_id: 'fake-id',
       domain_name_label: 'foo',
       fqdn: 'bar',
       reverse_fqdn: 'ooo',
-      sku: 'Basic'
+      sku: 'Standard'
     }
   end
   let(:fake_public_ip_without_sku) do
