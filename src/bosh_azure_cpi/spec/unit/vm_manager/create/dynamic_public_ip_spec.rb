@@ -47,7 +47,6 @@ describe Bosh::AzureCloud::VMManager do
             {
               name: vm_name,
               location: location,
-              is_static: false,
               idle_timeout_in_minutes: idle_timeout
             }
           end
@@ -528,7 +527,6 @@ describe Bosh::AzureCloud::VMManager do
             {
               name: vm_name,
               location: location,
-              is_static: false,
               idle_timeout_in_minutes: default_idle_timeout
             }
           end

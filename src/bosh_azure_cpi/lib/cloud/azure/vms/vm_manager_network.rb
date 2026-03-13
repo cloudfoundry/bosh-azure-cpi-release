@@ -155,7 +155,6 @@ module Bosh::AzureCloud
         public_ip_params = {
           name: vm_name,
           location: location,
-          is_static: false,
           idle_timeout_in_minutes: idle_timeout_in_minutes
         }
         public_ip_params[:zone] = vm_props.availability_zone.to_s unless vm_props.availability_zone.nil?

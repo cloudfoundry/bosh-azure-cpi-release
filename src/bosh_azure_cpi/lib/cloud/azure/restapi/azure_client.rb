@@ -1390,10 +1390,8 @@ module Bosh::AzureCloud
     # ==== params
     # * +:name+                                - String. Name of public IP.
     # * +:location+                            - String. Location where the public IP will be created.
-    # * +:is_static+                           - Boolean. Whether the IP address is static or dynamic.
     # * +:idle_timeout_in_minutes+             - Integer. Timeout for the TCP idle connection. The value can be set between 4 and 30 minutes.
-    # When public IP is in an availability zone
-    # * +:zone+                                - String. Zone number in string. Possible values: "1", "2" or "3".
+    # * +:zone+                                - String. (Optional) Zone number in string. Possible values: "1", "2" or "3".
     #
     # @return [Boolean]
     #
@@ -1405,15 +1403,14 @@ module Bosh::AzureCloud
       public_ip = {
         'name' => params[:name],
         'location' => params[:location],
+        'sku' => { 'name' => 'Standard' },
         'properties' => {
-          'publicIPAllocationMethod' => params[:is_static] ? 'Static' : 'Dynamic',
+          'publicIPAllocationMethod' => 'Static',
           'idleTimeoutInMinutes' => params[:idle_timeout_in_minutes]
         }
       }
       if params[:zone]
         public_ip['zones'] = [params[:zone]]
-        public_ip['sku'] = { 'name' => 'Standard' }
-        public_ip['properties']['publicIPAllocationMethod'] = 'Static'
       end
 
       http_put(url, public_ip)

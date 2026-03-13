@@ -38,19 +38,19 @@ describe Bosh::AzureCloud::AzureClient do
     let(:location) { 'fake-location' }
 
     context 'when token is valid, create operation is accepted and completed' do
-      context 'when creating static public ip' do
+      context 'when creating public ip' do
         let(:public_ip_params) do
           {
             name: public_ip_name,
             location: location,
-            idle_timeout_in_minutes: 4,
-            is_static: true
+            idle_timeout_in_minutes: 4
           }
         end
         let(:fake_public_ip_request_body) do
           {
             'name' => public_ip_name,
             'location' => location,
+            'sku' => { 'name' => 'Standard' },
             'properties' => {
               'idleTimeoutInMinutes' => 4,
               'publicIPAllocationMethod' => 'Static'
@@ -58,55 +58,7 @@ describe Bosh::AzureCloud::AzureClient do
           }
         end
 
-        it 'should create a public ip without error' do
-          stub_request(:post, token_uri).to_return(
-            status: 200,
-            body: {
-              'access_token' => valid_access_token,
-              'expires_on' => expires_on
-            }.to_json,
-            headers: {}
-          )
-          stub_request(:put, public_ip_uri).with(body: fake_public_ip_request_body).to_return(
-            status: 200,
-            body: '',
-            headers: {
-              'azure-asyncoperation' => operation_status_link
-            }
-          )
-          stub_request(:get, operation_status_link).to_return(
-            status: 200,
-            body: '{"status":"Succeeded"}',
-            headers: {}
-          )
-
-          expect do
-            azure_client.create_public_ip(resource_group, public_ip_params)
-          end.not_to raise_error
-        end
-      end
-
-      context 'when creating dynamic public ip' do
-        let(:public_ip_params) do
-          {
-            name: public_ip_name,
-            location: location,
-            idle_timeout_in_minutes: 4,
-            is_static: false
-          }
-        end
-        let(:fake_public_ip_request_body) do
-          {
-            'name' => public_ip_name,
-            'location' => location,
-            'properties' => {
-              'idleTimeoutInMinutes' => 4,
-              'publicIPAllocationMethod' => 'Dynamic'
-            }
-          }
-        end
-
-        it 'should create a public ip without error' do
+        it 'should create a Standard SKU public ip with Static allocation' do
           stub_request(:post, token_uri).to_return(
             status: 200,
             body: {
@@ -140,7 +92,6 @@ describe Bosh::AzureCloud::AzureClient do
             name: public_ip_name,
             location: location,
             idle_timeout_in_minutes: 4,
-            is_static: false,
             zone: 'fake-zone'
           }
         end
@@ -148,16 +99,16 @@ describe Bosh::AzureCloud::AzureClient do
           {
             'name' => public_ip_name,
             'location' => location,
+            'sku' => { 'name' => 'Standard' },
             'properties' => {
               'idleTimeoutInMinutes' => 4,
-              'publicIPAllocationMethod' => 'Static'  # Standard SKUs require Static
+              'publicIPAllocationMethod' => 'Static'
             },
-            'zones' => ['fake-zone'],
-            'sku' => { 'name' => 'Standard' }
+            'zones' => ['fake-zone']
           }
         end
 
-        it 'should create a public ip without error' do
+        it 'should create a Standard SKU public ip with Static allocation in the specified zone' do
           stub_request(:post, token_uri).to_return(
             status: 200,
             body: {
