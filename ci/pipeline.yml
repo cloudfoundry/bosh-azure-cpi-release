@@ -465,12 +465,12 @@ jobs:
 
 resource_types:
   - name: terraform_type
-    type: docker-image
+    type: registry-image
     source:
       repository: ljfranklin/terraform-resource
 
   - name: semver
-    type: docker-image
+    type: registry-image
     source:
       repository: concourse/semver-resource
       tag: 1.6
