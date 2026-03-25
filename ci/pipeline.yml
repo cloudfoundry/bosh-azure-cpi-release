@@ -80,6 +80,7 @@ shared:
   - &run-az-bats
     task: run-az-bats
     file: bosh-cpi-src/ci/tasks/run-az-bats.yml
+    image: bosh-integration-registry-image
     params: &run-az-bats-params
       INFRASTRUCTURE:                     azure
       STEMCELL_NAME:                      bosh-azure-hyperv-ubuntu-noble
@@ -111,6 +112,7 @@ shared:
   - &upload-stemcell
     task: upload-stemcell
     file: bosh-cpi-src/ci/tasks/upload-stemcell.yml
+    image: bosh-integration-registry-image
     params:
       <<: *azure-environment-params
 
@@ -124,12 +126,14 @@ shared:
   - &run-integration-windows
     task: run-integration-windows
     file: bosh-cpi-src/ci/tasks/run-integration-windows.yml
+    image: bosh-integration-registry-image
     params: &run-integration-windows-params
       <<: *run-integration-params
 
   - &ensure-cleanup
     task: ensure-cleanup
     file: bosh-cpi-src/ci/tasks/ensure-cleanup.yml
+    image: bosh-integration-registry-image
     params:
       <<: *azure-environment-params
 
@@ -158,6 +162,7 @@ jobs:
         - get: stemcell
           trigger: false
           resource: azure-ubuntu-stemcell
+        - get: bosh-integration-registry-image
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -168,6 +173,7 @@ jobs:
           do:
             - task: cleanup-images-in-gallery
               file: bosh-cpi-src/ci/tasks/cleanup-images-in-gallery.yml
+              image: bosh-integration-registry-image
               params:
                 <<: *azure-environment-params
             - <<: *destroy-integration-environment
@@ -188,6 +194,7 @@ jobs:
           - get: stemcell
             trigger: false
             resource: azure-windows-stemcell
+          - get: bosh-integration-registry-image
       - <<: *create-integration-environment
       - do:
         - <<: *upload-stemcell
@@ -223,6 +230,7 @@ jobs:
         - get: bosh-integration-registry-image
       - task: build-candidate
         file: bosh-cpi-src/ci/tasks/build-candidate.yml
+        image: bosh-integration-registry-image
       - <<: *create-az-bats-environment
       - do:
         - <<: *prepare-director
