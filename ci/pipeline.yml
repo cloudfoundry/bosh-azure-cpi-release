@@ -119,6 +119,7 @@ shared:
   - &run-integration
     task: run-integration
     file: bosh-cpi-src/ci/tasks/run-integration.yml
+    image: bosh-integration-registry-image
     params: &run-integration-params
       <<: *azure-environment-params
       SSH_PUBLIC_KEY: ((bosh-azure-cpi/integration_vm_keypair.public_key))
