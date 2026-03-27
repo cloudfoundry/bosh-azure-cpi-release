@@ -125,8 +125,20 @@ describe Bosh::AzureCloud::Cloud do
 
     context 'when disk conversion is not supported' do
       let(:cloud_properties) { { 'storage_account_type' => 'unsupported-type' } }
+      let(:new_disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
 
-      it 'raises an error' do
+      before do
+        allow(disk_manager2).to receive(:get_data_disk)
+          .and_return({
+            disk_size: old_disk_size_in_gib,
+            location: 'eastus',
+            sku_name: 'PremiumV2_LRS',
+            tags: { 'caching' => 'None' },
+            zone: '1'
+          })
+      end
+
+      it 'falls back to snapshot-based conversion and returns the new disk CID' do
         allow(disk_manager2).to receive(:update_disk).and_raise(Bosh::AzureCloud::AzureError.new(%{
 {
   "error": {
@@ -135,10 +147,25 @@ describe Bosh::AzureCloud::Cloud do
   }
 }
 }))
+        allow(new_disk_id_object).to receive(:to_s).and_return('new-disk-cid')
+        allow(disk_manager2).to receive(:recreate_disk_with_type)
+          .and_return(new_disk_id_object)
+
+        result = managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+
+        expect(disk_manager2).to have_received(:recreate_disk_with_type)
+          .with(disk_id_object, anything, 'unsupported-type', new_disk_size_in_gib, nil, nil)
+        expect(result).to eq('new-disk-cid')
+      end
+
+      it 'raises non-conversion Azure errors directly' do
+        allow(disk_manager2).to receive(:update_disk).and_raise(
+          Bosh::AzureCloud::AzureError.new('Some other Azure error')
+        )
 
         expect do
           managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
-        end.to raise_error(Bosh::Clouds::NotSupported, 'Disk conversion is not supported')
+        end.to raise_error(Bosh::AzureCloud::AzureError, /Some other Azure error/)
       end
     end
   end

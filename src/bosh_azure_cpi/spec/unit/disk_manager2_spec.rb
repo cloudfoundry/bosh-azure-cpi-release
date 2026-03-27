@@ -1391,4 +1391,291 @@ describe Bosh::AzureCloud::DiskManager2 do
       end
     end
   end
+
+  describe '#recreate_disk_with_type' do
+    let(:disk) do
+      {
+        location: 'fake-location',
+        sku_name: 'Standard_LRS',
+        tags: { 'caching' => 'None' }
+      }
+    end
+    let(:new_account_type) { 'PremiumV2_LRS' }
+    let(:new_disk_id) { instance_double(Bosh::AzureCloud::DiskId) }
+    let(:new_disk_name) { 'fake-new-disk-name' }
+
+    let(:disk_params) do
+      {
+        name: new_disk_name,
+        location: 'fake-location',
+        account_type: new_account_type,
+        tags: { 'caching' => 'None' }
+      }
+    end
+
+    before do
+      # snapshot_id is created first, then new_disk_id
+      allow(Bosh::AzureCloud::DiskId).to receive(:create)
+        .and_return(snapshot_id, new_disk_id)
+
+      allow(new_disk_id).to receive(:disk_name).and_return(new_disk_name)
+      allow(new_disk_id).to receive(:caching).and_return(caching)
+      allow(new_disk_id).to receive(:resource_group_name).and_return(resource_group_name)
+
+      allow(disk_manager2).to receive(:snapshot_disk)
+        .with(snapshot_id, disk_name, {})
+      allow(disk_manager2).to receive(:has_snapshot?)
+        .with(resource_group_name, snapshot_name)
+        .and_return(true)
+      allow(disk_manager2).to receive(:wait_for_snapshot_copy)
+        .with(resource_group_name, snapshot_name)
+      allow(azure_client).to receive(:create_managed_disk_from_snapshot)
+        .with(resource_group_name, disk_params, snapshot_name)
+      allow(disk_manager2).to receive(:has_data_disk?)
+        .with(new_disk_id)
+        .and_return(true)
+      allow(disk_manager2).to receive(:delete_disk)
+        .with(resource_group_name, disk_name)
+      allow(disk_manager2).to receive(:delete_snapshot)
+        .with(snapshot_id)
+    end
+
+    context 'when everything is ok' do
+      it 'recreates the disk and returns the new disk id' do
+        result = disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+        expect(result).to eq(new_disk_id)
+      end
+
+      it 'deletes the old disk before cleaning up the snapshot' do
+        expect(disk_manager2).to receive(:delete_disk).ordered
+        expect(disk_manager2).to receive(:delete_snapshot).ordered
+
+        disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+      end
+    end
+
+    context 'when optional parameters are provided' do
+      let(:disk_params) do
+        {
+          name: new_disk_name,
+          location: 'fake-location',
+          account_type: new_account_type,
+          tags: { 'caching' => 'None' },
+          disk_size: 2048,
+          iops: 5000,
+          mbps: 200
+        }
+      end
+
+      before do
+        allow(azure_client).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name)
+      end
+
+      it 'passes size, iops, and mbps to the disk params' do
+        expect(azure_client).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name)
+
+        disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type, 2048, 5000, 200)
+      end
+    end
+
+    context 'when the disk has a zone' do
+      let(:disk) do
+        {
+          location: 'fake-location',
+          sku_name: 'Standard_LRS',
+          tags: { 'caching' => 'None' },
+          zone: '2'
+        }
+      end
+
+      let(:disk_params) do
+        {
+          name: new_disk_name,
+          location: 'fake-location',
+          account_type: new_account_type,
+          tags: { 'caching' => 'None' },
+          zone: '2'
+        }
+      end
+
+      before do
+        allow(azure_client).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name)
+      end
+
+      it 'includes the zone in the disk params' do
+        expect(azure_client).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name)
+
+        disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+      end
+    end
+
+    context 'when the snapshot is not found' do
+      before do
+        allow(disk_manager2).to receive(:has_snapshot?)
+          .with(resource_group_name, snapshot_name)
+          .and_return(false)
+      end
+
+      it 'raises a CloudError' do
+        expect do
+          disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+        end.to raise_error(Bosh::Clouds::CloudError, /Cannot find snapshot '#{snapshot_name}'.*abort type conversion/)
+      end
+    end
+
+    context 'when creating the disk from snapshot fails' do
+      before do
+        allow(azure_client).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name)
+          .and_raise('fails to create disk')
+      end
+
+      it 'retries and raises an error with recovery instructions' do
+        expect(azure_client).to receive(:create_managed_disk_from_snapshot).exactly(3).times
+
+        expect do
+          disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+        end.to raise_error(Bosh::Clouds::CloudError, /Failed to create disk.*az disk create/m)
+      end
+    end
+
+    context 'when wait_for_snapshot_copy raises' do
+      before do
+        allow(disk_manager2).to receive(:wait_for_snapshot_copy)
+          .and_raise(Bosh::Clouds::CloudError, "Snapshot '#{snapshot_name}' entered Failed state during copy")
+      end
+
+      it 'propagates the error without deleting the old disk' do
+        expect(disk_manager2).not_to receive(:delete_disk)
+        expect(disk_manager2).not_to receive(:delete_snapshot)
+
+        expect do
+          disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+        end.to raise_error(Bosh::Clouds::CloudError, /entered Failed state/)
+      end
+    end
+
+    context 'when creating the disk fails but succeeds on retry' do
+      it 'recreates without error' do
+        count = 0
+        allow(azure_client).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name) do
+            count += 1
+            count == 1 ? raise('fails to create disk') : nil
+          end
+
+        expect(azure_client).to receive(:create_managed_disk_from_snapshot).twice
+
+        expect do
+          disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when the new disk is not found after creation' do
+      before do
+        allow(disk_manager2).to receive(:has_data_disk?)
+          .with(new_disk_id)
+          .and_return(false)
+      end
+
+      it 'raises an error with recovery instructions and does not delete old disk or snapshot' do
+        expect(disk_manager2).not_to receive(:delete_disk)
+        expect(disk_manager2).not_to receive(:delete_snapshot)
+
+        expect do
+          disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+        end.to raise_error(Bosh::Clouds::CloudError, /Cannot find new disk '#{new_disk_name}'.*recover.*manually/m)
+      end
+    end
+  end
+
+  describe '#wait_for_snapshot_copy' do
+    let(:snapshot_name) { 'fake-snapshot-name' }
+
+    context 'when the snapshot completes immediately' do
+      it 'returns without polling' do
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name)
+          .and_return({ provisioning_state: 'Succeeded', completion_percent: nil })
+
+        expect do
+          disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when the snapshot completes with 100% completion' do
+      it 'returns successfully' do
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name)
+          .and_return({ provisioning_state: 'Succeeded', completion_percent: 100.0 })
+
+        expect do
+          disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when the snapshot requires polling' do
+      it 'polls until completion' do
+        call_count = 0
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name) do
+            call_count += 1
+            if call_count < 3
+              { provisioning_state: 'Succeeded', completion_percent: call_count * 30.0 }
+            else
+              { provisioning_state: 'Succeeded', completion_percent: 100.0 }
+            end
+          end
+        allow(disk_manager2).to receive(:sleep)
+
+        disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name)
+
+        expect(azure_client).to have_received(:get_managed_snapshot_by_name).exactly(3).times
+      end
+    end
+
+    context 'when the snapshot is not found' do
+      it 'raises a CloudError' do
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name)
+          .and_return(nil)
+
+        expect do
+          disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name)
+        end.to raise_error(Bosh::Clouds::CloudError, /not found while waiting for copy/)
+      end
+    end
+
+    context 'when the snapshot enters Failed state' do
+      it 'raises a CloudError' do
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name)
+          .and_return({ provisioning_state: 'Failed', completion_percent: 50.0 })
+
+        expect do
+          disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name)
+        end.to raise_error(Bosh::Clouds::CloudError, /entered Failed state/)
+      end
+    end
+
+    context 'when the timeout is reached' do
+      it 'raises a CloudError' do
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name)
+          .and_return({ provisioning_state: 'Succeeded', completion_percent: 50.0 })
+        allow(disk_manager2).to receive(:sleep)
+
+        expect do
+          disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name, timeout: 5, interval: 2)
+        end.to raise_error(Bosh::Clouds::CloudError, /Timed out waiting for snapshot/)
+      end
+    end
+  end
 end
