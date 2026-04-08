@@ -69,7 +69,11 @@ describe Bosh::AzureCloud::Cloud do
           expect(stemcell_info.is_light_stemcell?).to be_falsey
           expect(stemcell_info.uri).to include "/Microsoft.Compute/galleries/#{@compute_gallery_name}/images/"
           image_data = JSON.parse(stemcell_info.image)
-          expect(image_data['offer']).to eq stemcell_properties['name']
+          generation = stemcell_properties.fetch('generation')
+          expect(generation).not_to be_nil
+          expected_offer = generation.downcase == 'gen1' ? stemcell_properties['name'] : "#{stemcell_properties['name']}-#{generation}"
+          expect(image_data['offer']).to eq expected_offer
+          expect(image_data['sku']).to eq generation
 
           # Replicate image into other location
           other_location = ['eastus', 'East US'].include?(@azure_config.location) ? 'West US' : 'East US'
