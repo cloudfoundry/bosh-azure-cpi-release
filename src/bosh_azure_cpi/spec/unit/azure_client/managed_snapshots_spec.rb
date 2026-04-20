@@ -196,7 +196,8 @@ describe Bosh::AzureCloud::AzureClient do
           location: 'g',
           tags: { 'h' => 'i' },
           provisioning_state: 'e',
-          disk_size: 100
+          disk_size: 100,
+          completion_percent: nil
         }
       end
 

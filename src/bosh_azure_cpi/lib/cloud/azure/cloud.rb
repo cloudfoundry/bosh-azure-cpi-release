@@ -495,8 +495,9 @@ module Bosh::AzureCloud
             error_message_pattern = /Changing a disk's account type from '.*' to '.*' is not supported./
             raise e unless e.message.match?(error_message_pattern)
 
-            @logger.warn("Disk conversion failed: #{e.message.match(error_message_pattern)[0]}")
-            raise Bosh::Clouds::NotSupported, 'Disk conversion is not supported'
+            @logger.warn("In-place disk conversion failed: #{e.message.match(error_message_pattern)[0]}. Falling back to snapshot-based conversion.")
+            new_disk_id = @disk_manager2.recreate_disk_with_type(disk_id, disk, account_type, new_size_in_gib, iops, mbps)
+            return new_disk_id.to_s
           end
 
           @logger.info("Finished update of disk '#{disk_name}'")

@@ -1332,6 +1332,7 @@ module Bosh::AzureCloud
         properties = result['properties']
         snapshot[:provisioning_state] = properties['provisioningState']
         snapshot[:disk_size]          = properties['diskSizeGB']
+        snapshot[:completion_percent] = properties['completionPercent']
       end
       snapshot
     end
