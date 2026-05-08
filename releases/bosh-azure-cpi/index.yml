@@ -73,6 +73,8 @@ builds:
     version: 52.0.1
   6554d210-8752-41c4-a0a3-15d6a0f27643:
     version: "19"
+  67c81414-47fa-4dde-7c24-d1adb90c3f16:
+    version: 53.1.4
   67dada97-d4fe-4309-5347-4b8129f88b99:
     version: 35.2.0
   6c5df816-570c-4660-573b-eaa907d3b7c4:
