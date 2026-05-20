@@ -73,12 +73,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
-                  publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  }
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
+                  publicIPAddress: { id: nic_params[:public_ip][:id] }
                 }
               }],
               dnsSettings: {
@@ -148,12 +148,10 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nil,
                   privateIPAllocationMethod: 'Dynamic',
-                  publicIPAddress: nil,
-                  subnet: {
-                    id: subnet[:id]
-                  }
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true
                 }
               }],
               dnsSettings: {
@@ -224,12 +222,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
-                  publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  }
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
+                  publicIPAddress: { id: nic_params[:public_ip][:id] }
                 }
               }],
               dnsSettings: {
@@ -284,12 +282,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
                   publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  },
                   loadBalancerBackendAddressPools: nic_params[:load_balancers].map { |lb| { id: lb[:backend_address_pools][0][:id] } },
                   loadBalancerInboundNatRules: nic_params[:load_balancers].flat_map { |lb| lb[:frontend_ip_configurations][0][:inbound_nat_rules] }.compact
                 }
@@ -663,12 +661,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
                   publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  },
                   applicationSecurityGroups: [
                     {
                       id: 'fake-asg-id-1'
@@ -731,12 +729,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
                   publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  },
                   applicationGatewayBackendAddressPools: nic_params[:application_gateways].map { |agw| { id: agw[:backend_address_pools][0][:id] } }
                 }
               }],
@@ -1036,4 +1034,5 @@ describe Bosh::AzureCloud::AzureClient do
       end
     end
   end
+
 end
