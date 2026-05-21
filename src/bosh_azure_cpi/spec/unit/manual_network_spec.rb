@@ -168,6 +168,23 @@ describe Bosh::AzureCloud::ManualNetwork do
     end
   end
 
+  context 'when ip is IPv6' do
+    let(:network_spec) do
+      {
+        'ip' => 'fd00::5',
+        'cloud_properties' => {
+          'virtual_network_name' => 'foo',
+          'subnet_name' => 'bar'
+        }
+      }
+    end
+
+    it 'uses the IPv6 address as the private IP' do
+      network = Bosh::AzureCloud::ManualNetwork.new(azure_config, 'default', network_spec)
+      expect(network.private_ip).to eq('fd00::5')
+    end
+  end
+
   context 'when optional cloud properties are not specified' do
     let(:network_spec) do
       {
