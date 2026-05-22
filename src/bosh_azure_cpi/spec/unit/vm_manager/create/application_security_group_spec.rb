@@ -607,7 +607,7 @@ describe Bosh::AzureCloud::VMManager do
               .with(MOCK_RESOURCE_GROUP_NAME, hash_including(
                                                 name: "#{vm_name}-0",
                                                 public_ip: dynamic_public_ip,
-                                                subnet: subnet,
+                                                ip_configurations: [hash_including(subnet: subnet)],
                                                 tags: tags,
                                                 load_balancers: [load_balancer],
                                                 application_gateways: [application_gateway]
@@ -634,7 +634,7 @@ describe Bosh::AzureCloud::VMManager do
             expect(azure_client).to receive(:create_network_interface)
               .with(MOCK_RESOURCE_GROUP_NAME, hash_including(
                                                 public_ip: dynamic_public_ip,
-                                                subnet: subnet,
+                                                ip_configurations: [hash_including(subnet: subnet)],
                                                 tags: tags,
                                                 load_balancers: [load_balancer],
                                                 application_gateways: [application_gateway]
