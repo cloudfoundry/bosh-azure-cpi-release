@@ -171,6 +171,8 @@ shared_context 'shared stuff for vm manager' do
       .and_return(vip_network)
     allow(network_configurator).to receive(:networks)
       .and_return([manual_network, dynamic_network])
+    allow(network_configurator).to receive(:nic_groups)
+      .and_return([[manual_network], [dynamic_network]])
     allow(network_configurator).to receive(:default_dns)
       .and_return('fake-dns')
 
@@ -183,6 +185,8 @@ shared_context 'shared stuff for vm manager' do
     allow(vip_network).to receive(:public_ip)
       .and_return('public-ip')
 
+    allow(manual_network).to receive(:spec)
+      .and_return({ 'type' => 'manual', 'ip' => 'private-ip' })
     allow(manual_network).to receive(:resource_group_name)
       .and_return(MOCK_RESOURCE_GROUP_NAME)
     allow(manual_network).to receive(:virtual_network_name)
@@ -200,6 +204,8 @@ shared_context 'shared stuff for vm manager' do
     allow(manual_network).to receive(:accelerated_networking)
       .and_return(false)
 
+    allow(dynamic_network).to receive(:spec)
+      .and_return({ 'type' => 'dynamic' })
     allow(dynamic_network).to receive(:resource_group_name)
       .and_return(MOCK_RESOURCE_GROUP_NAME)
     allow(dynamic_network).to receive(:virtual_network_name)
