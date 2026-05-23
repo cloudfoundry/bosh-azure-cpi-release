@@ -184,6 +184,8 @@ shared_context 'shared stuff for vm manager' do
                   }])
     allow(vip_network).to receive(:public_ip)
       .and_return('public-ip')
+    allow(vip_network).to receive(:spec)
+      .and_return({ 'type' => 'vip' })
 
     allow(manual_network).to receive(:spec)
       .and_return({ 'type' => 'manual', 'ip' => 'private-ip' })

@@ -125,6 +125,7 @@ describe Bosh::AzureCloud::AzureClient do
           'properties' => {
             'provisioningState' => 'fake-state',
             'privateIPAllocationMethod' => 'bar',
+            'privateIPAddressVersion' => 'IPv4',
             'publicIPAddress' => {
               'id' => public_ip_id
             },
@@ -155,6 +156,7 @@ describe Bosh::AzureCloud::AzureClient do
           name: 'fake-name',
           provisioning_state: 'fake-state',
           private_ip_allocation_method: 'bar',
+          private_ip_address_version: 'IPv4',
           public_ip: fake_public_ip,
           inbound_nat_rules: []
         }

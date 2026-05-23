@@ -205,6 +205,7 @@ module Bosh::AzureCloud
       public_ip = task_get_or_create_public_ip.value!
       load_balancers = task_get_load_balancers.value!
       application_gateways = task_get_application_gateways.value!
+      public_ip_nic_index = _get_public_ip_nic_index(network_configurator)
 
       # tasks to create NICs, NICs will be created in different threads
       tasks_creating = []
@@ -220,8 +221,12 @@ module Bosh::AzureCloud
         nic_name = "#{vm_name}-#{nic_index}"
         subnet = _get_network_subnet(primary_network)
 
-        ip_configurations = group_networks.each_with_index.map do |network, ipconfig_index|
-          ip_version = _detect_ip_version(network)
+        networks_with_ip_versions = group_networks.map do |network|
+          [network, _detect_ip_version(network)]
+        end
+        networks_with_ip_versions.sort_by! { |_network, ip_version| ip_version == 'IPv4' ? 0 : 1 }
+
+        ip_configurations = networks_with_ip_versions.each_with_index.map do |(network, ip_version), ipconfig_index|
           ipconfig = {
             name: "ipconfig#{nic_index}-#{ipconfig_index}",
             ip_version: ip_version,
@@ -240,15 +245,14 @@ module Bosh::AzureCloud
           enable_accelerated_networking: accelerated_networking,
           ip_configurations: ip_configurations
         }
+        nic_params[:public_ip] = nic_index == public_ip_nic_index ? public_ip : nil
 
         # NOTE: The first NIC is the Primary/Gateway network. See: `Bosh::AzureCloud::NetworkConfigurator.initialize`.
         if nic_index.zero?
-          nic_params[:public_ip] = public_ip
           nic_params[:tags] = primary_nic_tags
           nic_params[:load_balancers] = load_balancers
           nic_params[:application_gateways] = application_gateways
         else
-          nic_params[:public_ip] = nil
           nic_params[:tags] = AZURE_TAGS
           nic_params[:load_balancers] = nil
           nic_params[:application_gateways] = nil
@@ -263,6 +267,19 @@ module Bosh::AzureCloud
       # Calling .wait before .value! to make sure that all tasks are completed.
       tasks_creating.map(&:wait)
       tasks_creating.map(&:value!)
+    end
+
+    def _get_public_ip_nic_index(network_configurator)
+      vip_network = network_configurator.vip_network
+      vip_nic_group = vip_network&.spec&.[]('nic_group')
+      return 0 if vip_nic_group.nil?
+
+      nic_index = network_configurator.nic_groups.index do |group_networks|
+        group_networks.first.nic_group == vip_nic_group
+      end
+      cloud_error("Cannot find nic_group '#{vip_nic_group}' referenced by the vip network") if nic_index.nil?
+
+      nic_index
     end
 
     # Determine whether a network's IP is IPv4 or IPv6

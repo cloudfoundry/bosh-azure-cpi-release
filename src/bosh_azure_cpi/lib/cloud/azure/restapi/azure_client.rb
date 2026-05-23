@@ -1518,6 +1518,7 @@ module Bosh::AzureCloud
           ip[:id]                           = frontend_ip['id']
           ip[:provisioning_state]           = frontend_ip['properties']['provisioningState']
           ip[:private_ip_allocation_method] = frontend_ip['properties']['privateIPAllocationMethod']
+          ip[:private_ip_address_version]   = frontend_ip['properties']['privateIPAddressVersion'] unless frontend_ip['properties']['privateIPAddressVersion'].nil?
           ip[:private_ip]                   = frontend_ip['properties']['privateIPAddress'] unless frontend_ip['properties']['privateIPAddress'].nil?
           ip[:public_ip]                    = get_public_ip(frontend_ip['properties']['publicIPAddress']['id']) unless frontend_ip['properties']['publicIPAddress'].nil?
           ip[:inbound_nat_rules]            = frontend_ip['properties']['inboundNatRules']
@@ -2478,12 +2479,19 @@ module Bosh::AzureCloud
                           .map { |pools| { 'id' => pools[0][:id] } }
           config_properties['loadBalancerBackendAddressPools'] = backend_pools unless backend_pools.empty?
 
-          if ip_version == 'IPv4'
-            inbound_nat_rules = nic_params[:load_balancers]
-                                .flat_map { |lb| lb[:frontend_ip_configurations]&.first&.dig(:inbound_nat_rules) }
-                                .compact
-            config_properties['loadBalancerInboundNatRules'] = inbound_nat_rules unless inbound_nat_rules.empty?
-          end
+          inbound_nat_rules = nic_params[:load_balancers].flat_map do |lb|
+            frontends = lb[:frontend_ip_configurations]
+            next [] if frontends.nil?
+
+            frontends = [frontends] unless frontends.is_a?(Array)
+            frontends.select do |frontend|
+              frontend_ip_version = frontend[:private_ip_address_version] ||
+                                    frontend.dig(:public_ip, :public_ip_address_version) ||
+                                    'IPv4'
+              frontend_ip_version == ip_version
+            end.flat_map { |frontend| frontend[:inbound_nat_rules] || [] }
+          end.compact
+          config_properties['loadBalancerInboundNatRules'] = inbound_nat_rules unless inbound_nat_rules.empty?
         end
 
         # Application gateways - IPv4 backend only, as it does NOT support IPv6 backends
