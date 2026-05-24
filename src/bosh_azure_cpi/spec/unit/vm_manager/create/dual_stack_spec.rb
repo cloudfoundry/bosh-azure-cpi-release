@@ -232,4 +232,21 @@ describe Bosh::AzureCloud::VMManager, 'dual-stack NIC creation' do
     end
   end
 
+  describe '#_build_nic_groups_to_iface' do
+    let(:group_one_v4) { instance_double(Bosh::AzureCloud::ManualNetwork, spec: { 'nic_group' => '1' }) }
+    let(:group_one_v6) { instance_double(Bosh::AzureCloud::ManualNetwork, spec: { 'nic_group' => '1' }) }
+    let(:ungrouped) { instance_double(Bosh::AzureCloud::DynamicNetwork, spec: { 'type' => 'dynamic' }) }
+    let(:group_two) { instance_double(Bosh::AzureCloud::ManualNetwork, spec: { 'nic_group' => '2' }) }
+
+    before do
+      allow(network_configurator).to receive(:nic_groups)
+        .and_return([[group_one_v4, group_one_v6], [ungrouped], [group_two]])
+    end
+
+    it 'maps explicit groups to their NIC attachment order and omits implicit groups' do
+      mapping = vm_manager_ds.send(:_build_nic_groups_to_iface, network_configurator)
+
+      expect(mapping).to eq('1' => 'eth0', '2' => 'eth2')
+    end
+  end
 end
