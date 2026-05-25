@@ -51,6 +51,7 @@ In this step, you will install Cloud Foundry Command Line Interface and push you
   * [Calculate correct VM cloud properties based on `vm_resources`](./advanced/calculate-vm-cloud-properties/)
   * [Use Azure Accelerated Networking](./advanced/accelerated-networking/)
   * [Use Azure Managed Identity](./advanced/managed-identity/)
+  * [Deploy dual-stack (IPv4 + IPv6) instances](./advanced/ipv6-dual-stack/)
 
 # 4 Additional Information
 
