@@ -382,24 +382,49 @@ describe Bosh::AzureCloud::DiskManager2 do
 
   describe '#snapshot_disk' do
     let(:metadata) { { 'foo' => 'bar' } }
-    let(:snapshot_params) do
-      {
-        name: snapshot_name,
-        tags: {
-          'foo' => 'bar',
-          'original' => disk_name
-        },
-        disk_name: disk_name,
-        incremental: false
-      }
+
+    context 'when incremental is not specified (default)' do
+      let(:snapshot_params) do
+        {
+          name: snapshot_name,
+          tags: {
+            'foo' => 'bar',
+            'original' => disk_name
+          },
+          disk_name: disk_name,
+          incremental: false
+        }
+      end
+
+      it 'creates the managed snapshot with incremental: false' do
+        expect(azure_client).to receive(:create_managed_snapshot).with(resource_group_name, snapshot_params)
+
+        expect do
+          disk_manager2.snapshot_disk(snapshot_id, disk_name, metadata)
+        end.not_to raise_error
+      end
     end
 
-    it 'creates the managed snapshot' do
-      expect(azure_client).to receive(:create_managed_snapshot).with(resource_group_name, snapshot_params)
+    context 'when incremental: true is passed' do
+      let(:snapshot_params) do
+        {
+          name: snapshot_name,
+          tags: {
+            'foo' => 'bar',
+            'original' => disk_name
+          },
+          disk_name: disk_name,
+          incremental: true
+        }
+      end
 
-      expect do
-        disk_manager2.snapshot_disk(snapshot_id, disk_name, metadata)
-      end.not_to raise_error
+      it 'creates the managed snapshot with incremental: true' do
+        expect(azure_client).to receive(:create_managed_snapshot).with(resource_group_name, snapshot_params)
+
+        expect do
+          disk_manager2.snapshot_disk(snapshot_id, disk_name, metadata, incremental: true)
+        end.not_to raise_error
+      end
     end
   end
 
@@ -1306,7 +1331,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:create).and_return(snapshot_id)
       allow(disk_manager2).to receive(:snapshot_disk)
-        .with(snapshot_id, disk_name, {}, incremental: true)
+        .with(snapshot_id, disk_name, {})
       allow(disk_manager2).to receive(:has_snapshot?)
         .with(resource_group_name, snapshot_name)
         .and_return(true)
