@@ -1592,6 +1592,37 @@ describe Bosh::AzureCloud::DiskManager2 do
         end.to raise_error(Bosh::Clouds::CloudError, /Cannot find new disk '#{new_disk_name}'.*recover.*manually/m)
       end
     end
+
+    context 'when deleting the old disk fails' do
+      before do
+        allow(disk_manager2).to receive(:delete_disk)
+          .with(resource_group_name, disk_name)
+          .and_raise('failed to delete old disk')
+      end
+
+      it 'still returns the new disk id without raising' do
+        result = disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+        expect(result).to eq(new_disk_id)
+      end
+
+      it 'still attempts to delete the snapshot' do
+        expect(disk_manager2).to receive(:delete_snapshot).with(snapshot_id)
+        disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+      end
+    end
+
+    context 'when deleting the snapshot fails' do
+      before do
+        allow(disk_manager2).to receive(:delete_snapshot)
+          .with(snapshot_id)
+          .and_raise('failed to delete snapshot')
+      end
+
+      it 'still returns the new disk id without raising' do
+        result = disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+        expect(result).to eq(new_disk_id)
+      end
+    end
   end
 
   describe '#wait_for_snapshot_copy' do

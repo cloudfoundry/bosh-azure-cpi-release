@@ -243,6 +243,12 @@ module Bosh::AzureCloud
       }
     end
 
+    # Recreates a managed disk with a new storage account type via snapshot.
+    # For PremiumV2_LRS / UltraSSD_LRS source disks, Azure only supports incremental snapshots
+    # with a background copy that must complete before creating non-PremiumV2/Ultra disks.
+    # Instant Access Snapshots (--ia-duration) do NOT help here because they only allow
+    # creating PremiumV2/Ultra disks from the snapshot; cross-type conversion still requires
+    # waiting for completionPercent to reach 100.
     def recreate_disk_with_type(disk_id, disk, new_account_type, new_size_in_gib = nil, iops = nil, mbps = nil)
       @logger.info("recreate_disk_with_type(#{disk_id}, #{new_account_type}, #{new_size_in_gib})")
       resource_group_name = disk_id.resource_group_name
@@ -302,9 +308,19 @@ module Bosh::AzureCloud
         raise Bosh::Clouds::CloudError, error_message
       end
 
-      # 5. Delete old disk, then clean up the snapshot
-      delete_disk(resource_group_name, old_disk_name)
-      delete_snapshot(snapshot_id)
+      # 5. Delete old disk, then clean up the snapshot (best-effort to avoid resource leaks on retry)
+      begin
+        delete_disk(resource_group_name, old_disk_name)
+      rescue StandardError => e
+        @logger.warn("recreate_disk_with_type - Failed to delete old disk '#{old_disk_name}': #{e.inspect}. Manual cleanup may be required.")
+      end
+
+      begin
+        delete_snapshot(snapshot_id)
+      rescue StandardError => e
+        @logger.warn("recreate_disk_with_type - Failed to delete snapshot '#{snapshot_name}': #{e.inspect}. Manual cleanup may be required.")
+      end
+
       @logger.info("Disk '#{old_disk_name}' recreated as '#{new_disk_name}' with type '#{new_account_type}'")
 
       new_disk_id
