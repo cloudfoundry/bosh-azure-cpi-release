@@ -244,12 +244,8 @@ module Bosh::AzureCloud
       }
     end
 
-    # Recreates a managed disk with a new storage account type via snapshot.
-    # For PremiumV2_LRS / UltraSSD_LRS source disks, Azure only supports incremental snapshots
-    # with a background copy that must complete before creating non-PremiumV2/Ultra disks.
-    # Instant Access Snapshots (--ia-duration) do NOT help here because they only allow
-    # creating PremiumV2/Ultra disks from the snapshot; cross-type conversion still requires
-    # waiting for completionPercent to reach 100.
+    # Instant Access Snapshots are not used here: they only allow creating PremiumV2/Ultra disks
+    # from the snapshot, so cross-type conversion still requires waiting for completionPercent == 100.
     def recreate_disk_with_type(disk_id, disk, new_account_type, new_size_in_gib = nil, iops = nil, mbps = nil)
       @logger.info("recreate_disk_with_type(#{disk_id}, #{new_account_type}, #{new_size_in_gib})")
       resource_group_name = disk_id.resource_group_name
