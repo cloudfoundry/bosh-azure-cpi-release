@@ -139,7 +139,7 @@ module Bosh::AzureCloud
       _get_disk(resource_group_name, disk_name)
     end
 
-    def snapshot_disk(snapshot_id, disk_name, metadata)
+    def snapshot_disk(snapshot_id, disk_name, metadata, incremental: false)
       @logger.info("snapshot_disk(#{snapshot_id}, #{disk_name}, #{metadata})")
       resource_group_name = snapshot_id.resource_group_name()
       snapshot_name = snapshot_id.disk_name
@@ -148,7 +148,8 @@ module Bosh::AzureCloud
         tags: metadata.merge(
           'original' => disk_name
         ),
-        disk_name: disk_name
+        disk_name: disk_name,
+        incremental: incremental
       }
       @logger.info("Start to create a snapshot '#{snapshot_name}' from a managed disk '#{disk_name}'")
       @azure_client.create_managed_snapshot(resource_group_name, snapshot_params)
@@ -257,7 +258,7 @@ module Bosh::AzureCloud
       # 1. Snapshot the existing disk
       snapshot_id = DiskId.create(disk_id.caching, true, resource_group_name: resource_group_name)
       snapshot_name = snapshot_id.disk_name
-      snapshot_disk(snapshot_id, old_disk_name, {})
+      snapshot_disk(snapshot_id, old_disk_name, {}, incremental: true)
       @logger.info("Snapshot '#{snapshot_name}' created from disk '#{old_disk_name}' for type conversion")
 
       unless has_snapshot?(resource_group_name, snapshot_name)
@@ -289,8 +290,8 @@ module Bosh::AzureCloud
         @azure_client.create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
       rescue StandardError => e
         if retry_count < max_retries
-          @logger.info("recreate_disk_with_type - Error creating '#{new_disk_name}' from snapshot '#{snapshot_name}': #{e.inspect}. Retry #{retry_count}.")
           retry_count += 1
+          @logger.info("recreate_disk_with_type - Error creating '#{new_disk_name}' from snapshot '#{snapshot_name}': #{e.inspect}. Retry #{retry_count}/#{max_retries}.")
           retry
         end
 
