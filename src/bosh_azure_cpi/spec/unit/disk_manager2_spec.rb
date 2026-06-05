@@ -389,7 +389,8 @@ describe Bosh::AzureCloud::DiskManager2 do
           'foo' => 'bar',
           'original' => disk_name
         },
-        disk_name: disk_name
+        disk_name: disk_name,
+        incremental: false
       }
     end
 
@@ -1305,7 +1306,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     before do
       allow(Bosh::AzureCloud::DiskId).to receive(:create).and_return(snapshot_id)
       allow(disk_manager2).to receive(:snapshot_disk)
-        .with(snapshot_id, disk_name, {})
+        .with(snapshot_id, disk_name, {}, incremental: true)
       allow(disk_manager2).to receive(:has_snapshot?)
         .with(resource_group_name, snapshot_name)
         .and_return(true)
@@ -1423,7 +1424,7 @@ describe Bosh::AzureCloud::DiskManager2 do
       allow(new_disk_id).to receive(:resource_group_name).and_return(resource_group_name)
 
       allow(disk_manager2).to receive(:snapshot_disk)
-        .with(snapshot_id, disk_name, {})
+        .with(snapshot_id, disk_name, {}, incremental: true)
       allow(disk_manager2).to receive(:has_snapshot?)
         .with(resource_group_name, snapshot_name)
         .and_return(true)
