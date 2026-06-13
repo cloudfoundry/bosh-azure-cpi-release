@@ -246,6 +246,14 @@ describe Bosh::AzureCloud::AzureClient do
       provisioning_state: 'fake-state',
       dns_settings: ['168.63.129.16'],
       ip_configuration_id: 'fake-id',
+      ip_configurations: [{
+        id: 'fake-id',
+        name: nil,
+        primary: false,
+        private_ip: '10.0.0.100',
+        private_ip_allocation_method: 'Dynamic',
+        private_ip_address_version: 'IPv4'
+      }],
       private_ip: '10.0.0.100',
       private_ip_allocation_method: 'Dynamic'
     }
@@ -287,7 +295,8 @@ describe Bosh::AzureCloud::AzureClient do
           id: 'fake-subnet-id',
           name: 'fake-subnet-name',
           provisioning_state: 'fake-subnet-state',
-          address_prefix: 'fake-address-prefix'
+          address_prefix: 'fake-address-prefix',
+          address_prefixes: nil
         }
       ]
     }
@@ -312,7 +321,8 @@ describe Bosh::AzureCloud::AzureClient do
       id: 'fake-id',
       name: 'fake-name',
       provisioning_state: 'fake-state',
-      address_prefix: '10.0.0.0'
+      address_prefix: '10.0.0.0',
+      address_prefixes: nil
     }
   end
 
@@ -780,6 +790,15 @@ describe Bosh::AzureCloud::AzureClient do
             provisioning_state: 'fake-state',
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
+            ip_configurations: [{
+              id: 'fake-id',
+              name: nil,
+              primary: false,
+              private_ip: '10.0.0.100',
+              private_ip_allocation_method: 'Dynamic',
+              private_ip_address_version: 'IPv4',
+              public_ip: fake_public_ip
+            }],
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic',
             public_ip: fake_public_ip
@@ -844,6 +863,15 @@ describe Bosh::AzureCloud::AzureClient do
             provisioning_state: 'fake-state',
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
+            ip_configurations: [{
+              id: 'fake-id',
+              name: nil,
+              primary: false,
+              private_ip: '10.0.0.100',
+              private_ip_allocation_method: 'Dynamic',
+              private_ip_address_version: 'IPv4',
+              load_balancers: [fake_load_balancer]
+            }],
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic',
             load_balancers: [fake_load_balancer]
@@ -909,6 +937,15 @@ describe Bosh::AzureCloud::AzureClient do
             provisioning_state: 'fake-state',
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
+            ip_configurations: [{
+              id: 'fake-id',
+              name: nil,
+              primary: false,
+              private_ip: '10.0.0.100',
+              private_ip_allocation_method: 'Dynamic',
+              private_ip_address_version: 'IPv4',
+              application_gateways: [fake_application_gateway]
+            }],
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic',
             application_gateways: [fake_application_gateway]
@@ -967,6 +1004,14 @@ describe Bosh::AzureCloud::AzureClient do
             enable_ip_forwarding: true,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
+            ip_configurations: [{
+              id: 'fake-id',
+              name: nil,
+              primary: false,
+              private_ip: '10.0.0.100',
+              private_ip_allocation_method: 'Dynamic',
+              private_ip_address_version: 'IPv4'
+            }],
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic'
           }
@@ -1019,6 +1064,14 @@ describe Bosh::AzureCloud::AzureClient do
             enable_accelerated_networking: true,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
+            ip_configurations: [{
+              id: 'fake-id',
+              name: nil,
+              primary: false,
+              private_ip: '10.0.0.100',
+              private_ip_allocation_method: 'Dynamic',
+              private_ip_address_version: 'IPv4'
+            }],
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic'
           }
@@ -1073,6 +1126,14 @@ describe Bosh::AzureCloud::AzureClient do
             network_security_group: fake_nsg,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
+            ip_configurations: [{
+              id: 'fake-id',
+              name: nil,
+              primary: false,
+              private_ip: '10.0.0.100',
+              private_ip_allocation_method: 'Dynamic',
+              private_ip_address_version: 'IPv4'
+            }],
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic'
           }
@@ -1131,6 +1192,15 @@ describe Bosh::AzureCloud::AzureClient do
             provisioning_state: 'fake-state',
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
+            ip_configurations: [{
+              id: 'fake-id',
+              name: nil,
+              primary: false,
+              private_ip: '10.0.0.100',
+              private_ip_allocation_method: 'Dynamic',
+              private_ip_address_version: 'IPv4',
+              application_security_groups: [fake_asg]
+            }],
             private_ip: '10.0.0.100',
             private_ip_allocation_method: 'Dynamic',
             application_security_groups: [fake_asg]
@@ -1151,6 +1221,58 @@ describe Bosh::AzureCloud::AzureClient do
           expect(
             azure_client.get_network_interface_by_name(resource_group_name, nic_name)
           ).to eq(fake_nic)
+        end
+      end
+
+      context 'when the primary ipConfiguration is not first in the response' do
+        let(:nic_response_body) do
+          {
+            'id' => 'fake-id',
+            'name' => 'fake-name',
+            'location' => 'fake-location',
+            'tags' => 'fake-tags',
+            'properties' => {
+              'provisioningState' => 'fake-state',
+              'dnsSettings' => { 'dnsServers' => [] },
+              'ipConfigurations' => [
+                {
+                  'id' => 'fake-secondary-id',
+                  'name' => 'ipconfig-secondary',
+                  'properties' => {
+                    'primary' => false,
+                    'privateIPAddress' => 'fd00::5',
+                    'privateIPAllocationMethod' => 'Static',
+                    'privateIPAddressVersion' => 'IPv6'
+                  }
+                },
+                {
+                  'id' => 'fake-primary-id',
+                  'name' => 'ipconfig-primary',
+                  'properties' => {
+                    'primary' => true,
+                    'privateIPAddress' => '10.0.0.100',
+                    'privateIPAllocationMethod' => 'Static',
+                    'privateIPAddressVersion' => 'IPv4'
+                  }
+                }
+              ]
+            }
+          }.to_json
+        end
+
+        it 'derives ip_configuration_id and private_ip from the primary entry, not index 0' do
+          stub_request(:get, nic_uri).to_return(
+            status: 200,
+            body: nic_response_body,
+            headers: {}
+          )
+
+          result = azure_client.get_network_interface_by_name(resource_group_name, nic_name)
+
+          expect(result[:ip_configuration_id]).to eq('fake-primary-id')
+          expect(result[:private_ip]).to eq('10.0.0.100')
+          expect(result[:private_ip_allocation_method]).to eq('Static')
+          expect(result[:ip_configurations].length).to eq(2)
         end
       end
     end
