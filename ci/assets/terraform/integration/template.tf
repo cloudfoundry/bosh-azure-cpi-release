@@ -45,7 +45,7 @@ resource "azurerm_resource_group" "azure_default_rg" {
 # Create a virtual network in the azure_default_rg resource group
 resource "azurerm_virtual_network" "azure_bosh_network_in_default_rg" {
   name                = "azure_bosh_network"
-  address_space       = ["10.0.0.0/16"]
+  address_space       = ["10.0.0.0/16", "fd00::/48"]
   location            = var.location
   resource_group_name = azurerm_resource_group.azure_default_rg.name
 }
@@ -66,6 +66,13 @@ resource "azurerm_subnet" "azure_subnet_appgw_in_default_rg" {
   resource_group_name  = azurerm_resource_group.azure_default_rg.name
   virtual_network_name = azurerm_virtual_network.azure_bosh_network_in_default_rg.name
   address_prefixes     = ["10.0.2.0/24"]
+}
+
+resource "azurerm_subnet" "azure_dual_stack_subnet_in_default_rg" {
+  name                 = "azure_dual_stack_subnet"
+  resource_group_name  = azurerm_resource_group.azure_default_rg.name
+  virtual_network_name = azurerm_virtual_network.azure_bosh_network_in_default_rg.name
+  address_prefixes     = ["10.0.3.0/24", "fd00::/64"]
 }
 
 # Create a default Storage Account in the azure_default_rg resource group
@@ -391,4 +398,7 @@ output "asg_name" {
 }
 output "application_gateway_name" {
   value = azurerm_application_gateway.azure_application_gateway.name
+}
+output "dual_stack_subnet_name" {
+  value = azurerm_subnet.azure_dual_stack_subnet_in_default_rg.name
 }
