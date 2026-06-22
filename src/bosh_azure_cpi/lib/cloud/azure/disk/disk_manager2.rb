@@ -139,7 +139,7 @@ module Bosh::AzureCloud
       _get_disk(resource_group_name, disk_name)
     end
 
-    def snapshot_disk(snapshot_id, disk_name, metadata)
+    def snapshot_disk(snapshot_id, disk_name, metadata, incremental: false)
       @logger.info("snapshot_disk(#{snapshot_id}, #{disk_name}, #{metadata})")
       resource_group_name = snapshot_id.resource_group_name()
       snapshot_name = snapshot_id.disk_name
@@ -148,7 +148,8 @@ module Bosh::AzureCloud
         tags: metadata.merge(
           'original' => disk_name
         ),
-        disk_name: disk_name
+        disk_name: disk_name,
+        incremental: incremental
       }
       @logger.info("Start to create a snapshot '#{snapshot_name}' from a managed disk '#{disk_name}'")
       @azure_client.create_managed_snapshot(resource_group_name, snapshot_params)
@@ -241,6 +242,114 @@ module Bosh::AzureCloud
         mbps: mbps,
         disk_encryption_set_name: disk_encryption_set_name
       }
+    end
+
+    # Instant Access Snapshots are not used here: they only allow creating PremiumV2/Ultra disks
+    # from the snapshot, so cross-type conversion still requires waiting for completionPercent == 100.
+    def recreate_disk_with_type(disk_id, disk, new_account_type, new_size_in_gib = nil, iops = nil, mbps = nil)
+      @logger.info("recreate_disk_with_type(#{disk_id}, #{new_account_type}, #{new_size_in_gib})")
+      resource_group_name = disk_id.resource_group_name
+      old_disk_name = disk_id.disk_name
+
+      # 1. Snapshot the existing disk
+      snapshot_id = DiskId.create(disk_id.caching, true, resource_group_name: resource_group_name)
+      snapshot_name = snapshot_id.disk_name
+      snapshot_disk(snapshot_id, old_disk_name, {}, incremental: true)
+      @logger.info("Snapshot '#{snapshot_name}' created from disk '#{old_disk_name}' for type conversion")
+
+      unless has_snapshot?(resource_group_name, snapshot_name)
+        error_message = "recreate_disk_with_type - Cannot find snapshot '#{snapshot_name}' in resource group '#{resource_group_name}', abort type conversion.\n"
+        error_message += "You need to convert '#{disk_id}' to type '#{new_account_type}' manually."
+        raise Bosh::Clouds::CloudError, error_message
+      end
+
+      # 2. Wait for incremental snapshot copy to complete (required for PremiumV2_LRS / UltraSSD_LRS)
+      wait_for_snapshot_copy(resource_group_name, snapshot_name)
+
+      # 3. Create a new disk from the snapshot with the target type
+      new_disk_id = DiskId.create(disk_id.caching, true, resource_group_name: resource_group_name)
+      new_disk_name = new_disk_id.disk_name
+      disk_params = {
+        name: new_disk_name,
+        location: disk[:location],
+        account_type: new_account_type,
+        tags: disk[:tags]
+      }
+      disk_params[:zone] = disk[:zone] unless disk[:zone].nil?
+      disk_params[:disk_size] = new_size_in_gib unless new_size_in_gib.nil?
+      disk_params[:iops] = iops unless iops.nil?
+      disk_params[:mbps] = mbps unless mbps.nil?
+
+      max_retries = 2
+      retry_count = 0
+      begin
+        @azure_client.create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
+      rescue StandardError => e
+        if retry_count < max_retries
+          retry_count += 1
+          @logger.info("recreate_disk_with_type - Error creating '#{new_disk_name}' from snapshot '#{snapshot_name}': #{e.inspect}. Retry #{retry_count}/#{max_retries}.")
+          retry
+        end
+
+        error_message = "recreate_disk_with_type - Failed to create disk '#{new_disk_name}' from snapshot '#{snapshot_name}' in resource group '#{resource_group_name}'.\n"
+        error_message += "You need to recover '#{disk_id}' manually from snapshot '#{snapshot_name}'. Try:\n"
+        error_message += "    'az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{new_account_type} --name #{new_disk_name} --source #{snapshot_name}'\n"
+        error_message += "#{e.inspect}\n#{e.backtrace.join("\n")}"
+        raise Bosh::Clouds::CloudError, error_message
+      end
+
+      # 4. Verify the new disk exists before deleting the old one
+      unless has_data_disk?(new_disk_id)
+        error_message = "recreate_disk_with_type - Cannot find new disk '#{new_disk_name}' in resource group '#{resource_group_name}' after creation.\n"
+        error_message += "You need to recover '#{disk_id}' manually from snapshot '#{snapshot_name}'."
+        raise Bosh::Clouds::CloudError, error_message
+      end
+
+      # 5. Delete old disk, then clean up the snapshot (best-effort to avoid resource leaks on retry)
+      begin
+        delete_disk(resource_group_name, old_disk_name)
+      rescue StandardError => e
+        @logger.warn("recreate_disk_with_type - Failed to delete old disk '#{old_disk_name}': #{e.inspect}. Manual cleanup may be required.")
+      end
+
+      begin
+        delete_snapshot(snapshot_id)
+      rescue StandardError => e
+        @logger.warn("recreate_disk_with_type - Failed to delete snapshot '#{snapshot_name}': #{e.inspect}. Manual cleanup may be required.")
+      end
+
+      @logger.info("Disk '#{old_disk_name}' recreated as '#{new_disk_name}' with type '#{new_account_type}'")
+
+      new_disk_id
+    end
+
+    def wait_for_snapshot_copy(resource_group_name, snapshot_name, timeout: 1800, interval: 10)
+      @logger.info("Waiting for snapshot '#{snapshot_name}' to complete copy")
+      elapsed = 0
+      loop do
+        snapshot = @azure_client.get_managed_snapshot_by_name(resource_group_name, snapshot_name)
+        raise Bosh::Clouds::CloudError, "Snapshot '#{snapshot_name}' not found while waiting for copy" if snapshot.nil?
+
+        state = snapshot[:provisioning_state]
+        pct = snapshot[:completion_percent]
+
+        if state == 'Succeeded' && (pct.nil? || pct.to_f >= 100.0)
+          @logger.info("Snapshot '#{snapshot_name}' copy completed (completionPercent: #{pct})")
+          return
+        end
+
+        if state == 'Failed'
+          raise Bosh::Clouds::CloudError, "Snapshot '#{snapshot_name}' entered Failed state during copy"
+        end
+
+        if elapsed >= timeout
+          raise Bosh::Clouds::CloudError, "Timed out waiting for snapshot '#{snapshot_name}' copy to complete (state: #{state}, completionPercent: #{pct})"
+        end
+
+        @logger.info("Snapshot '#{snapshot_name}' copy in progress (state: #{state}, completionPercent: #{pct}), waiting...")
+        sleep(interval)
+        elapsed += interval
+      end
     end
 
     def migrate_to_zone(disk_id, disk, zone)

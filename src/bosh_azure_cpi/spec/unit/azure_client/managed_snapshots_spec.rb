@@ -37,17 +37,6 @@ describe Bosh::AzureCloud::AzureClient do
     let(:snapshot_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/snapshots/#{snapshot_name}?api-version=#{api_version_snapshot}" }
     let(:disk_uri) { "https://management.azure.com/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}?api-version=#{api_version_disk}" }
 
-    let(:snapshot_params) do
-      {
-        name: snapshot_name,
-        location: 'a',
-        tags: {
-          snapshot: snapshot_name
-        },
-        disk_name: disk_name
-      }
-    end
-
     let(:disk_response_body) do
       {
         id: 'a',
@@ -66,28 +55,10 @@ describe Bosh::AzureCloud::AzureClient do
       }
     end
 
-    let(:request_body) do
-      {
-        location: 'c',
-        tags: {
-          'snapshot' => snapshot_name
-        },
-        properties: {
-          creationData: {
-            createOption: 'Copy',
-            sourceUri: "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}"
-          }
-        }
-      }
-    end
-
-    it 'should raise no error' do
+    def stub_token_and_disk
       stub_request(:post, token_uri).to_return(
         status: 200,
-        body: {
-          'access_token' => valid_access_token,
-          'expires_on' => expires_on
-        }.to_json,
+        body: { 'access_token' => valid_access_token, 'expires_on' => expires_on }.to_json,
         headers: {}
       )
       stub_request(:get, disk_uri).to_return(
@@ -95,22 +66,86 @@ describe Bosh::AzureCloud::AzureClient do
         body: disk_response_body.to_json,
         headers: {}
       )
+    end
+
+    def stub_put_and_operation(request_body)
       stub_request(:put, snapshot_uri).with(body: request_body).to_return(
         status: 200,
         body: '',
-        headers: {
-          'azure-asyncoperation' => operation_status_link
-        }
+        headers: { 'azure-asyncoperation' => operation_status_link }
       )
       stub_request(:get, operation_status_link).to_return(
         status: 200,
         body: '{"status":"Succeeded"}',
         headers: {}
       )
+    end
 
-      expect do
-        azure_client.create_managed_snapshot(resource_group, snapshot_params)
-      end.not_to raise_error
+    context 'when incremental is not set (default)' do
+      let(:snapshot_params) do
+        {
+          name: snapshot_name,
+          tags: { snapshot: snapshot_name },
+          disk_name: disk_name
+        }
+      end
+
+      let(:request_body) do
+        {
+          location: 'c',
+          tags: { 'snapshot' => snapshot_name },
+          properties: {
+            creationData: {
+              createOption: 'Copy',
+              sourceUri: "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}"
+            },
+            incremental: false
+          }
+        }
+      end
+
+      it 'should raise no error and send incremental: false' do
+        stub_token_and_disk
+        stub_put_and_operation(request_body)
+
+        expect do
+          azure_client.create_managed_snapshot(resource_group, snapshot_params)
+        end.not_to raise_error
+      end
+    end
+
+    context 'when incremental is true' do
+      let(:snapshot_params) do
+        {
+          name: snapshot_name,
+          tags: { snapshot: snapshot_name },
+          disk_name: disk_name,
+          incremental: true
+        }
+      end
+
+      let(:request_body) do
+        {
+          location: 'c',
+          tags: { 'snapshot' => snapshot_name },
+          properties: {
+            creationData: {
+              createOption: 'Copy',
+              sourceUri: "/subscriptions/#{subscription_id}/resourceGroups/#{resource_group}/providers/Microsoft.Compute/disks/#{disk_name}"
+            },
+            incremental: true
+          }
+        }
+      end
+
+      it 'should raise no error and send incremental: true' do
+        stub_token_and_disk
+        stub_put_and_operation(request_body)
+
+        expect do
+          azure_client.create_managed_snapshot(resource_group, snapshot_params)
+        end.not_to raise_error
+      end
     end
   end
 
@@ -196,7 +231,8 @@ describe Bosh::AzureCloud::AzureClient do
           location: 'g',
           tags: { 'h' => 'i' },
           provisioning_state: 'e',
-          disk_size: 100
+          disk_size: 100,
+          completion_percent: nil
         }
       end
 

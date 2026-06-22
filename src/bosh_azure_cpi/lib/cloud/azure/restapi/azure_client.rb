@@ -1111,6 +1111,9 @@ module Bosh::AzureCloud
       }
       disk['zones'] = [disk_params[:zone]] unless disk_params[:zone].nil?
       disk['tags']  = disk_params[:tags] unless disk_params[:tags].nil?
+      disk['properties']['diskSizeGB'] = disk_params[:disk_size] unless disk_params[:disk_size].nil?
+      disk['properties']['diskIOPSReadWrite'] = disk_params[:iops] unless disk_params[:iops].nil?
+      disk['properties']['diskMBpsReadWrite'] = disk_params[:mbps] unless disk_params[:mbps].nil?
       http_put(disk_url, disk)
     end
 
@@ -1291,7 +1294,8 @@ module Bosh::AzureCloud
           'creationData' => {
             'createOption' => 'Copy',
             'sourceUri' => rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: disk_name)
-          }
+          },
+          'incremental' => params[:incremental] || false
         }
       }
 
@@ -1332,6 +1336,7 @@ module Bosh::AzureCloud
         properties = result['properties']
         snapshot[:provisioning_state] = properties['provisioningState']
         snapshot[:disk_size]          = properties['diskSizeGB']
+        snapshot[:completion_percent] = properties['completionPercent']
       end
       snapshot
     end
