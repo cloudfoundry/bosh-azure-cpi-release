@@ -1114,6 +1114,30 @@ describe Bosh::AzureCloud::AzureClient do
           end.not_to raise_error
         end
       end
+
+      context 'when a public IP has no ipConfiguration of the matching address family' do
+        let(:nic_params) do
+          {
+            public_ip: { id: 'fake-public-ip-id', public_ip_address_version: 'IPv6' },
+            ip_configurations: [
+              { name: 'ipconfig0-0', ip_version: 'IPv4', subnet: subnet, private_ip: '10.0.0.5' }
+            ]
+          }
+        end
+
+        it 'raises an error instead of silently dropping the public IP' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {}.to_json,
+            headers: {}
+          )
+
+          expect do
+            azure_client.create_network_interface(resource_group, nic_params)
+          end.to raise_error(Bosh::AzureCloud::AzureError, /no ipConfiguration matches the public IP address version 'IPv6'/)
+          expect(a_request(:put, network_interface_uri)).not_to have_been_made
+        end
+      end
     end
   end
 

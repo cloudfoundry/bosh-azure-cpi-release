@@ -2443,6 +2443,10 @@ module Bosh::AzureCloud
       public_ip_version = public_ip && (public_ip[:public_ip_address_version] || 'IPv4')
       public_ip_attached = false
 
+      if public_ip && ip_configurations.none? { |ipconfig| (ipconfig[:ip_version] || 'IPv4') == public_ip_version }
+        raise AzureError, "create_network_interface - no ipConfiguration matches the public IP address version '#{public_ip_version}' for network interface '#{nic_params[:name]}'"
+      end
+
       ip_configurations.each_with_index.map do |ipconfig, idx|
         ip_version = ipconfig[:ip_version] || 'IPv4'
         is_primary = idx.zero?
