@@ -21,10 +21,11 @@ GEM
       logging (~> 2.2.2)
       openssl (>= 3.2.0)
       semi_semantic (~> 1.2.0)
-    bosh_cpi (2.6.0)
-      httpclient (~> 2.8.3)
-      membrane (~> 1.1.0)
-      rspec
+    bosh_cpi (3.0.0)
+      base64
+      httpclient
+      logger
+      membrane
     concurrent-ruby (1.3.7)
     connection_pool (3.0.2)
     crack (1.0.1)
@@ -59,19 +60,22 @@ GEM
     faraday_middleware (1.2.1)
       faraday (~> 1.0)
     hashdiff (1.2.1)
-    httpclient (2.8.3)
+    httpclient (2.9.0)
+      mutex_m
     json (2.20.0)
     jwt (3.2.0)
       base64
     language_server-protocol (3.17.0.5)
     lint_roller (1.1.0)
     little-plugger (1.1.4)
+    logger (1.7.0)
     logging (2.2.2)
       little-plugger (~> 1.1)
       multi_json (~> 1.10)
     membrane (1.1.0)
     multi_json (1.21.1)
     multipart-post (2.4.1)
+    mutex_m (0.3.0)
     net-http-persistent (4.0.8)
       connection_pool (>= 2.2.4, < 4)
     net-protocol (0.2.2)
