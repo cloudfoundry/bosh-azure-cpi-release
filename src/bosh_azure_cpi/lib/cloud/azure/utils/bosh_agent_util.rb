@@ -23,8 +23,8 @@ module Bosh::AzureCloud
     #   }
     # }
     #
-    def encoded_user_data(instance_id, dns, agent_id, network_spec, environment, vm_params, config, computer_name = nil)
-      user_data = user_data_obj(instance_id, dns, agent_id, network_spec, environment, vm_params, config, computer_name)
+    def encoded_user_data(instance_id, dns, agent_id, network_spec, environment, vm_params, config, computer_name = nil, nic_groups_to_iface = {})
+      user_data = user_data_obj(instance_id, dns, agent_id, network_spec, environment, vm_params, config, computer_name, nic_groups_to_iface)
       Base64.strict_encode64(JSON.dump(user_data))
     end
 
@@ -37,7 +37,7 @@ module Bosh::AzureCloud
     # The agent settings are written directly to the VM's custom data.
     # The stemcell API version is used to determine compatibility with the agent on the stemcell.
     # The agent will read the base metadata, and additionally the agent settings
-    def user_data_obj(instance_id, dns, agent_id, network_spec, environment, vm_params, config, computer_name = nil)
+    def user_data_obj(instance_id, dns, agent_id, network_spec, environment, vm_params, config, computer_name = nil, nic_groups_to_iface = {})
       user_data = { }
       if computer_name
         user_data[:'instance-id'] = instance_id
@@ -47,7 +47,7 @@ module Bosh::AzureCloud
       end
       user_data[:dns] = { nameserver: dns } if dns
 
-      user_data.merge!(initial_agent_settings(agent_id, network_spec, environment, vm_params, config))
+      user_data.merge!(initial_agent_settings(agent_id, network_spec, environment, vm_params, config, nic_groups_to_iface))
 
       user_data
     end
@@ -74,13 +74,13 @@ module Bosh::AzureCloud
     # @param [Hash] environment
     # @param [Hash] vm_params
     # @return [Hash]
-    def initial_agent_settings(agent_id, network_spec, environment, vm_params, config)
+    def initial_agent_settings(agent_id, network_spec, environment, vm_params, config, nic_groups_to_iface = {})
       settings = {
         'vm' => {
           'name' => vm_params[:name]
         },
         'agent_id' => agent_id,
-        'networks' => _agent_network_spec(network_spec),
+        'networks' => _agent_network_spec(network_spec, nic_groups_to_iface),
         'disks' => {
           'system' => '/dev/sda',
           'persistent' => {}
@@ -101,9 +101,20 @@ module Bosh::AzureCloud
 
     private
 
-    def _agent_network_spec(network_spec)
+    # Build agent network spec with DHCP and optional interface alias.
+    #
+    # When nic_groups_to_iface is provided (dual-stack deployments), networks
+    # whose spec contains a 'nic_group' key are annotated with an 'alias' field
+    # (e.g. "eth0") so the bosh-agent can map multiple networks to the same OS
+    # interface without needing a MAC address (which Azure does not provide at
+    # NIC creation time).
+    def _agent_network_spec(network_spec, nic_groups_to_iface = {})
       Hash[*network_spec.map do |name, settings|
         settings['use_dhcp'] = true
+        nic_group = settings['nic_group']
+        if nic_group && nic_groups_to_iface[nic_group]
+          settings['alias'] = nic_groups_to_iface[nic_group]
+        end
         [name, settings]
       end.flatten]
     end

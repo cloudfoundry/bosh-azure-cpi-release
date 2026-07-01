@@ -30,6 +30,8 @@ RSpec.configure do |rspec_config|
 
     @vnet_name                   = ENV.fetch('BOSH_AZURE_VNET_NAME')
     @subnet_name                 = ENV.fetch('BOSH_AZURE_SUBNET_NAME')
+    @dual_stack_subnet_name      = ENV['BOSH_AZURE_DUAL_STACK_SUBNET_NAME']
+    @compute_gallery_name        = ENV['BOSH_AZURE_COMPUTE_GALLERY_NAME']
   end
 
   rspec_config.before do
