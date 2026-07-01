@@ -73,12 +73,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
-                  publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  }
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
+                  publicIPAddress: { id: nic_params[:public_ip][:id] }
                 }
               }],
               dnsSettings: {
@@ -148,12 +148,10 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nil,
                   privateIPAllocationMethod: 'Dynamic',
-                  publicIPAddress: nil,
-                  subnet: {
-                    id: subnet[:id]
-                  }
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true
                 }
               }],
               dnsSettings: {
@@ -224,12 +222,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
-                  publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  }
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
+                  publicIPAddress: { id: nic_params[:public_ip][:id] }
                 }
               }],
               dnsSettings: {
@@ -284,12 +282,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
                   publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  },
                   loadBalancerBackendAddressPools: nic_params[:load_balancers].map { |lb| { id: lb[:backend_address_pools][0][:id] } },
                   loadBalancerInboundNatRules: nic_params[:load_balancers].flat_map { |lb| lb[:frontend_ip_configurations][0][:inbound_nat_rules] }.compact
                 }
@@ -663,12 +661,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
                   publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  },
                   applicationSecurityGroups: [
                     {
                       id: 'fake-asg-id-1'
@@ -731,12 +729,12 @@ describe Bosh::AzureCloud::AzureClient do
               ipConfigurations: [{
                 name: nic_params[:ipconfig_name],
                 properties: {
-                  privateIPAddress: nic_params[:private_ip],
                   privateIPAllocationMethod: 'Static',
+                  privateIPAddressVersion: 'IPv4',
+                  subnet: { id: subnet[:id] },
+                  primary: true,
+                  privateIPAddress: nic_params[:private_ip],
                   publicIPAddress: { id: nic_params[:public_ip][:id] },
-                  subnet: {
-                    id: subnet[:id]
-                  },
                   applicationGatewayBackendAddressPools: nic_params[:application_gateways].map { |agw| { id: agw[:backend_address_pools][0][:id] } }
                 }
               }],
@@ -1034,6 +1032,113 @@ describe Bosh::AzureCloud::AzureClient do
           end
         end
       end
+
+      context 'with multiple ip_configurations and a public IP' do
+        let(:nic_params) do
+          {
+            name: nic_name,
+            location: 'fake-location',
+            tags: {},
+            enable_ip_forwarding: false,
+            enable_accelerated_networking: false,
+            dns_servers: nil,
+            public_ip: { id: 'fake-public-ip-id', public_ip_address_version: 'IPv4' },
+            network_security_group: { id: nsg_id },
+            application_security_groups: [],
+            load_balancers: nil,
+            application_gateways: nil,
+            ip_configurations: [
+              { name: 'ipconfig0-0', ip_version: 'IPv6', subnet: subnet, private_ip: 'fd00::5' },
+              { name: 'ipconfig0-1', ip_version: 'IPv4', subnet: subnet, private_ip: '10.0.0.5' }
+            ]
+          }
+        end
+        let(:request_body) do
+          {
+            name: nic_name,
+            location: 'fake-location',
+            tags: {},
+            properties: {
+              networkSecurityGroup: { id: nsg_id },
+              enableIPForwarding: false,
+              enableAcceleratedNetworking: false,
+              ipConfigurations: [
+                {
+                  name: 'ipconfig0-0',
+                  properties: {
+                    privateIPAllocationMethod: 'Static',
+                    privateIPAddressVersion: 'IPv6',
+                    subnet: { id: subnet[:id] },
+                    primary: true,
+                    privateIPAddress: 'fd00::5'
+                  }
+                },
+                {
+                  name: 'ipconfig0-1',
+                  properties: {
+                    privateIPAllocationMethod: 'Static',
+                    privateIPAddressVersion: 'IPv4',
+                    subnet: { id: subnet[:id] },
+                    primary: false,
+                    privateIPAddress: '10.0.0.5',
+                    publicIPAddress: { id: 'fake-public-ip-id' }
+                  }
+                }
+              ],
+              dnsSettings: { dnsServers: [] }
+            }
+          }
+        end
+
+        it 'attaches the public IP to the ipConfig whose family matches, regardless of order' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: { 'access_token' => valid_access_token, 'expires_on' => expires_on }.to_json,
+            headers: {}
+          )
+          stub_request(:put, network_interface_uri)
+            .with(body: request_body.to_json)
+            .to_return(
+              status: 200,
+              body: '',
+              headers: { 'azure-asyncoperation' => operation_status_link }
+            )
+          stub_request(:get, operation_status_link).to_return(
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
+
+          expect do
+            azure_client.create_network_interface(resource_group, nic_params)
+          end.not_to raise_error
+        end
+      end
+
+      context 'when a public IP has no ipConfiguration of the matching address family' do
+        let(:nic_params) do
+          {
+            public_ip: { id: 'fake-public-ip-id', public_ip_address_version: 'IPv6' },
+            ip_configurations: [
+              { name: 'ipconfig0-0', ip_version: 'IPv4', subnet: subnet, private_ip: '10.0.0.5' }
+            ]
+          }
+        end
+
+        it 'raises an error instead of silently dropping the public IP' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {}.to_json,
+            headers: {}
+          )
+
+          expect do
+            azure_client.create_network_interface(resource_group, nic_params)
+          end.to raise_error(Bosh::AzureCloud::AzureError, /no ipConfiguration matches the public IP address version 'IPv6'/)
+          expect(a_request(:put, network_interface_uri)).not_to have_been_made
+        end
+      end
     end
   end
+
 end

@@ -1573,6 +1573,8 @@ module Bosh::AzureCloud
     def create_network_interface(resource_group_name, nic_params)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_NETWORK_INTERFACES, resource_group_name: resource_group_name, name: nic_params[:name])
 
+      ip_configs_json = build_ip_configurations(nic_params)
+
       interface = {
         'name' => nic_params[:name],
         'location' => nic_params[:location],
@@ -1581,48 +1583,12 @@ module Bosh::AzureCloud
           'networkSecurityGroup' => nic_params[:network_security_group].nil? ? nil : { 'id' => nic_params[:network_security_group][:id] },
           'enableIPForwarding' => nic_params[:enable_ip_forwarding],
           'enableAcceleratedNetworking' => nic_params[:enable_accelerated_networking],
-          'ipConfigurations' => [
-            {
-              'name' => nic_params[:ipconfig_name],
-              'properties' => {
-                'privateIPAddress' => nic_params[:private_ip],
-                'privateIPAllocationMethod' => nic_params[:private_ip].nil? ? 'Dynamic' : 'Static',
-                'publicIPAddress' => nic_params[:public_ip].nil? ? nil : { 'id' => nic_params[:public_ip][:id] },
-                'subnet' => {
-                  'id' => nic_params[:subnet][:id]
-                }
-              }
-            }
-          ],
+          'ipConfigurations' => ip_configs_json,
           'dnsSettings' => {
             'dnsServers' => nic_params[:dns_servers].nil? ? [] : nic_params[:dns_servers]
           }
         }
       }
-
-      application_security_groups = []
-      asg_params = nic_params.fetch(:application_security_groups, [])
-      asg_params.each do |asg_param|
-        application_security_groups.push('id' => asg_param[:id])
-      end
-      interface['properties']['ipConfigurations'][0]['properties']['applicationSecurityGroups'] = application_security_groups unless application_security_groups.empty?
-
-      # see: Bosh::AzureCloud::VMManager._get_load_balancers
-      load_balancers = nic_params[:load_balancers]
-      unless load_balancers.nil?
-        backend_pools = load_balancers.map { |load_balancer| { id: load_balancer[:backend_address_pools][0][:id] } }
-        inbound_nat_rules = load_balancers.flat_map { |load_balancer| load_balancer[:frontend_ip_configurations][0][:inbound_nat_rules] }.compact
-        interface['properties']['ipConfigurations'][0]['properties']['loadBalancerBackendAddressPools'] = backend_pools
-        interface['properties']['ipConfigurations'][0]['properties']['loadBalancerInboundNatRules'] = inbound_nat_rules
-      end
-
-      # see: Bosh::AzureCloud::VMManager._get_application_gateways
-      application_gateways = nic_params[:application_gateways]
-      unless application_gateways.nil?
-        # NOTE: backend_address_pools[0] should always be used. (When `application_gateway/backend_pool_name` is specified, the named pool will always be first here.)
-        backend_pools = application_gateways.map { |application_gateway| { id: application_gateway[:backend_address_pools][0][:id] } }
-        interface['properties']['ipConfigurations'][0]['properties']['applicationGatewayBackendAddressPools'] = backend_pools
-      end
 
       http_put(url, interface)
     end
@@ -2461,6 +2427,85 @@ module Bosh::AzureCloud
       image
     end
 
+    def build_ip_configurations(nic_params)
+      ip_configurations = nic_params[:ip_configurations]
+
+      if ip_configurations.nil?
+        ip_configurations = [{
+          name: nic_params[:ipconfig_name],
+          private_ip: nic_params[:private_ip],
+          ip_version: 'IPv4',
+          subnet: nic_params[:subnet]
+        }]
+      end
+
+      public_ip = nic_params[:public_ip]
+      public_ip_version = public_ip && (public_ip[:public_ip_address_version] || 'IPv4')
+      public_ip_attached = false
+
+      if public_ip && ip_configurations.none? { |ipconfig| (ipconfig[:ip_version] || 'IPv4') == public_ip_version }
+        raise AzureError, "create_network_interface - no ipConfiguration matches the public IP address version '#{public_ip_version}' for network interface '#{nic_params[:name]}'"
+      end
+
+      ip_configurations.each_with_index.map do |ipconfig, idx|
+        ip_version = ipconfig[:ip_version] || 'IPv4'
+        is_primary = idx.zero?
+
+        config_properties = {
+          'privateIPAllocationMethod' => ipconfig[:private_ip].nil? ? 'Dynamic' : 'Static',
+          'privateIPAddressVersion' => ip_version,
+          'subnet' => { 'id' => ipconfig[:subnet][:id] },
+          'primary' => is_primary
+        }
+
+        config_properties['privateIPAddress'] = ipconfig[:private_ip] unless ipconfig[:private_ip].nil?
+
+        # Public IP - attach to the first ipConfig of the matching IP family.
+        if public_ip && !public_ip_attached && ip_version == public_ip_version
+          config_properties['publicIPAddress'] = { 'id' => public_ip[:id] }
+          public_ip_attached = true
+        end
+
+        # Load balancers - use separate backend pools per IP version
+        if nic_params[:load_balancers]
+          version_key = ip_version == 'IPv6' ? :backend_address_pools_v6 : :backend_address_pools
+          backend_pools = nic_params[:load_balancers]
+                          .map { |lb| lb[version_key] }
+                          .compact
+                          .reject(&:empty?)
+                          .map { |pools| { 'id' => pools[0][:id] } }
+          config_properties['loadBalancerBackendAddressPools'] = backend_pools unless backend_pools.empty?
+
+          if ip_version == 'IPv4'
+            inbound_nat_rules = nic_params[:load_balancers]
+                                .flat_map { |lb| lb[:frontend_ip_configurations]&.first&.dig(:inbound_nat_rules) }
+                                .compact
+            config_properties['loadBalancerInboundNatRules'] = inbound_nat_rules unless inbound_nat_rules.empty?
+          end
+        end
+
+        # Application gateways - IPv4 backend only, as it does NOT support IPv6 backends
+        if ip_version == 'IPv4' && nic_params[:application_gateways]
+          agw_backend_pools = nic_params[:application_gateways]
+                              .map { |agw| agw[:backend_address_pools]&.first }
+                              .compact
+                              .map { |pool| { 'id' => pool[:id] } }
+          config_properties['applicationGatewayBackendAddressPools'] = agw_backend_pools unless agw_backend_pools.empty?
+        end
+
+        # ASGs - attach to all ipConfigs
+        asg_params = nic_params.fetch(:application_security_groups, [])
+        unless asg_params.empty?
+          config_properties['applicationSecurityGroups'] = asg_params.map { |asg| { 'id' => asg[:id] } }
+        end
+
+        {
+          'name' => ipconfig[:name],
+          'properties' => config_properties
+        }
+      end
+    end
+
     # @return [Hash, nil]
     def parse_network_interface(result, recursive: true)
       interface = nil
@@ -2491,59 +2536,78 @@ module Bosh::AzureCloud
           properties['dnsSettings']['dnsServers'].each { |dns| interface[:dns_settings].push(dns) }
         end
 
-        ip_configuration = properties['ipConfigurations'][0]
-        interface[:ip_configuration_id] = ip_configuration['id']
+        interface[:ip_configurations] = properties['ipConfigurations'].map do |ip_config|
+          _parse_ip_configuration(ip_config, recursive)
+        end
 
-        ip_configuration_properties = ip_configuration['properties']
-        interface[:private_ip] = ip_configuration_properties['privateIPAddress']
-        interface[:private_ip_allocation_method] = ip_configuration_properties['privateIPAllocationMethod']
-        unless ip_configuration_properties['publicIPAddress'].nil?
-          interface[:public_ip] = if recursive
-                                    get_public_ip(ip_configuration_properties['publicIPAddress']['id'])
-                                  else
-                                    { id: ip_configuration_properties['publicIPAddress']['id'] }
-                                  end
-        end
-        load_balancer_backend_pools = ip_configuration_properties['loadBalancerBackendAddressPools']
-        unless load_balancer_backend_pools.nil?
-          load_balancers = load_balancer_backend_pools.map do |lb_backend_pool|
-            if recursive
-              names = _parse_name_from_id(lb_backend_pool['id'])
-              load_balancer = get_load_balancer_by_name(names[:resource_group_name], names[:resource_name])
-            else
-              load_balancer = { id: lb_backend_pool['id'] }
-            end
-            load_balancer
-          end
-          interface[:load_balancers] = load_balancers
-        end
-        application_gateway_backend_pools = ip_configuration_properties['applicationGatewayBackendAddressPools']
-        unless application_gateway_backend_pools.nil?
-          application_gateways = application_gateway_backend_pools.map do |agw_backend_pool|
-            if recursive
-              names = _parse_name_from_id(agw_backend_pool['id'])
-              application_gateway = get_application_gateway_by_name(names[:resource_group_name], names[:resource_name])
-            else
-              application_gateway = { id: agw_backend_pool['id'] }
-            end
-            application_gateway
-          end
-          interface[:application_gateways] = application_gateways
-        end
-        unless ip_configuration_properties['applicationSecurityGroups'].nil?
-          asgs_properties = ip_configuration_properties['applicationSecurityGroups']
-          asgs = []
-          asgs_properties.each do |asg_property|
-            if recursive
-              asgs.push(get_application_security_group(asg_property['id']))
-            else
-              asgs.push(id: asg_property['id'])
-            end
-          end
-          interface[:application_security_groups] = asgs
-        end
+        primary_config = interface[:ip_configurations].find { |c| c[:primary] } || interface[:ip_configurations][0]
+
+        interface[:ip_configuration_id] = primary_config[:id]
+        interface[:private_ip] = primary_config[:private_ip]
+        interface[:private_ip_allocation_method] = primary_config[:private_ip_allocation_method]
+        interface[:public_ip] = primary_config[:public_ip] if primary_config[:public_ip]
+        interface[:load_balancers] = primary_config[:load_balancers] if primary_config[:load_balancers]
+        interface[:application_gateways] = primary_config[:application_gateways] if primary_config[:application_gateways]
+        interface[:application_security_groups] = primary_config[:application_security_groups] if primary_config[:application_security_groups]
       end
       interface
+    end
+
+    # Parse a single ipConfiguration from a NIC response
+    def _parse_ip_configuration(ip_configuration, recursive)
+      props = ip_configuration['properties']
+      config = {
+        id: ip_configuration['id'],
+        name: ip_configuration['name'],
+        primary: props['primary'] == true,
+        private_ip: props['privateIPAddress'],
+        private_ip_allocation_method: props['privateIPAllocationMethod'],
+        private_ip_address_version: props['privateIPAddressVersion'] || 'IPv4'
+      }
+
+      unless props['publicIPAddress'].nil?
+        config[:public_ip] = if recursive
+                               get_public_ip(props['publicIPAddress']['id'])
+                             else
+                               { id: props['publicIPAddress']['id'] }
+                             end
+      end
+
+      lb_backend_pools = props['loadBalancerBackendAddressPools']
+      unless lb_backend_pools.nil?
+        config[:load_balancers] = lb_backend_pools.map do |lb_backend_pool|
+          if recursive
+            names = _parse_name_from_id(lb_backend_pool['id'])
+            get_load_balancer_by_name(names[:resource_group_name], names[:resource_name])
+          else
+            { id: lb_backend_pool['id'] }
+          end
+        end
+      end
+
+      agw_backend_pools = props['applicationGatewayBackendAddressPools']
+      unless agw_backend_pools.nil?
+        config[:application_gateways] = agw_backend_pools.map do |agw_backend_pool|
+          if recursive
+            names = _parse_name_from_id(agw_backend_pool['id'])
+            get_application_gateway_by_name(names[:resource_group_name], names[:resource_name])
+          else
+            { id: agw_backend_pool['id'] }
+          end
+        end
+      end
+
+      unless props['applicationSecurityGroups'].nil?
+        config[:application_security_groups] = props['applicationSecurityGroups'].map do |asg_property|
+          if recursive
+            get_application_security_group(asg_property['id'])
+          else
+            { id: asg_property['id'] }
+          end
+        end
+      end
+
+      config
     end
 
     # @return [Hash, nil]
@@ -2557,6 +2621,7 @@ module Bosh::AzureCloud
         properties = result['properties']
         subnet[:provisioning_state] = properties['provisioningState']
         subnet[:address_prefix]     = properties['addressPrefix']
+        subnet[:address_prefixes]   = properties['addressPrefixes']
       end
       subnet
     end
