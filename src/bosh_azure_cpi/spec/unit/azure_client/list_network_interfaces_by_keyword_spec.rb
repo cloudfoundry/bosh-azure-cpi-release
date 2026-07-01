@@ -164,6 +164,20 @@ describe Bosh::AzureCloud::AzureClient do
           provisioning_state: 'c',
           dns_settings: %w[g h],
           ip_configuration_id: 'd0',
+          ip_configurations: [
+            {
+              id: 'd0',
+              name: nil,
+              primary: false,
+              private_ip: 'e0',
+              private_ip_allocation_method: 'f0',
+              private_ip_address_version: 'IPv4',
+              public_ip: { id: 'j' },
+              load_balancers: [{ id: 'k' }],
+              application_gateways: [{ id: 'l' }],
+              application_security_groups: [{ id: 'asg-id-1' }]
+            }
+          ],
           private_ip: 'e0',
           private_ip_allocation_method: 'f0',
           network_security_group: { id: 'i' },
@@ -182,6 +196,16 @@ describe Bosh::AzureCloud::AzureClient do
           provisioning_state: 'c',
           dns_settings: %w[g h],
           ip_configuration_id: 'd1',
+          ip_configurations: [
+            {
+              id: 'd1',
+              name: nil,
+              primary: false,
+              private_ip: 'e1',
+              private_ip_allocation_method: 'f1',
+              private_ip_address_version: 'IPv4'
+            }
+          ],
           private_ip: 'e1',
           private_ip_allocation_method: 'f1'
         }

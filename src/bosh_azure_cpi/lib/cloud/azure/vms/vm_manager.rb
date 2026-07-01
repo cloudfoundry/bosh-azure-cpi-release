@@ -161,7 +161,8 @@ module Bosh::AzureCloud
       when 'linux'
         vm_params[:ssh_username]  = @azure_config.ssh_user
         vm_params[:ssh_cert_data] = @azure_config.ssh_public_key
-        user_data = agent_settings.user_data_obj(instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config)
+        nic_groups_to_iface = _build_nic_groups_to_iface(network_configurator)
+        user_data = agent_settings.user_data_obj(instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config, nil, nic_groups_to_iface)
         vm_params[:custom_data] = agent_settings.encode_user_data(user_data)
       when 'windows'
         # Generate secure random strings as username and password for Windows VMs
@@ -184,7 +185,8 @@ module Bosh::AzureCloud
         vm_params[:windows_password] = "#{SecureRandom.uuid}#{SecureRandom.uuid.upcase}".chars.shuffle.join
         computer_name = generate_windows_computer_name
         vm_params[:computer_name] = computer_name
-        vm_params[:custom_data]   = agent_settings.encoded_user_data(instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config, computer_name)
+        nic_groups_to_iface = _build_nic_groups_to_iface(network_configurator)
+        vm_params[:custom_data]   = agent_settings.encoded_user_data(instance_id.to_s, network_configurator.default_dns, bosh_vm_meta.agent_id, network_spec, env, vm_params, config, computer_name, nic_groups_to_iface)
       end
 
       vm_params[:diag_storage_uri] = diagnostics_storage_account[:storage_blob_host] unless diagnostics_storage_account.nil?
@@ -591,6 +593,25 @@ module Bosh::AzureCloud
 
       # If resource group does not exist, create it
       @azure_client.create_resource_group(resource_group_name, location)
+    end
+
+    # Map each explicit nic_group to its OS interface name (eth0, eth1, ...),
+    # matching the NIC attachment order used by _create_network_interfaces.
+    # The bosh-agent uses this alias to bind networks to interfaces since Azure
+    # only assigns MACs after VM start. Groups without an explicit nic_group
+    # are omitted; single-stack VMs rely on the agent's 1-net-1-iface fallback.
+    #
+    # @param network_configurator [NetworkConfigurator]
+    # @return [Hash{String => String}] e.g. {"1" => "eth0", "2" => "eth1"}
+    def _build_nic_groups_to_iface(network_configurator)
+      nic_groups_to_iface = {}
+      network_configurator.nic_groups.each_with_index do |group_networks, nic_index|
+        nic_group = group_networks.first.spec['nic_group']
+        if nic_group
+          nic_groups_to_iface[nic_group] = "eth#{nic_index}"
+        end
+      end
+      nic_groups_to_iface
     end
   end
 end
