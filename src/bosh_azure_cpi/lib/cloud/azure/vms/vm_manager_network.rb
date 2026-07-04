@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'ipaddr'
+
 module Bosh::AzureCloud
   class VMManager
     private
@@ -97,19 +99,28 @@ module Bosh::AzureCloud
           load_balancer = @azure_client.get_load_balancer_by_name(load_balancer_config.resource_group_name, load_balancer_config.name)
           cloud_error("Cannot find the load balancer '#{load_balancer_config.name}'") if load_balancer.nil?
 
+          pools = load_balancer[:backend_address_pools]
+          pools = [pools] unless pools.is_a?(Array)
+
           if load_balancer_config.backend_pool_name
             # NOTE: This is the only place where we simultaneously have both the Bosh LB config (from the vm_type) AND the Azure LB info (from the Azure API).
             # Since the `AzureClient.create_network_interface` method only uses the first backend pool,
             # and since there is not a 1-to-1 mapping between the vm_type LB configs and LBs (despite the config property name, each vm_type LB config actually represents a single LB Backend Pool, not a whole LB),
             # we can therefore remove all pools EXCEPT the specified pool.
             # To handle multiple pools of a single LB, you should use 1 vm_type LB Hash (with LB name + backend_pool_name) per pool.
-            pools = load_balancer[:backend_address_pools]
-            pools = [pools] unless pools.is_a?(Array)
             pool = pools.find { |p| Hash(p)[:name] == load_balancer_config.backend_pool_name }
             cloud_error("'#{load_balancer_config.name}' does not have a backend_pool named '#{load_balancer_config.backend_pool_name}': #{load_balancer}") if pool.nil?
 
             load_balancer[:backend_address_pools] = [pool]
           end
+
+          if load_balancer_config.backend_pool_name_v6
+            pool_v6 = pools.find { |p| Hash(p)[:name] == load_balancer_config.backend_pool_name_v6 }
+            cloud_error("'#{load_balancer_config.name}' does not have a backend_pool named '#{load_balancer_config.backend_pool_name_v6}': #{load_balancer}") if pool_v6.nil?
+
+            load_balancer[:backend_address_pools_v6] = [pool_v6]
+          end
+
           load_balancer
         end
       end
@@ -198,26 +209,40 @@ module Bosh::AzureCloud
       # tasks to create NICs, NICs will be created in different threads
       tasks_creating = []
 
-      networks = network_configurator.networks
-      networks.each_with_index do |network, index|
-        network_security_group = _get_network_security_group(vm_props, network)
-        application_security_groups = _get_application_security_groups(vm_props, network)
-        ip_forwarding = _get_ip_forwarding(vm_props, network)
-        accelerated_networking = _get_accelerated_networking(vm_props, network)
-        nic_name = "#{vm_name}-#{index}"
+      nic_groups = network_configurator.nic_groups
+      nic_groups.each_with_index do |group_networks, nic_index|
+        primary_network = group_networks.first
+
+        network_security_group = _get_network_security_group(vm_props, primary_network)
+        application_security_groups = _get_application_security_groups(vm_props, primary_network)
+        ip_forwarding = _get_ip_forwarding(vm_props, primary_network)
+        accelerated_networking = _get_accelerated_networking(vm_props, primary_network)
+        nic_name = "#{vm_name}-#{nic_index}"
+        subnet = _get_network_subnet(primary_network)
+
+        ip_configurations = group_networks.each_with_index.map do |network, ipconfig_index|
+          ip_version = _detect_ip_version(network)
+          ipconfig = {
+            name: "ipconfig#{nic_index}-#{ipconfig_index}",
+            ip_version: ip_version,
+            subnet: subnet
+          }
+          ipconfig[:private_ip] = network.private_ip if network.respond_to?(:private_ip)
+          ipconfig
+        end
+
         nic_params = {
           name: nic_name,
           location: location,
-          private_ip: network.is_a?(ManualNetwork) ? network.private_ip : nil,
           network_security_group: network_security_group,
           application_security_groups: application_security_groups,
-          ipconfig_name: "ipconfig#{index}",
           enable_ip_forwarding: ip_forwarding,
-          enable_accelerated_networking: accelerated_networking
+          enable_accelerated_networking: accelerated_networking,
+          ip_configurations: ip_configurations
         }
-        nic_params[:subnet] = _get_network_subnet(network)
+
         # NOTE: The first NIC is the Primary/Gateway network. See: `Bosh::AzureCloud::NetworkConfigurator.initialize`.
-        if index.zero?
+        if nic_index.zero?
           nic_params[:public_ip] = public_ip
           nic_params[:tags] = primary_nic_tags
           nic_params[:load_balancers] = load_balancers
@@ -238,6 +263,17 @@ module Bosh::AzureCloud
       # Calling .wait before .value! to make sure that all tasks are completed.
       tasks_creating.map(&:wait)
       tasks_creating.map(&:value!)
+    end
+
+    # Determine whether a network's IP is IPv4 or IPv6
+    def _detect_ip_version(network)
+      has_explicit_ip = network.respond_to?(:private_ip) && network.private_ip && !network.private_ip.empty?
+      return 'IPv4' unless has_explicit_ip
+
+      IPAddr.new(network.private_ip).ipv6? ? 'IPv6' : 'IPv4'
+    rescue IPAddr::InvalidAddressError => e
+      @logger.warn("Invalid IP address '#{network.private_ip}': #{e.message}, defaulting to IPv4")
+      'IPv4'
     end
 
     def _delete_possible_network_interfaces(resource_group_name, vm_name)

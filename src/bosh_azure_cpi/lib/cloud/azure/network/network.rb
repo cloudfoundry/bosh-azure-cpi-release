@@ -2,7 +2,7 @@
 
 module Bosh::AzureCloud
   class Network
-    attr_reader :resource_group_name
+    attr_reader :resource_group_name, :nic_group
     attr_reader :spec
 
     RESOURCE_GROUP_NAME_KEY = 'resource_group_name'
@@ -24,6 +24,7 @@ module Bosh::AzureCloud
       @ip = spec['ip']
       @cloud_properties = spec['cloud_properties']
       @spec = spec
+      @nic_group = spec['nic_group'] || name
       @resource_group_name = if @cloud_properties.nil? || @cloud_properties[RESOURCE_GROUP_NAME_KEY].nil?
                                @azure_config.resource_group_name
                              else

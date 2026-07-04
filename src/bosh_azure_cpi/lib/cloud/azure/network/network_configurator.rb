@@ -15,7 +15,7 @@ module Bosh::AzureCloud
   class NetworkConfigurator
     include Helpers
 
-    attr_reader :vip_network, :networks
+    attr_reader :vip_network, :networks, :nic_groups
     attr_accessor :logger
 
     ##
@@ -73,6 +73,8 @@ module Bosh::AzureCloud
       end
 
       cloud_error('At least one dynamic or manual network must be defined') if @networks.empty?
+
+      @nic_groups = _compute_nic_groups(@networks)
     end
 
     # For multiple networks, use the default dns specified in spec.
@@ -83,6 +85,23 @@ module Bosh::AzureCloud
         return network.dns if network.has_default_dns?
       end
       @networks[0].dns
+    end
+
+    private
+
+    # Group networks by nic_group. Networks sharing the same nic_group value
+    # are placed on the same NIC (with multiple ipConfigurations).
+    # The primary network's group always comes first.
+    #
+    # @return [Array<Array<Network>>] each inner array = one NIC's networks
+    def _compute_nic_groups(networks)
+      primary = networks[0]
+      groups = { primary.nic_group => [primary] }
+      networks.drop(1).each do |network|
+        groups[network.nic_group] ||= []
+        groups[network.nic_group] << network
+      end
+      groups.values
     end
   end
 end
