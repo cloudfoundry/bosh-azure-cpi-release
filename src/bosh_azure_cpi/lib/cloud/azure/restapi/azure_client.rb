@@ -1551,20 +1551,22 @@ module Bosh::AzureCloud
     #  ==== Params
     #
     # Accepted key/value pairs are:
-    # * +:name+                         - String. Name of network interface.
-    # * +:location+                     - String. The location where the network interface will be created.
-    # * +:tags                          - Hash. The tags of the network interface.
-    # * +:enable_ip_forwarding          - Boolean. Indicates whether IP forwarding is enabled on this network interface.
-    # * +:enable_accelerated_networking - Boolean. Indicates whether accelerated networking is enabled on this network interface.
-    # * +:ipconfig_name+                - String. The name of ipConfigurations for the network interface.
-    # * +:private_ip                    - String. Private IP address which the network interface will use.
-    # * +:public_ip                     - Hash. The public IP which the network interface is bound to.
-    # * +:subnet                        - Hash. The subnet which the network interface is bound to.
-    # * +:dns_servers                   - Array. DNS servers.
-    # * +:network_security_group        - Hash. The network security group which the network interface is bound to.
-    # * +:application_security_groups   - Array. The application security groups which the network interface is bound to.
-    # * +:load_balancers                - Array<Hash>. The load balancers which the network interface is bound to. (see: Bosh::AzureCloud::VMManager._get_load_balancers)
-    # * +:application_gateways          - Array<Hash>. The application gateways which the network interface is bound to. (see: Bosh::AzureCloud::VMManager._get_application_gateways)
+    # * +:name+                          - String. Name of network interface.
+    # * +:location+                      - String. The location where the network interface will be created.
+    # * +:tags+                          - Hash. The tags of the network interface.
+    # * +:enable_ip_forwarding+          - Boolean. Indicates whether IP forwarding is enabled on this network interface.
+    # * +:enable_accelerated_networking+ - Boolean. Indicates whether accelerated networking is enabled on this network interface.
+    # * +:dns_servers+                   - Array. DNS servers.
+    # * +:network_security_group+        - Hash. The network security group which the network interface is bound to.
+    # * +:application_security_groups+   - Array. The application security groups which the network interface is bound to. (attached to every ipConfiguration)
+    # * +:public_ip+                     - Hash. The public IP to bind. It is attached to the first ipConfiguration whose IP family (+:ip_version+) matches the public IP's address version.
+    # * +:load_balancers+                - Array<Hash>. The load balancers which the network interface is bound to. (see: Bosh::AzureCloud::VMManager._get_load_balancers)
+    # * +:application_gateways+          - Array<Hash>. The application gateways which the network interface is bound to. IPv4 backends only. (see: Bosh::AzureCloud::VMManager._get_application_gateways)
+    # * +:ip_configurations+             - Array<Hash>. One entry per ipConfiguration. Each entry accepts:
+    # *   +:name+                        - String. Name of the ipConfiguration.
+    # *   +:ip_version+                  - String. 'IPv4' or 'IPv6'. Defaults to 'IPv4'.
+    # *   +:private_ip+                  - String. Private IP address (IPv4 or IPv6). If omitted, the allocation method is Dynamic.
+    # *   +:subnet+                      - Hash. The subnet which the ipConfiguration is bound to.
     #
     # @return [Boolean]
     #
@@ -2486,6 +2488,8 @@ module Bosh::AzureCloud
 
         # Application gateways - IPv4 backend only, as it does NOT support IPv6 backends
         if ip_version == 'IPv4' && nic_params[:application_gateways]
+          # NOTE: backend_address_pools[0] should always be used.
+          # When `application_gateway/backend_pool_name` is specified, the named pool will always be first here.
           agw_backend_pools = nic_params[:application_gateways]
                               .map { |agw| agw[:backend_address_pools]&.first }
                               .compact
