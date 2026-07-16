@@ -1673,6 +1673,78 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
+  describe '#build_ip_configurations' do
+    let(:subnet) { { id: 'fake-subnet-id' } }
+    let(:nic_params) do
+      {
+        load_balancers: [
+          {
+            backend_address_pools: [{ id: 'fake-lb-v4-id' }],
+            backend_address_pools_v6: [{ id: 'fake-lb-v6-id' }],
+            frontend_ip_configurations: [
+              {
+                public_ip: { public_ip_address_version: 'IPv4' },
+                inbound_nat_rules: [{ id: 'fake-nat-rule-v4-id' }]
+              },
+              {
+                public_ip: { public_ip_address_version: 'IPv6' },
+                inbound_nat_rules: [{ id: 'fake-nat-rule-v6-id' }]
+              }
+            ]
+          }
+        ],
+        application_gateways: [
+          {
+            backend_address_pools: [{ id: 'fake-agw-pool-id' }]
+          }
+        ],
+        ip_configurations: [
+          {
+            name: 'ipconfig0-0',
+            ip_version: 'IPv4',
+            subnet: subnet,
+            private_ip: '10.0.0.5'
+          },
+          {
+            name: 'ipconfig0-1',
+            ip_version: 'IPv4',
+            subnet: subnet,
+            private_ip: '10.0.0.6'
+          },
+          {
+            name: 'ipconfig0-2',
+            ip_version: 'IPv6',
+            subnet: subnet,
+            private_ip: 'fd00::5'
+          }
+        ]
+      }
+    end
+
+    it 'places NAT rules once per family and application gateway pools only on primary IPv4' do
+      ip_configurations = azure_client.send(:build_ip_configurations, nic_params)
+      primary_ipv4 = ip_configurations[0]['properties']
+      secondary_ipv4 = ip_configurations[1]['properties']
+      ipv6 = ip_configurations[2]['properties']
+
+      expect(primary_ipv4).to include(
+        'loadBalancerBackendAddressPools' => [{ 'id' => 'fake-lb-v4-id' }],
+        'loadBalancerInboundNatRules' => [{ id: 'fake-nat-rule-v4-id' }],
+        'applicationGatewayBackendAddressPools' => [{ 'id' => 'fake-agw-pool-id' }]
+      )
+      expect(secondary_ipv4).to include(
+        'loadBalancerBackendAddressPools' => [{ 'id' => 'fake-lb-v4-id' }]
+      )
+      expect(secondary_ipv4).not_to have_key('loadBalancerInboundNatRules')
+      expect(secondary_ipv4).not_to have_key('applicationGatewayBackendAddressPools')
+      expect(ipv6).to include(
+        'loadBalancerBackendAddressPools' => [{ 'id' => 'fake-lb-v6-id' }],
+        'loadBalancerInboundNatRules' => [{ id: 'fake-nat-rule-v6-id' }]
+      )
+      expect(ipv6).not_to have_key('applicationGatewayBackendAddressPools')
+    end
+  end
+
   describe '#parse_network_interface — dual-stack NIC response' do
     let(:dual_stack_nic_response) do
       {

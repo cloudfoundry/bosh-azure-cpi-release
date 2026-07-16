@@ -2445,6 +2445,7 @@ module Bosh::AzureCloud
       public_ip = nic_params[:public_ip]
       public_ip_version = public_ip && (public_ip[:public_ip_address_version] || 'IPv4')
       public_ip_attached = false
+      nat_rules_attached_by_ip_version = {}
 
       if public_ip && ip_configurations.none? { |ipconfig| (ipconfig[:ip_version] || 'IPv4') == public_ip_version }
         raise AzureError, "create_network_interface - no ipConfiguration matches the public IP address version '#{public_ip_version}' for network interface '#{nic_params[:name]}'"
@@ -2479,23 +2480,26 @@ module Bosh::AzureCloud
                           .map { |pools| { 'id' => pools[0][:id] } }
           config_properties['loadBalancerBackendAddressPools'] = backend_pools unless backend_pools.empty?
 
-          inbound_nat_rules = nic_params[:load_balancers].flat_map do |lb|
-            frontends = lb[:frontend_ip_configurations]
-            next [] if frontends.nil?
+          unless nat_rules_attached_by_ip_version[ip_version]
+            inbound_nat_rules = nic_params[:load_balancers].flat_map do |lb|
+              frontends = lb[:frontend_ip_configurations]
+              next [] if frontends.nil?
 
-            frontends = [frontends] unless frontends.is_a?(Array)
-            frontends.select do |frontend|
-              frontend_ip_version = frontend[:private_ip_address_version] ||
-                                    frontend.dig(:public_ip, :public_ip_address_version) ||
-                                    'IPv4'
-              frontend_ip_version == ip_version
-            end.flat_map { |frontend| frontend[:inbound_nat_rules] || [] }
-          end.compact
-          config_properties['loadBalancerInboundNatRules'] = inbound_nat_rules unless inbound_nat_rules.empty?
+              frontends = [frontends] unless frontends.is_a?(Array)
+              frontends.select do |frontend|
+                frontend_ip_version = frontend[:private_ip_address_version] ||
+                                      frontend.dig(:public_ip, :public_ip_address_version) ||
+                                      'IPv4'
+                frontend_ip_version == ip_version
+              end.flat_map { |frontend| frontend[:inbound_nat_rules] || [] }
+            end.compact
+            config_properties['loadBalancerInboundNatRules'] = inbound_nat_rules unless inbound_nat_rules.empty?
+            nat_rules_attached_by_ip_version[ip_version] = true
+          end
         end
 
-        # Application gateways - IPv4 backend only, as it does NOT support IPv6 backends
-        if ip_version == 'IPv4' && nic_params[:application_gateways]
+        # Application gateways - preserve legacy placement on the primary IPv4 ipConfig.
+        if is_primary && ip_version == 'IPv4' && nic_params[:application_gateways]
           # NOTE: backend_address_pools[0] should always be used.
           # When `application_gateway/backend_pool_name` is specified, the named pool will always be first here.
           agw_backend_pools = nic_params[:application_gateways]
