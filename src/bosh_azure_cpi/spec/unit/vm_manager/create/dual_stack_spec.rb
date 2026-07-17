@@ -12,6 +12,12 @@ describe Bosh::AzureCloud::VMManager, 'dual-stack NIC creation' do
 
   let(:manual_network_v4) { build_manual_network(private_ip: '10.0.0.5', subnet_name: 'dual-stack-subnet') }
   let(:manual_network_v6) { build_manual_network(private_ip: 'fd00::5',  subnet_name: 'dual-stack-subnet') }
+  let(:interleaved_networks) do
+    Array.new(17) do |index|
+      private_ip = index.even? ? "10.0.0.#{index + 5}" : "fd00::#{index + 5}"
+      build_manual_network(private_ip: private_ip, subnet_name: 'dual-stack-subnet')
+    end
+  end
   let(:dynamic_net) do
     instance_double(Bosh::AzureCloud::DynamicNetwork).tap do |n|
       allow(n).to receive(:resource_group_name).and_return(MOCK_RESOURCE_GROUP_NAME)
@@ -78,6 +84,21 @@ describe Bosh::AzureCloud::VMManager, 'dual-stack NIC creation' do
         a_hash_including(name: 'ipconfig0-0', ip_version: 'IPv4', private_ip: '10.0.0.5', subnet: dual_stack_subnet),
         a_hash_including(name: 'ipconfig0-1', ip_version: 'IPv6', private_ip: 'fd00::5',  subnet: dual_stack_subnet)
       ])
+    end
+  end
+
+  context 'when a nic_group contains multiple networks of the same IP family' do
+    before do
+      allow(network_configurator).to receive(:nic_groups)
+        .and_return([interleaved_networks])
+    end
+
+    it 'keeps their relative order while placing IPv4 configurations before IPv6' do
+      nic = capture_nic_params.first
+      expected_ipv4 = (0...17).select(&:even?).map { |index| "10.0.0.#{index + 5}" }
+      expected_ipv6 = (0...17).select(&:odd?).map { |index| "fd00::#{index + 5}" }
+
+      expect(nic[:ip_configurations].map { |ipconfig| ipconfig[:private_ip] }).to eq(expected_ipv4 + expected_ipv6)
     end
   end
 

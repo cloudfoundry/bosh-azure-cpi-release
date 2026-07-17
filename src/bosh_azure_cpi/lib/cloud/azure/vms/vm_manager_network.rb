@@ -224,7 +224,10 @@ module Bosh::AzureCloud
         networks_with_ip_versions = group_networks.map do |network|
           [network, _detect_ip_version(network)]
         end
-        networks_with_ip_versions.sort_by! { |_network, ip_version| ip_version == 'IPv4' ? 0 : 1 }
+        ipv4_networks, ipv6_networks = networks_with_ip_versions.partition do |_network, ip_version|
+          ip_version == 'IPv4'
+        end
+        networks_with_ip_versions = ipv4_networks + ipv6_networks
 
         ip_configurations = networks_with_ip_versions.each_with_index.map do |(network, ip_version), ipconfig_index|
           ipconfig = {
