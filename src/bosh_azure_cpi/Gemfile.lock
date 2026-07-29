@@ -134,7 +134,7 @@ GEM
     ruby-progressbar (1.13.0)
     ruby2_keywords (0.0.5)
     semi_semantic (1.2.0)
-    simplecov (1.0.2)
+    simplecov (1.0.3)
     timeout (0.6.1)
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
