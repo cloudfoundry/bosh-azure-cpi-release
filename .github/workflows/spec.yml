@@ -15,7 +15,7 @@ jobs:
       run:
         working-directory: src/bosh_azure_cpi/
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v7
       with: { lfs: true }
 
     - uses: ruby/setup-ruby@v1
