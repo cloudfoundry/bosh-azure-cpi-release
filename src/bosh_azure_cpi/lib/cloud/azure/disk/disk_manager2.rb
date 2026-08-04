@@ -333,7 +333,7 @@ module Bosh::AzureCloud
         state = snapshot[:provisioning_state]
         pct = snapshot[:completion_percent]
 
-        if state == PROVISIONING_STATE_SUCCEEDED && (pct.nil? || pct.to_f >= 100.0)
+        if state == PROVISIONING_STATE_SUCCEEDED && !pct.nil? && pct.to_f >= 100.0
           @logger.info("Snapshot '#{snapshot_name}' copy completed (completionPercent: #{pct})")
           return
         end

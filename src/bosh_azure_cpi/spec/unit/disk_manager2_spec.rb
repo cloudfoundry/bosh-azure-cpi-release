@@ -1654,15 +1654,21 @@ describe Bosh::AzureCloud::DiskManager2 do
   describe '#wait_for_snapshot_copy' do
     let(:snapshot_name) { 'fake-snapshot-name' }
 
-    context 'when the snapshot completes immediately' do
-      it 'returns without polling' do
+    context 'when the snapshot reports Succeeded but completionPercent is nil' do
+      it 'continues polling until completionPercent reaches 100' do
         allow(azure_client).to receive(:get_managed_snapshot_by_name)
           .with(resource_group_name, snapshot_name)
-          .and_return({ provisioning_state: 'Succeeded', completion_percent: nil })
+          .and_return(
+            { provisioning_state: 'Succeeded', completion_percent: nil },
+            { provisioning_state: 'Succeeded', completion_percent: 100.0 }
+          )
+        allow(disk_manager2).to receive(:sleep)
 
         expect do
           disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name)
         end.not_to raise_error
+
+        expect(disk_manager2).to have_received(:sleep).once
       end
     end
 
