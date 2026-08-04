@@ -457,6 +457,18 @@ module Bosh::AzureCloud
       end
     end
 
+    ##
+    # Updates an existing managed disk's size and/or cloud properties (storage_account_type, iops, mbps).
+    # When the source disk is PremiumV2_LRS or UltraSSD_LRS and the target storage_account_type differs,
+    # Azure rejects in-place conversion, so the disk is recreated from an incremental snapshot and a new
+    # disk CID is returned. Otherwise the disk is updated in place via the Azure managed disk PATCH API.
+    #
+    # @param [String]  disk_cid         Cloud ID of the disk to update; returned from create_disk.
+    # @param [Integer] new_size         Desired disk size in MiB. Must be greater than or equal to the current size.
+    # @param [Hash]    cloud_properties Optional overrides: 'storage_account_type', 'iops', 'mbps', 'caching'.
+    #
+    # @return [String, nil] New disk CID when the disk was recreated via snapshot; nil when updated in place.
+    #
     def update_disk(disk_cid, new_size, cloud_properties)
       @logger.info("update_disk(#{disk_cid}, #{new_size}, #{cloud_properties})")
       raise Bosh::Clouds::NotSupported, 'Native disk update only supported for managed disks' unless @use_managed_disks
@@ -489,23 +501,61 @@ module Bosh::AzureCloud
             return
           end
 
-          begin
-            @disk_manager2.update_disk(disk_id, new_size_in_gib, account_type, iops, mbps)
-          rescue Bosh::AzureCloud::AzureError => e
-            error_message_pattern = /Changing a disk's account type from '.*' to '.*' is not supported./
-            raise e unless e.message.match?(error_message_pattern)
+          if snapshot_conversion_required?(disk, account_type)
+            if unconvertible_sector_size?(disk, account_type)
+              raise Bosh::Clouds::NotSupported, "Disk '#{disk_name}' has logical sector size 4096; Azure cannot create a '#{account_type}' disk (512-only) from its snapshot. This is an Azure platform limitation for 4k Premium SSD v2/Ultra disks."
+            end
 
-            @logger.warn("Disk conversion failed: #{e.message.match(error_message_pattern)[0]}")
-            raise Bosh::Clouds::NotSupported, 'Disk conversion is not supported'
+            @logger.info("Disk '#{disk_name}' is type '#{disk[:sku_name]}' which requires snapshot-based conversion to '#{account_type}'")
+            new_disk_id = @disk_manager2.recreate_disk_with_type(disk_id, disk, account_type, new_size_in_gib, iops, mbps)
+            return new_disk_id.to_s
           end
 
+          @disk_manager2.update_disk(disk_id, new_size_in_gib, account_type, iops, mbps)
           @logger.info("Finished update of disk '#{disk_name}'")
+          nil
         end
       end
     end
 
     def mib_to_gib(size)
       (size / 1024.0).ceil
+    end
+
+    ##
+    # Determines whether converting a disk to a new account type requires snapshot-based recreation.
+    # Azure rejects in-place type conversion when the source disk is PremiumV2_LRS or UltraSSD_LRS,
+    # so callers must take the snapshot-and-recreate path for those source types.
+    #
+    # @param [Hash]   disk                Disk hash returned by DiskManager2#get_data_disk.
+    # @param [String] target_account_type Desired storage account type, or nil if unchanged.
+    #
+    # @return [Boolean] True when snapshot-based recreation is required, false when in-place update is sufficient.
+    #
+    # @See https://learn.microsoft.com/en-us/azure/virtual-machines/disks-convert-types
+    #
+    def snapshot_conversion_required?(disk, target_account_type)
+      return false if target_account_type.nil?
+      return false if target_account_type == disk[:sku_name]
+
+      SNAPSHOT_CONVERSION_REQUIRED_TYPES.include?(disk[:sku_name])
+    end
+
+    ##
+    # Determines whether a snapshot-based conversion is blocked by a logical sector size mismatch.
+    # Azure can only create a 512-sector disk (Standard/StandardSSD/Premium) from a 512-sector snapshot.
+    # A 4096-sector Premium SSD v2 / Ultra source therefore cannot be converted to those types, and the
+    # caller should raise NotSupported so the Director falls back to copy-based migration.
+    #
+    # @param [Hash]   disk                Disk hash returned by DiskManager2#get_data_disk.
+    # @param [String] target_account_type Desired storage account type.
+    #
+    # @return [Boolean] True when the source sector size prevents conversion to the target type.
+    #
+    def unconvertible_sector_size?(disk, target_account_type)
+      return false unless SECTOR_SIZE_512_ONLY_TYPES.include?(target_account_type)
+
+      disk[:logical_sector_size].to_i == 4096
     end
 
     ##
