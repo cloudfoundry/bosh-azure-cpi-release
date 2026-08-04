@@ -333,13 +333,13 @@ module Bosh::AzureCloud
         state = snapshot[:provisioning_state]
         pct = snapshot[:completion_percent]
 
-        if state == 'Succeeded' && (pct.nil? || pct.to_f >= 100.0)
+        if state == PROVISIONING_STATE_SUCCEEDED && (pct.nil? || pct.to_f >= 100.0)
           @logger.info("Snapshot '#{snapshot_name}' copy completed (completionPercent: #{pct})")
           return
         end
 
-        if state == 'Failed'
-          raise Bosh::Clouds::CloudError, "Snapshot '#{snapshot_name}' entered Failed state during copy"
+        if [PROVISIONING_STATE_FAILED, PROVISIONING_STATE_CANCELED].include?(state)
+          raise Bosh::Clouds::CloudError, "Snapshot '#{snapshot_name}' entered '#{state}' state during copy"
         end
 
         if elapsed >= timeout

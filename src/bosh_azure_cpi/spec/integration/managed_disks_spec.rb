@@ -124,10 +124,11 @@ describe Bosh::AzureCloud::Cloud do
         @logger.info("Update managed disk '#{disk_cid}' from #{old_storage_account_type} to #{new_storage_account_type} via snapshot-based conversion")
         new_disk_cid = cpi_managed.update_disk(disk_cid, old_size, cloud_properties)
 
+        @disk_id_pool.push(new_disk_cid) if new_disk_cid
         expect(new_disk_cid).not_to be_nil
         expect(new_disk_cid).not_to eq(disk_cid)
-        @disk_id_pool.push(new_disk_cid)
         # Old disk should have been deleted by recreate_disk_with_type
+        expect(get_disk(disk_cid)).to be_nil
         @disk_id_pool.delete(disk_cid)
 
         @logger.info("Check the disk properties of the new disk '#{new_disk_cid}'")

@@ -523,42 +523,6 @@ module Bosh::AzureCloud
     end
 
     ##
-    # Determines whether converting a disk to a new account type requires snapshot-based recreation.
-    # Azure rejects in-place type conversion when the source disk is PremiumV2_LRS or UltraSSD_LRS,
-    # so callers must take the snapshot-and-recreate path for those source types.
-    #
-    # @param [Hash]   disk                Disk hash returned by DiskManager2#get_data_disk.
-    # @param [String] target_account_type Desired storage account type, or nil if unchanged.
-    #
-    # @return [Boolean] True when snapshot-based recreation is required, false when in-place update is sufficient.
-    #
-    # @See https://learn.microsoft.com/en-us/azure/virtual-machines/disks-convert-types
-    #
-    def snapshot_conversion_required?(disk, target_account_type)
-      return false if target_account_type.nil?
-      return false if target_account_type == disk[:sku_name]
-
-      SNAPSHOT_CONVERSION_REQUIRED_TYPES.include?(disk[:sku_name])
-    end
-
-    ##
-    # Determines whether a snapshot-based conversion is blocked by a logical sector size mismatch.
-    # Azure can only create a 512-sector disk (Standard/StandardSSD/Premium) from a 512-sector snapshot.
-    # A 4096-sector Premium SSD v2 / Ultra source therefore cannot be converted to those types, and the
-    # caller should raise NotSupported so the Director falls back to copy-based migration.
-    #
-    # @param [Hash]   disk                Disk hash returned by DiskManager2#get_data_disk.
-    # @param [String] target_account_type Desired storage account type.
-    #
-    # @return [Boolean] True when the source sector size prevents conversion to the target type.
-    #
-    def unconvertible_sector_size?(disk, target_account_type)
-      return false unless SECTOR_SIZE_512_ONLY_TYPES.include?(target_account_type)
-
-      disk[:logical_sector_size].to_i == 4096
-    end
-
-    ##
     # Checks for disk presence in the IaaS.
     # This method is mostly used by the consistency check tool (cloudcheck) to determine if the disk still exists.
     #
@@ -873,6 +837,19 @@ module Bosh::AzureCloud
     end
 
     private
+
+    def snapshot_conversion_required?(disk, target_account_type)
+      return false if target_account_type.nil?
+      return false if target_account_type == disk[:sku_name]
+
+      SNAPSHOT_CONVERSION_REQUIRED_TYPES.include?(disk[:sku_name])
+    end
+
+    def unconvertible_sector_size?(disk, target_account_type)
+      return false unless SECTOR_SIZE_512_ONLY_TYPES.include?(target_account_type)
+
+      disk[:logical_sector_size].to_i == 4096
+    end
 
     def _azure_config
       @config.azure

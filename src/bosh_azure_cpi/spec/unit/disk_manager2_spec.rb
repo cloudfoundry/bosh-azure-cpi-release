@@ -1572,7 +1572,7 @@ describe Bosh::AzureCloud::DiskManager2 do
     context 'when wait_for_snapshot_copy raises' do
       before do
         allow(disk_manager2).to receive(:wait_for_snapshot_copy)
-          .and_raise(Bosh::Clouds::CloudError, "Snapshot '#{snapshot_name}' entered Failed state during copy")
+          .and_raise(Bosh::Clouds::CloudError, "Snapshot '#{snapshot_name}' entered 'Failed' state during copy")
       end
 
       it 'propagates the error without deleting the old disk' do
@@ -1581,7 +1581,7 @@ describe Bosh::AzureCloud::DiskManager2 do
 
         expect do
           disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
-        end.to raise_error(Bosh::Clouds::CloudError, /entered Failed state/)
+        end.to raise_error(Bosh::Clouds::CloudError, /entered 'Failed' state/)
       end
     end
 
@@ -1718,7 +1718,19 @@ describe Bosh::AzureCloud::DiskManager2 do
 
         expect do
           disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name)
-        end.to raise_error(Bosh::Clouds::CloudError, /entered Failed state/)
+        end.to raise_error(Bosh::Clouds::CloudError, /entered 'Failed' state/)
+      end
+    end
+
+    context 'when the snapshot enters Canceled state' do
+      it 'raises a CloudError immediately' do
+        allow(azure_client).to receive(:get_managed_snapshot_by_name)
+          .with(resource_group_name, snapshot_name)
+          .and_return({ provisioning_state: 'Canceled', completion_percent: 50.0 })
+
+        expect do
+          disk_manager2.wait_for_snapshot_copy(resource_group_name, snapshot_name)
+        end.to raise_error(Bosh::Clouds::CloudError, /entered 'Canceled' state/)
       end
     end
 

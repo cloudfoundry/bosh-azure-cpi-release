@@ -212,7 +212,8 @@ describe Bosh::AzureCloud::AzureClient do
             'diskSizeGB' => 100,
             'timeCreated' => 'd',
             'provisioningState' => 'e',
-            'diskState' => 'f'
+            'diskState' => 'f',
+            'completionPercent' => 75.0
           },
           'type' => 'Microsoft.Compute/snapshots',
           'location' => 'g',
@@ -232,7 +233,7 @@ describe Bosh::AzureCloud::AzureClient do
           tags: { 'h' => 'i' },
           provisioning_state: 'e',
           disk_size: 100,
-          completion_percent: nil
+          completion_percent: 75.0
         }
       end
 
