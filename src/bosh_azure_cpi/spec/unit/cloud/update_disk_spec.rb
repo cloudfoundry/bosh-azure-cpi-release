@@ -120,6 +120,19 @@ describe Bosh::AzureCloud::Cloud do
           managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
         end.not_to raise_error
       end
+
+      context 'when Azure rejects the in-place type change with a conflict error' do
+        before do
+          allow(disk_manager2).to receive(:update_disk)
+            .and_raise(Bosh::AzureCloud::AzureConflictError, 'OperationNotAllowed: Changing account type is not supported')
+        end
+
+        it 'raises NotSupported so the Director falls back to copy migration' do
+          expect do
+            managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+          end.to raise_error(Bosh::Clouds::NotSupported, /In-place disk type change rejected by Azure/)
+        end
+      end
     end
 
     context 'when the source disk type requires snapshot-based conversion' do

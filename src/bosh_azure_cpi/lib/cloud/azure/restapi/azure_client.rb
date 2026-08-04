@@ -1087,7 +1087,7 @@ module Bosh::AzureCloud
     # * +:location+                     - String. The location where the managed disk will be created.
     # * +:tags+                         - Hash. Tags of the managed disk.
     # * +:account_type+                 - String. Specifies the account type of the managed disk.
-    #                                     Optional values: Standard_LRS, StandardSSD_LRS, Premium_LRS.
+    #                                     Supported values: Standard_LRS, StandardSSD_LRS, Premium_LRS, PremiumV2_LRS, UltraSSD_LRS.
     # * +:disk_size+                    - Integer. (Optional) Size of the new disk in GiB. Must be >= snapshot size.
     # * +:iops+                         - Integer. (Optional) Provisioned IOPS. Only valid for PremiumV2_LRS and UltraSSD_LRS.
     # * +:mbps+                         - Integer. (Optional) Provisioned throughput in MBps. Only valid for PremiumV2_LRS and UltraSSD_LRS.

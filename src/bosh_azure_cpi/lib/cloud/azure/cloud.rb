@@ -511,7 +511,11 @@ module Bosh::AzureCloud
             return new_disk_id.to_s
           end
 
-          @disk_manager2.update_disk(disk_id, new_size_in_gib, account_type, iops, mbps)
+          begin
+            @disk_manager2.update_disk(disk_id, new_size_in_gib, account_type, iops, mbps)
+          rescue AzureConflictError => e
+            raise Bosh::Clouds::NotSupported, "In-place disk type change rejected by Azure for disk '#{disk_name}': #{e.message}"
+          end
           @logger.info("Finished update of disk '#{disk_name}'")
           nil
         end
