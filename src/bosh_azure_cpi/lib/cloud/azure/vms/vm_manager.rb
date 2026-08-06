@@ -139,6 +139,13 @@ module Bosh::AzureCloud
         vm_params[:capacity_reservation_group_id] = vm_props.capacity_reservation_group_id
       end
 
+      unless vm_props.security_profile.nil?
+        vm_params[:security_profile] = {
+          security_type: vm_props.security_profile.security_type,
+          uefi_settings: vm_props.security_profile.uefi_settings
+        }
+      end
+
       unless vm_props.managed_identity.nil?
         vm_params[:identity] = {
           type: vm_props.managed_identity.type,
