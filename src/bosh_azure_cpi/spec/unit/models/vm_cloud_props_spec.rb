@@ -150,6 +150,8 @@ describe Bosh::AzureCloud::VMCloudProps do
     context 'when load_balancer is a hash' do
       let(:lb_name) { 'fake_lb_name' }
       let(:resource_group_name) { 'fake_resource_group' }
+      let(:backend_pool_name) { 'fake_backend_pool' }
+      let(:backend_pool_name_v6) { 'fake_backend_pool_v6' }
 
       context 'when resource group not empty' do
         let(:vm_cloud_props) do
@@ -158,7 +160,9 @@ describe Bosh::AzureCloud::VMCloudProps do
               'instance_type' => 'Standard_D1',
               'load_balancer' => {
                 'name' => lb_name,
-                'resource_group_name' => resource_group_name
+                'resource_group_name' => resource_group_name,
+                'backend_pool_name' => backend_pool_name,
+                'backend_pool_name_v6' => backend_pool_name_v6
               }
             }, azure_config_managed
           )
@@ -169,6 +173,8 @@ describe Bosh::AzureCloud::VMCloudProps do
           load_balancer = vm_cloud_props.load_balancers.first
           expect(load_balancer.name).to eq(lb_name)
           expect(load_balancer.resource_group_name).to eq(resource_group_name)
+          expect(load_balancer.backend_pool_name).to eq(backend_pool_name)
+          expect(load_balancer.backend_pool_name_v6).to eq(backend_pool_name_v6)
         end
       end
 
