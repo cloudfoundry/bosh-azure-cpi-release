@@ -477,7 +477,10 @@ describe Bosh::AzureCloud::AzureClient do
           provisioningState: 'd',
           diskSizeGB: 'e',
           diskMBpsReadWrite: 11,
-          diskIOPSReadWrite: 22
+          diskIOPSReadWrite: 22,
+          creationData: {
+            logicalSectorSize: 512
+          }
         }
       }
     end
@@ -495,7 +498,8 @@ describe Bosh::AzureCloud::AzureClient do
         provisioning_state: 'd',
         disk_size: 'e',
         mbps: 11,
-        iops: 22
+        iops: 22,
+        logical_sector_size: 512
       }
     end
 

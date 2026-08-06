@@ -41,15 +41,14 @@ describe Bosh::AzureCloud::Cloud do
       allow(Bosh::Clouds::Config.logger).to receive(:info)
     end
 
-    it 'updates the disk with the new size and cloud properties' do
+    it 'updates the disk with the new size and cloud properties and returns nil' do
       expect(disk_manager2).to receive(:update_disk)
         .with(disk_id_object, new_disk_size_in_gib, storage_account, iops, mbps)
       expect(Bosh::Clouds::Config.logger).to receive(:info)
         .with(/Finished update of disk 'fake-disk-name'/)
 
-      expect do
-        managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
-      end.not_to raise_error
+      result = managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+      expect(result).to be_nil
     end
 
     it 'raises an error if the disk is not found' do
@@ -121,24 +120,117 @@ describe Bosh::AzureCloud::Cloud do
           managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
         end.not_to raise_error
       end
+
+      context 'when Azure rejects the in-place type change with a conflict error' do
+        before do
+          allow(disk_manager2).to receive(:update_disk)
+            .and_raise(Bosh::AzureCloud::AzureConflictError, 'OperationNotAllowed: Changing account type is not supported')
+        end
+
+        it 'raises NotSupported so the Director falls back to copy migration' do
+          expect do
+            managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+          end.to raise_error(Bosh::Clouds::NotSupported, /In-place disk type change rejected by Azure/)
+        end
+      end
     end
 
-    context 'when disk conversion is not supported' do
-      let(:cloud_properties) { { 'storage_account_type' => 'unsupported-type' } }
+    context 'when the source disk type requires snapshot-based conversion' do
+      let(:new_disk_id_object) { instance_double(Bosh::AzureCloud::DiskId) }
 
-      it 'raises an error' do
-        allow(disk_manager2).to receive(:update_disk).and_raise(Bosh::AzureCloud::AzureError.new(%{
-{
-  "error": {
-    "code": "OperationNotAllowed",
-    "message": "Changing a disk's account type from 'PremiumV2_LRS' to 'unsupported-type' is not supported."
-  }
-}
-}))
+      before do
+        allow(new_disk_id_object).to receive(:to_s).and_return('new-disk-cid')
+        allow(disk_manager2).to receive(:recreate_disk_with_type).and_return(new_disk_id_object)
+      end
 
-        expect do
-          managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
-        end.to raise_error(Bosh::Clouds::NotSupported, 'Disk conversion is not supported')
+      %w[PremiumV2_LRS UltraSSD_LRS].each do |source_type|
+        context "when source disk type is #{source_type}" do
+          let(:cloud_properties) { { 'storage_account_type' => 'Premium_LRS' } }
+
+          before do
+            allow(disk_manager2).to receive(:get_data_disk)
+              .and_return({
+                disk_size: old_disk_size_in_gib,
+                location: 'eastus',
+                sku_name: source_type,
+                tags: { 'caching' => 'None' },
+                zone: '1'
+              })
+          end
+
+          it 'uses snapshot-based conversion without attempting in-place update' do
+            expect(disk_manager2).not_to receive(:update_disk)
+
+            result = managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+
+            expect(disk_manager2).to have_received(:recreate_disk_with_type)
+              .with(disk_id_object, anything, 'Premium_LRS', new_disk_size_in_gib, nil, nil)
+            expect(result).to eq('new-disk-cid')
+          end
+
+          context 'when target type matches source type' do
+            let(:cloud_properties) { { 'storage_account_type' => source_type } }
+
+            it 'uses in-place update without snapshot-based conversion' do
+              expect(disk_manager2).to receive(:update_disk)
+                .with(disk_id_object, new_disk_size_in_gib, source_type, nil, nil)
+              expect(disk_manager2).not_to receive(:recreate_disk_with_type)
+
+              expect do
+                managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+              end.not_to raise_error
+            end
+          end
+
+          context 'when the source disk has a 4096 logical sector size' do
+            let(:cloud_properties) { { 'storage_account_type' => 'Premium_LRS' } }
+
+            before do
+              allow(disk_manager2).to receive(:get_data_disk)
+                .and_return({
+                  disk_size: old_disk_size_in_gib,
+                  location: 'eastus',
+                  sku_name: source_type,
+                  tags: { 'caching' => 'None' },
+                  zone: '1',
+                  logical_sector_size: 4096
+                })
+            end
+
+            it 'raises NotSupported so the Director falls back to copy migration' do
+              expect(disk_manager2).not_to receive(:recreate_disk_with_type)
+              expect(disk_manager2).not_to receive(:update_disk)
+
+              expect do
+                managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+              end.to raise_error(Bosh::Clouds::NotSupported, /logical sector size 4096.*Azure platform limitation/m)
+            end
+          end
+
+          context 'when the source disk has a 512 logical sector size' do
+            let(:cloud_properties) { { 'storage_account_type' => 'Premium_LRS' } }
+
+            before do
+              allow(disk_manager2).to receive(:get_data_disk)
+                .and_return({
+                  disk_size: old_disk_size_in_gib,
+                  location: 'eastus',
+                  sku_name: source_type,
+                  tags: { 'caching' => 'None' },
+                  zone: '1',
+                  logical_sector_size: 512
+                })
+            end
+
+            it 'proceeds with snapshot-based conversion' do
+              result = managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+
+              expect(disk_manager2).to have_received(:recreate_disk_with_type)
+                .with(disk_id_object, anything, 'Premium_LRS', new_disk_size_in_gib, nil, nil)
+              expect(result).to eq('new-disk-cid')
+            end
+          end
+        end
       end
     end
   end
