@@ -173,7 +173,7 @@ describe Bosh::AzureCloud::Cloud do
 
             it 'uses in-place update without snapshot-based conversion' do
               expect(disk_manager2).to receive(:update_disk)
-                .with(disk_id_object, new_disk_size_in_gib, source_type, nil, nil)
+                .with(disk_id_object, new_disk_size_in_gib, nil, nil, nil)
               expect(disk_manager2).not_to receive(:recreate_disk_with_type)
 
               expect do

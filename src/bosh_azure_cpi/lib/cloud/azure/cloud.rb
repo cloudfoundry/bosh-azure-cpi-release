@@ -493,6 +493,7 @@ module Bosh::AzureCloud
 
           new_size_in_gib = nil if new_size_in_gib == old_size_in_gib
           account_type = cloud_properties['storage_account_type']
+          account_type = nil if account_type == disk[:sku_name]
           iops = cloud_properties['iops']
           mbps = cloud_properties['mbps']
 
@@ -844,7 +845,6 @@ module Bosh::AzureCloud
 
     def snapshot_conversion_required?(disk, target_account_type)
       return false if target_account_type.nil?
-      return false if target_account_type == disk[:sku_name]
 
       SNAPSHOT_CONVERSION_REQUIRED_TYPES.include?(disk[:sku_name])
     end
