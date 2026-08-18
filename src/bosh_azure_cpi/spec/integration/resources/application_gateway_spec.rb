@@ -64,7 +64,7 @@ describe Bosh::AzureCloud::Cloud do
       threads.times do |i|
         lifecycles[i] = Thread.new do
           agent_id = SecureRandom.uuid
-          ip_config_id = "/subscriptions/#{@subscription_id}/resourceGroups/#{@default_resource_group_name}/providers/Microsoft.Network/networkInterfaces/#{agent_id}-0/ipConfigurations/ipconfig0"
+          ip_config_id = "/subscriptions/#{@subscription_id}/resourceGroups/#{@default_resource_group_name}/providers/Microsoft.Network/networkInterfaces/#{agent_id}-0/ipConfigurations/ipconfig0-0"
           begin
             new_instance_id = @cpi.create_vm(
               agent_id,
