@@ -1461,7 +1461,6 @@ describe Bosh::AzureCloud::DiskManager2 do
         .with(new_disk_id)
         .and_return(true)
       allow(disk_manager2).to receive(:delete_disk)
-        .with(resource_group_name, disk_name)
       allow(disk_manager2).to receive(:delete_snapshot)
         .with(snapshot_id)
     end
@@ -1546,10 +1545,12 @@ describe Bosh::AzureCloud::DiskManager2 do
           .and_return(false)
       end
 
-      it 'raises a CloudError' do
+      it 'raises NotSupported without deleting the old disk' do
+        expect(disk_manager2).not_to receive(:delete_disk).with(resource_group_name, disk_name)
+
         expect do
           disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
-        end.to raise_error(Bosh::Clouds::CloudError, /Cannot find snapshot '#{snapshot_name}'.*abort type conversion/)
+        end.to raise_error(Bosh::Clouds::NotSupported, /Snapshot-based conversion of disk '#{disk_name}'.*not found after creation/m)
       end
     end
 
@@ -1560,12 +1561,14 @@ describe Bosh::AzureCloud::DiskManager2 do
           .and_raise('fails to create disk')
       end
 
-      it 'retries and raises an error with recovery instructions' do
+      it 'retries, cleans up, and raises NotSupported without deleting the old disk' do
         expect(azure_client).to receive(:create_managed_disk_from_snapshot).exactly(3).times
+        expect(disk_manager2).not_to receive(:delete_disk).with(resource_group_name, disk_name)
+        expect(disk_manager2).to receive(:delete_snapshot).with(snapshot_id)
 
         expect do
           disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
-        end.to raise_error(Bosh::Clouds::CloudError, /Failed to create disk.*az disk create/m)
+        end.to raise_error(Bosh::Clouds::NotSupported, /Snapshot-based conversion of disk '#{disk_name}'.*failed/m)
       end
     end
 
@@ -1575,13 +1578,13 @@ describe Bosh::AzureCloud::DiskManager2 do
           .and_raise(Bosh::Clouds::CloudError, "Snapshot '#{snapshot_name}' entered 'Failed' state during copy")
       end
 
-      it 'propagates the error without deleting the old disk' do
-        expect(disk_manager2).not_to receive(:delete_disk)
-        expect(disk_manager2).not_to receive(:delete_snapshot)
+      it 'cleans up and raises NotSupported without deleting the old disk' do
+        expect(disk_manager2).not_to receive(:delete_disk).with(resource_group_name, disk_name)
+        expect(disk_manager2).to receive(:delete_snapshot).with(snapshot_id)
 
         expect do
           disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
-        end.to raise_error(Bosh::Clouds::CloudError, /entered 'Failed' state/)
+        end.to raise_error(Bosh::Clouds::NotSupported, /entered 'Failed' state/)
       end
     end
 
@@ -1609,13 +1612,13 @@ describe Bosh::AzureCloud::DiskManager2 do
           .and_return(false)
       end
 
-      it 'raises an error with recovery instructions and does not delete old disk or snapshot' do
-        expect(disk_manager2).not_to receive(:delete_disk)
-        expect(disk_manager2).not_to receive(:delete_snapshot)
+      it 'cleans up and raises NotSupported without deleting the old disk' do
+        expect(disk_manager2).not_to receive(:delete_disk).with(resource_group_name, disk_name)
+        expect(disk_manager2).to receive(:delete_snapshot).with(snapshot_id)
 
         expect do
           disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
-        end.to raise_error(Bosh::Clouds::CloudError, /Cannot find new disk '#{new_disk_name}'.*recover.*manually/m)
+        end.to raise_error(Bosh::Clouds::NotSupported, /new disk '#{new_disk_name}' not found after creation/)
       end
     end
 

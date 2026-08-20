@@ -246,81 +246,77 @@ module Bosh::AzureCloud
 
     # Instant Access Snapshots are not used here: they only allow creating PremiumV2/Ultra disks
     # from the snapshot, so cross-type conversion still requires waiting for completionPercent == 100.
+    #
+    # Returns a NEW disk CID. This requires BOSH Director >= v282.1.7, which persists the CID
+    # returned by update_disk; older Directors call update_disk but drop the new CID
+    # (see https://bosh.io/docs/cpi-api-v2-method/update-disk/).
     def recreate_disk_with_type(disk_id, disk, new_account_type, new_size_in_gib = nil, iops = nil, mbps = nil)
       @logger.info("recreate_disk_with_type(#{disk_id}, #{new_account_type}, #{new_size_in_gib})")
       resource_group_name = disk_id.resource_group_name
       old_disk_name = disk_id.disk_name
 
-      # 1. Snapshot the existing disk
       snapshot_id = DiskId.create(disk_id.caching, true, resource_group_name: resource_group_name)
       snapshot_name = snapshot_id.disk_name
-      snapshot_disk(snapshot_id, old_disk_name, {}, incremental: true)
-      @logger.info("Snapshot '#{snapshot_name}' created from disk '#{old_disk_name}' for type conversion")
-
-      unless has_snapshot?(resource_group_name, snapshot_name)
-        error_message = "recreate_disk_with_type - Cannot find snapshot '#{snapshot_name}' in resource group '#{resource_group_name}', abort type conversion.\n"
-        error_message += "You need to convert '#{disk_id}' to type '#{new_account_type}' manually."
-        raise Bosh::Clouds::CloudError, error_message
-      end
-
-      # 2. Wait for incremental snapshot copy to complete (required for PremiumV2_LRS / UltraSSD_LRS)
-      wait_for_snapshot_copy(resource_group_name, snapshot_name)
-
-      # 3. Create a new disk from the snapshot with the target type
       new_disk_id = DiskId.create(disk_id.caching, true, resource_group_name: resource_group_name)
       new_disk_name = new_disk_id.disk_name
-      disk_params = {
-        name: new_disk_name,
-        location: disk[:location],
-        account_type: new_account_type,
-        tags: disk[:tags]
-      }
-      disk_params[:zone] = disk[:zone] unless disk[:zone].nil?
-      disk_params[:disk_size] = new_size_in_gib unless new_size_in_gib.nil?
-      disk_params[:iops] = iops unless iops.nil?
-      disk_params[:mbps] = mbps unless mbps.nil?
 
-      max_retries = 2
+      # Everything up to and including verifying the new disk is recoverable: the old disk is
+      # untouched (the Director has only detached it). On any failure we remove whatever we
+      # created and raise NotSupported, so the Director reattaches the old disk and falls back
+      # to copy-migration instead of being left with an orphaned, detached disk.
+      begin
+        # 1. Snapshot the existing disk
+        snapshot_disk(snapshot_id, old_disk_name, {}, incremental: true)
+        @logger.info("Snapshot '#{snapshot_name}' created from disk '#{old_disk_name}' for type conversion")
+        raise Bosh::Clouds::CloudError, "snapshot '#{snapshot_name}' not found after creation" unless has_snapshot?(resource_group_name, snapshot_name)
+
+        # 2. Wait for incremental snapshot copy to complete (required for PremiumV2_LRS / UltraSSD_LRS)
+        wait_for_snapshot_copy(resource_group_name, snapshot_name)
+
+        # 3. Create a new disk from the snapshot with the target type
+        disk_params = {
+          name: new_disk_name,
+          location: disk[:location],
+          account_type: new_account_type,
+          tags: disk[:tags]
+        }
+        disk_params[:zone] = disk[:zone] unless disk[:zone].nil?
+        disk_params[:disk_size] = new_size_in_gib unless new_size_in_gib.nil?
+        disk_params[:iops] = iops unless iops.nil?
+        disk_params[:mbps] = mbps unless mbps.nil?
+
+        create_disk_from_snapshot_with_retries(resource_group_name, disk_params, snapshot_name)
+
+        # 4. Verify the new disk exists before deleting the old one
+        raise Bosh::Clouds::CloudError, "new disk '#{new_disk_name}' not found after creation" unless has_data_disk?(new_disk_id)
+      rescue StandardError => e
+        @logger.warn("recreate_disk_with_type - Conversion of '#{old_disk_name}' to '#{new_account_type}' failed before the old disk was modified: #{e.inspect}. Cleaning up and signaling the Director to fall back to copy-migration.")
+        cleanup_orphaned_resource("new disk '#{new_disk_name}'") { delete_disk(resource_group_name, new_disk_name) }
+        cleanup_orphaned_resource("snapshot '#{snapshot_name}'") { delete_snapshot(snapshot_id) }
+        raise Bosh::Clouds::NotSupported, "Snapshot-based conversion of disk '#{old_disk_name}' to '#{new_account_type}' failed: #{e.message}"
+      end
+
+      # Point of no return: the new disk exists and holds the data. We must return its CID;
+      # cleanup of the old disk and snapshot is best-effort and must never raise.
+      cleanup_orphaned_resource("old disk '#{old_disk_name}'") { delete_disk(resource_group_name, old_disk_name) }
+      cleanup_orphaned_resource("snapshot '#{snapshot_name}'") { delete_snapshot(snapshot_id) }
+
+      @logger.info("Disk '#{old_disk_name}' recreated as '#{new_disk_name}' with type '#{new_account_type}'")
+      new_disk_id
+    end
+
+    def create_disk_from_snapshot_with_retries(resource_group_name, disk_params, snapshot_name, max_retries: 2)
       retry_count = 0
       begin
         @azure_client.create_managed_disk_from_snapshot(resource_group_name, disk_params, snapshot_name)
       rescue StandardError => e
         if retry_count < max_retries
           retry_count += 1
-          @logger.info("recreate_disk_with_type - Error creating '#{new_disk_name}' from snapshot '#{snapshot_name}': #{e.inspect}. Retry #{retry_count}/#{max_retries}.")
+          @logger.info("create_disk_from_snapshot_with_retries - Error creating '#{disk_params[:name]}' from snapshot '#{snapshot_name}': #{e.inspect}. Retry #{retry_count}/#{max_retries}.")
           retry
         end
-
-        error_message = "recreate_disk_with_type - Failed to create disk '#{new_disk_name}' from snapshot '#{snapshot_name}' in resource group '#{resource_group_name}'.\n"
-        error_message += "You need to recover '#{disk_id}' manually from snapshot '#{snapshot_name}'. Try:\n"
-        error_message += "    'az disk create --resource-group #{resource_group_name} --location #{disk[:location]} --sku #{new_account_type} --name #{new_disk_name} --source #{snapshot_name}'\n"
-        error_message += "#{e.inspect}\n#{e.backtrace.join("\n")}"
-        raise Bosh::Clouds::CloudError, error_message
+        raise
       end
-
-      # 4. Verify the new disk exists before deleting the old one
-      unless has_data_disk?(new_disk_id)
-        error_message = "recreate_disk_with_type - Cannot find new disk '#{new_disk_name}' in resource group '#{resource_group_name}' after creation.\n"
-        error_message += "You need to recover '#{disk_id}' manually from snapshot '#{snapshot_name}'."
-        raise Bosh::Clouds::CloudError, error_message
-      end
-
-      # 5. Delete old disk, then clean up the snapshot (best-effort to avoid resource leaks on retry)
-      begin
-        delete_disk(resource_group_name, old_disk_name)
-      rescue StandardError => e
-        @logger.warn("recreate_disk_with_type - Failed to delete old disk '#{old_disk_name}': #{e.inspect}. Manual cleanup may be required.")
-      end
-
-      begin
-        delete_snapshot(snapshot_id)
-      rescue StandardError => e
-        @logger.warn("recreate_disk_with_type - Failed to delete snapshot '#{snapshot_name}': #{e.inspect}. Manual cleanup may be required.")
-      end
-
-      @logger.info("Disk '#{old_disk_name}' recreated as '#{new_disk_name}' with type '#{new_account_type}'")
-
-      new_disk_id
     end
 
     def wait_for_snapshot_copy(resource_group_name, snapshot_name, timeout: 1800, interval: 10)
@@ -436,6 +432,12 @@ module Bosh::AzureCloud
     end
 
     private
+
+    def cleanup_orphaned_resource(description)
+      yield
+    rescue StandardError => e
+      @logger.warn("recreate_disk_with_type - best-effort cleanup of #{description} failed: #{e.inspect}. Manual cleanup may be required.")
+    end
 
     def _get_disk(resource_group_name, disk_name)
       @logger.info("_get_disk(#{resource_group_name}, #{disk_name})")
