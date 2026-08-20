@@ -1091,6 +1091,7 @@ module Bosh::AzureCloud
     # * +:disk_size+                    - Integer. (Optional) Size of the new disk in GiB. Must be >= snapshot size.
     # * +:iops+                         - Integer. (Optional) Provisioned IOPS. Only valid for PremiumV2_LRS and UltraSSD_LRS.
     # * +:mbps+                         - Integer. (Optional) Provisioned throughput in MBps. Only valid for PremiumV2_LRS and UltraSSD_LRS.
+    # * +:disk_encryption_set_id+       - String. (Optional) Full resource ID of the disk encryption set. Preserves customer-managed key (CMK) encryption from the source disk.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
@@ -1117,6 +1118,12 @@ module Bosh::AzureCloud
       disk['properties']['diskSizeGB'] = disk_params[:disk_size] unless disk_params[:disk_size].nil?
       disk['properties']['diskIOPSReadWrite'] = disk_params[:iops] unless disk_params[:iops].nil?
       disk['properties']['diskMBpsReadWrite'] = disk_params[:mbps] unless disk_params[:mbps].nil?
+      unless disk_params[:disk_encryption_set_id].nil?
+        disk['properties']['encryption'] = {
+          'diskEncryptionSetId' => disk_params[:disk_encryption_set_id],
+          'type' => 'EncryptionAtRestWithCustomerKey'
+        }
+      end
       http_put(disk_url, disk)
     end
 
@@ -2418,6 +2425,7 @@ module Bosh::AzureCloud
         managed_disk[:provisioning_state] = properties['provisioningState']
         managed_disk[:disk_size]          = properties['diskSizeGB']
         managed_disk[:logical_sector_size] = properties.dig('creationData', 'logicalSectorSize')
+        managed_disk[:disk_encryption_set_id] = properties.dig('encryption', 'diskEncryptionSetId')
       end
       managed_disk
     end

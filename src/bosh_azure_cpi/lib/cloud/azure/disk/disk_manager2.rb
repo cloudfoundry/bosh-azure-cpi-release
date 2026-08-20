@@ -284,6 +284,8 @@ module Bosh::AzureCloud
         disk_params[:disk_size] = new_size_in_gib unless new_size_in_gib.nil?
         disk_params[:iops] = iops unless iops.nil?
         disk_params[:mbps] = mbps unless mbps.nil?
+        # Preserve customer-managed key encryption (CMK) from the source disk.
+        disk_params[:disk_encryption_set_id] = disk[:disk_encryption_set_id] unless disk[:disk_encryption_set_id].nil?
 
         create_disk_from_snapshot_with_retries(resource_group_name, disk_params, snapshot_name)
 

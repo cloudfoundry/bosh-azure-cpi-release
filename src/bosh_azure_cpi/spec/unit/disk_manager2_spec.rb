@@ -1538,6 +1538,40 @@ describe Bosh::AzureCloud::DiskManager2 do
       end
     end
 
+    context 'when the disk has a customer-managed encryption set' do
+      let(:disk_encryption_set_id) { '/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Compute/diskEncryptionSets/fake-des' }
+      let(:disk) do
+        {
+          location: 'fake-location',
+          sku_name: 'Standard_LRS',
+          tags: { 'caching' => 'None' },
+          disk_encryption_set_id: disk_encryption_set_id
+        }
+      end
+
+      let(:disk_params) do
+        {
+          name: new_disk_name,
+          location: 'fake-location',
+          account_type: new_account_type,
+          tags: { 'caching' => 'None' },
+          disk_encryption_set_id: disk_encryption_set_id
+        }
+      end
+
+      before do
+        allow(azure_client).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name)
+      end
+
+      it 'preserves the encryption set on the new disk' do
+        expect(azure_client).to receive(:create_managed_disk_from_snapshot)
+          .with(resource_group_name, disk_params, snapshot_name)
+
+        disk_manager2.recreate_disk_with_type(disk_id, disk, new_account_type)
+      end
+    end
+
     context 'when the snapshot is not found' do
       before do
         allow(disk_manager2).to receive(:has_snapshot?)
