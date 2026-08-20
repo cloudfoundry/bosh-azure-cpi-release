@@ -130,7 +130,33 @@ describe Bosh::AzureCloud::Cloud do
         it 'raises NotSupported so the Director falls back to copy migration' do
           expect do
             managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
-          end.to raise_error(Bosh::Clouds::NotSupported, /In-place disk type change rejected by Azure/)
+          end.to raise_error(Bosh::Clouds::NotSupported, /In-place disk type change not supported/)
+        end
+      end
+
+      context 'when Azure rejects the in-place type change with a non-conflict "not supported" error' do
+        before do
+          allow(disk_manager2).to receive(:update_disk)
+            .and_raise(Bosh::AzureCloud::AzureError, "Changing a disk's account type from 'Premium_LRS' to 'Standard_LRS' is not supported.")
+        end
+
+        it 'raises NotSupported so the Director falls back to copy migration' do
+          expect do
+            managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+          end.to raise_error(Bosh::Clouds::NotSupported, /In-place disk type change not supported/)
+        end
+      end
+
+      context 'when the in-place update fails with an unrelated Azure error' do
+        before do
+          allow(disk_manager2).to receive(:update_disk)
+            .and_raise(Bosh::AzureCloud::AzureError, 'Internal server error')
+        end
+
+        it 're-raises the original error without converting it to NotSupported' do
+          expect do
+            managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+          end.to raise_error(Bosh::AzureCloud::AzureError, /Internal server error/)
         end
       end
     end

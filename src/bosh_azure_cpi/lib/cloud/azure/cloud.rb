@@ -514,8 +514,15 @@ module Bosh::AzureCloud
 
           begin
             @disk_manager2.update_disk(disk_id, new_size_in_gib, account_type, iops, mbps)
-          rescue AzureConflictError => e
-            raise Bosh::Clouds::NotSupported, "In-place disk type change rejected by Azure for disk '#{disk_name}': #{e.message}"
+          rescue AzureError => e
+            # Azure rejects some in-place account-type changes outright (e.g. certain SKU
+            # transitions on non-PremiumV2/Ultra disks). Signal NotSupported so the Director
+            # falls back to copy-migration; re-raise anything else (transient or unknown
+            # errors) so it is not silently turned into a disk recreation.
+            raise unless disk_conversion_rejected?(e)
+
+            @logger.warn("In-place disk update rejected by Azure for disk '#{disk_name}': #{e.message}")
+            raise Bosh::Clouds::NotSupported, "In-place disk type change not supported for disk '#{disk_name}': #{e.message}"
           end
           @logger.info("Finished update of disk '#{disk_name}'")
           nil
@@ -853,6 +860,12 @@ module Bosh::AzureCloud
       return false unless SECTOR_SIZE_512_ONLY_TYPES.include?(target_account_type)
 
       disk[:logical_sector_size].to_i == 4096
+    end
+
+    def disk_conversion_rejected?(error)
+      return true if error.is_a?(AzureConflictError)
+
+      error.message.match?(/Changing a disk's account type from '.*' to '.*' is not supported\./)
     end
 
     def _azure_config
