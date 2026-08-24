@@ -135,6 +135,7 @@ GEM
     ruby2_keywords (0.0.5)
     semi_semantic (1.2.0)
     simplecov (1.1.1)
+    syslog (0.1.2)
     timeout (0.6.1)
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
@@ -168,6 +169,7 @@ DEPENDENCIES
   rspec-retry
   rubocop
   simplecov
+  syslog
   webmock
 
 BUNDLED WITH
