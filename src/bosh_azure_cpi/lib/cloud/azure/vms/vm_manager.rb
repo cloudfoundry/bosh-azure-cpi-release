@@ -81,6 +81,7 @@ module Bosh::AzureCloud
       #   * prepare stemcell
       #   * prepare network interfaces, including public IP, NICs, LB, AG, etc
       #   * prepare availability set
+      #   * load existing load balancer with ip based backend pool
       #   * prepare storage account for diagnostics
       tasks = []
 
@@ -96,6 +97,12 @@ module Bosh::AzureCloud
           # Store the availability set name in the tags of the NIC
           primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
           _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
+        end
+      )
+
+      tasks.push(
+        task_load_balancer = Concurrent::Future.execute do
+          _get_load_balancers(vm_props)
         end
       )
 
@@ -119,6 +126,7 @@ module Bosh::AzureCloud
 
       stemcell_info = task_get_stemcell_info.value!
       network_interfaces = task_create_network_interfaces.value!
+      load_balancers = task_load_balancer.value!
       availability_set = task_get_or_create_availability_set.value!
       diagnostics_storage_account = task_get_diagnostics_storage_account.value!
 
@@ -207,6 +215,11 @@ module Bosh::AzureCloud
         @azure_client.update_managed_disk_performance(instance_id.resource_group_name, disk_name, vm_params[:ephemeral_disk][:iops], vm_params[:ephemeral_disk][:mbps])
       end
 
+      # Add virtual machine to the load balancer backend pool if load balancer pool is ip based and the load balancer pool exists.
+      unless load_balancers.nil? || load_balancers.empty?
+        _add_vm_to_load_balancer_backend_pool(load_balancers, virtual_machine_result)
+      end
+
       [instance_id, vm_params]
     rescue StandardError => e
       error_message = ''
@@ -238,6 +251,8 @@ module Bosh::AzureCloud
         end
       else
         begin
+          _remove_vm_from_load_balancer_backend_pool(virtual_machine_result)
+
           tasks = []
           # Delete the empty availability set
           tasks.push(
@@ -300,6 +315,10 @@ module Bosh::AzureCloud
       resource_group_name = instance_id.resource_group_name
       vm_name = instance_id.vm_name
       vm = @azure_client.get_virtual_machine_by_name(resource_group_name, vm_name)
+
+      # Remove the ip based load balancer backend pool addresses before the VM is deleted,
+      # so a failure here can still be retried with the VM present.
+      _remove_vm_from_load_balancer_backend_pool(vm)
 
       # Delete the VM
       if vm

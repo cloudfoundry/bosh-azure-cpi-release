@@ -229,6 +229,10 @@ describe Bosh::AzureCloud::VMManager, 'dual-stack NIC creation' do
     end
 
     it 'selects the configured backend pool for each IP family' do
+      expect(azure_client).to receive(:get_load_balancer_by_name)
+        .with(MOCK_RESOURCE_GROUP_NAME, 'fake-lb-name')
+        .and_return(load_balancer)
+
       result = vm_manager_ds.send(:_get_load_balancers, vm_props)
 
       expect(result).to match([
@@ -237,6 +241,8 @@ describe Bosh::AzureCloud::VMManager, 'dual-stack NIC creation' do
           backend_address_pools_v6: [pool_v6]
         )
       ])
+      expect(result.first[:backend_address_pools].first[:backend_address_pools_type]).to eq(Bosh::AzureCloud::Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_NIC)
+      expect(result.first[:backend_address_pools_v6].first[:backend_address_pools_type]).to eq(Bosh::AzureCloud::Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_NIC)
     end
 
     context 'when the configured IPv6 backend pool does not exist' do
@@ -250,6 +256,83 @@ describe Bosh::AzureCloud::VMManager, 'dual-stack NIC creation' do
           /does not have a backend_pool named 'missing-v6-pool'/
         )
       end
+    end
+  end
+
+  describe '#_add_vm_to_load_balancer_backend_pool' do
+    let(:vnet_id) { '/subscriptions/fake-subscription/resourceGroups/fake-resource-group/providers/Microsoft.Network/virtualNetworks/fake-vnet' }
+    let(:virtual_machine_result) do
+      {
+        name: 'fake-vm-name',
+        network_interfaces: [
+          {
+            primary: true,
+            ip_configurations: [
+              {
+                private_ip: '10.0.0.5',
+                private_ip_address_version: 'IPv4',
+                subnet: { id: "#{vnet_id}/subnets/fake-subnet" }
+              },
+              {
+                private_ip: 'fd00::5',
+                private_ip_address_version: 'IPv6',
+                subnet: { id: "#{vnet_id}/subnets/fake-subnet" }
+              }
+            ]
+          }
+        ]
+      }
+    end
+    let(:load_balancers) do
+      [
+        {
+          name: 'fake-lb-name',
+          resource_group_name: 'fake-resource-group',
+          backend_address_pools: [
+            { name: 'pool-v4', backend_address_pools_type: Bosh::AzureCloud::Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_IP },
+            { name: 'pool-nic', backend_address_pools_type: Bosh::AzureCloud::Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_NIC }
+          ],
+          backend_address_pools_v6: [
+            { name: 'pool-v6', backend_address_pools_type: Bosh::AzureCloud::Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_IP }
+          ]
+        }
+      ]
+    end
+
+    it 'adds each VM address to its matching IP-based pool and skips NIC-based pools' do
+      allow(SecureRandom).to receive(:uuid).and_return('ipv4-address', 'ipv6-address')
+      allow(vm_manager_ds).to receive(:flock).and_yield
+      allow(azure_client).to receive(:get_load_balancer_by_name)
+        .with('fake-resource-group', 'fake-lb-name')
+        .and_return(
+          backend_address_pools: [
+            { name: 'pool-v4', load_balancer_backend_addresses: [] },
+            { name: 'pool-v6', load_balancer_backend_addresses: [] },
+            { name: 'pool-nic', load_balancer_backend_addresses: [] }
+          ]
+        )
+      expect(azure_client).to receive(:update_load_balancer_backend_pool)
+        .with(
+          'fake-resource-group',
+          'fake-lb-name',
+          'pool-v4',
+          [{ name: 'ipv4-address', properties: { ipAddress: '10.0.0.5', virtualNetwork: { id: vnet_id } } }]
+        )
+        .ordered
+      expect(azure_client).to receive(:update_load_balancer_backend_pool)
+        .with(
+          'fake-resource-group',
+          'fake-lb-name',
+          'pool-v6',
+          [{ name: 'ipv6-address', properties: { ipAddress: 'fd00::5', virtualNetwork: { id: vnet_id } } }]
+        )
+        .ordered
+
+      vm_manager_ds.send(
+        :_add_vm_to_load_balancer_backend_pool,
+        load_balancers,
+        virtual_machine_result
+      )
     end
   end
 

@@ -1745,6 +1745,40 @@ describe Bosh::AzureCloud::AzureClient do
     end
   end
 
+  describe '#build_ip_configurations with IP-based load balancers' do
+    let(:subnet) { { id: 'fake-subnet-id' } }
+    let(:nic_params) do
+      {
+        load_balancers: [
+          {
+            backend_address_pools: [
+              { id: 'fake-ip-lb-1-pool-id', backend_address_pools_type: Bosh::AzureCloud::Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_IP }
+            ]
+          },
+          {
+            backend_address_pools: [
+              { id: 'fake-ip-lb-2-pool-id', backend_address_pools_type: Bosh::AzureCloud::Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_IP }
+            ]
+          }
+        ],
+        ip_configurations: [
+          {
+            name: 'ipconfig0-0',
+            ip_version: 'IPv4',
+            subnet: subnet,
+            private_ip: '10.0.0.5'
+          }
+        ]
+      }
+    end
+
+    it 'does not attach IP-based backend pools to the NIC configuration' do
+      ip_configuration = azure_client.send(:build_ip_configurations, nic_params).first['properties']
+
+      expect(ip_configuration).not_to have_key('loadBalancerBackendAddressPools')
+    end
+  end
+
   describe '#parse_network_interface — dual-stack NIC response' do
     let(:dual_stack_nic_response) do
       {
