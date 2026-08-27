@@ -842,8 +842,8 @@ module Bosh::AzureCloud
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client)
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(_azure_config, @blob_manager, @meta_store, @storage_account_manager, @azure_client)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client)
-      @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new(@azure_client)
+      @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager, @instance_type_mapper)
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager
     end

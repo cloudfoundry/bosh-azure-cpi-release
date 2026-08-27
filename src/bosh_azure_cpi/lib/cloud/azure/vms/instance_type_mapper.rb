@@ -4,6 +4,8 @@ module Bosh::AzureCloud
   class InstanceTypeMapper
     include Helpers
 
+    class SkuLookupError < StandardError; end
+
     SERIES_PREFERENCE = {
       'D' => 5,  # General purpose - balanced
       'F' => 4,  # Compute optimized
@@ -58,6 +60,28 @@ module Bosh::AzureCloud
 
       @logger.debug("Selected VM sizes (in order): #{closest_matched_vm_sizes.join(', ')}")
       closest_matched_vm_sizes
+    rescue SkuLookupError
+      cloud_error("Unable to meet desired instance size: #{desired_instance_size['cpu']} CPU, #{desired_instance_size['ram']} MB RAM")
+    end
+
+    def filter_by_architecture(instance_types, architecture, location)
+      normalized_architecture = CpuArchitecture.normalize(architecture) || CpuArchitecture::X64
+      sku_architectures = get_vm_skus(location).each_with_object({}) do |sku, architectures|
+        next if sku[:name].nil?
+
+        capabilities = sku[:capabilities] || {}
+        sku_architecture = CpuArchitecture.normalize(capabilities[:CpuArchitectureType]) || CpuArchitecture::X64
+        architectures[sku[:name].downcase] = sku_architecture
+      end
+
+      compatible_instance_types = instance_types.select do |instance_type|
+        sku_architectures[instance_type.downcase] == normalized_architecture
+      end
+
+      @logger.debug(
+        "VM sizes compatible with CPU architecture '#{normalized_architecture}': #{compatible_instance_types.join(', ')}"
+      )
+      compatible_instance_types
     end
 
     private
@@ -65,16 +89,15 @@ module Bosh::AzureCloud
     def get_vm_skus(location)
       cache_key = "skus-#{location}"
       unless @sku_cache[cache_key]
-        begin
-          @logger.debug("Fetching VM SKU information for location: #{location}")
-          @sku_cache[cache_key] = @azure_client.list_vm_skus(location)
-        rescue => e
-          @logger.warn("Failed to fetch VM SKU information: #{e.message}")
-          return []
-        end
+        @logger.debug("Fetching VM SKU information for location: #{location}")
+        @sku_cache[cache_key] = @azure_client.list_vm_skus(location)
       end
 
       @sku_cache[cache_key]
+    rescue => e
+      message = "Failed to fetch VM SKU information: #{e.message}"
+      @logger.warn(message)
+      raise SkuLookupError, message
     end
 
     def extract_generation(vm_name)

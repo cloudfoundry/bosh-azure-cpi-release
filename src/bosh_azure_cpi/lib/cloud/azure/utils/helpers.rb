@@ -86,6 +86,26 @@ module Bosh::AzureCloud
     SKU_TIER_STANDARD = 'Standard'
     SKU_TIER_PREMIUM  = 'Premium'
 
+    module CpuArchitecture
+      X64 = 'x64'
+      ARM64 = 'Arm64'
+
+      module_function
+
+      def normalize(architecture)
+        return nil if architecture.nil? || architecture.to_s.empty?
+
+        case architecture.to_s.downcase
+        when 'x86_64', 'amd64', 'x64'
+          X64
+        when 'aarch64', 'arm64'
+          ARM64
+        else
+          architecture.to_s
+        end
+      end
+    end
+
     # Storage Account
     STORAGE_ACCOUNT_TYPE_STANDARD_LRS    = 'Standard_LRS'
     STORAGE_ACCOUNT_TYPE_STANDARDSSD_LRS = 'StandardSSD_LRS'
@@ -487,6 +507,7 @@ module Bosh::AzureCloud
     # * +:os_type+     - String. os type of the stemcell, e.g. "linux"
     # * +:name+        - String. name of the stemcell, e.g. "bosh-azure-hyperv-ubuntu-trusty-go_agent"
     # * +:version      - String. version of the stemcell, e.g. "2972"
+    # * +:architecture+ - String. normalized Azure CPU architecture, e.g. "x64" or "Arm64".
     # * +:image_size   - Integer. size in MiB of the image.
     #                             For a normal stemcell, the value should be the size of root.vhd.
     #                             For a light stemcell, the value should be the size of the platform image.
@@ -496,12 +517,13 @@ module Bosh::AzureCloud
     # *   +sku+          - String. The sku of the publisher's offer.
     # *   +version+      - String. The version of the sku.
     class StemcellInfo
-      attr_reader :uri, :metadata, :os_type, :name, :version, :image_size, :image
+      attr_reader :uri, :metadata, :os_type, :name, :version, :image_size, :image, :architecture
 
       def initialize(uri, metadata)
         @uri = uri
         @metadata = metadata
         @os_type = @metadata['os_type'].nil? ? 'linux' : @metadata['os_type'].downcase
+        @architecture = CpuArchitecture.normalize(@metadata['architecture']) || CpuArchitecture::X64
         @name = @metadata['name']
         @version = @metadata['version']
         @image_size = if @metadata['disk'].nil?

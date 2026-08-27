@@ -81,6 +81,83 @@ describe Bosh::AzureCloud::VMManager do
             )
           end
 
+          context 'when the stemcell is ARM64' do
+            let(:instance_types) { %w[Standard_D2s_v5 Standard_D2ps_v5] }
+            let(:disk_cids) { nil }
+            let(:available_vm_sizes) do
+              instance_types.map do |instance_type|
+                {
+                  name: instance_type,
+                  number_of_cores: '2',
+                  memory_in_mb: 4096
+                }
+              end
+            end
+
+            before do
+              allow(stemcell_manager).to receive(:get_stemcell_architecture).with(stemcell_cid).and_return('Arm64')
+              allow(stemcell_manager2).to receive(:get_stemcell_architecture).with(stemcell_cid).and_return('Arm64')
+              allow(azure_client).to receive(:list_available_virtual_machine_sizes_by_availability_set)
+                .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
+                .and_return(available_vm_sizes)
+            end
+
+            it 'selects an instance type compatible with the stemcell architecture' do
+              expect(instance_type_mapper).to receive(:filter_by_architecture)
+                .with(instance_types, 'Arm64', location)
+                .and_return(['Standard_D2ps_v5'])
+
+              vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+
+              expect(vm_props.instance_type).to eq('Standard_D2ps_v5')
+            end
+
+            it 'selects a managed VM size before preparing a heavy stemcell' do
+              allow(vm_manager2).to receive(:_get_stemcell_info).and_call_original
+              expect(instance_type_mapper).to receive(:filter_by_architecture)
+                .with(instance_types, 'Arm64', location)
+                .and_return(['Standard_D2ps_v5'])
+              expect(disk_manager2).to receive(:get_default_storage_account_type)
+                .with('Standard_D2ps_v5', location)
+                .and_return('Premium_LRS')
+              expect(stemcell_manager2).to receive(:get_user_image_info)
+                .with(stemcell_cid, 'Premium_LRS', location)
+                .and_return(stemcell_info)
+
+              vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+
+              expect(vm_props.instance_type).to eq('Standard_D2ps_v5')
+            end
+
+            it 'fails before creating network interfaces or a VM when no instance type is compatible' do
+              allow(instance_type_mapper).to receive(:filter_by_architecture)
+                .with(instance_types, 'Arm64', location)
+                .and_return([])
+              expect(azure_client).not_to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:create_virtual_machine)
+
+              expect do
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+              end.to raise_error(/No available instance type supports stemcell architecture 'Arm64'/)
+            end
+
+            it 'reports VM SKU lookup failures as retryable' do
+              allow(instance_type_mapper).to receive(:filter_by_architecture)
+                .with(instance_types, 'Arm64', location)
+                .and_raise(Bosh::AzureCloud::InstanceTypeMapper::SkuLookupError, 'Failed to fetch VM SKU information: Azure API error')
+              expect(vm_manager).not_to receive(:_get_stemcell_info)
+              expect(azure_client).not_to receive(:create_network_interface)
+              expect(azure_client).not_to receive(:create_virtual_machine)
+
+              expect do
+                vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+              end.to raise_error(Bosh::Clouds::VMCreationFailed) { |error|
+                expect(error.ok_to_retry).to be(true)
+                expect(error.message).to include('Failed to fetch VM SKU information: Azure API error')
+              }
+            end
+          end
+
           context 'when disk_cids are not provided' do
             let(:disk_cids) { nil }
 

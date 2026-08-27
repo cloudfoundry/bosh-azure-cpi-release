@@ -753,6 +753,7 @@ describe Bosh::AzureCloud::Helpers do
           expect(stemcell_info.name).to eq('fake-name')
           expect(stemcell_info.version).to eq('fake-version')
           expect(stemcell_info.image_size).to eq(3072)
+          expect(stemcell_info.architecture).to eq('x64')
           expect(stemcell_info.is_light_stemcell?).to be(false)
           expect(stemcell_info.image_reference).to be(nil)
         end
@@ -860,6 +861,20 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
 
+    context 'when architecture is arm64' do
+      let(:metadata) do
+        {
+          'architecture' => 'aarch64'
+        }
+      end
+
+      it 'normalizes the architecture for Azure' do
+        stemcell_info = Bosh::AzureCloud::Helpers::StemcellInfo.new('fake-uri', metadata)
+
+        expect(stemcell_info.architecture).to eq('Arm64')
+      end
+    end
+
     context 'when metadata is empty' do
       let(:uri) { 'fake-uri' }
       let(:metadata) { {} }
@@ -871,6 +886,7 @@ describe Bosh::AzureCloud::Helpers do
         expect(stemcell_info.name).to be(nil)
         expect(stemcell_info.version).to be(nil)
         expect(stemcell_info.image_size).to eq(3072)
+        expect(stemcell_info.architecture).to eq('x64')
       end
     end
   end

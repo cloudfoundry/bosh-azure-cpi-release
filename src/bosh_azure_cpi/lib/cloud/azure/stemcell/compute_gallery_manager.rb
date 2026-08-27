@@ -195,18 +195,6 @@ module Bosh::AzureCloud
       normalized_os_type
     end
 
-    def normalize_architecture(arch)
-      return nil if arch.nil? || arch.empty?
-      case arch.to_s.downcase
-      when 'x86_64', 'x64'
-        'x64'
-      when 'arm64'
-        'Arm64'
-      else
-        arch
-      end
-    end
-
     def normalize_disk_controllers(disk_controllers)
       disk_controllers.map do |controller|
         case controller.to_s.downcase
@@ -227,7 +215,7 @@ module Bosh::AzureCloud
 
     def build_image_definition_params(location, metadata)
       os_type = normalize_os_type(metadata['os_type'])
-      architecture = normalize_architecture(metadata['architecture'])
+      architecture = CpuArchitecture.normalize(metadata['architecture'])
       image_metadata = JSON.parse(metadata['image'])
       hyperv_generation = build_hyperv_generation(metadata)
       features = build_features_array(metadata)
