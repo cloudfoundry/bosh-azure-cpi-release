@@ -22,8 +22,6 @@ RSpec.configure do |rspec_config|
     @ssh_public_key              = ENV.fetch('BOSH_AZURE_SSH_PUBLIC_KEY')
     @default_resource_group_name = ENV.fetch('BOSH_AZURE_DEFAULT_RESOURCE_GROUP_NAME')
     @storage_account_name        = ENV.fetch('BOSH_AZURE_STORAGE_ACCOUNT_NAME')
-    @use_managed_disks           = true
-
     @stemcell_id                 = ENV.fetch('BOSH_AZURE_STEMCELL_ID')
 
     @instance_type               = ENV.fetch('BOSH_AZURE_INSTANCE_TYPE', 'Standard_D1_v2')
@@ -48,7 +46,6 @@ RSpec.configure do |rspec_config|
       'ssh_user' => 'vcap',
       'ssh_public_key' => @ssh_public_key,
       'resource_group_name' => @default_resource_group_name,
-      'use_managed_disks' => @use_managed_disks,
       'storage_account_name' => @storage_account_name,
       'parallel_upload_thread_num' => 16,
       'vm' => {

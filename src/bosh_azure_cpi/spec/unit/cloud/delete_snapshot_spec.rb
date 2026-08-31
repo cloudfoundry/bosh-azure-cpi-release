@@ -34,22 +34,5 @@ describe Bosh::AzureCloud::Cloud do
         end.not_to raise_error
       end
     end
-
-    context 'when the snapshot is an unmanaged snapshot' do
-      let(:snapshot_name) { 'fake-snapshot-name' }
-
-      before do
-        allow(snapshot_id_object).to receive(:disk_name)
-          .and_return(snapshot_name)
-      end
-
-      it 'should delete the unmanaged snapshot' do
-        expect(disk_manager).to receive(:delete_snapshot).with(snapshot_id_object)
-
-        expect do
-          cloud.delete_snapshot(snapshot_cid)
-        end.not_to raise_error
-      end
-    end
   end
 end

@@ -13,30 +13,13 @@ describe Bosh::AzureCloud::DiskId do
     end
 
     context 'when creating a V2 disk id' do
-      context 'with unmanaged disk' do
-        let(:use_managed_disks) { false }
-        let(:storage_account_name) { '6slyzrx7ypji2cfdefaultsa' }
-        let(:disk_name) { "bosh-data-#{uuid}" }
-        let(:id_str) { "caching:#{caching};disk_name:#{disk_name};storage_account_name:#{storage_account_name}" }
-
-        it 'should return a correct disk id' do
-          disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks, storage_account_name: storage_account_name)
-          expect(disk_id.to_s).to eq(id_str)
-          expect(disk_id.disk_name).to eq(disk_name)
-          expect(disk_id.caching).to eq(caching)
-          expect(disk_id.storage_account_name).to eq(storage_account_name)
-          expect(disk_id.resource_group_name).to eq(nil)
-        end
-      end
-
       context 'with managed disk' do
-        let(:use_managed_disks) { true }
         let(:rg_name) { 'another-resource-group-name' }
         let(:disk_name) { "bosh-disk-data-#{uuid}" }
         let(:id_str) { "caching:#{caching};disk_name:#{disk_name};resource_group_name:#{rg_name}" }
 
         it 'should return a correct disk id' do
-          disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks, resource_group_name: rg_name)
+          disk_id = Bosh::AzureCloud::DiskId.create(caching, resource_group_name: rg_name)
           expect(disk_id.to_s).to eq(id_str)
           expect(disk_id.disk_name).to eq(disk_name)
           expect(disk_id.caching).to eq(caching)

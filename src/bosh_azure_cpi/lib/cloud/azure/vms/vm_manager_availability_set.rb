@@ -29,7 +29,7 @@ module Bosh::AzureCloud
         tags: AZURE_TAGS,
         platform_update_domain_count: vm_props.availability_set.platform_update_domain_count,
         platform_fault_domain_count: vm_props.availability_set.platform_fault_domain_count,
-        managed: @use_managed_disks
+        managed: true
       }
       availability_set = nil
       flock("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX) do
@@ -41,18 +41,8 @@ module Bosh::AzureCloud
         # In some regions, the location of availability set is case-sensitive, e.g. CanadaCentral instead of canadacentral.
         elsif !availability_set[:location].casecmp(availability_set_params[:location]).zero?
           cloud_error("availability set '#{availability_set_name}' already exists, but in a different location '#{availability_set[:location].downcase}' instead of '#{availability_set_params[:location].downcase}'. Please delete the availability set or choose another location.")
-        elsif !@use_managed_disks && availability_set[:managed]
-          cloud_error("availability set '#{availability_set_name}' already exists. It's not allowed to update it from managed to unmanaged.")
-        elsif @use_managed_disks && !availability_set[:managed]
-          @logger.info("availability set '#{availability_set_name}' exists, but it needs to be updated from unmanaged to managed.")
-          maximum_fault_domain_count = [availability_set[:platform_fault_domain_count], @azure_client.get_max_fault_domains_for_location(location)].compact.min
-          availability_set_params.merge!(
-            platform_update_domain_count: availability_set[:platform_update_domain_count],
-            platform_fault_domain_count: maximum_fault_domain_count,
-            managed: true
-          )
-          @azure_client.create_availability_set(resource_group_name, availability_set_params)
-          availability_set = @azure_client.get_availability_set_by_name(resource_group_name, availability_set_name)
+        elsif availability_set[:managed] == false
+          cloud_error("availability set '#{availability_set_name}' is unmanaged. Only managed availability sets can host managed-disk VMs. Please delete the availability set '#{availability_set_name}' and re-deploy.")
         else
           @logger.info("availability set '#{availability_set_name}' exists. No need to update.")
         end

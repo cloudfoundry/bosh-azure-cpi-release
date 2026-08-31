@@ -175,16 +175,6 @@ describe Bosh::AzureCloud::InstanceId do
           expect(instance_id.storage_account_name).to be(nil)
         end
       end
-
-      context 'when it is a unmanaged disk vm' do
-        let(:storage_account_name) { 'fakestorageaccountname' }
-        let(:instance_id_string) { "#{storage_account_name}-#{SecureRandom.uuid}" }
-        let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, 'fake-resource-group-name') }
-
-        it 'should get storage account from v1 vm name' do
-          expect(instance_id.storage_account_name).to eq(storage_account_name)
-        end
-      end
     end
 
     context 'when instance id is a v2 id' do
@@ -198,63 +188,8 @@ describe Bosh::AzureCloud::InstanceId do
     end
   end
 
-  describe 'use_managed_disks?' do
-    context 'when instance id is a v1 id' do
-      context 'when it is a unmanaged disk vm' do
-        let(:storage_account_name) { 'fakestorageaccountname' }
-        let(:instance_id_string) { "#{storage_account_name}-#{SecureRandom.uuid}" }
-        let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, 'fake-resource-group-name') }
-
-        it 'should return false' do
-          expect(instance_id.use_managed_disks?).to be(false)
-        end
-      end
-
-      context 'when it is a managed disk vm' do
-        let(:instance_id_string) { SecureRandom.uuid.to_s }
-        let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, 'fake-resource-group-name') }
-
-        it 'should return true' do
-          expect(instance_id.use_managed_disks?).to be(true)
-        end
-      end
-    end
-
-    context 'when instance id is a v2 id' do
-      context 'when it is a unmanaged disk vm' do
-        let(:instance_id_string) { 'resource_group_name:r;agent_id:None;storage_account_name:s' }
-        let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, 'fake-resource-group-name') }
-
-        it 'should return false' do
-          expect(instance_id.use_managed_disks?).to be(false)
-        end
-      end
-
-      context 'when it is a managed disk vm' do
-        let(:instance_id_string) { 'resource_group_name:r;agent_id:None' }
-        let(:instance_id) { Bosh::AzureCloud::InstanceId.parse(instance_id_string, 'fake-resource-group-name') }
-
-        it 'should return true' do
-          expect(instance_id.use_managed_disks?).to be(true)
-        end
-      end
-    end
-  end
-
   describe '#validate' do
     context 'when instance id is a v1 id' do
-      context 'when it is a unmanaged disk vm and length of agent id is not 36' do
-        let(:storage_account_name) { 'fakestorageaccountname' }
-        let(:instance_id_string) { "#{storage_account_name}-length-not-equal-to-36" }
-        let(:instance_id) { nil }
-
-        it 'should raise an error' do
-          expect do
-            Bosh::AzureCloud::InstanceId.parse(instance_id_string, 'fake-resource-group-name')
-          end.to raise_error(/Invalid instance id \(plain\)/)
-        end
-      end
-
       context 'when it is a managed disk vm and length of agent id is not 36' do
         let(:instance_id_string) { 'length-not-equal-to-36' }
 

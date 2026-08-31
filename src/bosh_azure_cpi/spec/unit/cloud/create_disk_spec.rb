@@ -69,194 +69,125 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
-    context 'when use_managed_disks is true' do
-      let(:disk_size_in_gib) { 42 }
-      let(:disk_size) { disk_size_in_gib * 1024 }
-      let(:caching) { 'ReadOnly' }
-      let(:cloud_properties) do
+    let(:disk_size_in_gib) { 42 }
+    let(:disk_size) { disk_size_in_gib * 1024 }
+    let(:caching) { 'ReadOnly' }
+    let(:cloud_properties) do
+      {
+        'caching' => caching
+      }
+    end
+
+    context 'when vm_cid is nil' do
+      let(:vm_cid) { nil }
+      let(:rg_location) { 'fake-resource-group-location' }
+      let(:resource_group) do
         {
-          'caching' => caching
+          location: rg_location
         }
       end
+      let(:zone) { nil }
+      let(:iops) { nil }
+      let(:mbps) { nil }
 
-      context 'when vm_cid is nil' do
-        let(:vm_cid) { nil }
-        let(:rg_location) { 'fake-resource-group-location' }
-        let(:resource_group) do
-          {
-            location: rg_location
-          }
-        end
-        let(:zone) { nil }
-        let(:iops) { nil }
-        let(:mbps) { nil }
-
-        before do
-          allow(azure_client).to receive(:get_resource_group).and_return(resource_group)
-        end
-
-        it 'should create a managed disk with the default location and storage account type' do
-          expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, true, { resource_group_name: default_resource_group_name })
-            .and_return(disk_id_object)
-          expect(disk_manager2).to receive(:create_disk)
-            .with(disk_id_object, rg_location, disk_size_in_gib, 'Standard_LRS', zone, iops, mbps, disk_encryption_set_name: nil)
-          expect(telemetry_manager).to receive(:monitor)
-            .with('create_disk', { id: '', extras: { 'disk_size' => disk_size } })
-            .and_call_original
-
-          expect do
-            managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
-          end.not_to raise_error
-        end
+      before do
+        allow(azure_client).to receive(:get_resource_group).and_return(resource_group)
       end
 
-      context 'when vm_cid is not nil' do
-        context 'when the instance is an unmanaged vm' do
-          before do
-            allow(instance_id_object).to receive(:use_managed_disks?)
-              .and_return(false)
-          end
+      it 'should create a managed disk with the default location and storage account type' do
+        expect(Bosh::AzureCloud::DiskId).to receive(:create)
+          .with(caching, { resource_group_name: default_resource_group_name })
+          .and_return(disk_id_object)
+        expect(disk_manager2).to receive(:create_disk)
+          .with(disk_id_object, rg_location, disk_size_in_gib, 'Standard_LRS', zone, iops, mbps, disk_encryption_set_name: nil)
+        expect(telemetry_manager).to receive(:monitor)
+          .with('create_disk', { id: '', extras: { 'disk_size' => disk_size } })
+          .and_call_original
 
-          it "can't create a managed disk for a VM with unmanaged disks" do
-            expect do
-              managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
-            end.to raise_error(/Cannot create a managed disk for a VM with unmanaged disks/)
-          end
-        end
-
-        context 'when the instance is a managed vm' do
-          let(:vm_location) { 'fake-vm-location' }
-          let(:vm_zone) { 'fake-zone' }
-          let(:iops) { nil }
-          let(:mbps) { nil }
-          let(:vm) do
-            {
-              location: vm_location,
-              vm_size: 'Standard_F1s',
-              zone: vm_zone
-            }
-          end
-          let(:default_storage_account_type) { 'Premium_LRS' }
-
-          before do
-            allow(instance_id_object).to receive(:use_managed_disks?)
-              .and_return(true)
-            allow(azure_client).to receive(:get_virtual_machine_by_name)
-              .with(resource_group_name, vm_name)
-              .and_return(vm)
-            allow(disk_manager2).to receive(:get_default_storage_account_type).with('Standard_F1s', vm_location).and_return(default_storage_account_type)
-          end
-
-          context 'when storage_account_type is not specified' do
-            it 'should create a managed disk in the same location with the vm and use the default storage account type' do
-              expect(Bosh::AzureCloud::DiskId).to receive(:create)
-                .with(caching, true, { resource_group_name: resource_group_name })
-                .and_return(disk_id_object)
-              expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, default_storage_account_type, vm_zone, iops, mbps, disk_encryption_set_name: nil)
-
-              managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
-            end
-          end
-
-          context 'when storage_account_type is specified' do
-            let(:cloud_properties) do
-              {
-                'caching' => caching,
-                'storage_account_type' => 'Standard_LRS'
-              }
-            end
-
-            it 'should create a managed disk in the same location with the vm and use the specified storage account type' do
-              expect(Bosh::AzureCloud::DiskId).to receive(:create)
-                .with(caching, true, { resource_group_name: resource_group_name })
-                .and_return(disk_id_object)
-              expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone, iops, mbps, disk_encryption_set_name: nil)
-
-              expect do
-                managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
-              end.not_to raise_error
-            end
-          end
-
-          context 'when storage_account_type, iops and mbps is specified' do
-            let(:iops) { 5000 }
-            let(:mbps) { 150 }
-            let(:cloud_properties) do
-              {
-                'caching' => caching,
-                'storage_account_type' => 'PremiumV2_LRS',
-                'iops' => iops,
-                'mbps' => mbps
-              }
-            end
-
-            it 'should create a managed disk in the same location with the vm and use the specified storage account type, iops and mbps' do
-              expect(Bosh::AzureCloud::DiskId).to receive(:create)
-                .with(caching, true, { resource_group_name: resource_group_name })
-                .and_return(disk_id_object)
-              expect(disk_manager2).to receive(:create_disk)
-                .with(disk_id_object, vm_location, disk_size_in_gib, 'PremiumV2_LRS', vm_zone, iops, mbps, disk_encryption_set_name: nil)
-
-              expect do
-                managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
-              end.not_to raise_error
-            end
-          end
-        end
+        expect do
+          managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
+        end.not_to raise_error
       end
     end
 
-    context 'when use_managed_disks is false' do
-      let(:disk_size_in_gib) { 42 }
-      let(:disk_size) { disk_size_in_gib * 1024 }
-      let(:caching) { 'ReadOnly' }
-      let(:storage_account_name) { 'fake-storage-account-name' }
-      let(:cloud_properties) do
-        {
-          'caching' => caching
-        }
-      end
-
-      context 'when vm_cid is not nil' do
-        let(:vm_storage_account_name) { 'vmstorageaccountname' }
+    context 'when vm_cid is not nil' do
+      context 'when the instance is a managed vm' do
+        let(:vm_location) { 'fake-vm-location' }
+        let(:vm_zone) { 'fake-zone' }
+        let(:iops) { nil }
+        let(:mbps) { nil }
+        let(:vm) do
+          {
+            location: vm_location,
+            vm_size: 'Standard_F1s',
+            zone: vm_zone
+          }
+        end
+        let(:default_storage_account_type) { 'Premium_LRS' }
 
         before do
-          allow(instance_id_object).to receive(:storage_account_name)
-            .and_return(vm_storage_account_name)
+          allow(azure_client).to receive(:get_virtual_machine_by_name)
+            .with(resource_group_name, vm_name)
+            .and_return(vm)
+          allow(disk_manager2).to receive(:get_default_storage_account_type).with('Standard_F1s', vm_location).and_return(default_storage_account_type)
         end
 
-        it 'should create an unmanaged disk in the same storage account of the vm' do
-          expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, false, { storage_account_name: vm_storage_account_name })
-            .and_return(disk_id_object)
-          expect(disk_manager).to receive(:create_disk)
-            .with(disk_id_object, disk_size_in_gib)
+        context 'when storage_account_type is not specified' do
+          it 'should create a managed disk in the same location with the vm and use the default storage account type' do
+            expect(Bosh::AzureCloud::DiskId).to receive(:create)
+              .with(caching, { resource_group_name: resource_group_name })
+              .and_return(disk_id_object)
+            expect(disk_manager2).to receive(:create_disk)
+              .with(disk_id_object, vm_location, disk_size_in_gib, default_storage_account_type, vm_zone, iops, mbps, disk_encryption_set_name: nil)
 
-          expect do
-            cloud.create_disk(disk_size, cloud_properties, vm_cid)
-          end.not_to raise_error
+            managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
+          end
         end
-      end
 
-      context 'when vm_cid is nil' do
-        let(:vm_cid) { nil }
+        context 'when storage_account_type is specified' do
+          let(:cloud_properties) do
+            {
+              'caching' => caching,
+              'storage_account_type' => 'Standard_LRS'
+            }
+          end
 
-        it 'should create an unmanaged disk in the default storage account of global configuration' do
-          expect(Bosh::AzureCloud::DiskId).to receive(:create)
-            .with(caching, false, { storage_account_name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME })
-            .and_return(disk_id_object)
-          expect(disk_manager).to receive(:create_disk)
-            .with(disk_id_object, disk_size_in_gib)
-          expect(telemetry_manager).to receive(:monitor)
-            .with('create_disk', { id: '', extras: { 'disk_size' => disk_size } })
-            .and_call_original
+          it 'should create a managed disk in the same location with the vm and use the specified storage account type' do
+            expect(Bosh::AzureCloud::DiskId).to receive(:create)
+              .with(caching, { resource_group_name: resource_group_name })
+              .and_return(disk_id_object)
+            expect(disk_manager2).to receive(:create_disk)
+              .with(disk_id_object, vm_location, disk_size_in_gib, 'Standard_LRS', vm_zone, iops, mbps, disk_encryption_set_name: nil)
 
-          expect do
-            cloud.create_disk(disk_size, cloud_properties, vm_cid)
-          end.not_to raise_error
+            expect do
+              managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
+            end.not_to raise_error
+          end
+        end
+
+        context 'when storage_account_type, iops and mbps is specified' do
+          let(:iops) { 5000 }
+          let(:mbps) { 150 }
+          let(:cloud_properties) do
+            {
+              'caching' => caching,
+              'storage_account_type' => 'PremiumV2_LRS',
+              'iops' => iops,
+              'mbps' => mbps
+            }
+          end
+
+          it 'should create a managed disk in the same location with the vm and use the specified storage account type, iops and mbps' do
+            expect(Bosh::AzureCloud::DiskId).to receive(:create)
+              .with(caching, { resource_group_name: resource_group_name })
+              .and_return(disk_id_object)
+            expect(disk_manager2).to receive(:create_disk)
+              .with(disk_id_object, vm_location, disk_size_in_gib, 'PremiumV2_LRS', vm_zone, iops, mbps, disk_encryption_set_name: nil)
+
+            expect do
+              managed_cloud.create_disk(disk_size, cloud_properties, vm_cid)
+            end.not_to raise_error
+          end
         end
       end
     end

@@ -25,12 +25,11 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       context 'and compute_gallery is enabled' do
-        let(:compute_gallery_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'compute_gallery_name' => 'gallery-name', 'use_managed_disks' => true}})) }
+        let(:compute_gallery_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'compute_gallery_name' => 'gallery-name'}})) }
 
         it 'should still use the light stemcell manager' do
           expect(light_stemcell_manager).to receive(:delete_stemcell)
             .with(stemcell_cid)
-          expect(stemcell_manager).not_to receive(:delete_stemcell)
           expect(stemcell_manager2).not_to receive(:delete_stemcell)
 
           expect do
@@ -43,36 +42,22 @@ describe Bosh::AzureCloud::Cloud do
     context 'when a heavy stemcell is used' do
       let(:stemcell_cid) { 'bosh-stemcell-eb365f8d-c069-4795-a6fc-3fb93dee6f0c' }
 
-      context 'and use_managed_disks is false' do
-        it 'should succeed' do
-          expect(stemcell_manager).to receive(:delete_stemcell)
-            .with(stemcell_cid)
+      it 'should succeed' do
+        expect(stemcell_manager2).to receive(:delete_stemcell)
+          .with(stemcell_cid)
 
-          expect do
-            cloud.delete_stemcell(stemcell_cid)
-          end.not_to raise_error
-        end
-      end
-
-      context 'and use_managed_disks is true' do
-        it 'should succeed' do
-          expect(stemcell_manager2).to receive(:delete_stemcell)
-            .with(stemcell_cid)
-
-          expect do
-            managed_cloud.delete_stemcell(stemcell_cid)
-          end.not_to raise_error
-        end
+        expect do
+          managed_cloud.delete_stemcell(stemcell_cid)
+        end.not_to raise_error
       end
 
       context 'and compute_gallery is enabled' do
-        let(:compute_gallery_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'compute_gallery_name' => 'gallery-name', 'use_managed_disks' => true}})) }
+        let(:compute_gallery_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'compute_gallery_name' => 'gallery-name'}})) }
 
         it 'should use stemcell_manager2' do
           expect(stemcell_manager2).to receive(:delete_stemcell)
             .with(stemcell_cid)
           expect(light_stemcell_manager).not_to receive(:delete_stemcell)
-          expect(stemcell_manager).not_to receive(:delete_stemcell)
 
           expect do
             compute_gallery_cloud.delete_stemcell(stemcell_cid)

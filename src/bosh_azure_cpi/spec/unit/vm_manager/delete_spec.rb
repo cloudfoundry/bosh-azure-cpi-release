@@ -4,15 +4,13 @@ require 'spec_helper'
 
 describe Bosh::AzureCloud::VMManager do
   describe '#delete' do
-    let(:disk_manager) { instance_double(Bosh::AzureCloud::DiskManager) }
     let(:disk_manager2) { instance_double(Bosh::AzureCloud::DiskManager2) }
     let(:azure_client) { instance_double(Bosh::AzureCloud::AzureClient) }
     let(:storage_account_manager) { instance_double(Bosh::AzureCloud::StorageAccountManager) }
     let(:azure_config) { mock_azure_config }
-    let(:stemcell_manager) { instance_double(Bosh::AzureCloud::StemcellManager) }
     let(:stemcell_manager2) { instance_double(Bosh::AzureCloud::StemcellManager2) }
     let(:light_stemcell_manager) { instance_double(Bosh::AzureCloud::LightStemcellManager) }
-    let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+    let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, disk_manager2, azure_client, storage_account_manager, stemcell_manager2, light_stemcell_manager) }
 
     let(:resource_group_name) { 'fake-resource-group-name' }
     let(:storage_account_name) { 'fake-storage-account-name' }
@@ -72,9 +70,6 @@ describe Bosh::AzureCloud::VMManager do
 
     context 'When vm is not nil' do
       before do
-        # It does NOT matter whether the vm is with managed disk or not. We assume the vm is with managed disks.
-        allow(instance_id).to receive(:use_managed_disks?)
-          .and_return(true)
         allow(disk_manager2).to receive(:generate_os_disk_name)
           .with(vm_name)
           .and_return(os_disk_name)
@@ -220,9 +215,6 @@ describe Bosh::AzureCloud::VMManager do
 
     context 'When vm is nil' do
       before do
-        # It does NOT matter whether the vm is with managed disk or not. We assume the vm is with managed disks.
-        allow(instance_id).to receive(:use_managed_disks?)
-          .and_return(true)
         allow(disk_manager2).to receive(:generate_os_disk_name)
           .with(vm_name)
           .and_return(os_disk_name)
@@ -314,51 +306,6 @@ describe Bosh::AzureCloud::VMManager do
             vm_manager.delete(instance_id)
           end.not_to raise_error
         end
-      end
-    end
-
-    context 'When vm is with unmanaged disk' do
-      before do
-        allow(instance_id).to receive(:use_managed_disks?)
-          .and_return(false)
-        allow(instance_id).to receive(:storage_account_name)
-          .and_return(storage_account_name)
-        allow(disk_manager).to receive(:generate_os_disk_name)
-          .with(vm_name)
-          .and_return(os_disk_name)
-        allow(disk_manager).to receive(:generate_ephemeral_disk_name)
-          .with(vm_name)
-          .and_return(ephemeral_disk_name)
-      end
-
-      # It does NOT matter whether the vm is nil or not. We assume that vm is not nil.
-      let(:vm) do
-        {
-          network_interfaces: [
-            { name: 'fake-nic-1' },
-            { name: 'fake-nic-2' }
-          ]
-        }
-      end
-
-      before do
-        allow(azure_client).to receive(:get_virtual_machine_by_name)
-          .with(resource_group_name, vm_name).and_return(vm)
-      end
-
-      it 'should delete all resources' do
-        expect(azure_client).to receive(:delete_virtual_machine).with(resource_group_name, vm_name)
-        expect(azure_client).to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-1')
-        expect(azure_client).to receive(:delete_network_interface).with(resource_group_name, 'fake-nic-2')
-        expect(azure_client).to receive(:delete_public_ip).with(resource_group_name, vm_name)
-        expect(disk_manager).to receive(:delete_disk).with(storage_account_name, os_disk_name)
-        expect(disk_manager).to receive(:delete_disk).with(storage_account_name, ephemeral_disk_name)
-        expect(disk_manager).to receive(:delete_vm_status_files)
-          .with(storage_account_name, vm_name)
-
-        expect do
-          vm_manager.delete(instance_id)
-        end.not_to raise_error
       end
     end
   end

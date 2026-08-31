@@ -5,9 +5,7 @@ require 'spec_helper'
 describe Bosh::AzureCloud::DiskId do
   describe '#self.create' do
     let(:caching) { 'None' }
-    let(:use_managed_disks) { true }
     let(:disk_name) { 'fake-disk-name' }
-    let(:storage_account_name) { 'fake-storage-account-name' }
 
     context 'when creating a new disk' do
       let(:id) do
@@ -19,32 +17,15 @@ describe Bosh::AzureCloud::DiskId do
 
       before do
         allow(Bosh::AzureCloud::DiskId).to receive(:_generate_data_disk_name)
-          .with(use_managed_disks)
           .and_return(disk_name)
       end
 
       it 'should generate a disk name and initialize the disk_id' do
         expect do
-          disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks)
+          disk_id = Bosh::AzureCloud::DiskId.create(caching)
           expect(disk_id.instance_variable_get('@plain_id')).to eq(nil)
           expect(disk_id.instance_variable_get('@id_hash')).to eq(id)
         end.not_to raise_error
-      end
-    end
-
-    context 'when use_managed_disks is true' do
-      it 'should generate a disk name with prefix bosh-disk-data' do
-        disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks, disk_name: nil, storage_account_name: storage_account_name)
-        expect(disk_id.disk_name).to start_with('bosh-disk-data')
-      end
-    end
-
-    context 'when use_managed_disks is false' do
-      let(:use_managed_disks) { false }
-
-      it 'should generate a disk name with prefix bosh-data' do
-        disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks, disk_name: nil, storage_account_name: storage_account_name)
-        expect(disk_id.disk_name).to start_with('bosh-data')
       end
     end
 
@@ -57,7 +38,7 @@ describe Bosh::AzureCloud::DiskId do
       end
 
       it 'should not generate a disk name and initialize the disk_id' do
-        disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks, disk_name: disk_name)
+        disk_id = Bosh::AzureCloud::DiskId.create(caching, disk_name: disk_name)
         expect(disk_id.instance_variable_get('@plain_id')).to eq(nil)
         expect(disk_id.instance_variable_get('@id_hash')).to eq(id)
       end
@@ -76,25 +57,7 @@ describe Bosh::AzureCloud::DiskId do
       it 'should initialize the disk_id' do
         expect(Bosh::AzureCloud::DiskId).not_to receive(:_generate_data_disk_name)
 
-        disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks, disk_name: disk_name, resource_group_name: resource_group_name)
-        expect(disk_id.instance_variable_get('@plain_id')).to eq(nil)
-        expect(disk_id.instance_variable_get('@id_hash')).to eq(id)
-      end
-    end
-
-    context 'when storage_account_name is NOT nil' do
-      let(:storage_account_name) { 'fake-storage-account-name' }
-      let(:id) do
-        {
-          'disk_name' => disk_name,
-          'caching' => caching,
-          'storage_account_name' => storage_account_name
-        }
-      end
-
-      it 'should initialize the disk_id' do
-        expect(Bosh::AzureCloud::DiskId).not_to receive(:_generate_data_disk_name)
-        disk_id = Bosh::AzureCloud::DiskId.create(caching, use_managed_disks, disk_name: disk_name, storage_account_name: storage_account_name)
+        disk_id = Bosh::AzureCloud::DiskId.create(caching, disk_name: disk_name, resource_group_name: resource_group_name)
         expect(disk_id.instance_variable_get('@plain_id')).to eq(nil)
         expect(disk_id.instance_variable_get('@id_hash')).to eq(id)
       end
@@ -162,7 +125,7 @@ describe Bosh::AzureCloud::DiskId do
         let(:disk_name) { 'bosh-disk-data-fake-disk-name' }
         let(:resource_group_name) { 'fake-resource-group-name' }
         let(:disk_id_string) { "caching:#{caching};disk_name:#{disk_name};resource_group_name:#{resource_group_name}" }
-        let(:disk_id) { Bosh::AzureCloud::DiskId.create(caching, true, disk_name: disk_name, resource_group_name: resource_group_name) }
+        let(:disk_id) { Bosh::AzureCloud::DiskId.create(caching, disk_name: disk_name, resource_group_name: resource_group_name) }
 
         it 'should return the v2 string' do
           expect(disk_id.to_s).to eq(disk_id_string)
@@ -173,7 +136,7 @@ describe Bosh::AzureCloud::DiskId do
         let(:caching) { 'None' }
         let(:disk_name) { 'bosh-disk-data-fake-disk-name' }
         let(:resource_group_name) { 'fake-resource-group-name' }
-        let(:disk_id_1) { Bosh::AzureCloud::DiskId.create(caching, true, disk_name: disk_name, resource_group_name: resource_group_name) }
+        let(:disk_id_1) { Bosh::AzureCloud::DiskId.create(caching, disk_name: disk_name, resource_group_name: resource_group_name) }
         let(:disk_id_2) { Bosh::AzureCloud::DiskId.parse(disk_id_1.to_s, resource_group_name) }
 
         it 'should have same output string' do
@@ -274,7 +237,7 @@ describe Bosh::AzureCloud::DiskId do
     context 'when disk name does not start with bosh-disk-data or bosh-data' do
       let(:caching) { 'None' }
       let(:disk_name) { 'dd' }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.create(caching, true, disk_name: disk_name, resource_group_name: 'rr') }
+      let(:disk_id) { Bosh::AzureCloud::DiskId.create(caching, disk_name: disk_name, resource_group_name: 'rr') }
 
       it 'should raise an error' do
         expect do
@@ -321,7 +284,7 @@ describe Bosh::AzureCloud::DiskId do
 
     context 'when disk name starts with bosh-disk-data (managed)' do
       let(:caching) { 'None' }
-      let(:disk_id) { Bosh::AzureCloud::DiskId.create(caching, true, resource_group_name: 'rr') }
+      let(:disk_id) { Bosh::AzureCloud::DiskId.create(caching, resource_group_name: 'rr') }
 
       it 'should raise an error' do
         expect do
@@ -334,7 +297,7 @@ describe Bosh::AzureCloud::DiskId do
   describe '#validate' do
     context 'disk name' do
       context 'when it is empty' do
-        let(:disk_id) { Bosh::AzureCloud::DiskId.create('None', true, disk_name: '', resource_group_name: 'r') }
+        let(:disk_id) { Bosh::AzureCloud::DiskId.create('None', disk_name: '', resource_group_name: 'r') }
 
         it 'should raise an error' do
           expect do
@@ -346,7 +309,7 @@ describe Bosh::AzureCloud::DiskId do
 
     context 'caching' do
       context 'when it is nil' do
-        let(:disk_id) { Bosh::AzureCloud::DiskId.create(nil, true, resource_group_name: 'r') }
+        let(:disk_id) { Bosh::AzureCloud::DiskId.create(nil, resource_group_name: 'r') }
 
         it 'should raise an error' do
           expect do
@@ -356,7 +319,7 @@ describe Bosh::AzureCloud::DiskId do
       end
 
       context 'when it is empty' do
-        let(:disk_id) { Bosh::AzureCloud::DiskId.create('', true, resource_group_name: 'r') }
+        let(:disk_id) { Bosh::AzureCloud::DiskId.create('', resource_group_name: 'r') }
 
         it 'should raise an error' do
           expect do
@@ -368,34 +331,12 @@ describe Bosh::AzureCloud::DiskId do
 
     context 'resource_group_name' do
       context 'when it is empty' do
-        let(:disk_id) { Bosh::AzureCloud::DiskId.create('None', true, resource_group_name: '') }
+        let(:disk_id) { Bosh::AzureCloud::DiskId.create('None', resource_group_name: '') }
 
         it 'should raise an error' do
           expect do
             disk_id.validate
           end.to raise_error(/Invalid resource_group_name in disk id \(version 2\)/)
-        end
-      end
-    end
-
-    context 'storage_account_name' do
-      context 'when it is nil' do
-        let(:disk_id) { Bosh::AzureCloud::DiskId.create('None', false) }
-
-        it 'should raise an error' do
-          expect do
-            disk_id.validate
-          end.to raise_error(/Invalid storage_account_name in disk id \(version 2\)/)
-        end
-      end
-
-      context 'when it is empty' do
-        let(:disk_id) { Bosh::AzureCloud::DiskId.create('None', false, storage_account_name: '') }
-
-        it 'should raise an error' do
-          expect do
-            disk_id.validate
-          end.to raise_error(/Invalid storage_account_name in disk id \(version 2\)/)
         end
       end
     end

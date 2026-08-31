@@ -27,7 +27,7 @@ describe Bosh::AzureCloud::Cloud do
       end
 
       context 'and compute_gallery is enabled' do
-        let(:compute_gallery_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'compute_gallery_name' => 'gallery-name', 'use_managed_disks' => true}})) }
+        let(:compute_gallery_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'compute_gallery_name' => 'gallery-name'}})) }
 
         it 'should still use the light stemcell manager' do
           expect(telemetry_manager).to receive(:monitor)
@@ -36,7 +36,6 @@ describe Bosh::AzureCloud::Cloud do
 
           expect(light_stemcell_manager).to receive(:create_stemcell)
             .with(cloud_properties).and_return(stemcell_cid)
-          expect(stemcell_manager).not_to receive(:create_stemcell)
           expect(stemcell_manager2).not_to receive(:create_stemcell)
 
           expect(
@@ -49,38 +48,21 @@ describe Bosh::AzureCloud::Cloud do
     context 'when a heavy stemcell is used' do
       let(:cloud_properties) { {} }
 
-      context 'and use_managed_disks is false' do
-        it 'should succeed' do
-          expect(telemetry_manager).to receive(:monitor)
-            .with('create_stemcell', { extras: { 'stemcell' => 'unknown_name-unknown_version' } })
-            .and_call_original
+      it 'should succeed' do
+        expect(telemetry_manager).to receive(:monitor)
+          .with('create_stemcell', { extras: { 'stemcell' => 'unknown_name-unknown_version' } })
+          .and_call_original
 
-          expect(stemcell_manager).to receive(:create_stemcell)
-            .with(image_path, cloud_properties).and_return(stemcell_cid)
+        expect(stemcell_manager2).to receive(:create_stemcell)
+          .with(image_path, cloud_properties).and_return(stemcell_cid)
 
-          expect(
-            cloud.create_stemcell(image_path, cloud_properties)
-          ).to eq(stemcell_cid)
-        end
-      end
-
-      context 'and use_managed_disks is true' do
-        it 'should succeed' do
-          expect(telemetry_manager).to receive(:monitor)
-            .with('create_stemcell', { extras: { 'stemcell' => 'unknown_name-unknown_version' } })
-            .and_call_original
-
-          expect(stemcell_manager2).to receive(:create_stemcell)
-            .with(image_path, cloud_properties).and_return(stemcell_cid)
-
-          expect(
-            managed_cloud.create_stemcell(image_path, cloud_properties)
-          ).to eq(stemcell_cid)
-        end
+        expect(
+          managed_cloud.create_stemcell(image_path, cloud_properties)
+        ).to eq(stemcell_cid)
       end
 
       context 'and compute_gallery is enabled' do
-        let(:compute_gallery_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'compute_gallery_name' => 'gallery-name', 'use_managed_disks' => true}})) }
+        let(:compute_gallery_cloud) { mock_cloud(mock_cloud_properties_merge({'azure' => {'compute_gallery_name' => 'gallery-name'}})) }
 
         it 'should use stemcell_manager2' do
           expect(telemetry_manager).to receive(:monitor)
@@ -90,7 +72,6 @@ describe Bosh::AzureCloud::Cloud do
           expect(stemcell_manager2).to receive(:create_stemcell)
             .with(image_path, cloud_properties).and_return(stemcell_cid)
           expect(light_stemcell_manager).not_to receive(:create_stemcell)
-          expect(stemcell_manager).not_to receive(:create_stemcell)
 
           expect(
             compute_gallery_cloud.create_stemcell(image_path, cloud_properties)
@@ -114,7 +95,7 @@ describe Bosh::AzureCloud::Cloud do
           .with('create_stemcell', { extras: { 'stemcell' => "#{stemcell_name}-#{stemcell_version}" } })
           .and_call_original
 
-        expect(stemcell_manager).to receive(:create_stemcell)
+        expect(stemcell_manager2).to receive(:create_stemcell)
           .with(image_path, cloud_properties).and_return(stemcell_cid)
 
         expect(

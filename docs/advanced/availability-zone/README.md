@@ -6,13 +6,7 @@ An Azure [Availability Zone](https://docs.microsoft.com/en-us/azure/availability
 
 * Before AZ General Availability (GA), you need to [sign up for the Availability Zones preview](http://aka.ms/azenroll) for your subscription. Please note that **NOT** all regions and VM sizes are supported. Read this [document](https://docs.microsoft.com/en-us/azure/availability-zones/az-overview) to get regions and VM sizes that support AZs.
 
-* A BOSH director with managed disks enabled
-
-    * Create a BOSH director
-
-        * [Using BOSH CLI manually](https://bosh.io/docs/init-azure.html)
-
-    * You must enable managed disks in your BOSH director by setting `use_managed_disks` to `true`. Please note the VMs with unmanaged disks do **NOT** support AZ. To enable managed disks, please refer to this [link](../managed-disks/README.md).
+* A BOSH director — [Using BOSH CLI manually](https://bosh.io/docs/init-azure.html)
 
 * You can refer to [cf-deployment](https://github.com/cloudfoundry/cf-deployment) to get a CF deployment manifest.
 

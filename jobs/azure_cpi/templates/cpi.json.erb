@@ -8,7 +8,6 @@
           'environment' => p('azure.environment'),
           'subscription_id' => p('azure.subscription_id'),
           'resource_group_name' => p('azure.resource_group_name'),
-          'use_managed_disks' => p('azure.use_managed_disks'),
           'ssh_user' => p('azure.ssh_user'),
           'parallel_upload_thread_num' => p('azure.parallel_upload_thread_num'),
           'pip_idle_timeout_in_minutes' => p('azure.pip_idle_timeout_in_minutes'),
@@ -63,10 +62,6 @@
 
   if_p('azure.storage_account_name') do |storage_account_name|
     params['cloud']['properties']['azure']['storage_account_name'] = storage_account_name
-  end.else do
-    if p('azure.use_managed_disks') == false
-      raise 'storage_account_name cannot be nil if use_managed_disks is false. Please read https://bosh.io/docs/azure-cpi.html.'
-    end
   end
 
   if_p('azure.ssh_public_key') do |ssh_public_key|

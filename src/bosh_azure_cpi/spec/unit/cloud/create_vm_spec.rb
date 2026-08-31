@@ -119,9 +119,6 @@ describe Bosh::AzureCloud::Cloud do
         allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
           .with(vm_props, location)
           .and_return(storage_account)
-        allow(stemcell_manager).to receive(:has_stemcell?)
-          .with(storage_account_name, stemcell_cid)
-          .and_return(true)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
           .with(azure_config, networks)
           .and_return(network_configurator)
@@ -179,7 +176,7 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
-    context 'when use_managed_disks is not set' do
+    context 'when creating VMs' do
       let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
       let(:instance_id_string) { 'fake-instance-id' }
       let(:vm_params) do
@@ -206,9 +203,6 @@ describe Bosh::AzureCloud::Cloud do
         allow(vm_manager).to receive(:get_storage_account_from_vm_properties)
           .with(vm_props, location)
           .and_return(storage_account)
-        allow(stemcell_manager).to receive(:has_stemcell?)
-          .with(storage_account_name, stemcell_cid)
-          .and_return(true)
         allow(Bosh::AzureCloud::NetworkConfigurator).to receive(:new)
           .with(azure_config, networks)
           .and_return(network_configurator)
@@ -299,7 +293,7 @@ describe Bosh::AzureCloud::Cloud do
       end
     end
 
-    context 'when use_managed_disks is set' do
+    context 'when creating managed VMs' do
       let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
       let(:instance_id_string) { 'fake-instance-id' }
       let(:vm_params) do

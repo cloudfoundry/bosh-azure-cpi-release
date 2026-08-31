@@ -75,7 +75,6 @@ def mock_cloud_options
         'parallel_upload_thread_num' => 16,
         'default_security_group' => MOCK_DEFAULT_SECURITY_GROUP,
         'debug_mode' => false,
-        'use_managed_disks' => false,
         'request_id' => MOCK_REQUEST_ID,
         'vm' => {
           'stemcell' => {

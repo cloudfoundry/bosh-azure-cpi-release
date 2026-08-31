@@ -74,32 +74,5 @@ describe Bosh::AzureCloud::Cloud do
         end
       end
     end
-
-    context 'when the disk is an unmanaged disk' do
-      let(:storage_account_name) { 'fake-storage-account-name' }
-      let(:disk_name) { 'fake-disk-name' }
-      let(:snapshot_name) { 'fake-snapshot-name' }
-
-      before do
-        allow(disk_id_object).to receive(:disk_name)
-          .and_return(disk_name)
-        allow(disk_id_object).to receive(:storage_account_name)
-          .and_return(storage_account_name)
-        allow(disk_manager2).to receive(:get_data_disk)
-          .with(disk_id_object)
-          .and_return(nil)
-      end
-
-      it 'should take an unmanaged snapshot of the disk' do
-        expect(disk_manager).to receive(:snapshot_disk)
-          .with(storage_account_name, disk_name, metadata)
-          .and_return(snapshot_name)
-        expect(Bosh::AzureCloud::DiskId).to receive(:create)
-          .with(caching, false, { disk_name: snapshot_name, storage_account_name: storage_account_name })
-          .and_return(snapshot_id_object)
-
-        expect(cloud.snapshot_disk(disk_cid, metadata)).to eq(snapshot_cid)
-      end
-    end
   end
 end

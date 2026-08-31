@@ -4,16 +4,13 @@ module Bosh::AzureCloud
   class VMManager
     include Helpers
 
-    def initialize(azure_config, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager)
+    def initialize(azure_config, disk_manager2, azure_client, storage_account_manager, stemcell_manager2, light_stemcell_manager)
       @azure_config = azure_config
-      @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
       @azure_client = azure_client
       @storage_account_manager = storage_account_manager
-      @stemcell_manager = stemcell_manager
       @stemcell_manager2 = stemcell_manager2
       @light_stemcell_manager = light_stemcell_manager
-      @use_managed_disks = azure_config.use_managed_disks
       @logger = Bosh::Clouds::Config.logger
     end
 
@@ -32,20 +29,11 @@ module Bosh::AzureCloud
         is_persistent_disk_premium = false
         disk_cids&.each do |disk_cid|
           disk_id = DiskId.parse(disk_cid, @azure_config.resource_group_name)
-          # TODO: What if the disk was migrated from unmanaged disk
-          if @use_managed_disks
-            disk = @disk_manager2.get_data_disk(disk_id)
-            if disk[:sku_tier] == SKU_TIER_PREMIUM
-              is_persistent_disk_premium = true
-              break
-            end
-          else
-            storage_account_name = disk_id.storage_account_name
-            storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
-            if storage_account[:sku_tier] == SKU_TIER_PREMIUM
-              is_persistent_disk_premium = true
-              break
-            end
+          disk = @disk_manager2.get_data_disk(disk_id)
+          cloud_error("Disk '#{disk_id.disk_name}' is not found.") if disk.nil?
+          if disk[:sku_tier] == SKU_TIER_PREMIUM
+            is_persistent_disk_premium = true
+            break
           end
         end
         if is_persistent_disk_premium
@@ -86,7 +74,7 @@ module Bosh::AzureCloud
 
       tasks.push(
         task_get_stemcell_info = Concurrent::Future.execute do
-          _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location, instance_id.storage_account_name)
+          _get_stemcell_info(bosh_vm_meta.stemcell_cid, vm_props, location)
         end
       )
 
@@ -128,7 +116,7 @@ module Bosh::AzureCloud
         location: location,
         tags: _get_tags(vm_props, env),
         vm_size: vm_props.instance_type,
-        managed: @use_managed_disks
+        managed: true
       }
 
       unless vm_props.capacity_reservation_group.nil?
@@ -158,10 +146,8 @@ module Bosh::AzureCloud
 
       if stemcell_info.is_light_stemcell?
         vm_params[:image_reference] = stemcell_info.image_reference
-      elsif @use_managed_disks
-        vm_params[:image_id] = stemcell_info.uri
       else
-        vm_params[:image_uri] = stemcell_info.uri
+        vm_params[:image_id] = stemcell_info.uri
       end
 
       case stemcell_info.os_type
@@ -201,7 +187,7 @@ module Bosh::AzureCloud
       virtual_machine_result = _create_virtual_machine(instance_id, vm_params, network_interfaces, availability_set)
 
       # IOPS and MBPS for the ephemeral disk need to be set after the disk was created
-      if @use_managed_disks && vm_params[:ephemeral_disk] && (vm_params[:ephemeral_disk][:iops] || vm_params[:ephemeral_disk][:mbps])
+      if vm_params[:ephemeral_disk] && (vm_params[:ephemeral_disk][:iops] || vm_params[:ephemeral_disk][:mbps])
 
         disk_name = virtual_machine_result[:data_disks][0][:name]
         @azure_client.update_managed_disk_performance(instance_id.resource_group_name, disk_name, vm_params[:ephemeral_disk][:iops], vm_params[:ephemeral_disk][:mbps])
@@ -216,25 +202,12 @@ module Bosh::AzureCloud
         error_message += 'You need to delete below resource manually after finishing investigation.\n'
         error_message += "\t Resource Group: #{resource_group_name}\n"
         error_message += "\t Virtual Machine: #{vm_name}\n"
-        if @use_managed_disks
-          os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
-          error_message += "\t Managed OS Disk: #{os_disk_name}\n"
+        os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
+        error_message += "\t Managed OS Disk: #{os_disk_name}\n"
 
-          unless vm_params[:ephemeral_disk].nil?
-            ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
-            error_message += "\t Managed Ephemeral Disk: #{ephemeral_disk_name}\n"
-          end
-        else
-          storage_account_name = instance_id.storage_account_name
-          os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
-          error_message += "\t OS disk blob: #{os_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name} in default resource group\n"
-
-          unless vm_params[:ephemeral_disk].nil?
-            ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(vm_name)
-            error_message += "\t Ephemeral disk blob: #{ephemeral_disk_name}.vhd in the container #{DISK_CONTAINER} in the storage account #{storage_account_name} in default resource group\n"
-          end
-
-          error_message += "\t VM status blobs: All blobs which matches the pattern /^#{vm_name}.*status$/ in the container #{DISK_CONTAINER} in the storage account #{storage_account_name} in default resource group\n"
+        unless vm_params[:ephemeral_disk].nil?
+          ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
+          error_message += "\t Managed Ephemeral Disk: #{ephemeral_disk_name}\n"
         end
       else
         begin
@@ -350,44 +323,19 @@ module Bosh::AzureCloud
       )
 
       # Delete OS & ephemeral disks
-      if instance_id.use_managed_disks?
-        tasks.push(
-          Concurrent::Future.execute do
-            os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
-            @disk_manager2.delete_disk(resource_group_name, os_disk_name)
-          end
-        )
+      tasks.push(
+        Concurrent::Future.execute do
+          os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
+          @disk_manager2.delete_disk(resource_group_name, os_disk_name)
+        end
+      )
 
-        tasks.push(
-          Concurrent::Future.execute do
-            ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
-            @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
-          end
-        )
-      else
-        storage_account_name = instance_id.storage_account_name
-
-        tasks.push(
-          Concurrent::Future.execute do
-            os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
-            @disk_manager.delete_disk(storage_account_name, os_disk_name)
-          end
-        )
-
-        tasks.push(
-          Concurrent::Future.execute do
-            ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(vm_name)
-            @disk_manager.delete_disk(storage_account_name, ephemeral_disk_name)
-          end
-        )
-
-        # Cleanup invalid VM status file
-        tasks.push(
-          Concurrent::Future.execute do
-            @disk_manager.delete_vm_status_files(storage_account_name, vm_name)
-          end
-        )
-      end
+      tasks.push(
+        Concurrent::Future.execute do
+          ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
+          @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
+        end
+      )
 
       # when exception happens in thread, .wait will not raise the error, but .wait! will.
       # Calling .wait before .wait! to make sure that all tasks are completed.
@@ -421,24 +369,15 @@ module Bosh::AzureCloud
     def attach_disk(instance_id, disk_id)
       @logger.info("attach_disk(#{instance_id}, #{disk_id})")
       disk_name = disk_id.disk_name
-      disk_params = if instance_id.use_managed_disks?
-                      {
-                        disk_name: disk_name,
-                        caching: disk_id.caching,
-                        disk_bosh_id: disk_id.to_s,
-                        disk_id: @azure_client.get_managed_disk_by_name(disk_id.resource_group_name, disk_name)[:id],
-                        managed: true
-                      }
-                    else
-                      {
-                        disk_name: disk_name,
-                        caching: disk_id.caching,
-                        disk_bosh_id: disk_id.to_s,
-                        disk_uri: @disk_manager.get_data_disk_uri(disk_id),
-                        disk_size: @disk_manager.get_disk_size_in_gb(disk_id),
-                        managed: false
-                      }
-                    end
+      managed_disk = @azure_client.get_managed_disk_by_name(disk_id.resource_group_name, disk_name)
+      cloud_error("Disk '#{disk_name}' is not found in resource group '#{disk_id.resource_group_name}'.") if managed_disk.nil?
+      disk_params = {
+        disk_name: disk_name,
+        caching: disk_id.caching,
+        disk_bosh_id: disk_id.to_s,
+        disk_id: managed_disk[:id],
+        managed: true
+      }
       lun = @azure_client.attach_disk_to_virtual_machine(
         instance_id.resource_group_name,
         instance_id.vm_name,
@@ -458,40 +397,23 @@ module Bosh::AzureCloud
 
     private
 
-    def _build_instance_id(bosh_vm_meta, location, vm_props)
-      if @use_managed_disks
-        instance_id = InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id)
-      else
-        storage_account = get_storage_account_from_vm_properties(vm_props, location)
-        instance_id = InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id, storage_account[:name])
-      end
-      instance_id
+    def _build_instance_id(bosh_vm_meta, _location, vm_props)
+      InstanceId.create(vm_props.resource_group_name, bosh_vm_meta.agent_id)
     end
 
-    def _get_stemcell_info(stemcell_cid, vm_props, location, storage_account_name)
-      stemcell_info = nil
-      if @use_managed_disks
-        if is_light_stemcell_cid?(stemcell_cid)
-          raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
-
-          stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
-        else
-          begin
-            storage_account_type = _get_root_disk_type(vm_props, location)
-            # Treat user_image_info as stemcell_info
-            stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_cid, storage_account_type, location)
-          rescue StandardError => e
-            raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell '#{stemcell_cid}': #{e.inspect}\n#{e.backtrace.join("\n")}"
-          end
-        end
-      elsif is_light_stemcell_cid?(stemcell_cid)
+    def _get_stemcell_info(stemcell_cid, vm_props, location)
+      if is_light_stemcell_cid?(stemcell_cid)
         raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @light_stemcell_manager.has_stemcell?(location, stemcell_cid)
 
         stemcell_info = @light_stemcell_manager.get_stemcell_info(stemcell_cid)
       else
-        raise Bosh::Clouds::VMCreationFailed.new(false), "Given stemcell '#{stemcell_cid}' does not exist" unless @stemcell_manager.has_stemcell?(storage_account_name, stemcell_cid)
-
-        stemcell_info = @stemcell_manager.get_stemcell_info(storage_account_name, stemcell_cid)
+        begin
+          storage_account_type = _get_root_disk_type(vm_props, location)
+          # Treat user_image_info as stemcell_info
+          stemcell_info = @stemcell_manager2.get_user_image_info(stemcell_cid, storage_account_type, location)
+        rescue StandardError => e
+          raise Bosh::Clouds::VMCreationFailed.new(false), "Failed to get the user image information for the stemcell '#{stemcell_cid}': #{e.inspect}\n#{e.backtrace.join("\n")}"
+        end
       end
 
       @logger.debug("get_stemcell_info - got stemcell '#{stemcell_info.inspect}'")
@@ -553,27 +475,13 @@ module Bosh::AzureCloud
 
             # ephemeral_os_disk delete automatically, run for os_disk and ephemeral_disk only
             unless vm_params[:os_disk].nil?
-              if @use_managed_disks
-                os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
-                @disk_manager2.delete_disk(resource_group_name, os_disk_name)
-              else
-                storage_account_name = instance_id.storage_account_name
-                os_disk_name = @disk_manager.generate_os_disk_name(vm_name)
-                @disk_manager.delete_disk(storage_account_name, os_disk_name)
-
-                # Cleanup invalid VM status file
-                @disk_manager.delete_vm_status_files(storage_account_name, vm_name)
-              end
+              os_disk_name = @disk_manager2.generate_os_disk_name(vm_name)
+              @disk_manager2.delete_disk(resource_group_name, os_disk_name)
             end
 
             unless vm_params[:ephemeral_disk].nil?
-              if @use_managed_disks
-                ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
-                @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
-              else
-                ephemeral_disk_name = @disk_manager.generate_ephemeral_disk_name(vm_name)
-                @disk_manager.delete_disk(storage_account_name, ephemeral_disk_name)
-              end
+              ephemeral_disk_name = @disk_manager2.generate_ephemeral_disk_name(vm_name)
+              @disk_manager2.delete_disk(resource_group_name, ephemeral_disk_name)
             end
           rescue StandardError => error
             retry if (retry_delete_count += 1) <= max_retries

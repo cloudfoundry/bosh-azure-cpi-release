@@ -14,7 +14,7 @@ describe Bosh::AzureCloud::VMManager do
     let(:props_factory) do
       Bosh::AzureCloud::PropsFactory.new(
         Bosh::AzureCloud::ConfigFactory.build(
-          mock_cloud_properties_merge('azure' => { 'use_managed_disks' => true })
+          mock_cloud_options['properties']
         )
       )
     end

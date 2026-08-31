@@ -405,44 +405,28 @@ describe Bosh::AzureCloud::StorageAccountManager do
         end
       end
 
-      context 'When use_managed_disks is false' do
-        it 'should return the default storage account, and do not set the tags' do
-          expect(azure_client).not_to receive(:update_tags_of_storage_account)
+      context 'When the default storage account do not have the tags' do
+        it 'should return the default storage account, and set the tags' do
+          expect(azure_client).to receive(:update_tags_of_storage_account).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, STEMCELL_STORAGE_ACCOUNT_TAGS)
           expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
         end
       end
 
-      context 'When use_managed_disks is true' do
-        let(:azure_config_managed) do
-          mock_azure_config_merge(
-            'use_managed_disks' => true
-          )
-        end
-        let(:storage_account_manager) { Bosh::AzureCloud::StorageAccountManager.new(azure_config_managed, blob_manager, azure_client) }
-
-        context 'When the default storage account do not have the tags' do
-          it 'should return the default storage account, and set the tags' do
-            expect(azure_client).to receive(:update_tags_of_storage_account).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, STEMCELL_STORAGE_ACCOUNT_TAGS)
-            expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
-          end
+      context 'When the default storage account has the tags' do
+        let(:default_storage_account) do
+          {
+            name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
+            tags: STEMCELL_STORAGE_ACCOUNT_TAGS
+          }
         end
 
-        context 'When the default storage account has the tags' do
-          let(:default_storage_account) do
-            {
-              name: MOCK_DEFAULT_STORAGE_ACCOUNT_NAME,
-              tags: STEMCELL_STORAGE_ACCOUNT_TAGS
-            }
-          end
+        before do
+          allow(azure_client).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
+        end
 
-          before do
-            allow(azure_client).to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME).and_return(default_storage_account)
-          end
-
-          it 'should return the default storage account, and do not set the tags' do
-            expect(azure_client).not_to receive(:update_tags_of_storage_account)
-            expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
-          end
+        it 'should return the default storage account, and do not set the tags' do
+          expect(azure_client).not_to receive(:update_tags_of_storage_account)
+          expect(storage_account_manager.default_storage_account).to eq(default_storage_account)
         end
       end
     end

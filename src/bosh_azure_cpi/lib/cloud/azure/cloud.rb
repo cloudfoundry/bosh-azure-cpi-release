@@ -5,7 +5,7 @@ module Bosh::AzureCloud
     attr_reader   :config
     # Below defines are for test purpose
     attr_reader   :blob_manager, :meta_store, :storage_account_manager, :vm_manager, :instance_type_mapper
-    attr_reader   :disk_manager, :disk_manager2, :stemcell_manager, :stemcell_manager2, :light_stemcell_manager
+    attr_reader   :disk_manager2, :stemcell_manager2, :light_stemcell_manager
     attr_reader   :props_factory
     attr_reader   :api_version, :stemcell_api_version
 
@@ -34,10 +34,6 @@ module Bosh::AzureCloud
 
       request_id = options_dup['azure']['request_id']
       Bosh::AzureCloud::CPILogger.set_request_id(request_id) if request_id
-
-      @use_managed_disks = _azure_config.use_managed_disks
-
-      @use_compute_gallery = !_azure_config.compute_gallery_name.nil?
 
       _init_cpi_lock_dir
 
@@ -85,10 +81,8 @@ module Bosh::AzureCloud
         @telemetry_manager.monitor('create_stemcell', extras: extras) do
           if has_light_stemcell_property?(cloud_properties)
             @light_stemcell_manager.create_stemcell(cloud_properties)
-          elsif @use_compute_gallery || @use_managed_disks
-            @stemcell_manager2.create_stemcell(image_path, cloud_properties)
           else
-            @stemcell_manager.create_stemcell(image_path, cloud_properties)
+            @stemcell_manager2.create_stemcell(image_path, cloud_properties)
           end
         end
       end
@@ -111,10 +105,8 @@ module Bosh::AzureCloud
         @telemetry_manager.monitor('delete_stemcell', id: stemcell_cid) do
           if is_light_stemcell_cid?(stemcell_cid)
             @light_stemcell_manager.delete_stemcell(stemcell_cid)
-          elsif @use_compute_gallery || @use_managed_disks
-            @stemcell_manager2.delete_stemcell(stemcell_cid)
           else
-            @stemcell_manager.delete_stemcell(stemcell_cid)
+            @stemcell_manager2.delete_stemcell(stemcell_cid)
           end
         end
       end
@@ -336,46 +328,31 @@ module Bosh::AzureCloud
         extras = { 'disk_size' => size }
         @telemetry_manager.monitor('create_disk', id: id, extras: extras) do
           validate_disk_size(size)
-          disk_id = nil
-          if @use_managed_disks
-            if vm_cid.nil?
-              # If instance_id is nil, the managed disk will be created in the resource group location.
-              resource_group_name = _azure_config.resource_group_name
-              resource_group = @azure_client.get_resource_group(resource_group_name)
-              location = resource_group[:location]
-              default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
-              zone = nil
-            else
-              instance_id = InstanceId.parse(vm_cid, _azure_config.resource_group_name)
-              cloud_error('Cannot create a managed disk for a VM with unmanaged disks') unless instance_id.use_managed_disks?
-              resource_group_name = instance_id.resource_group_name
-              # If the instance is a managed VM, the managed disk will be created in the location of the VM.
-              vm = @azure_client.get_virtual_machine_by_name(resource_group_name, instance_id.vm_name)
-              location = vm[:location]
-              instance_type = vm[:vm_size]
-              zone = vm[:zone]
-              default_storage_account_type = @disk_manager2.get_default_storage_account_type(instance_type, location)
-            end
-            storage_account_type = cloud_properties.fetch('storage_account_type', default_storage_account_type)
-            caching = cloud_properties.fetch('caching', 'None')
-            iops = cloud_properties.fetch('iops', nil)
-            mbps = cloud_properties.fetch('mbps', nil)
-            disk_encryption_set_name = cloud_properties.fetch('disk_encryption_set_name', nil)
-            validate_disk_caching(caching)
-            disk_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
-            @disk_manager2.create_disk(disk_id, location, size / 1024, storage_account_type, zone, iops, mbps, disk_encryption_set_name: disk_encryption_set_name)
+          if vm_cid.nil?
+            # If instance_id is nil, the managed disk will be created in the resource group location.
+            resource_group_name = _azure_config.resource_group_name
+            resource_group = @azure_client.get_resource_group(resource_group_name)
+            location = resource_group[:location]
+            default_storage_account_type = STORAGE_ACCOUNT_TYPE_STANDARD_LRS
+            zone = nil
           else
-            storage_account_name = _azure_config.storage_account_name
-            caching = cloud_properties.fetch('caching', 'None')
-            validate_disk_caching(caching)
-            unless vm_cid.nil?
-              instance_id = InstanceId.parse(vm_cid, _azure_config.resource_group_name)
-              @logger.info("Create disk for vm '#{instance_id.vm_name}'")
-              storage_account_name = instance_id.storage_account_name
-            end
-            disk_id = DiskId.create(caching, false, storage_account_name: storage_account_name)
-            @disk_manager.create_disk(disk_id, size / 1024)
+            instance_id = InstanceId.parse(vm_cid, _azure_config.resource_group_name)
+            resource_group_name = instance_id.resource_group_name
+            # The managed disk will be created in the location of the VM.
+            vm = @azure_client.get_virtual_machine_by_name(resource_group_name, instance_id.vm_name)
+            location = vm[:location]
+            instance_type = vm[:vm_size]
+            zone = vm[:zone]
+            default_storage_account_type = @disk_manager2.get_default_storage_account_type(instance_type, location)
           end
+          storage_account_type = cloud_properties.fetch('storage_account_type', default_storage_account_type)
+          caching = cloud_properties.fetch('caching', 'None')
+          iops = cloud_properties.fetch('iops', nil)
+          mbps = cloud_properties.fetch('mbps', nil)
+          disk_encryption_set_name = cloud_properties.fetch('disk_encryption_set_name', nil)
+          validate_disk_caching(caching)
+          disk_id = DiskId.create(caching, resource_group_name: resource_group_name)
+          @disk_manager2.create_disk(disk_id, location, size / 1024, storage_account_type, zone, iops, mbps, disk_encryption_set_name: disk_encryption_set_name)
           disk_id.to_s
         end
       end
@@ -398,17 +375,7 @@ module Bosh::AzureCloud
       with_thread_name("delete_disk(#{disk_cid})") do
         @telemetry_manager.monitor('delete_disk', id: disk_cid) do
           disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
-          if @use_managed_disks
-            # A managed disk may be created from an old blob disk, so its name still starts with 'bosh-data' instead of 'bosh-disk-data'
-            # CPI checks whether the managed disk with the name exists. If not, delete the old blob disk.
-            unless disk_id.disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
-              disk = @disk_manager2.get_data_disk(disk_id)
-              return @disk_manager.delete_data_disk(disk_id) if disk.nil?
-            end
-            @disk_manager2.delete_data_disk(disk_id)
-          else
-            @disk_manager.delete_data_disk(disk_id)
-          end
+          @disk_manager2.delete_data_disk(disk_id)
         end
       end
     end
@@ -430,7 +397,6 @@ module Bosh::AzureCloud
     #
     def resize_disk(disk_cid, new_size)
       @logger.info("resize_disk(#{disk_cid}, #{new_size})")
-      raise Bosh::Clouds::NotSupported unless @use_managed_disks
 
       @telemetry_manager.monitor('initialize') do
         _init_azure
@@ -460,7 +426,6 @@ module Bosh::AzureCloud
 
     def update_disk(disk_cid, new_size, cloud_properties)
       @logger.info("update_disk(#{disk_cid}, #{new_size}, #{cloud_properties})")
-      raise Bosh::Clouds::NotSupported, 'Native disk update only supported for managed disks' unless @use_managed_disks
 
       @telemetry_manager.monitor('initialize') do
         _init_azure
@@ -526,23 +491,7 @@ module Bosh::AzureCloud
       with_thread_name("has_disk?(#{disk_cid})") do
         @telemetry_manager.monitor('has_disk?', id: disk_cid) do
           disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
-          if disk_id.disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
-            return @disk_manager2.has_data_disk?(disk_id)
-          else
-            ##
-            # when disk name starts with DATA_DISK_PREFIX, the disk could be an unmanaged disk OR a managed disk (migrated from unmanaged disk)
-            #
-            # if @use_managed_disks is true, and
-            #   if the managed disk is found (the unmanaged disk is already migrated to managed disk for sure), return true;
-            #   if the managed disk is not found, but the unmanaged disk is already migrated to managed disk, return false;
-            #   if the managed disk is not found, and the unmanaged disk not yet migrated (bosh is updated but vm is not), check existence of the unmanaged disk.
-            # if @use_managed_disks is false, check existence of the unmanaged disk.
-            if @use_managed_disks
-              return true if @disk_manager2.has_data_disk?(disk_id)
-              return false if @disk_manager.is_migrated?(disk_id) # the managed disk is not found, and the unmanaged disk is already migrated to managed disk
-            end
-            return @disk_manager.has_data_disk?(disk_id)
-          end
+          @disk_manager2.has_data_disk?(disk_id)
         end
       end
     end
@@ -572,7 +521,6 @@ module Bosh::AzureCloud
         @telemetry_manager.monitor('attach_disk', id: vm_cid) do
           instance_id = InstanceId.parse(vm_cid, _azure_config.resource_group_name)
           disk_id = DiskId.parse(disk_cid, _azure_config.resource_group_name)
-          vm_name = instance_id.vm_name
           disk_name = disk_id.disk_name
 
           vm = @vm_manager.find(instance_id)
@@ -591,48 +539,14 @@ module Bosh::AzureCloud
             sleep(30)
           end
 
-          if @use_managed_disks
-            disk = @disk_manager2.get_data_disk(disk_id)
-            vm_zone = vm[:zone]
-            if instance_id.use_managed_disks?
-              if disk.nil?
-                if disk_id.disk_name.start_with?(DATA_DISK_PREFIX)
-                  @logger.info("attach_disk - migrate the disk '#{disk_name}' from unmanaged to managed")
-                  begin
-                    storage_account_name = disk_id.storage_account_name
-                    blob_uri = @disk_manager.get_data_disk_uri(disk_id)
-                    storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
-                    location = storage_account[:location]
-                    # Can not use the type of the default storage account because only Standard_LRS and Premium_LRS are supported for managed disk.
-                    account_type = storage_account[:sku_tier] == SKU_TIER_PREMIUM ? STORAGE_ACCOUNT_TYPE_PREMIUM_LRS : STORAGE_ACCOUNT_TYPE_STANDARD_LRS
-                    @logger.debug("attach_disk - Migrating the unmanaged disk '#{disk_name}' to a managed disk")
-                    @disk_manager2.create_disk_from_blob(disk_id, blob_uri, location, account_type, storage_account[:id], vm_zone)
-
-                    # Set below metadata but not delete it.
-                    # Users can manually delete all blobs in container 'bosh' whose names start with 'bosh-data' after migration is finished.
-                    @blob_manager.set_blob_metadata(storage_account_name, DISK_CONTAINER, "#{disk_name}.vhd", METADATA_FOR_MIGRATED_BLOB_DISK)
-                  rescue StandardError => e
-                    if account_type # There are no other functions between defining account_type and @disk_manager2.create_disk_from_blob
-                      begin
-                        @disk_manager2.delete_data_disk(disk_id)
-                      rescue StandardError
-                        @logger.error("attach_disk - Failed to delete the created managed disk #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
-                      end
-                    end
-                    cloud_error("attach_disk - Failed to create the managed disk for #{disk_name}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
-                  end
-                end
-              elsif disk[:zone].nil? && !vm_zone.nil?
-                @logger.info("attach_disk - migrate the managed disk '#{disk_name}' from regional to zonal")
-                begin
-                  @disk_manager2.migrate_to_zone(disk_id, disk, vm_zone)
-                rescue StandardError => e
-                  cloud_error("attach_disk - Failed to migrate disk #{disk_name} to zone #{vm_zone}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
-                end
-              end
-            else
-              cloud_error('Cannot attach a managed disk to a VM with unmanaged disks') unless disk.nil?
-              @logger.debug("attach_disk - although use_managed_disks is enabled, will still attach the unmanaged disk '#{disk_name}' to the VM '#{vm_name}' with unmanaged disks")
+          disk = @disk_manager2.get_data_disk(disk_id)
+          vm_zone = vm[:zone]
+          if !disk.nil? && disk[:zone].nil? && !vm_zone.nil?
+            @logger.info("attach_disk - migrate the managed disk '#{disk_name}' from regional to zonal")
+            begin
+              @disk_manager2.migrate_to_zone(disk_id, disk, vm_zone)
+            rescue StandardError => e
+              cloud_error("attach_disk - Failed to migrate disk #{disk_name} to zone #{vm_zone}. Error: #{e.inspect}\n#{e.backtrace.join("\n")}")
             end
           end
 
@@ -744,20 +658,8 @@ module Bosh::AzureCloud
           resource_group_name = disk_id.resource_group_name
           disk_name = disk_id.disk_name
           caching = disk_id.caching
-          if disk_name.start_with?(MANAGED_DATA_DISK_PREFIX)
-            snapshot_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
-            @disk_manager2.snapshot_disk(snapshot_id, disk_name, encode_metadata(metadata))
-          else
-            disk = @disk_manager2.get_data_disk(disk_id)
-            if disk.nil?
-              storage_account_name = disk_id.storage_account_name
-              snapshot_name = @disk_manager.snapshot_disk(storage_account_name, disk_name, encode_metadata(metadata))
-              snapshot_id = DiskId.create(caching, false, disk_name: snapshot_name, storage_account_name: storage_account_name)
-            else
-              snapshot_id = DiskId.create(caching, true, resource_group_name: resource_group_name)
-              @disk_manager2.snapshot_disk(snapshot_id, disk_name, encode_metadata(metadata))
-            end
-          end
+          snapshot_id = DiskId.create(caching, resource_group_name: resource_group_name)
+          @disk_manager2.snapshot_disk(snapshot_id, disk_name, encode_metadata(metadata))
 
           @logger.info("Take a snapshot '#{snapshot_id}' for the disk '#{disk_id}'")
           snapshot_id.to_s
@@ -781,12 +683,7 @@ module Bosh::AzureCloud
       with_thread_name("delete_snapshot(#{snapshot_cid})") do
         @telemetry_manager.monitor('delete_snapshot', id: snapshot_cid) do
           snapshot_id = DiskId.parse(snapshot_cid, _azure_config.resource_group_name)
-          snapshot_name = snapshot_id.disk_name
-          if snapshot_name.start_with?(MANAGED_DATA_DISK_PREFIX)
-            @disk_manager2.delete_snapshot(snapshot_id)
-          else
-            @disk_manager.delete_snapshot(snapshot_id)
-          end
+          @disk_manager2.delete_snapshot(snapshot_id)
           @logger.info("The snapshot '#{snapshot_id}' is deleted")
         end
       end
@@ -833,17 +730,15 @@ module Bosh::AzureCloud
       # get the default storage account.
       @azure_client            = Bosh::AzureCloud::AzureClient.new(_azure_config, @logger)
       @blob_manager            = Bosh::AzureCloud::BlobManager.new(_azure_config, @azure_client)
-      @disk_manager            = Bosh::AzureCloud::DiskManager.new(_azure_config, @blob_manager)
       @storage_account_manager = Bosh::AzureCloud::StorageAccountManager.new(_azure_config, @blob_manager, @azure_client)
 
       table_manager            = Bosh::AzureCloud::TableManager.new(_azure_config, @storage_account_manager, @azure_client)
       @meta_store              = Bosh::AzureCloud::MetaStore.new(table_manager)
 
-      @stemcell_manager        = Bosh::AzureCloud::StemcellManager.new(@blob_manager, @meta_store, @storage_account_manager)
       @disk_manager2           = Bosh::AzureCloud::DiskManager2.new(@azure_client)
       @stemcell_manager2       = Bosh::AzureCloud::StemcellManager2.new(_azure_config, @blob_manager, @meta_store, @storage_account_manager, @azure_client)
       @light_stemcell_manager  = Bosh::AzureCloud::LightStemcellManager.new(@blob_manager, @storage_account_manager, @azure_client)
-      @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @disk_manager, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager, @stemcell_manager2, @light_stemcell_manager)
+      @vm_manager              = Bosh::AzureCloud::VMManager.new(_azure_config, @disk_manager2, @azure_client, @storage_account_manager, @stemcell_manager2, @light_stemcell_manager)
       @instance_type_mapper    = Bosh::AzureCloud::InstanceTypeMapper.new(@azure_client)
     rescue Net::OpenTimeout => e
       cloud_error("Please make sure the CPI has proper network access to Azure. #{e.inspect}") # TODO: Will it throw the error when initializing the client and manager

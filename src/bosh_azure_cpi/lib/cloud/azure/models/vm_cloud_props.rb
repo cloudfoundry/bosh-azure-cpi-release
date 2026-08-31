@@ -52,7 +52,7 @@ module Bosh::AzureCloud
         disk_encryption_set_name: root_disk_hash['disk_encryption_set_name']
       )
 
-      cloud_error("Only one of 'type' and 'placement' is allowed to be configured for the root_disk when 'placement' is not set to persistent") if @root_disk.placement != 'remote' && !@root_disk.type.nil? && !global_azure_config.use_managed_disks
+      cloud_error("Only one of 'type' and 'placement' is allowed to be configured for the root_disk when 'placement' is not set to persistent") if @root_disk.placement != 'remote' && !@root_disk.type.nil?
 
       ephemeral_disk_hash = vm_properties.fetch('ephemeral_disk', {})
       @ephemeral_disk = Bosh::AzureCloud::EphemeralDisk.new(
@@ -69,7 +69,6 @@ module Bosh::AzureCloud
 
       @availability_zone = vm_properties['availability_zone']
       unless @availability_zone.nil?
-        cloud_error('Virtual Machines deployed to an Availability Zone must use managed disks') unless global_azure_config.use_managed_disks
         cloud_error("'#{@availability_zone}' is not a valid zone. Available zones are: #{AVAILABILITY_ZONES}") unless AVAILABILITY_ZONES.include?(@availability_zone.to_s)
       end
       @availability_set = _parse_availability_set_config(vm_properties, global_azure_config)
@@ -128,15 +127,10 @@ module Bosh::AzureCloud
     end
 
     # In AzureStack, availability sets can only be configured with 1 fault domain and 1 update domain.
-    # In Azure, the max fault domain count of an unmanaged availability set is 3;
-    #           the max fault domain count of a managed availability set is 2 in some regions.
+    # In Azure, the max fault domain count of a managed availability set is 2 in some regions.
     #           When all regions support 3 fault domains, the default value should be changed to 3.
     def _default_fault_domain_count(global_azure_config)
-      if global_azure_config.environment == ENVIRONMENT_AZURESTACK
-        1
-      else
-        global_azure_config.use_managed_disks ? 2 : 3
-      end
+      global_azure_config.environment == ENVIRONMENT_AZURESTACK ? 1 : 2
     end
 
     # @return [Array<Bosh::AzureCloud::LoadBalancerConfig>,nil]

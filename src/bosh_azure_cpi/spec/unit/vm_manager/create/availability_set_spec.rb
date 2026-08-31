@@ -298,125 +298,6 @@ describe Bosh::AzureCloud::VMManager do
               end
             end
 
-            context 'when the disk is an unmanaged disk' do
-              context 'when the storage account is Standand SKU' do
-                let(:storage_account_name) { 'fakestorageaccountname' }
-                let(:storage_account) do
-                  {
-                    name: storage_account_name,
-                    sku_tier: 'Standard'
-                  }
-                end
-
-                before do
-                  allow(disk_id_object).to receive(:storage_account_name)
-                    .and_return(storage_account_name)
-                  allow(azure_client).to receive(:get_storage_account_by_name)
-                    .with(storage_account_name)
-                    .and_return(storage_account)
-                end
-
-                it 'should select the first one of instance_types' do
-                  expect(vm_manager).to receive(:flock)
-                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
-                    .and_call_original
-                  expect(vm_manager).to receive(:flock)
-                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
-                    .and_call_original
-                  expect(azure_client).to receive(:create_network_interface).twice
-
-                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  expect(vm_params[:name]).to eq(vm_name)
-                  expect(vm_props.instance_type).to eq('Standard_DS2_v3')
-                end
-
-                context 'when instance_types do not support premium storage' do
-                  let(:instance_types) { %w[Standard_D2_v3 Standard_D2_v2] }
-                  let(:vm_props) do
-                    props_factory.parse_vm_props(
-                      'instance_type' => nil,
-                      'instance_types' => instance_types,
-                      'availability_set' => availability_set_name,
-                      'platform_update_domain_count' => platform_update_domain_count,
-                      'platform_fault_domain_count' => platform_fault_domain_count
-                    )
-                  end
-
-                  it 'should select the first one of instance_types' do
-                    expect(vm_manager).to receive(:flock)
-                      .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
-                      .and_call_original
-                    expect(vm_manager).to receive(:flock)
-                      .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
-                      .and_call_original
-                    expect(azure_client).to receive(:create_network_interface).twice
-
-                    _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                    expect(vm_params[:name]).to eq(vm_name)
-                    expect(vm_props.instance_type).to eq('Standard_D2_v3')
-                  end
-                end
-              end
-
-              context 'when the disk is Premium SKU' do
-                let(:storage_account_name) { 'fakestorageaccountname' }
-                let(:storage_account) do
-                  {
-                    name: storage_account_name,
-                    sku_tier: 'Premium'
-                  }
-                end
-
-                before do
-                  allow(disk_id_object).to receive(:storage_account_name)
-                    .and_return(storage_account_name)
-                  allow(azure_client).to receive(:get_storage_account_by_name)
-                    .with(storage_account_name)
-                    .and_return(storage_account)
-                  allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_DS2_v3", "fake-location").and_return(true)
-                  allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v3", "fake-location").and_return(false)
-                end
-
-                it 'should select one instance type which supports Premium storage' do
-                  expect(vm_manager).to receive(:flock)
-                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
-                    .and_call_original
-                  expect(vm_manager).to receive(:flock)
-                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
-                    .and_call_original
-                  expect(azure_client).to receive(:create_network_interface).twice
-
-                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  expect(vm_params[:name]).to eq(vm_name)
-                  expect(vm_props.instance_type).to eq('Standard_DS2_v3')
-                end
-
-                context 'when instance_types do not support premium storage' do
-                  let(:instance_types) { %w[Standard_D2_v3 Standard_D2_v2] }
-                  let(:vm_props) do
-                    props_factory.parse_vm_props(
-                      'instance_type' => nil,
-                      'instance_types' => instance_types,
-                      'availability_set' => availability_set_name,
-                      'platform_update_domain_count' => platform_update_domain_count,
-                      'platform_fault_domain_count' => platform_fault_domain_count
-                    )
-                  end
-
-                  before do
-                    allow(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
-                    allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v2", "fake-location").and_return(false)
-                    allow(disk_manager2).to receive(:supports_premium_storage?).with("Standard_D2_v3", "fake-location").and_return(false)
-                  end
-
-                  it 'should raise an error' do
-                    expect do
-                      vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                    end.to raise_error(/No available instance type is found/)
-                  end
-                end
-              end
-            end
           end
         end
 
@@ -437,7 +318,7 @@ describe Bosh::AzureCloud::VMManager do
               tags: { 'user-agent' => 'bosh' },
               platform_update_domain_count: vm_props.availability_set.platform_update_domain_count,
               platform_fault_domain_count: vm_props.availability_set.platform_fault_domain_count,
-              managed: false
+              managed: true
             }
           end
           let(:availability_set) do
@@ -494,7 +375,7 @@ describe Bosh::AzureCloud::VMManager do
                 tags: { 'user-agent' => 'bosh' },
                 platform_update_domain_count: vm_props.availability_set.platform_update_domain_count,
                 platform_fault_domain_count: vm_props.availability_set.platform_fault_domain_count,
-                managed: false
+                managed: true
               }
             end
             let(:availability_set) do
@@ -537,7 +418,7 @@ describe Bosh::AzureCloud::VMManager do
                 tags: { 'user-agent' => 'bosh' },
                 platform_update_domain_count: 5,
                 platform_fault_domain_count: 3,
-                managed: false
+                managed: true
               }
             end
 
@@ -639,36 +520,6 @@ describe Bosh::AzureCloud::VMManager do
               }
             end
 
-            context 'when the availability set is unmanaged' do
-              let(:vm_props) do
-                props_factory.parse_vm_props(
-                  'instance_type' => 'Standard_D1',
-                  'availability_set' => availability_set_name,
-                  'platform_update_domain_count' => 4,
-                  'platform_fault_domain_count' => 1
-                )
-              end
-
-              before do
-                avset_params[:managed] = false
-              end
-
-              it 'should create the unmanaged availability set' do
-                expect(vm_manager).to receive(:flock)
-                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
-                  .and_call_original
-                expect(vm_manager).to receive(:flock)
-                  .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
-                  .and_call_original
-
-                expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
-                expect(azure_client).to receive(:create_network_interface).twice
-
-                _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                expect(vm_params[:name]).to eq(vm_name)
-              end
-            end
-
             context 'when the availability set is managed' do
               let(:vm_props) do
                 Bosh::AzureCloud::VMCloudProps.new(
@@ -718,38 +569,6 @@ describe Bosh::AzureCloud::VMManager do
             end
 
             context 'when the environment is not AzureStack' do
-              context 'when the availability set is unmanaged' do
-                let(:vm_props) do
-                  Bosh::AzureCloud::VMCloudProps.new(
-                    {
-                      'instance_type' => 'Standard_D1',
-                      'availability_set' => availability_set_name
-                    }, azure_config
-                  )
-                end
-
-                before do
-                  avset_params[:platform_update_domain_count] = 5
-                  avset_params[:platform_fault_domain_count]  = 3
-                  avset_params[:managed]                      = false
-                end
-
-                it 'should create the unmanaged availability set' do
-                  expect(vm_manager).to receive(:flock)
-                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
-                    .and_call_original
-                  expect(vm_manager).to receive(:flock)
-                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
-                    .and_call_original
-
-                  expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
-                  expect(azure_client).to receive(:create_network_interface).twice
-
-                  _, vm_params = vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  expect(vm_params[:name]).to eq(vm_name)
-                end
-              end
-
               context 'when the availability set is managed' do
                 let(:vm_props) do
                   Bosh::AzureCloud::VMCloudProps.new(
@@ -778,59 +597,6 @@ describe Bosh::AzureCloud::VMManager do
                   expect(azure_client).to receive(:create_network_interface).twice
 
                   _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                  expect(vm_params[:name]).to eq(vm_name)
-                end
-              end
-            end
-
-            context 'when the environment is AzureStack' do
-              # VM manager for AzureStack
-              let(:azure_config_azure_stack) do
-                mock_azure_config_merge(
-                  'environment' => 'AzureStack'
-                )
-              end
-              let(:vm_manager_azure_stack) do
-                Bosh::AzureCloud::VMManager.new(
-                  azure_config_azure_stack, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager
-                )
-              end
-              let(:vm_props) do
-                Bosh::AzureCloud::VMCloudProps.new(
-                  {
-                    'instance_type' => 'Standard_D1',
-                    'availability_set' => availability_set_name
-                  },
-                  azure_config_azure_stack
-                )
-              end
-
-              before do
-                allow(vm_manager_azure_stack).to receive(:_get_stemcell_info).and_return(stemcell_info)
-                allow(vm_manager_azure_stack).to receive(:get_storage_account_from_vm_properties)
-                  .and_return(name: storage_account_name)
-              end
-
-              # Only unmanaged availability set is supported on AzureStack
-              context 'when the availability set is unmanaged' do
-                before do
-                  avset_params[:platform_update_domain_count] = 1
-                  avset_params[:platform_fault_domain_count]  = 1
-                  avset_params[:managed]                      = false
-                end
-
-                it 'should create the unmanaged availability set' do
-                  expect(vm_manager_azure_stack).to receive(:flock)
-                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
-                    .and_call_original
-                  expect(vm_manager_azure_stack).to receive(:flock)
-                    .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
-                    .and_call_original
-
-                  expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
-                  expect(azure_client).to receive(:create_network_interface).twice
-
-                  _, vm_params = vm_manager_azure_stack.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
                   expect(vm_params[:name]).to eq(vm_name)
                 end
               end
@@ -876,7 +642,7 @@ describe Bosh::AzureCloud::VMManager do
             end
           end
 
-          context 'when the managed property is aligned with @use_managed_disks' do
+          context 'when the existing availability set is managed' do
             let(:availability_set_name) { SecureRandom.uuid.to_s }
             let(:availability_set) do
               {
@@ -911,7 +677,7 @@ describe Bosh::AzureCloud::VMManager do
             end
           end
 
-          context 'when the managed property is not aligned with @use_managed_disks' do
+          context 'when the existing availability set is unmanaged' do
             let(:availability_set_name) { SecureRandom.uuid.to_s }
             let(:vm_props) do
               props_factory.parse_vm_props(
@@ -961,7 +727,7 @@ describe Bosh::AzureCloud::VMManager do
                 allow(azure_client).to receive(:get_max_fault_domains_for_location).with(location).and_return(location_fault_domain_count)
               end
 
-              it 'should update the managed property of the availability set' do
+              it 'should raise an error requiring the unmanaged availability set to be deleted' do
                 expect(vm_manager2).to receive(:flock)
                   .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_SH)
                   .and_call_original
@@ -969,28 +735,9 @@ describe Bosh::AzureCloud::VMManager do
                   .with("#{CPI_LOCK_PREFIX_AVAILABILITY_SET}-#{availability_set_name}", File::LOCK_EX)
                   .and_call_original
 
-                expect(azure_client).to receive(:create_availability_set).with(MOCK_RESOURCE_GROUP_NAME, avset_params)
-                expect(azure_client).to receive(:create_network_interface).twice
-
-                _, vm_params = vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                expect(vm_params[:name]).to eq(vm_name)
-              end
-            end
-
-            context 'when using managed avset in unmanaged vm' do
-              before do
-                allow(azure_client).to receive(:get_availability_set_by_name)
-                  .with(MOCK_RESOURCE_GROUP_NAME, vm_props.availability_set.name)
-                  .and_return(existing_avset_managed)
-              end
-
-              it 'should raise error' do
-                expect(azure_client).to receive(:delete_network_interface).twice
-                expect(azure_client).to receive(:create_network_interface).twice
-
                 expect do
-                  vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                end.to raise_error(/availability set '.+' already exists. It's not allowed to update it from managed to unmanaged./)
+                  vm_manager2.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+                end.to raise_error(Bosh::Clouds::CloudError, /availability set '#{availability_set_name}' is unmanaged/)
               end
             end
           end

@@ -28,12 +28,6 @@ describe Bosh::AzureCloud::Cloud do
       allow(Bosh::Clouds::Config.logger).to receive(:info)
     end
 
-    it 'should raise a NotSupported error if use_managed_disks is false' do
-      expect do
-        cloud.resize_disk(disk_cid, new_size)
-      end.to raise_error(Bosh::Clouds::NotSupported)
-    end
-
     context 'when trying to resize to a larger disk size multiple of 1024' do
       let(:new_size) { 1_024_000 }
 

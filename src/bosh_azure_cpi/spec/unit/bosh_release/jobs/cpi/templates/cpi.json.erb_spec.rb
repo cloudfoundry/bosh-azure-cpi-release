@@ -63,7 +63,6 @@ describe 'cpi.json.erb' do
             'debug_mode' => false,
             'keep_failed_vms' => false,
             'enable_telemetry' => false,
-            'use_managed_disks' => false,
             'pip_idle_timeout_in_minutes' => 4,
             'enable_vm_boot_diagnostics' => false
           },
@@ -207,16 +206,6 @@ describe 'cpi.json.erb' do
       end
     end
 
-    context 'when the managed disks are enabled' do
-      before do
-        manifest['properties']['azure']['use_managed_disks'] = true
-      end
-
-      it 'is able to render use_managed_disks to true' do
-        expect(subject['cloud']['properties']['azure']['use_managed_disks']).to be(true)
-      end
-    end
-
     context 'when the keep_failed_vms are enabled' do
       before do
         manifest['properties']['azure']['keep_failed_vms'] = true
@@ -252,20 +241,8 @@ describe 'cpi.json.erb' do
         manifest['properties']['azure']['storage_account_name'] = nil
       end
 
-      context 'when the managed disks are enabled' do
-        before do
-          manifest['properties']['azure']['use_managed_disks'] = true
-        end
-
-        it 'allows storage_account_name to be nil' do
-          expect(subject['cloud']['properties']['azure']['storage_account_name']).to be_nil
-        end
-      end
-
-      context 'when the managed disks are disabled' do
-        it 'raises an error of missing storage_account_name' do
-          expect { subject }.to raise_error(/storage_account_name cannot be nil if use_managed_disks is false/)
-        end
+      it 'allows storage_account_name to be nil' do
+        expect(subject['cloud']['properties']['azure']['storage_account_name']).to be_nil
       end
     end
 

@@ -142,46 +142,6 @@ module Bosh::AzureCloud
       end
     end
 
-    ##
-    # Creates an empty vhd blob.
-    #
-    # @param [String] container_name container name
-    # @param [String] blob_name vhd name
-    # @param [Integer] blob_size_in_gb blob size in GiB
-    # @param [Boolean] storage_account_name Is premium or not.
-    # @return [void]
-    def create_empty_vhd_blob(storage_account_name, container_name, blob_name, blob_size_in_gb)
-      @logger.info("create_empty_vhd_blob(#{storage_account_name}, #{container_name}, #{blob_name}, #{blob_size_in_gb})")
-      blob_created = false
-      _initialize_blob_client(storage_account_name) do
-        @logger.info('create_empty_vhd_blob: Start to generate vhd footer')
-        vhd_size = blob_size_in_gb * 1024 * 1024 * 1024
-
-        vhd_footer = VHDUtils.generate_footer(vhd_size).values.join
-        blob_size = vhd_size + 512
-        options = {
-          timeout: TIMEOUT_FOR_BLOB_OPERATIONS
-        }
-        @logger.info("create_empty_vhd_blob: Calling _create_page_blob(#{container_name}, #{blob_name}, #{blob_size}, #{options})")
-        _create_page_blob(container_name, blob_name, blob_size, options)
-        blob_created = true
-
-        @logger.info('create_empty_vhd_blob: Start to upload vhd footer')
-
-        options = merge_storage_common_options(options)
-        # Do not log vhd_footer because its size is 512 bytes.
-        @logger.info("create_empty_vhd_blob: Calling put_blob_pages(#{container_name}, #{blob_name}, #{vhd_size}, #{blob_size - 1}, [VHD-FOOTER], #{options})")
-        @blob_service_client.put_blob_pages(container_name, blob_name, vhd_size, blob_size - 1, vhd_footer, options)
-      rescue StandardError => e
-        if blob_created
-          options = merge_storage_common_options
-          @logger.info("create_empty_vhd_blob: Calling delete_blob(#{container_name}, #{blob_name}, #{options})")
-          @blob_service_client.delete_blob(container_name, blob_name, options)
-        end
-        cloud_error("create_empty_vhd_blob: Failed to create empty vhd blob: inspect:#{e.inspect}\nbacktrace:#{e.backtrace.join("\n")}")
-      end
-    end
-
     def get_blob_properties(storage_account_name, container_name, blob_name)
       @logger.info("get_blob_properties(#{storage_account_name}, #{container_name}, #{blob_name})")
       _initialize_blob_client(storage_account_name) do

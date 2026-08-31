@@ -66,232 +66,79 @@ describe Bosh::AzureCloud::Cloud do
         .with('attach_disk', { id: vm_cid }).and_call_original
     end
 
-    context 'when use_managed_disks is true' do
-      context 'when the disk is a managed disk' do
-        let(:disk) { {} }
+    context 'when the disk is a managed disk' do
+      let(:disk) { {} }
 
-        before do
-          allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(disk)
-        end
-
-        context 'when the vm is a vm with managed disks' do
-          before do
-            allow(instance_id_object).to receive(:use_managed_disks?)
-              .and_return(true)
-          end
-
-          context 'and disk exists' do
-            it 'attaches the managed disk to the vm' do
-              expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
-                                                         .and_return(lun)
-
-              expect do
-                managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.not_to raise_error
-            end
-          end
-
-          context 'and disk does not exist' do
-            before do
-              allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(nil)
-              allow(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
-                                                        .and_raise('disk not found')
-            end
-
-            it 'should not migrate the disk' do
-              expect(disk_manager2).not_to receive(:create_disk_from_blob)
-
-              expect do
-                managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.to raise_error 'disk not found'
-            end
-          end
-        end
-
-        context 'when the vm is a vm with unmanaged disks' do
-          context 'when the managed disk disk exists' do
-            before do
-              allow(instance_id_object).to receive(:use_managed_disks?)
-                .and_return(false)
-            end
-
-            it "can't attach a managed disk to a VM with unmanaged disks" do
-              expect do
-                managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.to raise_error(/Cannot attach a managed disk to a VM with unmanaged disks/)
-            end
-          end
-
-          context 'when the managed disk does not exist' do
-            before do
-              allow(instance_id_object).to receive(:use_managed_disks?)
-                .and_return(false)
-              allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(nil)
-            end
-
-            it 'still attach the unmanaged disk to the VM with unmanaged disks' do
-              expect(vm_manager).to receive(:attach_disk)
-              expect do
-                managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.not_to raise_error
-            end
-          end
-        end
-
-        context 'when the vm is in a zone but the disk is not' do
-          let(:disk) { {} }
-          let(:vm_zone) { 'fake-zone' }
-
-          before do
-            vm[:zone] = vm_zone
-            allow(instance_id_object).to receive(:use_managed_disks?)
-              .and_return(true)
-            allow(vm_manager).to receive(:find)
-              .and_return(vm)
-          end
-
-          context 'when the disk is migrated successfully' do
-            before do
-              allow(disk_manager2).to receive(:migrate_to_zone).with(disk_id_object, disk, vm_zone)
-            end
-
-            it 'attach the disk' do
-              expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
-                                                         .and_return(lun)
-
-              expect do
-                managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.not_to raise_error
-            end
-          end
-
-          context 'when it fails to migrate the disk' do
-            before do
-              allow(disk_manager2).to receive(:migrate_to_zone)
-                .and_raise(StandardError)
-            end
-
-            it 'raise an error' do
-              expect do
-                managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.to raise_error(/attach_disk - Failed to migrate disk/)
-            end
-          end
-        end
+      before do
+        allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(disk)
       end
 
-      context 'when the disk is an unmanaged disk' do
-        before do
-          allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(nil)
-          allow(disk_id_object).to receive(:disk_name).and_return('bosh-data-abc')
-        end
-
-        context 'when the vm is a vm with managed disks' do
-          let(:blob_uri) { 'fake-blob-uri' }
-          let(:location) { 'fake-location' }
-          let(:account_type) { 'Premium_LRS' }
-          let(:storage_account_id) { 'storage-account-id' }
-          let(:storage_account) do
-            {
-              location: location,
-              account_type: account_type,
-              sku_tier: 'Premium',
-              id: storage_account_id
-            }
-          end
-
-          before do
-            allow(instance_id_object).to receive(:use_managed_disks?)
-              .and_return(true)
-            allow(disk_manager).to receive(:get_data_disk_uri)
-              .with(disk_id_object)
-              .and_return(blob_uri)
-            allow(azure_client).to receive(:get_storage_account_by_name)
-              .with(storage_account_name)
-              .and_return(storage_account)
-          end
-
-          context 'a managed disk is created successfully from the unmanage disk' do
-            it 'attaches the managed disk to the vm' do
-              expect(disk_id_object).to receive(:storage_account_name)
-                .and_return(storage_account_name)
-              expect(disk_manager2).to receive(:create_disk_from_blob)
-                .with(disk_id_object, blob_uri, location, account_type, storage_account_id, nil)
-              expect(blob_manager).to receive(:set_blob_metadata)
-
-              expect(vm_manager).to receive(:attach_disk)
-                .with(instance_id_object, disk_id_object)
-                .and_return(lun)
-
-              expect do
-                managed_cloud.attach_disk(vm_cid, disk_cid)
-              end.not_to raise_error
-            end
-          end
-
-          context 'a managed disk fails to be created from the unmanage disk' do
-            before do
-              allow(disk_manager2).to receive(:create_disk_from_blob).and_raise(StandardError)
-              allow(disk_id_object).to receive(:storage_account_name)
-                .and_return(storage_account_name)
-            end
-
-            context 'the managed disk is cleaned up' do
-              before do
-                allow(disk_manager2).to receive(:delete_data_disk).with(disk_id_object)
-              end
-
-              it 'fails to attach the managed disk to the vm, but successfully cleanup the managed disk' do
-                expect(blob_manager).not_to receive(:set_blob_metadata)
-
-                expect do
-                  managed_cloud.attach_disk(vm_cid, disk_cid)
-                end.to raise_error(/attach_disk - Failed to create the managed disk/)
-              end
-            end
-
-            context 'the managed disk is not cleaned up' do
-              before do
-                allow(disk_manager2).to receive(:delete_data_disk).with(disk_id_object).and_raise(StandardError)
-              end
-
-              it 'fails to attach the managed disk to the vm and cleanup the managed disk' do
-                expect(blob_manager).not_to receive(:set_blob_metadata)
-
-                expect do
-                  managed_cloud.attach_disk(vm_cid, disk_cid)
-                end.to raise_error(/attach_disk - Failed to create the managed disk/)
-              end
-            end
-          end
-        end
-
-        context 'when the vm is a vm with unmanaged disks' do
-          before do
-            allow(instance_id_object).to receive(:use_managed_disks?)
-              .and_return(false)
-          end
-
-          it 'attaches the unmanaged disk to the vm' do
+      context 'when the vm is a vm with managed disks' do
+        context 'and disk exists' do
+          it 'attaches the managed disk to the vm' do
             expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
                                                        .and_return(lun)
 
             expect do
-              cloud.attach_disk(vm_cid, disk_cid)
+              managed_cloud.attach_disk(vm_cid, disk_cid)
             end.not_to raise_error
           end
         end
+
+        context 'and disk does not exist' do
+          before do
+            allow(disk_manager2).to receive(:get_data_disk).with(disk_id_object).and_return(nil)
+            allow(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
+                                                      .and_raise('disk not found')
+          end
+
+          it 'should not migrate the disk' do
+            expect(disk_manager2).not_to receive(:create_disk_from_blob)
+
+            expect do
+              managed_cloud.attach_disk(vm_cid, disk_cid)
+            end.to raise_error 'disk not found'
+          end
+        end
       end
-    end
 
-    context 'when use_managed_disks is false' do
-      it 'attaches the unmanaged disk to the vm' do
-        expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
-                                                   .and_return(lun)
+      context 'when the vm is in a zone but the disk is not' do
+        let(:disk) { {} }
+        let(:vm_zone) { 'fake-zone' }
 
-        expect do
-          cloud.attach_disk(vm_cid, disk_cid)
-        end.not_to raise_error
+        before do
+          vm[:zone] = vm_zone
+          allow(vm_manager).to receive(:find)
+            .and_return(vm)
+        end
+
+        context 'when the disk is migrated successfully' do
+          before do
+            allow(disk_manager2).to receive(:migrate_to_zone).with(disk_id_object, disk, vm_zone)
+          end
+
+          it 'attach the disk' do
+            expect(vm_manager).to receive(:attach_disk).with(instance_id_object, disk_id_object)
+                                                       .and_return(lun)
+
+            expect do
+              managed_cloud.attach_disk(vm_cid, disk_cid)
+            end.not_to raise_error
+          end
+        end
+
+        context 'when it fails to migrate the disk' do
+          before do
+            allow(disk_manager2).to receive(:migrate_to_zone)
+              .and_raise(StandardError)
+          end
+
+          it 'raise an error' do
+            expect do
+              managed_cloud.attach_disk(vm_cid, disk_cid)
+            end.to raise_error(/attach_disk - Failed to migrate disk/)
+          end
+        end
       end
     end
 

@@ -26,7 +26,7 @@ Below are behavior changes with a new deployment:
 
 1. Deploying Cloud Foundry:
 
-    1. (Optional) If availability sets are used to host VMs with managed disks and you want to have 3 fault domains, you need to set `platform_fault_domain_count` to `3` explicitly in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). The reason: When `use_managed_disks` is `true`, the default value of `platform_fault_domain_count` is `2` because [the maximum number of fault domain is 2 in some regions](#with-availability-sets).
+    1. (Optional) If availability sets are used and you want to have 3 fault domains, you need to set `platform_fault_domain_count` to `3` explicitly in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). The default value of `platform_fault_domain_count` is `2` because [the maximum number of fault domain is 2 in some regions](#with-availability-sets).
 
     1. (Optional) You can specify the `storage_account_type` in [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools). For example, if you need a SSD persistent disk for Cloud Foundry VM, you can use `Premium_LRS`.
 
@@ -87,7 +87,7 @@ This is the recommended approach for existing deployment, you can migrate entire
 
     1. (**REQUIRED**) You need to remove `storage_account_name` and `storage_account_max_disk_number` if they exist in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools).
 
-    1. (Optional) If availability sets are used to host VMs with managed disks and you want to have 3 fault domains, you need to set `platform_fault_domain_count` to `3` explicitly in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). The reason: When `use_managed_disks` is `true`, the default value of `platform_fault_domain_count` is `2` because [the maximum number of fault domain is 2 in some regions](#with-availability-sets).
+    1. (Optional) If availability sets are used and you want to have 3 fault domains, you need to set `platform_fault_domain_count` to `3` explicitly in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). The default value of `platform_fault_domain_count` is `2` because [the maximum number of fault domain is 2 in some regions](#with-availability-sets).
 
     1. (Optional) You can specify the `storage_account_type` in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools). For example, if you need a SSD root disk for Cloud Foundry VM, you can use `Premium_LRS`.
 

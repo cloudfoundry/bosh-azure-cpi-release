@@ -55,10 +55,7 @@ properties:
   azure.resource_group_name:
     description: Resource group name to use when spinning up new vms
   azure.storage_account_name:
-    description: Azure storage account name. This property is required when use_managed_disks is false or upgrading from an existing deployment whose use_managed_disks is false.
-  azure.use_managed_disks:
-    description: Enable managed disks
-    default: false
+    description: Azure storage account name. Used as the default stemcell storage account.
   azure.default_security_group:
     description: The name of the default security group that will be applied to all created VMs
   azure.pip_idle_timeout_in_minutes:
