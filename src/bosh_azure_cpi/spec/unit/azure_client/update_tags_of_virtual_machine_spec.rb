@@ -105,6 +105,135 @@ describe Bosh::AzureCloud::AzureClient do
             azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
           end.not_to raise_error
         end
+
+        it 'retries the complete update when Azure rejects a concurrent write' do
+          allow(logger).to receive(:warn)
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:get, vm_uri).to_return(
+            status: 200,
+            body: exiting_vm,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: updated_vm).to_return(
+            {
+              status: 409,
+              body: '{"error":{"code":"ConflictingConcurrentWriteNotAllowed"}}',
+              headers: {}
+            },
+            {
+              status: 200,
+              body: '',
+              headers: {
+                'azure-asyncoperation' => operation_status_link
+              }
+            }
+          )
+          stub_request(:get, operation_status_link).to_return(
+            status: 200,
+            body: '{"status":"Succeeded"}',
+            headers: {}
+          )
+
+          expect do
+            azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+          end.not_to raise_error
+          expect(a_request(:get, vm_uri)).to have_been_requested.times(2)
+          expect(a_request(:put, vm_uri).with(body: updated_vm)).to have_been_requested.times(2)
+          expect(a_request(:get, operation_status_link)).to have_been_requested.once
+          expect(azure_client).to have_received(:sleep).with(5).twice
+          expect(logger).to have_received(:warn).with('update_tags_of_virtual_machine - concurrent write conflict. Will retry after 5 seconds.').once
+        end
+
+        it 'stops retrying concurrent writes after the retry limit' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:get, vm_uri).to_return(
+            status: 200,
+            body: exiting_vm,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: updated_vm).to_return(
+            status: 409,
+            body: '{"error":{"code":"ConflictingConcurrentWriteNotAllowed"}}',
+            headers: {}
+          )
+
+          expect do
+            azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+          end.to raise_error Bosh::AzureCloud::AzureConflictError
+          expect(a_request(:get, vm_uri)).to have_been_requested.times(AZURE_MAX_RETRY_COUNT + 1)
+          expect(a_request(:put, vm_uri).with(body: updated_vm)).to have_been_requested.times(AZURE_MAX_RETRY_COUNT + 1)
+          expect(azure_client).to have_received(:sleep).with(5).exactly(AZURE_MAX_RETRY_COUNT).times
+        end
+
+        it 'does not retry other Azure conflict errors' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:get, vm_uri).to_return(
+            status: 200,
+            body: exiting_vm,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: updated_vm).to_return(
+            status: 409,
+            body: '{"error":{"code":"AnotherConflict"}}',
+            headers: {}
+          )
+
+          expect do
+            azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+          end.to raise_error Bosh::AzureCloud::AzureConflictError
+          expect(a_request(:put, vm_uri).with(body: updated_vm)).to have_been_requested.once
+          expect(azure_client).not_to have_received(:sleep)
+        end
+
+        it 'does not retry conflicts with the concurrent-write phrase outside the error body' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:get, vm_uri).to_return(
+            status: 200,
+            body: exiting_vm,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: updated_vm).to_return(
+            status: 409,
+            body: 'not JSON',
+            headers: {
+              'x-ms-request-id' => 'ConflictingConcurrentWriteNotAllowed'
+            }
+          )
+
+          expect do
+            azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+          end.to raise_error Bosh::AzureCloud::AzureConflictError
+          expect(a_request(:put, vm_uri).with(body: updated_vm)).to have_been_requested.once
+          expect(azure_client).not_to have_received(:sleep)
+        end
       end
 
       context "when VM's information doesn't contain tags" do

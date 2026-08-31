@@ -582,12 +582,23 @@ module Bosh::AzureCloud
     #
     def update_tags_of_virtual_machine(resource_group_name, name, tags)
       url = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_VIRTUAL_MACHINES, resource_group_name: resource_group_name, name: name)
-      vm = get_resource_by_id(url)
-      raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name '#{name}' in resource group '#{resource_group_name}'" if vm.nil?
+      retry_count = 0
+      begin
+        vm = get_resource_by_id(url)
+        raise AzureNotFoundError, "update_tags_of_virtual_machine - cannot find the virtual machine by name '#{name}' in resource group '#{resource_group_name}'" if vm.nil?
 
-      vm = remove_resources_from_vm(vm)
-      vm['tags'].merge!(tags)
-      http_put(url, vm)
+        vm = remove_resources_from_vm(vm)
+        vm['tags'].merge!(tags)
+        http_put(url, vm)
+      rescue AzureConflictError => e
+        if conflicting_concurrent_write_not_allowed?(e) && retry_count < AZURE_MAX_RETRY_COUNT
+          retry_count += 1
+          @logger.warn("update_tags_of_virtual_machine - concurrent write conflict. Will retry after 5 seconds.")
+          sleep(5)
+          retry
+        end
+        raise e
+      end
     end
 
     # Attach a specified disk to a virtual machine
@@ -3218,6 +3229,13 @@ module Bosh::AzureCloud
         end
       end
       vm
+    end
+
+    def conflicting_concurrent_write_not_allowed?(error)
+      response_body = error.message[/\Ahttp_put - http code: 409\n.*\nError message: (.*)\z/m, 1]
+      JSON.parse(response_body).dig('error', 'code') == 'ConflictingConcurrentWriteNotAllowed'
+    rescue JSON::ParserError, TypeError
+      false
     end
   end
 end
