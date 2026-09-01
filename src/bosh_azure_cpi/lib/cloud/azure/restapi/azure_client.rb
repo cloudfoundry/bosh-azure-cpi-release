@@ -3233,7 +3233,8 @@ module Bosh::AzureCloud
 
     def conflicting_concurrent_write_not_allowed?(error)
       response_body = error.message[/\Ahttp_put - http code: 409\n.*\nError message: (.*)\z/m, 1]
-      JSON.parse(response_body).dig('error', 'code') == 'ConflictingConcurrentWriteNotAllowed'
+      response = JSON.parse(response_body)
+      response.is_a?(Hash) && response.dig('error', 'code') == 'ConflictingConcurrentWriteNotAllowed'
     rescue JSON::ParserError, TypeError
       false
     end

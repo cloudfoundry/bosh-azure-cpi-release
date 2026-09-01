@@ -234,6 +234,33 @@ describe Bosh::AzureCloud::AzureClient do
           expect(a_request(:put, vm_uri).with(body: updated_vm)).to have_been_requested.once
           expect(azure_client).not_to have_received(:sleep)
         end
+
+        it 'does not retry conflicts with a null error body' do
+          stub_request(:post, token_uri).to_return(
+            status: 200,
+            body: {
+              'access_token' => valid_access_token,
+              'expires_on' => expires_on
+            }.to_json,
+            headers: {}
+          )
+          stub_request(:get, vm_uri).to_return(
+            status: 200,
+            body: exiting_vm,
+            headers: {}
+          )
+          stub_request(:put, vm_uri).with(body: updated_vm).to_return(
+            status: 409,
+            body: 'null',
+            headers: {}
+          )
+
+          expect do
+            azure_client.update_tags_of_virtual_machine(resource_group, vm_name, tags)
+          end.to raise_error Bosh::AzureCloud::AzureConflictError
+          expect(a_request(:put, vm_uri).with(body: updated_vm)).to have_been_requested.once
+          expect(azure_client).not_to have_received(:sleep)
+        end
       end
 
       context "when VM's information doesn't contain tags" do
