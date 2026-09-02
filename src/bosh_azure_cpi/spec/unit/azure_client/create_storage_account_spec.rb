@@ -72,13 +72,14 @@ describe Bosh::AzureCloud::AzureClient do
     context 'when the environment is AzureStack' do
       before do
         allow(azure_config).to receive(:environment).and_return('AzureStack')
-        allow(azure_client).to receive(:http_url).and_return(URI(storage_account_uri))
+        allow(azure_config).to receive(:azure_stack).and_return(instance_double(Bosh::AzureCloud::AzureStackConfig, endpoint_prefix: 'api', domain: 'fake-domain'))
       end
 
       it 'should create the storage account without a minimum TLS version' do
         response = instance_double(Net::HTTPResponse, code: '200')
 
-        expect(azure_client).to receive(:http_get_response) do |_uri, request, _retry_after|
+        expect(azure_client).to receive(:http_get_response) do |uri, request, _retry_after|
+          expect(uri.query).to eq('api-version=2016-01-01')
           expect(JSON.parse(request.body).fetch('properties', {})).not_to have_key('minimumTlsVersion')
           response
         end
