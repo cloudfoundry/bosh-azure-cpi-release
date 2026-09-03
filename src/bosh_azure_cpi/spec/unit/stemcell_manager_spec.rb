@@ -400,5 +400,22 @@ describe Bosh::AzureCloud::StemcellManager do
         expect(stemcell_info.metadata).to eq(stemcell_blob_metadata)
       end
     end
+
+    describe '#get_stemcell_architecture' do
+      let(:stemcell_container) { 'stemcell' }
+
+      before do
+        allow(blob_manager).to receive(:get_blob_uri)
+          .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+          .and_return('fake-blob-url')
+        allow(blob_manager).to receive(:get_blob_metadata)
+          .with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME, stemcell_container, "#{stemcell_name}.vhd")
+          .and_return('architecture' => 'aarch64')
+      end
+
+      it 'reads normalized architecture from the default stemcell blob' do
+        expect(stemcell_manager.get_stemcell_architecture(stemcell_name)).to eq('Arm64')
+      end
+    end
   end
 end

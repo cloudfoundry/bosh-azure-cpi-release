@@ -73,6 +73,10 @@ module Bosh::AzureCloud
       StemcellInfo.new(uri, metadata)
     end
 
+    def get_stemcell_architecture(name)
+      get_stemcell_info(@default_storage_account_name, name).architecture
+    end
+
     private
 
     def _handle_stemcell_in_different_storage_account(storage_account_name, name)

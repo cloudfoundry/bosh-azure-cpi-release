@@ -444,4 +444,59 @@ describe Bosh::AzureCloud::InstanceTypeMapper do
       end
     end
   end
+
+  describe '#filter_by_architecture' do
+    let(:azure_skus) do
+      [
+        {
+          name: 'Standard_D2s_v5',
+          capabilities: {
+            CpuArchitectureType: 'x64'
+          }
+        },
+        {
+          name: 'Standard_D2ps_v5',
+          capabilities: {
+            CpuArchitectureType: 'Arm64'
+          }
+        },
+        {
+          name: 'Standard_D2_v3',
+          capabilities: {}
+        }
+      ]
+    end
+
+    let(:instance_types) { %w[Standard_D2ps_v5 Standard_D2_v3 Standard_D2s_v5] }
+
+    before do
+      allow(azure_client).to receive(:list_vm_skus).with(location).and_return(azure_skus)
+    end
+
+    it 'returns only VM sizes matching an ARM64 stemcell' do
+      expect(subject.filter_by_architecture(instance_types, 'aarch64', location)).to eq(['Standard_D2ps_v5'])
+    end
+
+    it 'normalizes x86_64 and treats SKUs without the capability as x64' do
+      expect(subject.filter_by_architecture(instance_types, 'x86_64', location)).to eq(
+        %w[Standard_D2_v3 Standard_D2s_v5]
+      )
+    end
+
+    it 'defaults to x64 when stemcell architecture metadata is absent' do
+      expect(subject.filter_by_architecture(instance_types, nil, location)).to eq(
+        %w[Standard_D2_v3 Standard_D2s_v5]
+      )
+    end
+
+    it 'preserves VM SKU lookup failures' do
+      allow(azure_client).to receive(:list_vm_skus).with(location)
+                                                        .and_raise(Bosh::AzureCloud::AzureError.new('Azure API error'))
+      expect(logger).to receive(:warn).with(/Failed to fetch VM SKU information: Azure API error/)
+
+      expect do
+        subject.filter_by_architecture(instance_types, 'arm64', location)
+      end.to raise_error(Bosh::AzureCloud::InstanceTypeMapper::SkuLookupError, /Failed to fetch VM SKU information/)
+    end
+  end
 end

@@ -23,11 +23,12 @@ shared_context 'shared stuff for vm manager' do
   let(:stemcell_manager) { instance_double(Bosh::AzureCloud::StemcellManager) }
   let(:stemcell_manager2) { instance_double(Bosh::AzureCloud::StemcellManager2) }
   let(:light_stemcell_manager) { instance_double(Bosh::AzureCloud::LightStemcellManager) }
+  let(:instance_type_mapper) { instance_double(Bosh::AzureCloud::InstanceTypeMapper) }
   let(:blob_manager) { instance_double(Bosh::AzureCloud::BlobManager) }
   # VM manager for unmanaged disks
-  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+  let(:vm_manager) { Bosh::AzureCloud::VMManager.new(azure_config, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, instance_type_mapper) }
   # VM manager for managed disks
-  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager) }
+  let(:vm_manager2) { Bosh::AzureCloud::VMManager.new(azure_config_managed, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, instance_type_mapper) }
   # Parameters of create
   let(:instance_id) { instance_double(Bosh::AzureCloud::InstanceId) }
   let(:location) { 'fake-location' }
@@ -85,6 +86,15 @@ shared_context 'shared stuff for vm manager' do
       .and_return(nil)
     allow(stemcell_info).to receive(:is_light_stemcell?)
       .and_return(false)
+    allow(stemcell_info).to receive(:architecture)
+      .and_return(Bosh::AzureCloud::Helpers::CpuArchitecture::X64)
+    allow(stemcell_manager).to receive(:get_stemcell_architecture)
+      .and_return(Bosh::AzureCloud::Helpers::CpuArchitecture::X64)
+    allow(stemcell_manager2).to receive(:get_stemcell_architecture)
+      .and_return(Bosh::AzureCloud::Helpers::CpuArchitecture::X64)
+    allow(instance_type_mapper).to receive(:filter_by_architecture) do |instance_types, _architecture, _location|
+      instance_types
+    end
   end
 
   # AzureClient

@@ -4,7 +4,7 @@ module Bosh::AzureCloud
   class VMManager
     include Helpers
 
-    def initialize(azure_config, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager)
+    def initialize(azure_config, disk_manager, disk_manager2, azure_client, storage_account_manager, stemcell_manager, stemcell_manager2, light_stemcell_manager, instance_type_mapper = nil)
       @azure_config = azure_config
       @disk_manager = disk_manager
       @disk_manager2 = disk_manager2
@@ -13,6 +13,7 @@ module Bosh::AzureCloud
       @stemcell_manager = stemcell_manager
       @stemcell_manager2 = stemcell_manager2
       @light_stemcell_manager = light_stemcell_manager
+      @instance_type_mapper = instance_type_mapper || InstanceTypeMapper.new(azure_client)
       @use_managed_disks = azure_config.use_managed_disks
       @logger = Bosh::Clouds::Config.logger
     end
@@ -69,12 +70,24 @@ module Bosh::AzureCloud
           end
 
           cloud_error('No available instance type is found.') if calculated_instance_types.empty?
-          vm_props.instance_type = calculated_instance_types[0]
         end
       else
         availability_set_name = nil
-        vm_props.instance_type = vm_props.instance_types[0] if vm_props.instance_type.nil?
       end
+
+      if vm_props.instance_type.nil?
+        stemcell_architecture = _get_stemcell_architecture(bosh_vm_meta.stemcell_cid)
+        calculated_instance_types = @instance_type_mapper.filter_by_architecture(
+          calculated_instance_types,
+          stemcell_architecture,
+          location
+        )
+        if calculated_instance_types.empty?
+          cloud_error("No available instance type supports stemcell architecture '#{stemcell_architecture}' in location '#{location}'.")
+        end
+        vm_props.instance_type = calculated_instance_types[0]
+      end
+
       @logger.info("The instance type is '#{vm_props.instance_type}'")
 
       # tasks to prepare resources for VM
@@ -287,7 +300,8 @@ module Bosh::AzureCloud
 
       # Replace vmSize with instance_type because only instance_type exists in the manifest
       error_message = error_message.gsub!('vmSize', 'instance_type') if error_message.include?('vmSize')
-      raise Bosh::Clouds::VMCreationFailed.new(false), "#{error_message}\n#{e.backtrace.join("\n")}"
+      ok_to_retry = e.is_a?(InstanceTypeMapper::SkuLookupError)
+      raise Bosh::Clouds::VMCreationFailed.new(ok_to_retry), "#{error_message}\n#{e.backtrace.join("\n")}"
     end
 
     def find(instance_id)
@@ -457,6 +471,18 @@ module Bosh::AzureCloud
     end
 
     private
+
+    def _get_stemcell_architecture(stemcell_cid)
+      architecture = if is_light_stemcell_cid?(stemcell_cid)
+                       @light_stemcell_manager.get_stemcell_info(stemcell_cid).architecture
+                     elsif @use_managed_disks
+                       @stemcell_manager2.get_stemcell_architecture(stemcell_cid)
+                     else
+                       @stemcell_manager.get_stemcell_architecture(stemcell_cid)
+                     end
+      @logger.debug("get_stemcell_architecture - got '#{architecture}' for stemcell '#{stemcell_cid}'")
+      architecture
+    end
 
     def _build_instance_id(bosh_vm_meta, location, vm_props)
       if @use_managed_disks
