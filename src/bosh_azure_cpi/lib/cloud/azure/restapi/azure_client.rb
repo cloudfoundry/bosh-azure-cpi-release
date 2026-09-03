@@ -1891,7 +1891,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/main/specification/storage/resource-manager/Microsoft.Storage/stable/2026-04-01/openapi.json
     #
     def create_storage_account(name, location, sku, kind, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
@@ -1903,6 +1903,9 @@ module Bosh::AzureCloud
         'kind' => kind,
         'tags' => tags
       }
+      unless @azure_config.environment == ENVIRONMENT_AZURESTACK
+        storage_account['properties'] = { 'minimumTlsVersion' => 'TLS1_2' }
+      end
 
       uri = http_url(url)
       @logger.info("create_storage_account - trying to put '#{uri}'")
@@ -1972,7 +1975,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/main/specification/storage/resource-manager/Microsoft.Storage/stable/2026-04-01/openapi.json
     #
     def check_storage_account_name_availability(name)
       url =  "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
@@ -1997,7 +2000,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/main/specification/storage/resource-manager/Microsoft.Storage/stable/2026-04-01/openapi.json
     #
     def get_storage_account_by_name(name)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)
@@ -2009,7 +2012,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/main/specification/storage/resource-manager/Microsoft.Storage/stable/2026-04-01/openapi.json
     #
     def get_storage_account(url)
       result = get_resource_by_id(url)
@@ -2021,7 +2024,7 @@ module Bosh::AzureCloud
     #
     # @return [Hash]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/main/specification/storage/resource-manager/Microsoft.Storage/stable/2026-04-01/openapi.json
     #
     def get_storage_account_keys_by_name(name)
       result = nil
@@ -2045,7 +2048,7 @@ module Bosh::AzureCloud
     #
     # @return [Array]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/main/specification/storage/resource-manager/Microsoft.Storage/stable/2026-04-01/openapi.json
     #
     def list_storage_accounts
       storage_accounts = []
@@ -2066,7 +2069,7 @@ module Bosh::AzureCloud
     #
     # @return [Boolean]
     #
-    # @See https://github.com/Azure/azure-rest-api-specs/blob/master/specification/storage/resource-manager/Microsoft.Storage/stable/2017-10-01/storage.json
+    # @See https://github.com/Azure/azure-rest-api-specs/blob/main/specification/storage/resource-manager/Microsoft.Storage/stable/2026-04-01/openapi.json
     #
     def update_tags_of_storage_account(name, tags)
       url = rest_api_url(REST_API_PROVIDER_STORAGE, REST_API_STORAGE_ACCOUNTS, name: name)

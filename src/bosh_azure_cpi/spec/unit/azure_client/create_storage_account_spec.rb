@@ -7,9 +7,10 @@ WebMock.disable_net_connect!(allow_localhost: true)
 
 describe Bosh::AzureCloud::AzureClient do
   let(:logger) { Bosh::Clouds::Config.logger }
+  let(:azure_config) { mock_azure_config }
   let(:azure_client) do
     Bosh::AzureCloud::AzureClient.new(
-      mock_azure_config,
+      azure_config,
       logger
     )
   end
@@ -39,6 +40,9 @@ describe Bosh::AzureCloud::AzureClient do
           name: sku
         },
         kind: kind,
+        properties: {
+          minimumTlsVersion: 'TLS1_2'
+        },
         tags: tags
       }
     end
@@ -58,6 +62,27 @@ describe Bosh::AzureCloud::AzureClient do
           body: '',
           headers: {}
         )
+
+        expect(
+          azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
+        ).to be(true)
+      end
+    end
+
+    context 'when the environment is AzureStack' do
+      before do
+        allow(azure_config).to receive(:environment).and_return('AzureStack')
+        allow(azure_config).to receive(:azure_stack).and_return(instance_double(Bosh::AzureCloud::AzureStackConfig, endpoint_prefix: 'api', domain: 'fake-domain'))
+      end
+
+      it 'should create the storage account without a minimum TLS version' do
+        response = instance_double(Net::HTTPResponse, code: '200')
+
+        expect(azure_client).to receive(:http_get_response) do |uri, request, _retry_after|
+          expect(uri.query).to eq('api-version=2016-01-01')
+          expect(JSON.parse(request.body).fetch('properties', {})).not_to have_key('minimumTlsVersion')
+          response
+        end
 
         expect(
           azure_client.create_storage_account(storage_account_name, location, sku, kind, tags)
