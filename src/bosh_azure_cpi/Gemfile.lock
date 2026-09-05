@@ -134,7 +134,7 @@ GEM
     ruby-progressbar (1.13.0)
     ruby2_keywords (0.0.5)
     semi_semantic (1.2.0)
-    simplecov (1.1.1)
+    simplecov (1.2.0)
     syslog (0.4.0)
       logger
     timeout (0.6.1)
