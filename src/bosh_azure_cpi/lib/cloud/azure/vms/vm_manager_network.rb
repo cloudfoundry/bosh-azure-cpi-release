@@ -97,10 +97,19 @@ module Bosh::AzureCloud
         # NOTE: The following block gets the Azure API info for each Bosh AGW config (from the vm_type config).
         load_balancers = load_balancer_configs.map do |load_balancer_config|
           load_balancer = @azure_client.get_load_balancer_by_name(load_balancer_config.resource_group_name, load_balancer_config.name)
+
           cloud_error("Cannot find the load balancer '#{load_balancer_config.name}'") if load_balancer.nil?
 
           pools = load_balancer[:backend_address_pools]
           pools = [pools] unless pools.is_a?(Array)
+
+          # NOTE: The following block sets the type of each backend pool in the load balancer, which is used to filter out backend pools that are not associated with NICs when creating network interfaces.
+          _detect_backend_pool_type(load_balancer_config, load_balancer, pools)
+
+          load_balancer[:resource_group_name] = vm_props.resource_group_name
+          unless load_balancer_config.resource_group_name.nil?
+            load_balancer[:resource_group_name] = load_balancer_config.resource_group_name
+          end
 
           if load_balancer_config.backend_pool_name
             # NOTE: This is the only place where we simultaneously have both the Bosh LB config (from the vm_type) AND the Azure LB info (from the Azure API).
@@ -108,14 +117,14 @@ module Bosh::AzureCloud
             # and since there is not a 1-to-1 mapping between the vm_type LB configs and LBs (despite the config property name, each vm_type LB config actually represents a single LB Backend Pool, not a whole LB),
             # we can therefore remove all pools EXCEPT the specified pool.
             # To handle multiple pools of a single LB, you should use 1 vm_type LB Hash (with LB name + backend_pool_name) per pool.
-            pool = pools.find { |p| Hash(p)[:name] == load_balancer_config.backend_pool_name }
+            pool = pools.find { |p| Hash(p)[:name].casecmp?(load_balancer_config.backend_pool_name) }
             cloud_error("'#{load_balancer_config.name}' does not have a backend_pool named '#{load_balancer_config.backend_pool_name}': #{load_balancer}") if pool.nil?
 
             load_balancer[:backend_address_pools] = [pool]
           end
 
           if load_balancer_config.backend_pool_name_v6
-            pool_v6 = pools.find { |p| Hash(p)[:name] == load_balancer_config.backend_pool_name_v6 }
+            pool_v6 = pools.find { |p| Hash(p)[:name].casecmp?(load_balancer_config.backend_pool_name_v6) }
             cloud_error("'#{load_balancer_config.name}' does not have a backend_pool named '#{load_balancer_config.backend_pool_name_v6}': #{load_balancer}") if pool_v6.nil?
 
             load_balancer[:backend_address_pools_v6] = [pool_v6]
@@ -125,6 +134,35 @@ module Bosh::AzureCloud
         end
       end
       load_balancers
+    end
+
+    # Detect the type of each backend pool in the load balancer, which is used to filter out backend pools that are not associated with NICs when creating network interfaces.
+    #
+    # @param [LoadBalancerConfig] load_balancer_config load balancer config
+    # @param [Hash] load_balancer load balancer info from the Azure API
+    # @param [Array<Hash>] pools backend pools in the load balancer
+    # @return [Array<Hash>]
+    def _detect_backend_pool_type(load_balancer_config, load_balancer, pools)
+      default_backend_pool_type = load_balancer_config.default_backend_pool_type
+
+      pools.each do |pool|
+        pool[:backend_address_pools_type] = default_backend_pool_type
+
+        has_nic_members = Array(pool[:backend_ip_configurations]).any?
+        has_ip_members  = Array(pool[:load_balancer_backend_addresses]).any?
+
+        # NIC membership wins only when NICs are actually attached.
+        pool[:backend_address_pools_type] = LOAD_BALANCER_BACKEND_POOL_TYPE_NIC if has_nic_members
+        pool[:backend_address_pools_type] = LOAD_BALANCER_BACKEND_POOL_TYPE_IP if has_ip_members && !has_nic_members
+
+      end
+
+      load_balancer[:backend_address_pools_type] = LOAD_BALANCER_BACKEND_POOL_TYPE_NIC
+      # Add the type IP to the load_balancer when one of the bools are ip based
+      if pools.any? { |pool| pool[:backend_address_pools_type] == LOAD_BALANCER_BACKEND_POOL_TYPE_IP }
+         load_balancer[:backend_address_pools_type] = LOAD_BALANCER_BACKEND_POOL_TYPE_IP
+      end
+
     end
 
     # @return [Array<Hash>]
@@ -252,8 +290,20 @@ module Bosh::AzureCloud
 
         # NOTE: The first NIC is the Primary/Gateway network. See: `Bosh::AzureCloud::NetworkConfigurator.initialize`.
         if nic_index.zero?
-          nic_params[:tags] = primary_nic_tags
-          nic_params[:load_balancers] = load_balancers
+          # Keep caller-provided tags (including the default AZURE_TAGS) unchanged.
+          nic_params[:tags] = primary_nic_tags.dup
+
+          # IP-based backend pools are tracked through tags, not NIC associations.
+          ip_based_load_balancers, nic_based_load_balancers = Array(load_balancers).partition do |lb|
+            lb[:backend_address_pools_type] == LOAD_BALANCER_BACKEND_POOL_TYPE_IP
+          end
+
+          nic_params[:load_balancers] = load_balancers.nil? ? nil : nic_based_load_balancers
+
+          unless ip_based_load_balancers.empty?
+            nic_params[:tags][LOAD_BALANCER_USED_BY_TAG] = true
+          end
+
           nic_params[:application_gateways] = application_gateways
         else
           nic_params[:tags] = AZURE_TAGS
@@ -309,6 +359,205 @@ module Bosh::AzureCloud
       # Calling .wait before .wait! to make sure that all tasks are completed.
       tasks.map(&:wait)
       tasks.map(&:wait!)
+    end
+
+    # @param [String] private_ip - The private IP address of the VM to be
+    # @param [String] vnet_id - The virtual network ID of the VM to be added to the backend pool.
+    # @param [String] backend_address_name - The name of the backend address to be added to the backend pool.
+    # @return [Hash] - The backend address to be added to the backend pool.
+    def _build_backend_address(properties = {}, backend_address_name = "", private_ip = nil, vnet_id = nil)
+      backend_address = {}
+      if backend_address_name.empty?
+        # Azure generates a random uuid when adding a VM manually via ui to the backend pool.
+        backend_address_name = SecureRandom.uuid
+      end
+
+      backend_address[:name] = "#{backend_address_name}"
+      backend_address[:properties] = properties
+
+      unless private_ip.nil? && vnet_id.nil?
+        backend_address[:properties][:ipAddress] = private_ip
+        backend_address[:properties][:virtualNetwork] = {}
+        backend_address[:properties][:virtualNetwork][:id] = vnet_id
+      end
+
+      backend_address
+    end
+
+    # @param [Hash] load_balancer - returned by Bosh::AzureCloud::AzureClient.get_load_balancer_by_name
+    # @param [Array<Hash>] vm_network_interfaces - returned by Bosh::AzureCloud::AzureClient.create_virtual_machine
+    # @return [Array<Hash>] - The backend addresses to
+    def _calculate_backend_addresses_for_load_balancer(load_balancer, vm_network_interfaces)
+      backend_addresses = []
+      primary_nic = vm_network_interfaces.find { |nic| nic[:primary] }
+
+      return backend_addresses if primary_nic.nil?
+
+      load_balancer[:backend_address_pools].each do |pool|
+        pool_type = pool[:backend_address_pools_type]
+        next unless pool_type == LOAD_BALANCER_BACKEND_POOL_TYPE_IP
+
+        backend_addresses_v4_pool = {}
+        backend_addresses_v4_pool[:name] = pool[:name]
+        backend_addresses_v4_pool[:loadBalancerBackendAddresses] = []
+
+        # Ipv4 adresse und subnet
+        ip = primary_nic[:ip_configurations].find { |ip_config| ip_config[:private_ip] && !ip_config[:private_ip].empty? && ip_config[:private_ip_address_version].to_s.upcase == 'IPV4' }
+
+        unless ip.nil?
+          private_ip = ip[:private_ip]
+          subnet_id = ip[:subnet][:id]
+          vnet_id = subnet_id.split('/subnets/')[0]
+
+          backend_addresses_v4_pool[:loadBalancerBackendAddresses] << _build_backend_address({}, "", private_ip, vnet_id)
+        end
+
+        backend_addresses << backend_addresses_v4_pool unless backend_addresses_v4_pool[:loadBalancerBackendAddresses].empty?
+      end
+
+      unless load_balancer[:backend_address_pools_v6].nil? || load_balancer[:backend_address_pools_v6].empty?
+        load_balancer[:backend_address_pools_v6].each do |pool_v6|
+          pool_type_v6 = pool_v6[:backend_address_pools_type]
+          next unless pool_type_v6 == LOAD_BALANCER_BACKEND_POOL_TYPE_IP
+
+          backend_addresses_v6_pool = {}
+          backend_addresses_v6_pool[:name] = pool_v6[:name]
+          backend_addresses_v6_pool[:loadBalancerBackendAddresses] = []
+
+          # Ipv6 adresse und subnet
+          ip = primary_nic[:ip_configurations].find { |ip_config| ip_config[:private_ip] && !ip_config[:private_ip].empty? && ip_config[:private_ip_address_version].to_s.upcase == 'IPV6' }
+
+          unless ip.nil?
+            private_ip = ip[:private_ip]
+            subnet_id = ip[:subnet][:id]
+            vnet_id = subnet_id.split('/subnets/')[0]
+
+            backend_addresses_v6_pool[:loadBalancerBackendAddresses] << _build_backend_address({}, "", private_ip, vnet_id)
+          end
+          backend_addresses << backend_addresses_v6_pool unless backend_addresses_v6_pool[:loadBalancerBackendAddresses].empty?
+        end
+      end
+      backend_addresses
+    end
+
+    # @param [Hash] virtual_machine_result - returned by Bosh::AzureCloud::AzureClient.get_virtual_machine_by_name
+    # @return [void]
+    def _remove_vm_from_load_balancer_backend_pool(virtual_machine_result)
+      return if virtual_machine_result.nil?
+
+      # Check if vm is used by any load balancer
+      vm_used_by_load_balancer = virtual_machine_result[:network_interfaces].select { |nic|
+        nic[:tags]&.any? {
+          |key, _| key.include?(LOAD_BALANCER_USED_BY_TAG)
+        }
+      }
+
+      return if vm_used_by_load_balancer.empty?
+
+      # Collect all the private IP addresses of the VM from its network interfaces that are not associated with a load balancer backend pool.
+      vm_ips = virtual_machine_result[:network_interfaces].flat_map { |nic|
+        nic[:ip_configurations]
+          .reject { |ip_config| Array(ip_config[:load_balancers]).any? }
+          .map { |ip_config| ip_config[:private_ip] }
+          .compact
+      }
+
+      # If there is not load balancer ip based backend pool, then the backend pool is nic based and managed by azure. In this case, we don't need to remove the vm from the backend pool.
+      if vm_ips.empty?
+        @logger.info("The VM '#{virtual_machine_result[:name]}' has no private IP addresses that are not associated with a load balancer backend pool, so the pool is nic based and managed by azure.")
+        return
+      end
+
+      # Collect the virtual network IDs of the VM from its network interfaces.
+      vm_vnet = virtual_machine_result[:network_interfaces].flat_map { |nic|
+        nic[:ip_configurations].map { |ip_config| ip_config[:subnet][:id].split('/subnets/')[0] }.compact
+      }
+      vm_vnet.uniq!
+
+      # Load all load balancers
+      # Lock the operation until the load balancer backend pool is updated to avoid race conditions.
+      flock("#{CPI_LOCK_LOAD_BALANCER}-all", File::LOCK_EX) do
+
+        load_balancers = @azure_client.list_all_load_balancers()
+        return if load_balancers.nil? || load_balancers.empty?
+
+        #Find load balancer backend pool that has the ip addresses of the vm assigned.
+        load_balancer_tu = load_balancers.find_all { |load_balancer|
+          Array(load_balancer[:backend_address_pools]).any? {
+            |pool| Array(pool[:load_balancer_backend_addresses]).any? {
+              |backend_address| (vm_ips.include?(backend_address['properties']['ipAddress']) && vm_vnet.include?(backend_address['properties']['virtualNetwork']['id'])) } }
+        }
+
+        unless load_balancer_tu.nil? || load_balancer_tu.empty?
+          load_balancer_tu.each do |load_balancer|
+              resource_group = load_balancer[:id].split('/resourceGroups/')[1].split('/')[0]
+
+              load_balancer[:backend_address_pools].each do |pool|
+                existing_addresses = Array(pool[:load_balancer_backend_addresses])
+                next if existing_addresses.empty?
+
+                matches_vm = existing_addresses.any? do |backend_address|
+                  vm_ips.include?(backend_address['properties']['ipAddress']) &&
+                    vm_vnet.include?(backend_address['properties']['virtualNetwork']['id'])
+                end
+                next unless matches_vm
+
+                backend_addresses_pool = {}
+                backend_addresses_pool[:name] = pool[:name]
+                backend_addresses_pool[:loadBalancerBackendAddresses] = []
+
+                Array(pool[:load_balancer_backend_addresses]).each do |backend_address|
+                  unless vm_ips.include?(backend_address['properties']['ipAddress']) && vm_vnet.include?(backend_address['properties']['virtualNetwork']['id'])
+                    poolVmName = backend_address['name']
+                    backend_addresses_pool[:loadBalancerBackendAddresses] << _build_backend_address(backend_address['properties'], poolVmName)
+                  end
+                end
+
+                @azure_client.update_load_balancer_backend_pool(resource_group, load_balancer[:name], pool[:name], backend_addresses_pool[:loadBalancerBackendAddresses])
+
+            end
+          end
+        end
+      end
+    end
+
+    # @param [Array<Hash>] load_balancers - one Hash (returned by Bosh::AzureCloud::AzureClient.get_load_balancer_by_name) per load balancer
+    # @param [Hash] virtual_machine_result - returned by Bosh::AzureCloud::AzureClient.create_virtual_machine
+    # @return [void]
+    def _add_vm_to_load_balancer_backend_pool(load_balancers, virtual_machine_result)
+      return if virtual_machine_result.nil? || load_balancers.nil? || load_balancers.empty?
+
+      vm_network_interfaces = virtual_machine_result[:network_interfaces]
+
+      load_balancers.each do |load_balancer|
+        load_balancer_name = load_balancer[:name]
+        resource_group_name = load_balancer[:resource_group_name]
+
+        # First build the new backend addresses for the load balancer, then update the load balancer with the new backend addresses.
+        backend_addresses = _calculate_backend_addresses_for_load_balancer(load_balancer, vm_network_interfaces)
+
+        # First get the current backend pool of the load balancer, then update the backend pool with the new backend addresses.
+        flock("#{CPI_LOCK_LOAD_BALANCER}-all", File::LOCK_EX) do
+          load_balancer_current = @azure_client.get_load_balancer_by_name(resource_group_name, load_balancer_name)
+          next if load_balancer_current.nil?
+
+          load_balancer_current[:backend_address_pools].each do |pool|
+            pool_name = pool[:name]
+            backend_addresses_pool = backend_addresses.find { |p| p[:name].casecmp?(pool_name) }
+            unless backend_addresses_pool.nil?
+               new_ips = backend_addresses_pool[:loadBalancerBackendAddresses].map { |a| a[:properties][:ipAddress] }
+               Array(pool[:load_balancer_backend_addresses]).each do |backend_address|
+                 next if new_ips.include?(backend_address['properties']['ipAddress'])
+
+                 backend_addresses_pool[:loadBalancerBackendAddresses] << _build_backend_address(backend_address['properties'], backend_address['name'])
+               end
+
+              @azure_client.update_load_balancer_backend_pool(resource_group_name, load_balancer_name, pool_name, backend_addresses_pool[:loadBalancerBackendAddresses]) unless backend_addresses_pool[:loadBalancerBackendAddresses].empty?
+
+            end
+          end
+        end
+      end
     end
   end
 end

@@ -162,6 +162,7 @@ describe Bosh::AzureCloud::VMCloudProps do
                 'name' => lb_name,
                 'resource_group_name' => resource_group_name,
                 'backend_pool_name' => backend_pool_name,
+                'default_backend_pool_type' => 'ip',
                 'backend_pool_name_v6' => backend_pool_name_v6
               }
             }, azure_config_managed
@@ -175,6 +176,7 @@ describe Bosh::AzureCloud::VMCloudProps do
           expect(load_balancer.resource_group_name).to eq(resource_group_name)
           expect(load_balancer.backend_pool_name).to eq(backend_pool_name)
           expect(load_balancer.backend_pool_name_v6).to eq(backend_pool_name_v6)
+          expect(load_balancer.default_backend_pool_type).to eq('ip')
         end
       end
 
@@ -219,6 +221,25 @@ describe Bosh::AzureCloud::VMCloudProps do
           expect(vm_cloud_props.load_balancers[1].resource_group_name).to eq(resource_group_name)
           expect(vm_cloud_props.load_balancers[2].name).to eq('c')
           expect(vm_cloud_props.load_balancers[2].resource_group_name).to eq(resource_group_name)
+        end
+      end
+
+      context 'when default_backend_pool_type is not a valid value' do
+        let(:vm_cloud_props) do
+          Bosh::AzureCloud::VMCloudProps.new(
+            {
+              'instance_type' => 'Standard_D1',
+              'load_balancer' => {
+                'name' => "#{lb_name},b,c",
+                'default_backend_pool_type' => 'invalid_value',
+                'resource_group_name' => resource_group_name
+              }
+            }, azure_config_managed
+          )
+        end
+
+        it 'should return an error' do
+          expect { vm_cloud_props.load_balancers }.to raise_error(/backend_pool_type must be one of 'nic','ip'/)
         end
       end
     end

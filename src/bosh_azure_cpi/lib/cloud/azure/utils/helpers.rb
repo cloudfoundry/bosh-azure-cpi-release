@@ -82,6 +82,11 @@ module Bosh::AzureCloud
 
     AZURE_MAX_RETRY_COUNT = 10
 
+    # Azure Loadbalancer backend pool type
+    LOAD_BALANCER_BACKEND_POOL_TYPE_NIC = 'nic'
+    LOAD_BALANCER_BACKEND_POOL_TYPE_IP = 'ip'
+    LOAD_BALANCER_USED_BY_TAG = 'used_by_load_balancer'
+
     # sku
     SKU_TIER_STANDARD = 'Standard'
     SKU_TIER_PREMIUM  = 'Premium'
@@ -155,6 +160,7 @@ module Bosh::AzureCloud
     CPI_LOCK_CREATE_GALLERY_IMAGE           = "#{CPI_LOCK_PREFIX}-create-gallery-image".freeze
     CPI_LOCK_PREFIX_AVAILABILITY_SET        = "#{CPI_LOCK_PREFIX}-availability-set".freeze
     CPI_LOCK_EVENT_HANDLER                  = "#{CPI_LOCK_PREFIX}-event-handler".freeze
+    CPI_LOCK_LOAD_BALANCER                  = "#{CPI_LOCK_PREFIX}-load-balancer".freeze
 
     # REST Connection Errors
     ERROR_OPENSSL_RESET           = 'SSL_connect'

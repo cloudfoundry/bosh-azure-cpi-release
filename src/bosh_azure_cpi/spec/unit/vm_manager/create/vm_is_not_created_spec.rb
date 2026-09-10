@@ -16,6 +16,36 @@ describe Bosh::AzureCloud::VMManager do
       allow(vm_manager2).to receive(:_get_stemcell_info).and_return(stemcell_info)
     end
 
+    context 'when adding the VM to load balancer backend pools partially fails' do
+      let(:virtual_machine_result) do
+        {
+          network_interfaces: [
+            { ip_configurations: [] }
+          ]
+        }
+      end
+
+      before do
+        allow(vm_manager).to receive(:_get_load_balancers).and_return([load_balancer])
+        allow(azure_client).to receive(:create_virtual_machine).and_return(virtual_machine_result)
+      end
+
+      it 'rolls back registered backend addresses before deleting network interfaces' do
+        expect(vm_manager).to receive(:_add_vm_to_load_balancer_backend_pool)
+          .with([load_balancer], virtual_machine_result)
+          .ordered
+          .and_raise('backend pool update failed')
+        expect(vm_manager).to receive(:_remove_vm_from_load_balancer_backend_pool)
+          .with(virtual_machine_result)
+          .ordered
+        expect(azure_client).to receive(:delete_network_interface).twice.ordered
+
+        expect do
+          vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+        end.to raise_error(/backend pool update failed/)
+      end
+    end
+
     context 'when VM is not created' do
       context 'and azure_client.create_virtual_machine raises an normal error' do
         context 'and no more error occurs' do
