@@ -164,6 +164,12 @@ module Bosh::AzureCloud
           default_backend_pool_type = nil
         end
         String(load_balancer_names).split(',').map do |load_balancer_name|
+
+          # Validate that backend_pool_name is specified when default_backend_pool_type is 'ip'
+          if default_backend_pool_type == LOAD_BALANCER_BACKEND_POOL_TYPE_IP && backend_pool_name.nil?
+            cloud_error("backend_pool_name must be specified when default_backend_pool_type is 'ip'")
+          end
+
           Bosh::AzureCloud::LoadBalancerConfig.new(
             resource_group_name || global_azure_config.resource_group_name,
             load_balancer_name,
