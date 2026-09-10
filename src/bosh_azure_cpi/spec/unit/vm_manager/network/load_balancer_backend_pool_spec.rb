@@ -219,10 +219,14 @@ describe Bosh::AzureCloud::VMManager do
         name: 'fake-vm-name',
         network_interfaces: [
           {
+            tags: network_interface_tags,
             ip_configurations: [first_ip_configuration, second_ip_configuration]
           }
         ]
       }
+    end
+    let(:network_interface_tags) do
+      { Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG => true }
     end
     let(:first_ip_configuration) do
       {
@@ -278,6 +282,18 @@ describe Bosh::AzureCloud::VMManager do
 
     before do
       allow(azure_client).to receive(:list_all_load_balancers).and_return(load_balancers)
+    end
+
+    context 'when the VM is not marked as used by a load balancer' do
+      let(:network_interface_tags) { {} }
+
+      it 'does not inspect or update load balancers' do
+        expect(vm_manager).not_to receive(:flock)
+        expect(azure_client).not_to receive(:list_all_load_balancers)
+        expect(azure_client).not_to receive(:update_load_balancer_backend_pool)
+
+        vm_manager.send(:_remove_vm_from_load_balancer_backend_pool, virtual_machine_result)
+      end
     end
 
     context 'when both IP configurations have the backend pool property' do

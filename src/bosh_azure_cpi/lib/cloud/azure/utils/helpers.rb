@@ -85,6 +85,7 @@ module Bosh::AzureCloud
     # Azure Loadbalancer backend pool type
     LOAD_BALANCER_BACKEND_POOL_TYPE_NIC = 'nic'
     LOAD_BALANCER_BACKEND_POOL_TYPE_IP = 'ip'
+    LOAD_BALANCER_USED_BY_TAG = 'used_by_load_balancer'
 
     # sku
     SKU_TIER_STANDARD = 'Standard'
