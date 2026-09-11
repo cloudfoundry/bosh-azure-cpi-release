@@ -1115,7 +1115,11 @@ module Bosh::AzureCloud
     # * +:location+                     - String. The location where the managed disk will be created.
     # * +:tags+                         - Hash. Tags of the managed disk.
     # * +:account_type+                 - String. Specifies the account type of the managed disk.
-    #                                     Optional values: Standard_LRS, StandardSSD_LRS, Premium_LRS.
+    #                                     Supported values: Standard_LRS, StandardSSD_LRS, Premium_LRS, PremiumV2_LRS, UltraSSD_LRS.
+    # * +:disk_size+                    - Integer. (Optional) Size of the new disk in GiB. Must be >= snapshot size.
+    # * +:iops+                         - Integer. (Optional) Provisioned IOPS. Only valid for PremiumV2_LRS and UltraSSD_LRS.
+    # * +:mbps+                         - Integer. (Optional) Provisioned throughput in MBps. Only valid for PremiumV2_LRS and UltraSSD_LRS.
+    # * +:disk_encryption_set_id+       - String. (Optional) Full resource ID of the disk encryption set. Preserves customer-managed key (CMK) encryption from the source disk.
     # When disk is in a zone
     # * +:zone+                         - String. Zone number in string.
     #
@@ -1139,6 +1143,15 @@ module Bosh::AzureCloud
       }
       disk['zones'] = [disk_params[:zone]] unless disk_params[:zone].nil?
       disk['tags']  = disk_params[:tags] unless disk_params[:tags].nil?
+      disk['properties']['diskSizeGB'] = disk_params[:disk_size] unless disk_params[:disk_size].nil?
+      disk['properties']['diskIOPSReadWrite'] = disk_params[:iops] unless disk_params[:iops].nil?
+      disk['properties']['diskMBpsReadWrite'] = disk_params[:mbps] unless disk_params[:mbps].nil?
+      unless disk_params[:disk_encryption_set_id].nil?
+        disk['properties']['encryption'] = {
+          'diskEncryptionSetId' => disk_params[:disk_encryption_set_id],
+          'type' => 'EncryptionAtRestWithCustomerKey'
+        }
+      end
       http_put(disk_url, disk)
     end
 
@@ -1319,7 +1332,8 @@ module Bosh::AzureCloud
           'creationData' => {
             'createOption' => 'Copy',
             'sourceUri' => rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISKS, resource_group_name: resource_group_name, name: disk_name)
-          }
+          },
+          'incremental' => params[:incremental] || false
         }
       }
 
@@ -1360,6 +1374,7 @@ module Bosh::AzureCloud
         properties = result['properties']
         snapshot[:provisioning_state] = properties['provisioningState']
         snapshot[:disk_size]          = properties['diskSizeGB']
+        snapshot[:completion_percent] = properties['completionPercent']
       end
       snapshot
     end
@@ -2409,6 +2424,8 @@ module Bosh::AzureCloud
         managed_disk[:mbps]      = properties['diskMBpsReadWrite']
         managed_disk[:provisioning_state] = properties['provisioningState']
         managed_disk[:disk_size]          = properties['diskSizeGB']
+        managed_disk[:logical_sector_size] = properties.dig('creationData', 'logicalSectorSize')
+        managed_disk[:disk_encryption_set_id] = properties.dig('encryption', 'diskEncryptionSetId')
       end
       managed_disk
     end
