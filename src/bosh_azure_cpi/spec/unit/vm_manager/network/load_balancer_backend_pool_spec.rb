@@ -243,7 +243,7 @@ describe Bosh::AzureCloud::VMManager do
     let(:backend_pool_references) do
       [
         {
-          id: '/subscriptions/fake-subscription/resourceGroups/fake-resource-group/providers/Microsoft.Network/loadBalancers/fake-lb/backendAddressPools/pool-v4'
+          id: '/subscriptions/fake-subscription/resourceGroups/fake-resource-group/providers/Microsoft.Network/loadBalancers/fake-lb/backendAddressPools/nic-pool'
         }
       ]
     end
@@ -304,9 +304,12 @@ describe Bosh::AzureCloud::VMManager do
         super().merge(load_balancers: backend_pool_references)
       end
 
-      it 'does not update IP-based backend addresses' do
-        expect(vm_manager).not_to receive(:flock)
-        expect(azure_client).not_to receive(:update_load_balancer_backend_pool)
+      it 'removes matching IP-based addresses even when both configurations have NIC-based associations' do
+        expect(vm_manager).to receive(:flock)
+          .with("#{Bosh::AzureCloud::Helpers::CPI_LOCK_LOAD_BALANCER}-all", File::LOCK_EX)
+          .and_yield
+        expect(azure_client).to receive(:update_load_balancer_backend_pool)
+          .with(resource_group_name, 'fake-lb', 'pool-v4', [])
 
         vm_manager.send(
           :_remove_vm_from_load_balancer_backend_pool,
@@ -320,22 +323,12 @@ describe Bosh::AzureCloud::VMManager do
         super().merge(load_balancers: backend_pool_references)
       end
 
-      it 'removes the unmarked address and preserves the marked address' do
+      it 'removes both IP-based addresses regardless of NIC-based associations' do
         expect(vm_manager).to receive(:flock)
           .with("#{Bosh::AzureCloud::Helpers::CPI_LOCK_LOAD_BALANCER}-all", File::LOCK_EX)
           .and_yield
         expect(azure_client).to receive(:update_load_balancer_backend_pool)
-          .with(
-            resource_group_name,
-            'fake-lb',
-            'pool-v4',
-            [
-              {
-                name: 'retained-vm',
-                properties: { 'ipAddress' => '10.0.0.6', 'virtualNetwork' => { 'id' => vnet_id } }
-              }
-            ]
-          )
+          .with(resource_group_name, 'fake-lb', 'pool-v4', [])
 
         vm_manager.send(
           :_remove_vm_from_load_balancer_backend_pool,
@@ -359,6 +352,49 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
+    context 'when a tagged NIC uses both NIC-based and IP-based pools' do
+      let(:first_ip_configuration) do
+        super().merge(load_balancers: backend_pool_references)
+      end
+      let(:virtual_machine_result) do
+        super().merge(network_interfaces: [
+          { tags: network_interface_tags, ip_configurations: [first_ip_configuration, { private_ip: nil }] },
+          { ip_configurations: [second_ip_configuration] }
+        ])
+      end
+
+      it 'removes the tagged NIC address from the IP-based pool and leaves NIC-based pools and untagged NICs untouched' do
+        load_balancers.first[:backend_address_pools] << {
+          name: 'nic-pool',
+          backend_ip_configurations: [{ id: 'fake-nic-ip-configuration-id' }]
+        }
+        expect(azure_client).not_to receive(:update_load_balancer_backend_pool)
+          .with(resource_group_name, 'fake-lb', 'nic-pool', anything)
+        expect(vm_manager).to receive(:flock)
+          .with("#{Bosh::AzureCloud::Helpers::CPI_LOCK_LOAD_BALANCER}-all", File::LOCK_EX)
+          .and_yield
+        expect(azure_client).to receive(:update_load_balancer_backend_pool)
+          .with(resource_group_name, 'fake-lb', 'pool-v4', [
+            { name: retained_address['name'], properties: retained_address['properties'] }
+          ]).once
+
+        vm_manager.send(:_remove_vm_from_load_balancer_backend_pool, virtual_machine_result)
+      end
+    end
+
+    context 'when tagged NICs have no private IP addresses' do
+      let(:first_ip_configuration) { { private_ip: nil } }
+      let(:second_ip_configuration) { {} }
+
+      it 'does not inspect or update load balancers' do
+        expect(vm_manager).not_to receive(:flock)
+        expect(azure_client).not_to receive(:list_all_load_balancers)
+        expect(azure_client).not_to receive(:update_load_balancer_backend_pool)
+
+        vm_manager.send(:_remove_vm_from_load_balancer_backend_pool, virtual_machine_result)
+      end
+    end
+
     context 'when VM IP configurations belong to different virtual networks' do
       let(:second_ip_configuration) do
         super().merge(subnet: { id: "#{vnet_id}-other/subnets/fake-subnet" })
@@ -366,7 +402,7 @@ describe Bosh::AzureCloud::VMManager do
       let(:virtual_machine_result) do
         super().merge(network_interfaces: [
           { tags: network_interface_tags, ip_configurations: [first_ip_configuration] },
-          { ip_configurations: [second_ip_configuration] }
+          { tags: network_interface_tags, ip_configurations: [second_ip_configuration] }
         ])
       end
 

@@ -452,15 +452,14 @@ module Bosh::AzureCloud
 
       return if vm_used_by_load_balancer.empty?
 
-      vm_ips = virtual_machine_result[:network_interfaces].flat_map { |nic|
+      vm_ips = vm_used_by_load_balancer.flat_map { |nic|
         nic[:ip_configurations]
-          .reject { |ip_config| Array(ip_config[:load_balancers]).any? || ip_config[:private_ip].nil? }
+          .reject { |ip_config| ip_config[:private_ip].nil? }
           .map { |ip_config| [ip_config[:private_ip], ip_config[:subnet][:id].split('/subnets/')[0]] }
       }
 
-      # If there is not load balancer ip based backend pool, then the backend pool is nic based and managed by azure. In this case, we don't need to remove the vm from the backend pool.
       if vm_ips.empty?
-        @logger.info("The VM '#{virtual_machine_result[:name]}' has no private IP addresses that are not associated with a load balancer backend pool, so the pool is nic based and managed by azure.")
+        @logger.info("The VM '#{virtual_machine_result[:name]}' has no private IP addresses on NICs marked for IP-based backend pool cleanup.")
         return
       end
 
