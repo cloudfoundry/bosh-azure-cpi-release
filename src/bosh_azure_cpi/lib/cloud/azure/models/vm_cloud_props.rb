@@ -35,6 +35,7 @@ module Bosh::AzureCloud
     BACKEND_POOL_NAME_KEY = 'backend_pool_name'
     BACKEND_POOL_NAME_V6_KEY = 'backend_pool_name_v6'
     RESOURCE_GROUP_NAME_KEY = 'resource_group_name'
+    DEFAULT_BACKEND_POOL_TYPE = 'default_backend_pool_type'
     NAME_KEY = 'name'
 
     def initialize(vm_properties, global_azure_config)
@@ -154,22 +155,41 @@ module Bosh::AzureCloud
           resource_group_name = lbc[RESOURCE_GROUP_NAME_KEY]
           backend_pool_name = lbc[BACKEND_POOL_NAME_KEY]
           backend_pool_name_v6 = lbc[BACKEND_POOL_NAME_V6_KEY]
+          default_backend_pool_type = lbc[DEFAULT_BACKEND_POOL_TYPE]
         else
           load_balancer_names = lbc
           resource_group_name = nil
           backend_pool_name = nil
           backend_pool_name_v6 = nil
+          default_backend_pool_type = nil
         end
         String(load_balancer_names).split(',').map do |load_balancer_name|
+
+          # Validate that backend_pool_name is specified when default_backend_pool_type is 'ip'
+          if default_backend_pool_type == LOAD_BALANCER_BACKEND_POOL_TYPE_IP && backend_pool_name.nil?
+            cloud_error("backend_pool_name must be specified when default_backend_pool_type is 'ip'")
+          end
+
           Bosh::AzureCloud::LoadBalancerConfig.new(
             resource_group_name || global_azure_config.resource_group_name,
             load_balancer_name,
             backend_pool_name,
-            backend_pool_name_v6
+            backend_pool_name_v6,
+            _default_loadbalancer_backend_pool_type(default_backend_pool_type)
           )
         end
       end
       load_balancers.compact
+    end
+
+    def _default_loadbalancer_backend_pool_type(backend_pool_type)
+      if backend_pool_type.nil?
+        LOAD_BALANCER_BACKEND_POOL_TYPE_NIC
+      else
+        valid_placements = [LOAD_BALANCER_BACKEND_POOL_TYPE_NIC, LOAD_BALANCER_BACKEND_POOL_TYPE_IP]
+        cloud_error("backend_pool_type must be one of 'nic','ip'") unless valid_placements.include?(backend_pool_type)
+        backend_pool_type
+      end
     end
 
     # @return [Array<Bosh::AzureCloud::ApplicationGatewayConfig>,nil]

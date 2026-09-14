@@ -1431,6 +1431,7 @@ describe Bosh::AzureCloud::AzureClient do
               body: '{"status":"Succeeded"}',
               headers: {}
             )
+            allow(azure_client).to receive(:get_network_interface).and_return({})
 
             expect do
               azure_client.create_virtual_machine(resource_group, vm_params_windows, network_interfaces)
@@ -1472,6 +1473,7 @@ describe Bosh::AzureCloud::AzureClient do
               body: '{"status":"Succeeded"}',
               headers: {}
             )
+            allow(azure_client).to receive(:get_network_interface).and_return({})
 
             expect do
               azure_client.create_virtual_machine(resource_group, vm_params_windows, network_interfaces)
