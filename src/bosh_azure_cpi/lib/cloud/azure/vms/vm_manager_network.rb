@@ -382,6 +382,25 @@ module Bosh::AzureCloud
       backend_address
     end
 
+    def _backend_address_endpoint(properties)
+      properties = properties.transform_keys(&:to_s)
+      virtual_network = properties['virtualNetwork'] || {}
+      network_id = virtual_network['id'] || virtual_network[:id]
+
+      subnet = properties['subnet'] || {}
+      subnet_id = subnet['id'] || subnet[:id]
+
+      unless subnet_id.nil?
+        network_id ||= subnet_id&.split('/subnets/')&.first
+      end
+
+      private_ip = properties['ipAddress']
+
+      return nil if private_ip.nil? || network_id.nil?
+
+      [private_ip, network_id]
+    end
+
     # @param [Hash] load_balancer - returned by Bosh::AzureCloud::AzureClient.get_load_balancer_by_name
     # @param [Array<Hash>] vm_network_interfaces - returned by Bosh::AzureCloud::AzureClient.create_virtual_machine
     # @return [Array<Hash>] - The backend addresses to
@@ -474,7 +493,7 @@ module Bosh::AzureCloud
         load_balancer_tu = load_balancers.find_all { |load_balancer|
           Array(load_balancer[:backend_address_pools]).any? {
             |pool| Array(pool[:load_balancer_backend_addresses]).any? {
-              |backend_address| vm_ips.include?([backend_address['properties']['ipAddress'], backend_address['properties']['virtualNetwork']['id']]) } }
+              |backend_address| vm_ips.include?(_backend_address_endpoint(backend_address['properties'])) } }
         }
 
         unless load_balancer_tu.nil? || load_balancer_tu.empty?
@@ -486,7 +505,7 @@ module Bosh::AzureCloud
                 next if existing_addresses.empty?
 
                 matches_vm = existing_addresses.any? do |backend_address|
-                  vm_ips.include?([backend_address['properties']['ipAddress'], backend_address['properties']['virtualNetwork']['id']])
+                  vm_ips.include?(_backend_address_endpoint(backend_address['properties']))
                 end
                 next unless matches_vm
 
@@ -495,7 +514,7 @@ module Bosh::AzureCloud
                 backend_addresses_pool[:loadBalancerBackendAddresses] = []
 
                 Array(pool[:load_balancer_backend_addresses]).each do |backend_address|
-                  unless vm_ips.include?([backend_address['properties']['ipAddress'], backend_address['properties']['virtualNetwork']['id']])
+                  unless vm_ips.include?(_backend_address_endpoint(backend_address['properties']))
                     poolVmName = backend_address['name']
                     backend_addresses_pool[:loadBalancerBackendAddresses] << _build_backend_address(backend_address['properties'], poolVmName)
                   end
@@ -533,9 +552,9 @@ module Bosh::AzureCloud
             pool_name = pool[:name]
             backend_addresses_pool = backend_addresses.find { |p| p[:name].casecmp?(pool_name) }
             unless backend_addresses_pool.nil?
-               new_ips = backend_addresses_pool[:loadBalancerBackendAddresses].map { |address| [address[:properties][:ipAddress], address[:properties][:virtualNetwork][:id]] }
+               new_ips = backend_addresses_pool[:loadBalancerBackendAddresses].map { |address| _backend_address_endpoint(address[:properties]) }.compact
                Array(pool[:load_balancer_backend_addresses]).each do |backend_address|
-                 next if new_ips.include?([backend_address['properties']['ipAddress'], backend_address['properties']['virtualNetwork']['id']])
+                 next if new_ips.include?(_backend_address_endpoint(backend_address['properties']))
 
                  backend_addresses_pool[:loadBalancerBackendAddresses] << _build_backend_address(backend_address['properties'], backend_address['name'])
                end

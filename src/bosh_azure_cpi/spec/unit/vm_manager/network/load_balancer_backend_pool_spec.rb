@@ -202,6 +202,52 @@ describe Bosh::AzureCloud::VMManager do
       vm_manager.send(:_add_vm_to_load_balancer_backend_pool, load_balancers, virtual_machine_result)
     end
 
+    it 'deduplicates subnet-based endpoints and preserves unknown or different networks during registration' do
+      new_address = {
+        name: 'new-address',
+        properties: { ipAddress: '10.0.0.5', subnet: { id: "#{vnet_id}/subnets/new-subnet" } }
+      }
+      duplicate_address = {
+        'name' => 'duplicate-address',
+        'properties' => {
+          'ipAddress' => '10.0.0.5',
+          'subnet' => { 'id' => "#{vnet_id}/subnets/existing-subnet" }
+        }
+      }
+      retained_addresses = [
+        {
+          'name' => 'other-network',
+          'properties' => {
+            'ipAddress' => '10.0.0.5',
+            'subnet' => { 'id' => "#{vnet_id}-other/subnets/subnet" }
+          }
+        },
+        {
+          'name' => 'prefer-vnet',
+          'properties' => {
+            'ipAddress' => '10.0.0.5',
+            'subnet' => { 'id' => "#{vnet_id}/subnets/subnet" },
+            'virtualNetwork' => { 'id' => "#{vnet_id}-other" }
+          }
+        },
+        { 'name' => 'unknown-network', 'properties' => { 'ipAddress' => '10.0.0.5' } }
+      ]
+      allow(vm_manager).to receive(:_calculate_backend_addresses_for_load_balancer)
+        .with(load_balancers.first, virtual_machine_result[:network_interfaces])
+        .and_return([{ name: 'pool-v4', loadBalancerBackendAddresses: [new_address] }])
+      expect(azure_client).to receive(:get_load_balancer_by_name)
+        .with(resource_group_name, 'fake-lb')
+        .and_return({ backend_address_pools: [
+          { name: 'pool-v4', load_balancer_backend_addresses: [duplicate_address] + retained_addresses }
+        ] })
+      expect(azure_client).to receive(:update_load_balancer_backend_pool)
+        .with(resource_group_name, 'fake-lb', 'pool-v4', [new_address] + retained_addresses.map do |address|
+          { name: address['name'], properties: address['properties'] }
+        end)
+
+      vm_manager.send(:_add_vm_to_load_balancer_backend_pool, load_balancers, virtual_machine_result)
+    end
+
     it 'merges existing addresses and updates the matching pool under a lock' do
       new_address = {
         name: 'new-address',
@@ -318,6 +364,47 @@ describe Bosh::AzureCloud::VMManager do
 
     before do
       allow(azure_client).to receive(:list_all_load_balancers).and_return(load_balancers)
+    end
+
+    it 'removes subnet-based endpoints and preserves unknown or different networks' do
+      removed_address['properties'] = {
+        'ipAddress' => '10.0.0.5',
+        'subnet' => { 'id' => "#{vnet_id}/subnets/fake-subnet" }
+      }
+      retained_addresses = [
+        {
+          'name' => 'other-network',
+          'properties' => {
+            'ipAddress' => '10.0.0.5',
+            'subnet' => { 'id' => "#{vnet_id}-other/subnets/subnet" }
+          }
+        },
+        {
+          'name' => 'prefer-vnet',
+          'properties' => {
+            'ipAddress' => '10.0.0.5',
+            'subnet' => { 'id' => "#{vnet_id}/subnets/subnet" },
+            'virtualNetwork' => { 'id' => "#{vnet_id}-other" }
+          }
+        },
+        { 'name' => 'unknown-network', 'properties' => { 'ipAddress' => '10.0.0.5' } }
+      ]
+      load_balancers.first[:backend_address_pools].first[:load_balancer_backend_addresses] = retained_addresses + [removed_address]
+      load_balancers.first[:backend_address_pools] << {
+        name: 'unmatched-pool',
+        load_balancer_backend_addresses: retained_addresses
+      }
+      expect(vm_manager).to receive(:flock)
+        .with("#{Bosh::AzureCloud::Helpers::CPI_LOCK_LOAD_BALANCER}-all", File::LOCK_EX)
+        .and_yield
+      expect(azure_client).not_to receive(:update_load_balancer_backend_pool)
+        .with(resource_group_name, 'fake-lb', 'unmatched-pool', anything)
+      expect(azure_client).to receive(:update_load_balancer_backend_pool)
+        .with(resource_group_name, 'fake-lb', 'pool-v4', retained_addresses.map do |address|
+          { name: address['name'], properties: address['properties'] }
+        end).once
+
+      vm_manager.send(:_remove_vm_from_load_balancer_backend_pool, virtual_machine_result)
     end
 
     context 'when the VM is not marked as used by a load balancer' do
