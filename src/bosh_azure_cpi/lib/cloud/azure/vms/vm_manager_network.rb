@@ -533,9 +533,9 @@ module Bosh::AzureCloud
             pool_name = pool[:name]
             backend_addresses_pool = backend_addresses.find { |p| p[:name].casecmp?(pool_name) }
             unless backend_addresses_pool.nil?
-               new_ips = backend_addresses_pool[:loadBalancerBackendAddresses].map { |a| a[:properties][:ipAddress] }
+               new_ips = backend_addresses_pool[:loadBalancerBackendAddresses].map { |address| [address[:properties][:ipAddress], address[:properties][:virtualNetwork][:id]] }
                Array(pool[:load_balancer_backend_addresses]).each do |backend_address|
-                 next if new_ips.include?(backend_address['properties']['ipAddress'])
+                 next if new_ips.include?([backend_address['properties']['ipAddress'], backend_address['properties']['virtualNetwork']['id']])
 
                  backend_addresses_pool[:loadBalancerBackendAddresses] << _build_backend_address(backend_address['properties'], backend_address['name'])
                end

@@ -166,6 +166,42 @@ describe Bosh::AzureCloud::VMManager do
       vm_manager.send(:_add_vm_to_load_balancer_backend_pool, load_balancers, nil)
     end
 
+    it 'preserves identical IPs in different virtual networks and deduplicates exact IP and virtual network pairs' do
+      new_address = {
+        name: 'new-address',
+        properties: { ipAddress: '10.0.0.5', virtualNetwork: { id: vnet_id } }
+      }
+      duplicate_address = {
+        'name' => 'duplicate-address',
+        'properties' => {
+          'ipAddress' => '10.0.0.5',
+          'virtualNetwork' => { 'id' => vnet_id }
+        }
+      }
+      other_vnet_address = {
+        'name' => 'other-vnet-vm',
+        'properties' => {
+          'ipAddress' => '10.0.0.5',
+          'virtualNetwork' => { 'id' => "#{vnet_id}-other" }
+        }
+      }
+      allow(vm_manager).to receive(:_calculate_backend_addresses_for_load_balancer)
+        .with(load_balancers.first, virtual_machine_result[:network_interfaces])
+        .and_return([{ name: 'pool-v4', loadBalancerBackendAddresses: [new_address] }])
+      expect(azure_client).to receive(:get_load_balancer_by_name)
+        .with(resource_group_name, 'fake-lb')
+        .and_return({ backend_address_pools: [
+          { name: 'pool-v4', load_balancer_backend_addresses: [duplicate_address, other_vnet_address] }
+        ] })
+      expect(azure_client).to receive(:update_load_balancer_backend_pool)
+        .with(resource_group_name, 'fake-lb', 'pool-v4', [
+          new_address,
+          { name: other_vnet_address['name'], properties: other_vnet_address['properties'] }
+        ])
+
+      vm_manager.send(:_add_vm_to_load_balancer_backend_pool, load_balancers, virtual_machine_result)
+    end
+
     it 'merges existing addresses and updates the matching pool under a lock' do
       new_address = {
         name: 'new-address',
