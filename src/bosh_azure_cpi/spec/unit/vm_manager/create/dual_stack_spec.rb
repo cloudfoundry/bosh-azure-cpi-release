@@ -87,6 +87,77 @@ describe Bosh::AzureCloud::VMManager, 'dual-stack NIC creation' do
     end
   end
 
+  context 'when a load balancer contains both NIC-based and IP-based pools' do
+    let(:nic_pool) { { name: 'nic-pool', backend_address_pools_type: 'nic' } }
+    let(:ip_pool) { { name: 'ip-pool', backend_address_pools_type: 'ip' } }
+    let(:nic_pool_v6) { { name: 'nic-pool-v6', backend_address_pools_type: 'nic' } }
+    let(:ip_pool_v6) { { name: 'ip-pool-v6', backend_address_pools_type: 'ip' } }
+    let(:mixed_load_balancer) do
+      {
+        name: 'mixed-lb',
+        backend_address_pools: [nic_pool, ip_pool],
+        backend_address_pools_v6: [ip_pool_v6, nic_pool_v6]
+      }
+    end
+
+    before do
+      allow(vm_manager_ds).to receive(:_get_load_balancers).and_return([mixed_load_balancer])
+      allow(network_configurator).to receive(:nic_groups).and_return([[manual_network_v4, manual_network_v6]])
+    end
+
+    it 'marks the NIC for cleanup when only IPv6 has IP-based pools without changing inputs' do
+      mixed_load_balancer[:backend_address_pools] = [nic_pool]
+      original = Marshal.load(Marshal.dump(mixed_load_balancer))
+
+      nic = capture_nic_params.first
+
+      expect(nic[:load_balancers]).to eq([original])
+      expect(nic[:tags][Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG]).to eq('true')
+      expect(mixed_load_balancer).to eq(original)
+    end
+
+    it 'forwards all pools unchanged and marks the NIC for IP-pool cleanup' do
+      nic = capture_nic_params.first
+
+      expect(nic[:load_balancers]).to eq([mixed_load_balancer])
+      expect(nic[:tags][Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG]).to eq('true')
+    end
+
+    it 'forwards NIC-only pools without marking the NIC for IP-pool cleanup' do
+      mixed_load_balancer[:backend_address_pools] = [nic_pool]
+      mixed_load_balancer[:backend_address_pools_v6] = [nic_pool_v6]
+
+      nic = capture_nic_params.first
+
+      expect(nic[:load_balancers]).to eq([mixed_load_balancer])
+      expect(nic[:tags]).not_to have_key(Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG)
+    end
+
+    it 'forwards nil without marking the NIC for cleanup when no load balancers are configured' do
+      allow(vm_manager_ds).to receive(:_get_load_balancers).and_return(nil)
+
+      nic = capture_nic_params.first
+
+      expect(nic[:load_balancers]).to be_nil
+      expect(nic[:tags]).not_to have_key(Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG)
+    end
+
+    it 'preserves repeated load balancer entries and their selected pools without changing inputs' do
+      first = mixed_load_balancer.merge(id: 'mixed-lb-id', backend_address_pools: [nic_pool, ip_pool], backend_address_pools_v6: [])
+      second = mixed_load_balancer.merge(id: 'mixed-lb-id', backend_address_pools: [nic_pool], backend_address_pools_v6: [nic_pool_v6, ip_pool_v6])
+      other = first.merge(id: 'other-lb-id')
+      inputs = [first, second, first, other]
+      original = Marshal.load(Marshal.dump(inputs))
+      allow(vm_manager_ds).to receive(:_get_load_balancers).and_return(inputs)
+
+      nic = capture_nic_params.first
+
+      expect(nic[:load_balancers]).to eq(original)
+      expect(nic[:tags][Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG]).to eq('true')
+      expect(inputs).to eq(original)
+    end
+  end
+
   context 'when a nic_group contains multiple networks of the same IP family' do
     before do
       allow(network_configurator).to receive(:nic_groups)

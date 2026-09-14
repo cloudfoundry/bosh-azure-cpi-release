@@ -104,7 +104,7 @@ module Bosh::AzureCloud
           pools = [pools] unless pools.is_a?(Array)
 
           # NOTE: The following block sets the type of each backend pool in the load balancer, which is used to filter out backend pools that are not associated with NICs when creating network interfaces.
-          _detect_backend_pool_type(load_balancer_config, load_balancer, pools)
+          _detect_backend_pool_type(load_balancer_config, pools)
 
           load_balancer[:resource_group_name] = vm_props.resource_group_name
           unless load_balancer_config.resource_group_name.nil?
@@ -139,10 +139,9 @@ module Bosh::AzureCloud
     # Detect the type of each backend pool in the load balancer, which is used to filter out backend pools that are not associated with NICs when creating network interfaces.
     #
     # @param [LoadBalancerConfig] load_balancer_config load balancer config
-    # @param [Hash] load_balancer load balancer info from the Azure API
     # @param [Array<Hash>] pools backend pools in the load balancer
     # @return [Array<Hash>]
-    def _detect_backend_pool_type(load_balancer_config, load_balancer, pools)
+    def _detect_backend_pool_type(load_balancer_config, pools)
       default_backend_pool_type = load_balancer_config.default_backend_pool_type
 
       pools.each do |pool|
@@ -156,13 +155,6 @@ module Bosh::AzureCloud
         pool[:backend_address_pools_type] = LOAD_BALANCER_BACKEND_POOL_TYPE_IP if has_ip_members && !has_nic_members
 
       end
-
-      load_balancer[:backend_address_pools_type] = LOAD_BALANCER_BACKEND_POOL_TYPE_NIC
-      # Add the type IP to the load_balancer when one of the bools are ip based
-      if pools.any? { |pool| pool[:backend_address_pools_type] == LOAD_BALANCER_BACKEND_POOL_TYPE_IP }
-         load_balancer[:backend_address_pools_type] = LOAD_BALANCER_BACKEND_POOL_TYPE_IP
-      end
-
     end
 
     # @return [Array<Hash>]
@@ -294,15 +286,21 @@ module Bosh::AzureCloud
           nic_params[:tags] = primary_nic_tags.dup
 
           # IP-based backend pools are tracked through tags, not NIC associations.
-          ip_based_load_balancers, nic_based_load_balancers = Array(load_balancers).partition do |lb|
-            lb[:backend_address_pools_type] == LOAD_BALANCER_BACKEND_POOL_TYPE_IP
+          nic_params[:load_balancers] = load_balancers
+
+          has_ip_based_pools = Array(load_balancers).any? do |load_balancer|
+            [:backend_address_pools, :backend_address_pools_v6].any? do |pool_key|
+              pools = load_balancer[pool_key]
+              next false if pools.nil?
+
+              pools = [pools] unless pools.is_a?(Array)
+              pools.any? do |pool|
+                pool[:backend_address_pools_type] == LOAD_BALANCER_BACKEND_POOL_TYPE_IP
+              end
+            end
           end
 
-          nic_params[:load_balancers] = load_balancers.nil? ? nil : nic_based_load_balancers
-
-          unless ip_based_load_balancers.empty?
-            nic_params[:tags][LOAD_BALANCER_USED_BY_TAG] = true
-          end
+          nic_params[:tags][LOAD_BALANCER_USED_BY_TAG] = 'true' if has_ip_based_pools
 
           nic_params[:application_gateways] = application_gateways
         else
@@ -454,12 +452,10 @@ module Bosh::AzureCloud
 
       return if vm_used_by_load_balancer.empty?
 
-      # Collect all the private IP addresses of the VM from its network interfaces that are not associated with a load balancer backend pool.
       vm_ips = virtual_machine_result[:network_interfaces].flat_map { |nic|
         nic[:ip_configurations]
-          .reject { |ip_config| Array(ip_config[:load_balancers]).any? }
-          .map { |ip_config| ip_config[:private_ip] }
-          .compact
+          .reject { |ip_config| Array(ip_config[:load_balancers]).any? || ip_config[:private_ip].nil? }
+          .map { |ip_config| [ip_config[:private_ip], ip_config[:subnet][:id].split('/subnets/')[0]] }
       }
 
       # If there is not load balancer ip based backend pool, then the backend pool is nic based and managed by azure. In this case, we don't need to remove the vm from the backend pool.
@@ -467,12 +463,6 @@ module Bosh::AzureCloud
         @logger.info("The VM '#{virtual_machine_result[:name]}' has no private IP addresses that are not associated with a load balancer backend pool, so the pool is nic based and managed by azure.")
         return
       end
-
-      # Collect the virtual network IDs of the VM from its network interfaces.
-      vm_vnet = virtual_machine_result[:network_interfaces].flat_map { |nic|
-        nic[:ip_configurations].map { |ip_config| ip_config[:subnet][:id].split('/subnets/')[0] }.compact
-      }
-      vm_vnet.uniq!
 
       # Load all load balancers
       # Lock the operation until the load balancer backend pool is updated to avoid race conditions.
@@ -485,7 +475,7 @@ module Bosh::AzureCloud
         load_balancer_tu = load_balancers.find_all { |load_balancer|
           Array(load_balancer[:backend_address_pools]).any? {
             |pool| Array(pool[:load_balancer_backend_addresses]).any? {
-              |backend_address| (vm_ips.include?(backend_address['properties']['ipAddress']) && vm_vnet.include?(backend_address['properties']['virtualNetwork']['id'])) } }
+              |backend_address| vm_ips.include?([backend_address['properties']['ipAddress'], backend_address['properties']['virtualNetwork']['id']]) } }
         }
 
         unless load_balancer_tu.nil? || load_balancer_tu.empty?
@@ -497,8 +487,7 @@ module Bosh::AzureCloud
                 next if existing_addresses.empty?
 
                 matches_vm = existing_addresses.any? do |backend_address|
-                  vm_ips.include?(backend_address['properties']['ipAddress']) &&
-                    vm_vnet.include?(backend_address['properties']['virtualNetwork']['id'])
+                  vm_ips.include?([backend_address['properties']['ipAddress'], backend_address['properties']['virtualNetwork']['id']])
                 end
                 next unless matches_vm
 
@@ -507,7 +496,7 @@ module Bosh::AzureCloud
                 backend_addresses_pool[:loadBalancerBackendAddresses] = []
 
                 Array(pool[:load_balancer_backend_addresses]).each do |backend_address|
-                  unless vm_ips.include?(backend_address['properties']['ipAddress']) && vm_vnet.include?(backend_address['properties']['virtualNetwork']['id'])
+                  unless vm_ips.include?([backend_address['properties']['ipAddress'], backend_address['properties']['virtualNetwork']['id']])
                     poolVmName = backend_address['name']
                     backend_addresses_pool[:loadBalancerBackendAddresses] << _build_backend_address(backend_address['properties'], poolVmName)
                   end

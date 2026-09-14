@@ -226,7 +226,7 @@ describe Bosh::AzureCloud::VMManager do
       }
     end
     let(:network_interface_tags) do
-      { Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG => true }
+      { Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG => 'true' }
     end
     let(:first_ip_configuration) do
       {
@@ -356,6 +356,42 @@ describe Bosh::AzureCloud::VMManager do
           :_remove_vm_from_load_balancer_backend_pool,
           virtual_machine_result
         )
+      end
+    end
+
+    context 'when VM IP configurations belong to different virtual networks' do
+      let(:second_ip_configuration) do
+        super().merge(subnet: { id: "#{vnet_id}-other/subnets/fake-subnet" })
+      end
+      let(:virtual_machine_result) do
+        super().merge(network_interfaces: [
+          { tags: network_interface_tags, ip_configurations: [first_ip_configuration] },
+          { ip_configurations: [second_ip_configuration] }
+        ])
+      end
+
+      before do
+        allow(vm_manager).to receive(:flock).and_yield
+      end
+
+      it 'removes only exact IP and virtual network pairs and leaves unrelated pools untouched' do
+        load_balancers.first[:backend_address_pools] << {
+          name: 'unrelated-pool',
+          load_balancer_backend_addresses: [retained_address]
+        }
+        expect(azure_client).to receive(:update_load_balancer_backend_pool)
+          .with(resource_group_name, 'fake-lb', 'pool-v4', [
+            { name: retained_address['name'], properties: retained_address['properties'] }
+          ]).once
+
+        vm_manager.send(:_remove_vm_from_load_balancer_backend_pool, virtual_machine_result)
+      end
+
+      it 'does not update a load balancer with only mismatched IP and virtual network pairs' do
+        load_balancers.first[:backend_address_pools].first[:load_balancer_backend_addresses] = [retained_address]
+        expect(azure_client).not_to receive(:update_load_balancer_backend_pool)
+
+        vm_manager.send(:_remove_vm_from_load_balancer_backend_pool, virtual_machine_result)
       end
     end
 
