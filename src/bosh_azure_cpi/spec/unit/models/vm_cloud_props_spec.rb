@@ -424,6 +424,62 @@ describe Bosh::AzureCloud::VMCloudProps do
     end
 
     context 'when root_disk is specified' do
+      context 'with full_caching' do
+        %w[cache-disk resource-disk nvme-disk].each do |placement|
+          [true, false, nil].each do |full_caching|
+            it "preserves #{full_caching.inspect} for #{placement}, defaulting nil to false" do
+              props = Bosh::AzureCloud::VMCloudProps.new(
+                {
+                  'instance_type' => 'Standard_D8ds_v6',
+                  'root_disk' => { 'placement' => placement, 'full_caching' => full_caching }
+                }, azure_config_managed
+              )
+
+              expect(props.root_disk.placement).to eq(placement)
+              expect(props.root_disk.full_caching).to equal(full_caching.nil? ? false : full_caching)
+            end
+          end
+        end
+
+        ['true', 'false', 0, 1, [], {}].each do |full_caching|
+          it "rejects non-boolean full_caching #{full_caching.inspect}" do
+            expect do
+              Bosh::AzureCloud::VMCloudProps.new(
+                {
+                  'instance_type' => 'Standard_D8ds_v6',
+                  'root_disk' => { 'placement' => 'nvme-disk', 'full_caching' => full_caching }
+                }, azure_config_managed
+              )
+            end.to raise_error(Bosh::Clouds::CloudError, "root_disk 'full_caching' must be a boolean")
+          end
+        end
+
+        ['remote', nil].each do |placement|
+          it "rejects enabled full_caching for placement #{placement.inspect}" do
+            expect do
+              Bosh::AzureCloud::VMCloudProps.new(
+                {
+                  'instance_type' => 'Standard_D8ds_v6',
+                  'root_disk' => { 'placement' => placement, 'full_caching' => true }
+                }, azure_config_managed
+              )
+            end.to raise_error(Bosh::Clouds::CloudError, "root_disk 'full_caching' requires placement 'cache-disk', 'resource-disk', or 'nvme-disk'")
+          end
+
+          it "accepts disabled full_caching for placement #{placement.inspect}" do
+            props = Bosh::AzureCloud::VMCloudProps.new(
+              {
+                'instance_type' => 'Standard_D8ds_v6',
+                'root_disk' => { 'placement' => placement, 'full_caching' => false }
+              }, azure_config_managed
+            )
+
+            expect(props.root_disk.placement).to eq('remote')
+            expect(props.root_disk.full_caching).to equal(false)
+          end
+        end
+      end
+
       context 'with type and placement' do
         let(:vm_cloud_properties) do
           {
@@ -455,7 +511,7 @@ describe Bosh::AzureCloud::VMCloudProps do
         it 'should raise an error' do
           expect do
             Bosh::AzureCloud::VMCloudProps.new(vm_cloud_properties, azure_config)
-          end.to raise_error("root_disk 'placement' must be one of 'resource-disk','cache-disk','remote'")
+          end.to raise_error("root_disk 'placement' must be one of 'resource-disk','cache-disk','nvme-disk','remote'")
         end
       end
 

@@ -393,7 +393,8 @@ module Bosh::AzureCloud
         os_disk = {
           'diffDiskSettings' => {
             'option' => 'Local',
-            'placement' => vm_params[:ephemeral_os_disk][:disk_placement]
+            'placement' => vm_params[:ephemeral_os_disk][:disk_placement],
+            'enableFullCaching' => vm_params[:ephemeral_os_disk].fetch(:disk_full_caching, false)
           },
           'caching' => vm_params[:ephemeral_os_disk][:disk_caching],
           'createOption' => 'FromImage',

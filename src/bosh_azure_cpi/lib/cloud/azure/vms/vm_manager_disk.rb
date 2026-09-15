@@ -15,7 +15,7 @@ module Bosh::AzureCloud
           os_disk = @disk_manager2.os_disk(instance_id.vm_name, stemcell_info, vm_props.root_disk.size, vm_props.caching, vm_props.ephemeral_disk.use_root_disk, disk_encryption_set_name: vm_props.root_disk.disk_encryption_set_name)
         else
           ephemeral_os_disk = @disk_manager2.ephemeral_os_disk(instance_id.vm_name, stemcell_info, vm_props.root_disk.size, vm_props.ephemeral_disk.size,
-                                                               vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement, disk_encryption_set_name: vm_props.root_disk.disk_encryption_set_name)
+                                                               vm_props.ephemeral_disk.use_root_disk, vm_props.root_disk.placement, disk_encryption_set_name: vm_props.root_disk.disk_encryption_set_name, full_caching: vm_props.root_disk.full_caching)
         end
       else
         storage_account_name = instance_id.storage_account_name

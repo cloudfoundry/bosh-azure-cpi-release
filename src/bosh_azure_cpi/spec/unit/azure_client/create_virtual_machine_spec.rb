@@ -69,6 +69,77 @@ describe Bosh::AzureCloud::AzureClient do
       ]
     end
 
+    context 'with disks built from VM cloud properties' do
+      let(:managed_config) { mock_azure_config_merge('use_managed_disks' => true) }
+      let(:disk_manager) { Bosh::AzureCloud::DiskManager2.new(azure_client) }
+      let(:vm_manager) do
+        Bosh::AzureCloud::VMManager.new(managed_config, nil, disk_manager, azure_client, nil, nil, nil, nil)
+      end
+      let(:instance_id) { double('instance_id', vm_name: vm_name) }
+      let(:stemcell_info) { double('stemcell_info', image_size: 3072, is_windows?: false) }
+
+      before do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: { 'access_token' => valid_access_token, 'expires_on' => expires_on }.to_json
+        )
+        stub_request(:put, vm_uri).to_return(
+          status: 200,
+          body: '',
+          headers: { 'azure-asyncoperation' => operation_status_link }
+        )
+        stub_request(:get, operation_status_link).to_return(status: 200, body: '{"status":"Succeeded"}')
+      end
+
+      { 'cache-disk' => 'CacheDisk', 'resource-disk' => 'ResourceDisk', 'nvme-disk' => 'NvmeDisk', 'remote' => nil, nil => nil }.each do |placement, azure_placement|
+        { 'omitted' => {}, 'false' => { 'full_caching' => false }, 'true' => { 'full_caching' => true } }.each do |setting, caching_properties|
+          next if azure_placement.nil? && setting == 'true'
+
+          it "serializes placement #{placement.inspect} with full_caching #{setting} from cloud properties" do
+            root_properties = { 'size' => 32768 }.merge(caching_properties)
+            root_properties['placement'] = placement unless placement.nil?
+            props = Bosh::AzureCloud::VMCloudProps.new(
+              {
+                'instance_type' => 'Standard_D8ds_v6',
+                'root_disk' => root_properties,
+                'ephemeral_disk' => { 'use_root_disk' => true }
+              }, managed_config
+            )
+            os_disk, ephemeral_disk, ephemeral_os_disk = vm_manager.send(:_build_disks, instance_id, stemcell_info, props)
+            params = vm_params.merge(
+              managed: true,
+              vm_size: props.instance_type,
+              image_id: '/fake-image',
+              os_disk: os_disk,
+              ephemeral_disk: ephemeral_disk,
+              ephemeral_os_disk: ephemeral_os_disk
+            )
+
+            azure_client.create_virtual_machine(resource_group, params, network_interfaces)
+
+            expect(WebMock).to have_requested(:put, vm_uri).with { |request|
+              storage_profile = JSON.parse(request.body).fetch('properties').fetch('storageProfile')
+              disk = storage_profile.fetch('osDisk')
+              expect(disk.fetch('createOption')).to eq('FromImage')
+              expect(disk.fetch('diskSizeGB')).to eq(32)
+              expect(storage_profile).not_to have_key('dataDisks')
+              if azure_placement.nil?
+                expect(disk).not_to have_key('diffDiskSettings')
+              else
+                expect(disk.fetch('caching')).to eq('ReadOnly')
+                expect(disk.fetch('diffDiskSettings')).to eq(
+                  'option' => 'Local',
+                  'placement' => azure_placement,
+                  'enableFullCaching' => caching_properties.fetch('full_caching', false)
+                )
+              end
+              true
+            }.once
+          end
+        end
+      end
+    end
+
     context 'parse the parameters' do
       context 'when identity is not nil' do
         context 'when identity is system assigned identity' do
