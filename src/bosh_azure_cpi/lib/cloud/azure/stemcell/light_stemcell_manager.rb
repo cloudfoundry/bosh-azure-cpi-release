@@ -77,7 +77,7 @@ module Bosh::AzureCloud
         metadata = _post_process_metadata(metadata)
       end
 
-      metadata['image'] = JSON.parse(metadata['image'], symbolize_keys: false)
+      metadata['image'] = JSON.parse(metadata['image'])
       metadata
     end
 
