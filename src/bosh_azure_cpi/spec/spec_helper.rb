@@ -3,11 +3,9 @@
 $LOAD_PATH.unshift File.expand_path('../lib', __dir__)
 
 require 'simplecov'
-# BUG: https://github.com/simplecov-ruby/simplecov/issues/1003
-SimpleCov.configure do
-  add_filter '/spec'
+SimpleCov.start do
+  skip '/spec'
 end
-SimpleCov.start
 
 require 'cloud/azure'
 require 'fileutils'
