@@ -132,7 +132,7 @@ When submitting a PR, you need to provide the test coverage and make sure that t
 
 ```bash
 cd ~/workspace/bosh-azure-cpi-release/src/bosh_azure_cpi
-./bin/test-unit
+bundle exec rake spec:unit
 ```
 
 or:
@@ -140,7 +140,7 @@ or:
 ```bash
 cd ~/workspace/bosh-azure-cpi-release
 pushd src/bosh_azure_cpi
-./bin/test-unit
+  bundle exec rake spec:unit
 popd
 ```
 
@@ -148,7 +148,7 @@ or:
 
 ```bash
 cd ~/workspace/bosh-azure-cpi-release
-pushd 'src/bosh_azure_cpi' ; ./bin/test-unit ; popd
+pushd 'src/bosh_azure_cpi' ; bundle exec rake spec:unit ; popd
 ```
 
 If unit tests are passed, you can create a dev release and deploy it for tests.
@@ -189,7 +189,8 @@ tests that are run along with the other unit tests as instructed above. When
 required, you can run them separately though, with this command:
 
 ```bash
-./src/bosh_azure_cpi/bin/test-unit --spec spec/unit/bosh_release
+cd src/bosh_azure_cpi/
+bundle exec rspec spec/unit/bosh_release
 ```
 
 ### CI Pipeline
