@@ -1,12 +1,20 @@
 require 'rspec/core/rake_task'
 require 'rubocop/rake_task'
 
-namespace :spec do
-  RSpec::Core::RakeTask.new(:unit) do |t|
-    t.pattern = 'spec/unit/**{,/*/**}/*_spec.rb'
+task default: %w[check_ruby_version rubocop spec:unit]
+
+task :check_ruby_version do
+  unless RUBY_VERSION == (requested_ruby = File.read('.ruby-version').chomp)
+    fail("=> Ruby version: '#{RUBY_VERSION}' does not match .ruby-version => '#{requested_ruby}'")
   end
 end
 
 RuboCop::RakeTask.new do |t|
   t.options = ['--fail-level=E'] # only fail on `Error`
+end
+
+namespace :spec do
+  RSpec::Core::RakeTask.new(:unit) do |t|
+    t.pattern = 'spec/unit/**{,/*/**}/*_spec.rb'
+  end
 end
