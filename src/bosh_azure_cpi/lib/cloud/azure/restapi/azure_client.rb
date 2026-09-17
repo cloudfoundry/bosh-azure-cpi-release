@@ -139,7 +139,7 @@ module Bosh::AzureCloud
       begin
         uri = http_url(url, params)
         response = http_get(uri)
-        result = JSON.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
+        result = JSON.parse(response.body) unless response.body.nil? || response.body == ''
       rescue AzureNotFoundError
         @logger.debug("Resource not found for url #{url} with parms #{params}")
         result = nil
@@ -156,7 +156,7 @@ module Bosh::AzureCloud
         uri = http_url(url, params)
         response = http_get(uri)
         unless response.body.nil?
-          body = JSON.parse(response.body, symbolize_keys: false)
+          body = JSON.parse(response.body)
           result = body
           next_url = body['nextLink']
         end
@@ -167,7 +167,7 @@ module Bosh::AzureCloud
           response = http_get(uri)
           cloud_error("Got empty page from nextLink #{next_url}") if response.body.nil?
 
-          body = JSON.parse(response.body, symbolize_keys: false)
+          body = JSON.parse(response.body)
           result.deep_merge!(body)
           next_url = body['nextLink']
         end
@@ -508,7 +508,7 @@ module Bosh::AzureCloud
       }
 
       response = http_put(url, vm, params)
-      result = JSON.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
+      result = JSON.parse(response.body) unless response.body.nil? || response.body == ''
 
       _parse_virtual_machine(result, false)
     end
@@ -2190,7 +2190,7 @@ module Bosh::AzureCloud
 
       @logger.debug("Creating / updating gallery image version: '#{url}' with params: #{image_version_params}")
       response = http_put(url, image_version_params, { 'api-version' => '2025-03-03' })
-      result = JSON.parse(response.body, symbolize_keys: false) unless response.body.nil? || response.body == ''
+      result = JSON.parse(response.body) unless response.body.nil? || response.body == ''
 
       parse_gallery_image(result)
     end
@@ -2746,7 +2746,7 @@ module Bosh::AzureCloud
 
     # @return [Object]
     def redact_credentials_in_response_body(body)
-      is_debug_mode(@azure_config) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body, symbolize_keys: false)).to_json
+      is_debug_mode(@azure_config) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body)).to_json
     rescue StandardError
       body
     end
