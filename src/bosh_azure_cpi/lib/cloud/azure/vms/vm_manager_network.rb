@@ -255,7 +255,7 @@ module Bosh::AzureCloud
           [network, _detect_ip_version(network)]
         end
         ipv4_networks, ipv6_networks = networks_with_ip_versions.partition do |_network, ip_version|
-          ip_version == 'IPv4'
+          ip_version == IP_VERSION_IPV4
         end
         networks_with_ip_versions = ipv4_networks + ipv6_networks
 
@@ -336,12 +336,12 @@ module Bosh::AzureCloud
     # Determine whether a network's IP is IPv4 or IPv6
     def _detect_ip_version(network)
       has_explicit_ip = network.respond_to?(:private_ip) && network.private_ip && !network.private_ip.empty?
-      return 'IPv4' unless has_explicit_ip
+      return IP_VERSION_IPV4 unless has_explicit_ip
 
-      IPAddr.new(network.private_ip).ipv6? ? 'IPv6' : 'IPv4'
+      IPAddr.new(network.private_ip).ipv6? ? IP_VERSION_IPV6 : IP_VERSION_IPV4
     rescue IPAddr::InvalidAddressError => e
-      @logger.warn("Invalid IP address '#{network.private_ip}': #{e.message}, defaulting to IPv4")
-      'IPv4'
+      @logger.warn("Invalid IP address '#{network.private_ip}': #{e.message}, defaulting to #{IP_VERSION_IPV4}")
+      IP_VERSION_IPV4
     end
 
     def _delete_possible_network_interfaces(resource_group_name, vm_name)
@@ -421,7 +421,7 @@ module Bosh::AzureCloud
         primary_nic[:ip_configurations].each do |ip_config|
           private_ip = ip_config[:private_ip]
           next if private_ip.nil? || private_ip.empty?
-          next unless ip_config[:private_ip_address_version].to_s.upcase == 'IPV4'
+          next unless ip_config[:private_ip_address_version].to_s.casecmp?(IP_VERSION_IPV4)
 
           subnet_id = ip_config[:subnet][:id]
           vnet_id = subnet_id.split('/subnets/')[0]
@@ -442,7 +442,7 @@ module Bosh::AzureCloud
           backend_addresses_v6_pool[:loadBalancerBackendAddresses] = []
 
           # Ipv6 adresse und subnet
-          ip = primary_nic[:ip_configurations].find { |ip_config| ip_config[:private_ip] && !ip_config[:private_ip].empty? && ip_config[:private_ip_address_version].to_s.upcase == 'IPV6' }
+          ip = primary_nic[:ip_configurations].find { |ip_config| ip_config[:private_ip] && !ip_config[:private_ip].empty? && ip_config[:private_ip_address_version].to_s.casecmp?(IP_VERSION_IPV6) }
 
           unless ip.nil?
             private_ip = ip[:private_ip]

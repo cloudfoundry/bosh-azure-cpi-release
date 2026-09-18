@@ -87,6 +87,9 @@ module Bosh::AzureCloud
     LOAD_BALANCER_BACKEND_POOL_TYPE_IP = 'ip'
     LOAD_BALANCER_USED_BY_TAG = 'used_by_load_balancer'
 
+    IP_VERSION_IPV4 = 'IPv4'
+    IP_VERSION_IPV6 = 'IPv6'
+
     # sku
     SKU_TIER_STANDARD = 'Standard'
     SKU_TIER_PREMIUM  = 'Premium'
