@@ -542,6 +542,7 @@ module Bosh::AzureCloud
 
         # First build the new backend addresses for the load balancer, then update the load balancer with the new backend addresses.
         backend_addresses = _calculate_backend_addresses_for_load_balancer(load_balancer, vm_network_interfaces)
+        next if backend_addresses.empty?
 
         # First get the current backend pool of the load balancer, then update the backend pool with the new backend addresses.
         flock("#{CPI_LOCK_LOAD_BALANCER}-all", File::LOCK_EX) do
