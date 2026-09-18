@@ -419,6 +419,38 @@ describe Bosh::AzureCloud::VMManager do
       end
     end
 
+    ['TRUE', 'TrUe'].each do |tag_value|
+      context "when the load balancer tag value is #{tag_value.inspect}" do
+        let(:network_interface_tags) do
+          { Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG => tag_value }
+        end
+
+        it 'removes matching backend addresses' do
+          expect(vm_manager).to receive(:flock).and_yield
+          expect(azure_client).to receive(:update_load_balancer_backend_pool)
+            .with(resource_group_name, 'fake-lb', 'pool-v4', [])
+
+          vm_manager.send(:_remove_vm_from_load_balancer_backend_pool, virtual_machine_result)
+        end
+      end
+    end
+
+    ['false', 'FALSE', '', nil].each do |tag_value|
+      context "when the load balancer tag value is #{tag_value.inspect}" do
+        let(:network_interface_tags) do
+          { Bosh::AzureCloud::Helpers::LOAD_BALANCER_USED_BY_TAG => tag_value }
+        end
+
+        it 'does not inspect or update load balancers' do
+          expect(vm_manager).not_to receive(:flock)
+          expect(azure_client).not_to receive(:list_all_load_balancers)
+          expect(azure_client).not_to receive(:update_load_balancer_backend_pool)
+
+          vm_manager.send(:_remove_vm_from_load_balancer_backend_pool, virtual_machine_result)
+        end
+      end
+    end
+
     context 'when both IP configurations have the backend pool property' do
       let(:first_ip_configuration) do
         super().merge(load_balancers: backend_pool_references)

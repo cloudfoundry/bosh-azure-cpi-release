@@ -465,7 +465,7 @@ module Bosh::AzureCloud
       # Check if vm is used by any load balancer
       vm_used_by_load_balancer = virtual_machine_result[:network_interfaces].select { |nic|
         nic[:tags]&.any? {
-          |key, _| key.include?(LOAD_BALANCER_USED_BY_TAG)
+          |key, value| key.include?(LOAD_BALANCER_USED_BY_TAG) && value.to_s.casecmp?('true')
         }
       }
 
