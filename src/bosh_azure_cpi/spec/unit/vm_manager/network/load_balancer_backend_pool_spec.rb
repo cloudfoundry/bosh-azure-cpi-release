@@ -58,6 +58,16 @@ describe Bosh::AzureCloud::VMManager do
               private_ip: 'fd00::5',
               private_ip_address_version: 'IPv6',
               subnet: { id: "#{vnet_id}/subnets/fake-subnet" }
+            },
+            {
+              private_ip: '',
+              private_ip_address_version: 'IPv4',
+              subnet: { id: "#{vnet_id}/subnets/fake-subnet" }
+            },
+            {
+              private_ip: nil,
+              private_ip_address_version: 'IPv4',
+              subnet: { id: "#{vnet_id}/subnets/fake-subnet" }
             }
           ]
         },
@@ -65,7 +75,7 @@ describe Bosh::AzureCloud::VMManager do
           primary: false,
           ip_configurations: [
             {
-              private_ip: '',
+              private_ip: '10.0.0.7',
               private_ip_address_version: 'IPv4',
               subnet: { id: "#{vnet_id}/subnets/fake-subnet" }
             }
@@ -74,7 +84,7 @@ describe Bosh::AzureCloud::VMManager do
       ]
     end
 
-    it 'builds addresses for each IP-based pool and skips NIC-based pools and empty IPs' do
+    it 'builds addresses for IP-based pools and skips NIC-based pools, empty or nil IPs, and secondary NICs' do
       allow(SecureRandom).to receive(:uuid).and_return('ipv4-address', 'ipv6-address')
 
       result = vm_manager.send(
@@ -101,6 +111,33 @@ describe Bosh::AzureCloud::VMManager do
               properties: { ipAddress: 'fd00::5', virtualNetwork: { id: vnet_id } }
             }
           ]
+        }
+      ])
+    end
+
+    it 'builds an address for every non-empty IPv4 configuration on the primary NIC' do
+      vm_network_interfaces.first[:ip_configurations] << {
+        private_ip: '10.0.0.6',
+        private_ip_address_version: 'ipv4',
+        subnet: { id: "#{vnet_id}/subnets/fake-subnet" }
+      }
+      allow(SecureRandom).to receive(:uuid).and_return('first-ipv4', 'second-ipv4', 'ipv6')
+
+      result = vm_manager.send(
+        :_calculate_backend_addresses_for_load_balancer,
+        load_balancer,
+        vm_network_interfaces
+      )
+
+      ipv4_pool = result.find { |pool| pool[:name] == 'pool-v4' }
+      expect(ipv4_pool[:loadBalancerBackendAddresses]).to eq([
+        {
+          name: 'first-ipv4',
+          properties: { ipAddress: '10.0.0.5', virtualNetwork: { id: vnet_id } }
+        },
+        {
+          name: 'second-ipv4',
+          properties: { ipAddress: '10.0.0.6', virtualNetwork: { id: vnet_id } }
         }
       ])
     end

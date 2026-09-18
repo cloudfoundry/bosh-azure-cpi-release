@@ -418,12 +418,12 @@ module Bosh::AzureCloud
         backend_addresses_v4_pool[:name] = pool[:name]
         backend_addresses_v4_pool[:loadBalancerBackendAddresses] = []
 
-        # Ipv4 adresse und subnet
-        ip = primary_nic[:ip_configurations].find { |ip_config| ip_config[:private_ip] && !ip_config[:private_ip].empty? && ip_config[:private_ip_address_version].to_s.upcase == 'IPV4' }
+        primary_nic[:ip_configurations].each do |ip_config|
+          private_ip = ip_config[:private_ip]
+          next if private_ip.nil? || private_ip.empty?
+          next unless ip_config[:private_ip_address_version].to_s.upcase == 'IPV4'
 
-        unless ip.nil?
-          private_ip = ip[:private_ip]
-          subnet_id = ip[:subnet][:id]
+          subnet_id = ip_config[:subnet][:id]
           vnet_id = subnet_id.split('/subnets/')[0]
 
           backend_addresses_v4_pool[:loadBalancerBackendAddresses] << _build_backend_address({}, "", private_ip, vnet_id)

@@ -39,7 +39,7 @@ vm_types:
       default_backend_pool_type: ip
 ```
 
-After creating the VM, the CPI adds its private IPv4 address and virtual network ID to `router-pool`. For a dual-stack VM, use `backend_pool_name_v6` to select the IPv6 pool:
+After creating the VM, the CPI adds every non-empty private IPv4 address on its primary NIC, together with the virtual network ID, to `router-pool`. For a dual-stack VM, use `backend_pool_name_v6` to select the IPv6 pool:
 
 ```yaml
 load_balancer:
@@ -50,6 +50,16 @@ load_balancer:
 ```
 
 Valid values for `default_backend_pool_type` are `nic` and `ip`. When the property is omitted, it defaults to `nic`.
+
+### IP address selection
+
+For IP-based backend pools, the CPI uses only the VM's primary NIC:
+
+* Each selected IPv4 pool receives all non-empty private IPv4 addresses on that NIC, including secondary IPv4 configurations. For example, if the primary NIC has `10.0.0.5` and `10.0.0.6`, both addresses are registered in `router-pool`.
+* Each selected IPv6 pool receives the NIC's non-empty private IPv6 address. Azure supports at most one private IPv6 address per NIC.
+* Addresses on secondary NICs are not registered, and nil or empty addresses are skipped. If the primary NIC has no matching address for a pool's IP version, the CPI adds no addresses to that pool.
+
+Azure no longer restricts load-balancer membership to the primary IPv4 configuration. See [Secondary IP configurations](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/virtual-network-network-interface-addresses#secondary) and [IPv6 addressing limits](https://learn.microsoft.com/en-us/azure/virtual-network/ip-services/virtual-network-network-interface-addresses#ipv6).
 
 ## Assign a VM to multiple backend pools
 
@@ -68,7 +78,7 @@ load_balancer:
   default_backend_pool_type: ip
 ```
 
-The CPI adds each newly created VM to every configured IP-based backend pool.
+The CPI registers the primary NIC's matching addresses in every configured IP-based backend pool, following the IP address selection rules above.
 
 ## Migrate an existing pool from NIC-based to IP-based
 
