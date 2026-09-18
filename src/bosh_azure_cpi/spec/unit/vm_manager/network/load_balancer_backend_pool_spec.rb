@@ -195,6 +195,100 @@ describe Bosh::AzureCloud::VMManager do
       allow(vm_manager).to receive(:flock).and_yield
     end
 
+    context 'with a real creation result parsed without extended resources' do
+      let(:azure_client) { Bosh::AzureCloud::AzureClient.new(azure_config, Bosh::Clouds::Config.logger) }
+      let(:resource_prefix) { "/subscriptions/#{azure_config.subscription_id}/resourceGroups/#{resource_group_name}" }
+      let(:nic_id) { "#{resource_prefix}/providers/Microsoft.Network/networkInterfaces/fake-nic" }
+      let(:load_balancer_id) { "#{resource_prefix}/providers/Microsoft.Network/loadBalancers/fake-lb" }
+
+      [
+        [['10.0.0.5', 'IPv4'], ['10.0.0.6', 'IPv4']],
+        [['10.0.0.5', 'IPv4'], ['fd00::5', 'IPv6']]
+      ].each do |addresses|
+        it "registers #{addresses.map(&:first).join(' and ')} without expanding NIC references" do
+          nic_resource = {
+            'id' => nic_id,
+            'tags' => { 'used_by_load_balancer' => 'true' },
+            'properties' => {
+              'primary' => true,
+              'dnsSettings' => { 'dnsServers' => [] },
+              'networkSecurityGroup' => { 'id' => 'fake-nsg' },
+              'ipConfigurations' => addresses.each_with_index.map do |(address, version), index|
+                {
+                  'name' => "ipconfig#{index}",
+                  'properties' => {
+                    'primary' => index.zero?,
+                    'privateIPAddress' => address,
+                    'privateIPAddressVersion' => version,
+                    'subnet' => { 'id' => "#{vnet_id}/subnets/fake-subnet" },
+                    'publicIPAddress' => { 'id' => 'fake-public-ip' },
+                    'loadBalancerBackendAddressPools' => [{ 'id' => "#{load_balancer_id}/backendAddressPools/nic-pool" }],
+                    'applicationGatewayBackendAddressPools' => [{ 'id' => 'fake-gateway-pool' }],
+                    'applicationSecurityGroups' => [{ 'id' => 'fake-asg' }]
+                  }
+                }
+              end
+            }
+          }
+          vm_response = {
+            'name' => 'fake-vm',
+            'properties' => {
+              'hardwareProfile' => { 'vmSize' => 'Standard_D1' },
+              'storageProfile' => { 'osDisk' => {}, 'dataDisks' => [] },
+              'networkProfile' => { 'networkInterfaces' => [{ 'id' => nic_id }] }
+            }
+          }
+          vm_params = {
+            name: 'fake-vm', location: 'fake-location', vm_size: 'Standard_D1',
+            os_type: 'linux', ssh_username: 'vcap', ssh_cert_data: 'fake-cert',
+            managed: true, image_reference: { 'id' => 'fake-image' }
+          }
+          expect(azure_client).to receive(:http_put)
+            .with("#{resource_prefix}/providers/Microsoft.Compute/virtualMachines/fake-vm", anything, { 'validating' => 'true' })
+            .and_return(double('vm response', body: vm_response.to_json))
+          expect(azure_client).to receive(:get_resource_by_id).with(nic_id).once.and_return(nic_resource)
+          expect(azure_client).to receive(:parse_network_interface).with(nic_resource, recursive: false).and_call_original
+          expect(azure_client).not_to receive(:get_public_ip)
+          expect(azure_client).not_to receive(:get_network_security_group)
+          expect(azure_client).not_to receive(:get_application_gateway_by_name)
+          expect(azure_client).not_to receive(:get_application_security_group)
+
+          created_vm = azure_client.create_virtual_machine(resource_group_name, vm_params, [{ id: nic_id }])
+          expect(created_vm[:network_interfaces].first).to include(primary: true, tags: { 'used_by_load_balancer' => 'true' })
+
+          pools = addresses.map(&:last).uniq.map do |version|
+            { name: "pool-#{version}", backend_address_pools_type: 'ip' }
+          end
+          configured_load_balancer = {
+            name: 'fake-lb', resource_group_name: resource_group_name,
+            backend_address_pools: pools.select { |pool| pool[:name] == 'pool-IPv4' },
+            backend_address_pools_v6: pools.select { |pool| pool[:name] == 'pool-IPv6' }
+          }
+          expect(azure_client).to receive(:get_load_balancer_by_name)
+            .with(resource_group_name, 'fake-lb').once.and_call_original
+          expect(azure_client).to receive(:get_resource_by_id).with(load_balancer_id).once.and_return(
+            'name' => 'fake-lb',
+            'properties' => {
+              'frontendIPConfigurations' => [],
+              'backendAddressPools' => pools.map { |pool| { 'name' => pool[:name], 'properties' => {} } }
+            }
+          )
+          addresses.group_by(&:last).each do |version, family_addresses|
+            expect(azure_client).to receive(:http_put)
+              .with("#{load_balancer_id}/backendAddressPools/pool-#{version}", anything, { 'api-version' => '2025-07-01' }) do |_url, body, _params|
+                backend_addresses = body[:properties][:loadBalancerBackendAddresses]
+                expect(backend_addresses.map { |address| address[:properties] }).to match_array(
+                  family_addresses.map { |address, _version| { ipAddress: address, virtualNetwork: { id: vnet_id } } }
+                )
+                expect(backend_addresses.map { |address| address[:name] }).to all(be_a(String).and(satisfy { |name| !name.empty? }))
+              end
+          end
+
+          vm_manager.send(:_add_vm_to_load_balancer_backend_pool, [configured_load_balancer], created_vm)
+        end
+      end
+    end
+
     it 'does nothing when the VM result or load balancers are absent' do
       expect(azure_client).not_to receive(:get_load_balancer_by_name)
 

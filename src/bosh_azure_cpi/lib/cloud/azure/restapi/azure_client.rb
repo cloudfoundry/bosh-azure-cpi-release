@@ -805,7 +805,8 @@ module Bosh::AzureCloud
 
         vm[:network_interfaces] = []
         properties['networkProfile']['networkInterfaces'].each do |nic_properties|
-            vm[:network_interfaces].push(get_network_interface(nic_properties['id']))
+          nic_resource = get_resource_by_id(nic_properties['id'])
+          vm[:network_interfaces].push(parse_network_interface(nic_resource, recursive: extend_resources))
         end
 
         boot_diagnostics = properties.fetch('diagnosticsProfile', {}).fetch('bootDiagnostics', {})

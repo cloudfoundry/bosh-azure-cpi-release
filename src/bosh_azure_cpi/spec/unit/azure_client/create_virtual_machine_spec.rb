@@ -1402,6 +1402,31 @@ describe Bosh::AzureCloud::AzureClient do
           }
         end
 
+        before do
+          response_body[:properties][:networkProfile][:networkInterfaces].each_with_index do |nic_reference, index|
+            nic_resource = {
+              'id' => nic_reference[:id],
+              'properties' => {
+                'primary' => nic_reference[:properties][:primary],
+                'dnsSettings' => { 'dnsServers' => [] },
+                'ipConfigurations' => [{
+                  'id' => "#{nic_reference[:id]}/ipConfigurations/ipconfig1",
+                  'name' => 'ipconfig1',
+                  'properties' => {
+                    'primary' => true,
+                    'privateIPAddress' => "10.0.0.#{index + 4}",
+                    'privateIPAddressVersion' => 'IPv4',
+                    'privateIPAllocationMethod' => 'Static',
+                    'subnet' => { 'id' => 'fake-vnet/subnets/fake-subnet' }
+                  }
+                }]
+              }
+            }
+            expect(azure_client).to receive(:get_resource_by_id).with(nic_reference[:id]).and_return(nic_resource)
+            expect(azure_client).to receive(:parse_network_interface).with(nic_resource, recursive: false).and_call_original
+          end
+        end
+
         context 'redact credentials in logs' do
           let(:azure_client) do
             Bosh::AzureCloud::AzureClient.new(
@@ -1431,8 +1456,6 @@ describe Bosh::AzureCloud::AzureClient do
               body: '{"status":"Succeeded"}',
               headers: {}
             )
-            allow(azure_client).to receive(:get_network_interface).and_return({})
-
             expect do
               azure_client.create_virtual_machine(resource_group, vm_params_windows, network_interfaces)
             end.not_to raise_error
@@ -1473,8 +1496,6 @@ describe Bosh::AzureCloud::AzureClient do
               body: '{"status":"Succeeded"}',
               headers: {}
             )
-            allow(azure_client).to receive(:get_network_interface).and_return({})
-
             expect do
               azure_client.create_virtual_machine(resource_group, vm_params_windows, network_interfaces)
             end.not_to raise_error
