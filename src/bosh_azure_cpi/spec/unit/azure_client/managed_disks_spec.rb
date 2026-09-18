@@ -455,6 +455,68 @@ describe Bosh::AzureCloud::AzureClient do
         end.not_to raise_error
       end
     end
+
+    context 'when disk_encryption_set_id is provided' do
+      let(:disk_encryption_set_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{MOCK_RESOURCE_GROUP_NAME}/providers/Microsoft.Compute/diskEncryptionSets/fake-des" }
+      let(:disk_params) do
+        {
+          name: disk_name,
+          location: 'b',
+          tags: { 'foo' => 'bar' },
+          account_type: 'c',
+          disk_encryption_set_id: disk_encryption_set_id
+        }
+      end
+
+      let(:request_body) do
+        {
+          location: 'b',
+          tags: {
+            foo: 'bar'
+          },
+          sku: {
+            name: 'c'
+          },
+          properties: {
+            creationData: {
+              createOption: 'Copy',
+              sourceResourceId: snapshot_url
+            },
+            encryption: {
+              diskEncryptionSetId: disk_encryption_set_id,
+              type: 'EncryptionAtRestWithCustomerKey'
+            }
+          }
+        }
+      end
+
+      it 'preserves the customer-managed encryption on the new disk' do
+        stub_request(:post, token_uri).to_return(
+          status: 200,
+          body: {
+            'access_token' => valid_access_token,
+            'expires_on' => expires_on
+          }.to_json,
+          headers: {}
+        )
+        stub_request(:put, disk_uri).with(body: request_body).to_return(
+          status: 200,
+          body: '',
+          headers: {
+            'azure-asyncoperation' => operation_status_link
+          }
+        )
+        stub_request(:get, operation_status_link).to_return(
+          status: 200,
+          body: '{"status":"Succeeded"}',
+          headers: {}
+        )
+
+        expect do
+          azure_client.create_managed_disk_from_snapshot(resource_group, disk_params, snapshot_name)
+        end.not_to raise_error
+      end
+    end
   end
 
   describe '#get_managed_disk_by_name' do
@@ -477,7 +539,14 @@ describe Bosh::AzureCloud::AzureClient do
           provisioningState: 'd',
           diskSizeGB: 'e',
           diskMBpsReadWrite: 11,
-          diskIOPSReadWrite: 22
+          diskIOPSReadWrite: 22,
+          creationData: {
+            logicalSectorSize: 512
+          },
+          encryption: {
+            diskEncryptionSetId: "/subscriptions/#{subscription_id}/resourceGroups/#{MOCK_RESOURCE_GROUP_NAME}/providers/Microsoft.Compute/diskEncryptionSets/fake-des",
+            type: 'EncryptionAtRestWithCustomerKey'
+          }
         }
       }
     end
@@ -495,7 +564,9 @@ describe Bosh::AzureCloud::AzureClient do
         provisioning_state: 'd',
         disk_size: 'e',
         mbps: 11,
-        iops: 22
+        iops: 22,
+        logical_sector_size: 512,
+        disk_encryption_set_id: "/subscriptions/#{subscription_id}/resourceGroups/#{MOCK_RESOURCE_GROUP_NAME}/providers/Microsoft.Compute/diskEncryptionSets/fake-des"
       }
     end
 
