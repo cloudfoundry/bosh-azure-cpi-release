@@ -9,7 +9,8 @@ describe Bosh::AzureCloud::LoadBalancerConfig do
       let(:resource_group_name) { 'fake_rg' }
       let(:backend_pool_name) { 'fake_pool' }
       let(:backend_pool_name_v6) { 'fake_pool_v6' }
-      let(:expected_string) { "name: #{name}, resource_group_name: #{resource_group_name}, backend_pool_name: #{backend_pool_name}, backend_pool_name_v6: #{backend_pool_name_v6}" }
+      let(:default_backend_pool_type) { Bosh::AzureCloud::Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_NIC }
+      let(:expected_string) { "name: #{name}, resource_group_name: #{resource_group_name}, backend_pool_name: #{backend_pool_name}, backend_pool_name_v6: #{backend_pool_name_v6}, default_backend_pool_type: #{default_backend_pool_type}" }
       let(:load_balancer_config) do
         Bosh::AzureCloud::LoadBalancerConfig.new(resource_group_name, name, backend_pool_name, backend_pool_name_v6)
       end
