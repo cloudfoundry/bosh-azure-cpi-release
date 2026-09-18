@@ -393,12 +393,18 @@ module Bosh::AzureCloud
         os_disk = {
           'diffDiskSettings' => {
             'option' => 'Local',
-            'placement' => vm_params[:ephemeral_os_disk][:disk_placement]
+            'placement' => vm_params[:ephemeral_os_disk][:disk_placement],
           },
           'caching' => vm_params[:ephemeral_os_disk][:disk_caching],
           'createOption' => 'FromImage',
           'name' => vm_params[:ephemeral_os_disk][:disk_name]
         }
+
+        # Enable full caching for ephemeral OS disk if not running on Azure Stack
+        if @azure_config.environment != ENVIRONMENT_AZURESTACK
+          os_disk['diffDiskSettings']['enableFullCaching'] = vm_params[:ephemeral_os_disk].fetch(:disk_full_caching, false)
+        end
+
         os_disk['diskSizeGB'] = vm_params[:ephemeral_os_disk][:disk_size] unless vm_params[:ephemeral_os_disk][:disk_size].nil?
         if vm_params[:ephemeral_os_disk][:disk_encryption_set_name]
           disk_encryption_set_id = rest_api_url(REST_API_PROVIDER_COMPUTE, REST_API_DISK_ENCRYPTION_SETS, name: vm_params[:ephemeral_os_disk][:disk_encryption_set_name])

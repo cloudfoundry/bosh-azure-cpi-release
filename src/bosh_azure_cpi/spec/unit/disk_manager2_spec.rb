@@ -493,6 +493,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_size: 7,
           disk_placement: 'CacheDisk',
           disk_caching: 'ReadOnly',
+          disk_full_caching: false,
           disk_encryption_set_name: nil
         )
       end
@@ -520,6 +521,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_size: 8,
           disk_placement: nil,
           disk_caching: 'ReadOnly',
+          disk_full_caching: false,
           disk_encryption_set_name: nil
         )
       end
@@ -548,6 +550,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_size: 3,
           disk_placement: 'ResourceDisk',
           disk_caching: 'ReadOnly',
+          disk_full_caching: false,
           disk_encryption_set_name: nil
         )
       end
@@ -575,6 +578,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_size: 5,
           disk_placement: nil,
           disk_caching: 'ReadOnly',
+          disk_full_caching: false,
           disk_encryption_set_name: nil
         )
       end
@@ -602,6 +606,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_size: 5,
           disk_placement: 'CacheDisk',
           disk_caching: 'ReadOnly',
+          disk_full_caching: false,
           disk_encryption_set_name: nil
         )
       end
@@ -628,6 +633,7 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_size: 30,
           disk_placement: 'CacheDisk',
           disk_caching: 'ReadOnly',
+          disk_full_caching: false,
           disk_encryption_set_name: nil
         )
       end
@@ -655,9 +661,23 @@ describe Bosh::AzureCloud::DiskManager2 do
           disk_size: 10,
           disk_placement: 'CacheDisk',
           disk_caching: 'ReadOnly',
+          disk_full_caching: false,
           disk_encryption_set_name: nil
         )
       end
+    end
+
+    it 'passes through full_caching when enabled' do
+      expect(
+        disk_manager2.ephemeral_os_disk(vm_name, stemcell_info, 10_240, nil, false, 'cache-disk', full_caching: true)
+      ).to eq(
+        disk_name: disk_name,
+        disk_size: 10,
+        disk_placement: 'CacheDisk',
+        disk_caching: 'ReadOnly',
+        disk_full_caching: true,
+        disk_encryption_set_name: nil
+      )
     end
 
     it 'passes through the disk encryption set name' do
@@ -672,6 +692,7 @@ describe Bosh::AzureCloud::DiskManager2 do
         disk_size: nil,
         disk_placement: nil,
         disk_caching: 'ReadOnly',
+        disk_full_caching: false,
         disk_encryption_set_name: 'set_name'
       )
     end

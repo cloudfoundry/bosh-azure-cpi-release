@@ -49,6 +49,7 @@ module Bosh::AzureCloud
         root_disk_hash['size'],
         root_disk_hash['type'],
         _default_root_disk_placement(root_disk_hash['placement']),
+        full_caching: _validate_root_disk_caching(root_disk_hash['placement'], root_disk_hash['full_caching']),
         disk_encryption_set_name: root_disk_hash['disk_encryption_set_name']
       )
 
@@ -115,10 +116,28 @@ module Bosh::AzureCloud
       if root_disk_placement.nil?
         'remote'
       else
-        valid_placements = %w[resource-disk cache-disk remote]
-        cloud_error("root_disk 'placement' must be one of 'resource-disk','cache-disk','remote'") unless valid_placements.include?(root_disk_placement)
+        valid_placements = %w[resource-disk cache-disk nvme-disk remote]
+        cloud_error("root_disk 'placement' must be one of 'resource-disk','cache-disk','nvme-disk','remote'") unless valid_placements.include?(root_disk_placement)
         root_disk_placement
       end
+    end
+
+    def _validate_root_disk_caching(root_disk_placement, full_caching)
+      return false if full_caching.nil?
+
+      unless [true, false].include?(full_caching)
+        cloud_error("root_disk 'full_caching' must be a boolean")
+      end
+
+      valid_placements = %w[cache-disk resource-disk nvme-disk]
+      if full_caching && !valid_placements.include?(root_disk_placement)
+        cloud_error(
+          "root_disk 'full_caching' requires placement " \
+          "'cache-disk', 'resource-disk', or 'nvme-disk'"
+        )
+      end
+
+      full_caching
     end
 
     # In AzureStack, availability sets can only be configured with 1 update domain.
