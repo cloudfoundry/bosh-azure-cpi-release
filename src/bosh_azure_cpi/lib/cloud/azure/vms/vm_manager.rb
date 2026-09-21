@@ -252,7 +252,12 @@ module Bosh::AzureCloud
       else
         begin
           _remove_vm_from_load_balancer_backend_pool(virtual_machine_result)
+        rescue StandardError => error
+          error_message += "An error is thrown in cleaning up load balancer backend pools.\n"
+          error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}\n"
+        end
 
+        begin
           tasks = []
           # Delete the empty availability set
           tasks.push(

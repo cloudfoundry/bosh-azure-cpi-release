@@ -26,6 +26,21 @@ For NIC-based pools, Azure associates the NIC IP configuration with the selected
 
 ## Configure an IP-based backend pool
 
+### Required permissions
+
+IP-based backend pools require subscription-level read permissions for the CPI service principal. During VM deletion, the CPI lists load balancers throughout the configured subscription and reads their public frontend IP resources to find matching backend memberships. Load balancers can be in resource groups other than the VM's group; the load balancer configuration supports an explicit `resource_group_name`.
+
+Before enabling `default_backend_pool_type: ip`, assign the built-in **Reader** role at subscription scope, or a custom role assigned at subscription scope containing both actions:
+
+* `Microsoft.Network/loadBalancers/read`
+* `Microsoft.Network/publicIPAddresses/read`
+
+Keep **Virtual Machine Contributor** and **Network Contributor** scoped to the relevant resource groups as described in [service principal role assignments](../../get-started/create-service-principal.md). Subscription-wide write access is not required. The service principal can lack write access in unrelated resource groups, but must have backend-pool write permission wherever cleanup removes matching private-IP/virtual-network addresses. A custom read role limited to the actions above does not grant access to other resource types.
+
+Subscription-scoped permissions are inherited by resources in the subscription. The CPI does not skip authorization failures: if a required load-balancer or public-IP read is denied, cleanup fails before VM deletion. Resource-group-only read assignments are therefore insufficient, even if VM creation succeeds. This prerequisite also applies to existing VMs whose NICs have `used_by_load_balancer: "true"`; no additional NIC tags or tag migration are required. Do not remove that tag to bypass cleanup, as that leaves stale backend addresses.
+
+### Configuration
+
 Set `default_backend_pool_type` to `ip` on the load balancer configuration:
 
 ```yaml

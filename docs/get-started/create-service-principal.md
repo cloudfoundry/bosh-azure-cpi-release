@@ -275,6 +275,8 @@ info:    role assignment list command OK
 
 By default, the scope of the role is set to the subscription. And it can also be assigned to one specific resource group or multiple resource groups if you want.
 
+**Additional read permissions for IP-based load-balancer backend pools:** When using `default_backend_pool_type: ip`, assign the CPI service principal **Reader** at subscription scope, or a custom role assigned at that scope containing `Microsoft.Network/loadBalancers/read` and `Microsoft.Network/publicIPAddresses/read`. Deletion discovers memberships across the subscription, including load balancers in other resource groups. Contributor roles can remain scoped to the relevant groups; write access in unrelated groups is not required. Required read failures are not skipped and block cleanup before VM deletion. See [IP-based pool permissions](../advanced/load-balancer-backend-configuration/README.md#required-permissions) for details.
+
 ```
 azure role assignment create --spn <service-principal-name> --roleName "Virtual Machine Contributor" --resource-group <resource-group-name>
 azure role assignment create --spn <service-principal-name> --roleName "Network Contributor" --resource-group <resource-group-name>
