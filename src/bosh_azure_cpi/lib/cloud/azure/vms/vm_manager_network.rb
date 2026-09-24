@@ -176,7 +176,7 @@ module Bosh::AzureCloud
     end
 
     # @return [Array<Hash>] one Hash (returned by Bosh::AzureCloud::AzureClient.get_network_interface_by_name)  per network interface created
-    def _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS)
+    def _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags = AZURE_TAGS, network_interface_names: [])
       # Tasks to prepare before creating NICs:
       #   * prepare public ip
       #   * prepare load balancer(s)
@@ -260,6 +260,7 @@ module Bosh::AzureCloud
           nic_params[:load_balancers] = nil
           nic_params[:application_gateways] = nil
         end
+        network_interface_names.push(nic_name)
         tasks_creating.push(
           Concurrent::Future.execute do
             @azure_client.create_network_interface(resource_group_name, nic_params)
@@ -270,6 +271,48 @@ module Bosh::AzureCloud
       # Calling .wait before .value! to make sure that all tasks are completed.
       tasks_creating.map(&:wait)
       tasks_creating.map(&:value!)
+    ensure
+      tasks_creating&.each(&:wait)
+    end
+
+    # Delete network interfaces by name in parallel
+    # @param [String] resource_group_name
+    # @param [Array<String>] network_interface_names
+    # @return [void]
+    def _delete_network_interfaces_by_name(resource_group_name, network_interface_names)
+      tasks = []
+      network_interface_names.each do |network_interface_name|
+        tasks.push(
+          Concurrent::Future.execute do
+            retry_count = 0
+            begin
+              @azure_client.delete_network_interface(resource_group_name, network_interface_name)
+            rescue AzureError => delete_error
+              retry_count += 1
+              if (retry_count < 20) && (delete_error.message =~ /NicReservedForAnotherVm/)
+                sleep 10
+                retry
+              end
+              raise delete_error
+            end
+          end
+        )
+      end
+
+      # Calling .wait before .wait! to make sure that all tasks are completed.
+      tasks.map(&:wait)
+      tasks.map(&:wait!)
+    end
+
+    # Delete dynamic public IP if it exists
+    # @param [String] resource_group_name
+    # @param [String] vm_name
+    # @return [void]
+    def _delete_dynamic_public_ip(resource_group_name, vm_name)
+      dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
+      return if dynamic_public_ip.nil?
+
+      @azure_client.delete_public_ip(resource_group_name, vm_name)
     end
 
     def _get_public_ip_nic_index(network_configurator)

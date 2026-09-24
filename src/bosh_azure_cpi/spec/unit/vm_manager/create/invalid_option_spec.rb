@@ -228,6 +228,9 @@ describe Bosh::AzureCloud::VMManager do
 
     context 'when network interface is not created' do
       before do
+        expect(azure_client).not_to receive(:list_network_interfaces_by_keyword)
+        expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-0")
+        expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-1")
         allow(azure_client).to receive(:get_network_subnet_by_name)
           .and_return(subnet)
         allow(azure_client).to receive(:get_load_balancer_by_name)
@@ -245,15 +248,8 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context 'when none of network interface is created' do
-        before do
-          allow(azure_client).to receive(:list_network_interfaces_by_keyword)
-            .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
-            .and_return([])
-        end
-
-        it 'should raise an error and do not delete any network interface' do
+        it 'should attempt cleanup of both attempted NICs and raise the creation error' do
           expect(azure_client).not_to receive(:delete_virtual_machine)
-          expect(azure_client).not_to receive(:delete_network_interface)
           expect do
             vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
           end.to raise_error(/network interface is not created/)
@@ -261,17 +257,10 @@ describe Bosh::AzureCloud::VMManager do
       end
 
       context 'when one network interface is created and the another one is not' do
-        let(:network_interface) do
-          {
-            id: "/subscriptions/fake-subscription/resourceGroups/fake-resource-group/providers/Microsoft.Network/networkInterfaces/#{vm_name}-x",
-            name: "#{vm_name}-x"
-          }
-        end
-
         before do
-          allow(azure_client).to receive(:list_network_interfaces_by_keyword)
-            .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
-            .and_return([network_interface])
+          allow(azure_client).to receive(:create_network_interface)
+            .with(MOCK_RESOURCE_GROUP_NAME, hash_including(name: "#{vm_name}-0"))
+            .and_return(true)
           allow(azure_client).to receive(:get_network_subnet_by_name)
             .and_return(subnet)
           allow(azure_client).to receive(:get_load_balancer_by_name)
@@ -287,7 +276,6 @@ describe Bosh::AzureCloud::VMManager do
         end
 
         it 'should delete the (possible) existing network interface and raise an error' do
-          expect(azure_client).to receive(:delete_network_interface).once
           expect do
             vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
           end.to raise_error(/network interface is not created/)
@@ -302,9 +290,6 @@ describe Bosh::AzureCloud::VMManager do
           allow(azure_client).to receive(:get_public_ip_by_name)
             .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
             .and_return(dynamic_public_ip)
-          allow(azure_client).to receive(:list_network_interfaces_by_keyword)
-            .with(MOCK_RESOURCE_GROUP_NAME, vm_name)
-            .and_return([])
         end
 
         it 'should delete the dynamic public IP' do
