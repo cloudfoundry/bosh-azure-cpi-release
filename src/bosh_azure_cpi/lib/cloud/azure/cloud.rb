@@ -501,6 +501,7 @@ module Bosh::AzureCloud
           end
 
           @logger.info("Finished update of disk '#{disk_name}'")
+          nil # Logger#info returns true; explicit nil signals in-place update per CPI v2 spec
         end
       end
     end

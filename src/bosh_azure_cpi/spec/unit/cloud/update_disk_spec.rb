@@ -52,6 +52,11 @@ describe Bosh::AzureCloud::Cloud do
       end.not_to raise_error
     end
 
+    it 'returns nil for in-place updates so the director keeps the existing disk CID' do
+      result = managed_cloud.update_disk(disk_cid, new_disk_size, cloud_properties)
+      expect(result).to be_nil
+    end
+
     it 'raises an error if the disk is not found' do
       allow(disk_manager2).to receive(:get_data_disk).and_return(nil)
 
