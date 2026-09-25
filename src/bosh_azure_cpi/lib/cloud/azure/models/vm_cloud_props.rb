@@ -92,7 +92,7 @@ module Bosh::AzureCloud
       @accelerated_networking = vm_properties['accelerated_networking']
 
       @storage_account_name = vm_properties['storage_account_name']
-      @storage_account_kind = vm_properties.fetch('storage_account_kind', STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1)
+      @storage_account_kind = vm_properties.fetch('storage_account_kind', STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V2)
       @storage_account_type = vm_properties['storage_account_type']
       @storage_account_max_disk_number = vm_properties.fetch('storage_account_max_disk_number', 30)
 
