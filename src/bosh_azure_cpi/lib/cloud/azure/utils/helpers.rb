@@ -110,6 +110,7 @@ module Bosh::AzureCloud
     STORAGE_ACCOUNT_TYPE_STANDARD_LRS    = 'Standard_LRS'
     STORAGE_ACCOUNT_TYPE_STANDARDSSD_LRS = 'StandardSSD_LRS'
     STORAGE_ACCOUNT_TYPE_PREMIUM_LRS     = 'Premium_LRS'
+    STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1 = 'Storage'
     STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V2 = 'StorageV2'
     STEMCELL_STORAGE_ACCOUNT_TAGS = AZURE_TAGS.merge(
       'type' => 'stemcell'
@@ -329,6 +330,13 @@ module Bosh::AzureCloud
 
     def get_api_version(azure_config, resource_provider)
       AZURE_ENVIRONMENTS[azure_config.environment]['apiVersion'][resource_provider]
+    end
+
+    # Azure Stack Hub only supports General Purpose v1 (Storage); GPv2 (StorageV2) is not available
+    # on that platform regardless of API version. All other Azure environments use GPv2, which is
+    # required since Microsoft retired GPv1 creation in public Azure in September 2026.
+    def default_storage_account_kind(environment)
+      environment == ENVIRONMENT_AZURESTACK ? STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V1 : STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V2
     end
 
     def validate_disk_size(size)

@@ -181,7 +181,7 @@ module Bosh::AzureCloud
       storage_account = get_or_create_storage_account_by_tags(
         STEMCELL_STORAGE_ACCOUNT_TAGS,
         STORAGE_ACCOUNT_TYPE_STANDARD_LRS,
-        STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V2,
+        default_storage_account_kind(@azure_config.environment),
         location,
         [DISK_CONTAINER, STEMCELL_CONTAINER],
         true
@@ -195,7 +195,7 @@ module Bosh::AzureCloud
       get_or_create_storage_account_by_tags(
         DIAGNOSTICS_STORAGE_ACCOUNT_TAGS,
         STORAGE_ACCOUNT_TYPE_STANDARD_LRS,
-        STORAGE_ACCOUNT_KIND_GENERAL_PURPOSE_V2,
+        default_storage_account_kind(@azure_config.environment),
         location,
         [],
         false

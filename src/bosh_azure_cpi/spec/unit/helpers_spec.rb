@@ -1201,4 +1201,24 @@ describe Bosh::AzureCloud::Helpers do
       end
     end
   end
+
+  describe '#default_storage_account_kind' do
+    context 'when environment is AzureStack' do
+      it 'returns General Purpose v1 (Storage)' do
+        expect(helpers_tester.default_storage_account_kind('AzureStack')).to eq('Storage')
+      end
+    end
+
+    context 'when environment is AzureCloud' do
+      it 'returns General Purpose v2 (StorageV2)' do
+        expect(helpers_tester.default_storage_account_kind('AzureCloud')).to eq('StorageV2')
+      end
+    end
+
+    context 'when environment is AzureUSGovernment' do
+      it 'returns General Purpose v2 (StorageV2)' do
+        expect(helpers_tester.default_storage_account_kind('AzureUSGovernment')).to eq('StorageV2')
+      end
+    end
+  end
 end
