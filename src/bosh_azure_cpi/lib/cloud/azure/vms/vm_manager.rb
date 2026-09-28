@@ -298,7 +298,7 @@ module Bosh::AzureCloud
           tasks.map(&:wait)
           tasks.map(&:wait!)
         rescue StandardError => error
-          error_message = 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
+          error_message += 'The VM fails in creating but an error is thrown in cleanuping network interfaces or dynamic public IP.\n'
           error_message += "#{error.inspect}\n#{error.backtrace.join("\n")}"
         end
       end
