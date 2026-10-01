@@ -643,7 +643,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
             azure_config.storage_account_name = nil
             expect(azure_client).not_to receive(:get_storage_account_by_name).with(MOCK_DEFAULT_STORAGE_ACCOUNT_NAME)
             expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
-              .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
+              .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'StorageV2', resource_group_location, %w[bosh stemcell], true)
               .and_return(targeted_storage_account)
 
             storage_account_manager.default_storage_account
@@ -686,7 +686,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
           it 'should create a new storage account' do
             azure_config.storage_account_name = nil
             expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
-              .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
+              .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'StorageV2', resource_group_location, %w[bosh stemcell], true)
               .and_return(targeted_storage_account)
 
             storage_account_manager.default_storage_account
@@ -707,7 +707,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
         it 'should create a new storage account' do
           azure_config.storage_account_name = nil
           expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
-            .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'Storage', resource_group_location, %w[bosh stemcell], true)
+            .with(STEMCELL_STORAGE_ACCOUNT_TAGS, 'Standard_LRS', 'StorageV2', resource_group_location, %w[bosh stemcell], true)
             .and_return(targeted_storage_account)
 
           storage_account_manager.default_storage_account
@@ -724,7 +724,7 @@ describe Bosh::AzureCloud::StorageAccountManager do
           'type' => 'bootdiagnostics'
         }
       end
-      let(:kind) { 'Storage' }
+      let(:kind) { 'StorageV2' }
 
       it 'should get or create the storage account' do
         expect(storage_account_manager).to receive(:get_or_create_storage_account_by_tags)
