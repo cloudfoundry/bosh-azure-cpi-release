@@ -19,6 +19,7 @@ module Bosh::AzureCloud
     end
 
     def create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_settings, network_spec, config)
+      network_interface_names = []
       # network_configurator contains service principal in azure_config so we must not log it.
       @logger.info("create(#{bosh_vm_meta}, #{location}, #{vm_props.inspect}, #{disk_cids}, ..., ...)")
 
@@ -108,7 +109,7 @@ module Bosh::AzureCloud
           primary_nic_tags = AZURE_TAGS.dup
           # Store the availability set name in the tags of the NIC
           primary_nic_tags['availability_set'] = availability_set_name unless availability_set_name.nil?
-          _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags)
+          _create_network_interfaces(resource_group_name, vm_name, location, vm_props, network_configurator, primary_nic_tags, network_interface_names: network_interface_names)
         end
       )
 
@@ -262,29 +263,10 @@ module Bosh::AzureCloud
           tasks.push(
             Concurrent::Future.execute do
               # Delete NICs
-              if network_interfaces
-                network_interfaces.each do |network_interface|
-                  retry_count = 0
-                  begin
-                    @azure_client.delete_network_interface(resource_group_name, network_interface[:name])
-                  rescue AzureError => delete_error
-                    retry_count += 1
-                    if (retry_count < 20) && (delete_error.message =~ /NicReservedForAnotherVm/)
-                      sleep 10
-                      retry
-                    end
-                    raise delete_error
-                  end
-                end
-              else
-                # If create_network_interfaces fails for some reason, some of the NICs are created and some are not.
-                # CPI need to cleanup these NICs.
-                _delete_possible_network_interfaces(resource_group_name, vm_name)
-              end
+              _delete_network_interfaces_by_name(resource_group_name, network_interface_names)
 
               # Delete the dynamic public IP
-              dynamic_public_ip = @azure_client.get_public_ip_by_name(resource_group_name, vm_name)
-              @azure_client.delete_public_ip(resource_group_name, vm_name) unless dynamic_public_ip.nil?
+              _delete_dynamic_public_ip(resource_group_name, vm_name)
             end
           )
 

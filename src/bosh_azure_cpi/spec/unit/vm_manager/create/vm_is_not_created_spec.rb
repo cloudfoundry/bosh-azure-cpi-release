@@ -17,6 +17,73 @@ describe Bosh::AzureCloud::VMManager do
     end
 
     context 'when VM is not created' do
+      context 'when preparation fails' do
+        before do
+          expect(azure_client).not_to receive(:list_network_interfaces_by_keyword)
+        end
+
+        it 'cleans up only the attempted NIC when a later security-group lookup fails' do
+          allow(vm_manager).to receive(:_get_network_security_group).and_call_original
+          allow(vm_manager).to receive(:_get_network_security_group).with(vm_props, dynamic_network)
+            .and_raise('security group lookup failed')
+          expect(azure_client).to receive(:create_network_interface)
+            .with(MOCK_RESOURCE_GROUP_NAME, hash_including(name: "#{vm_name}-0"))
+          expect(azure_client).not_to receive(:create_network_interface)
+            .with(MOCK_RESOURCE_GROUP_NAME, hash_including(name: "#{vm_name}-1"))
+          expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-0")
+          expect(azure_client).not_to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-1")
+
+          expect do
+            vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+          end.to raise_error(Bosh::Clouds::VMCreationFailed, /security group lookup failed/)
+        end
+
+        it 'retains attempted NIC names when the stemcell result raises first' do
+          allow(vm_manager).to receive(:_get_stemcell_info).and_raise('stemcell preparation failed')
+          expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-0")
+          expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-1")
+
+          expect do
+            vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+          end.to raise_error(Bosh::Clouds::VMCreationFailed, /stemcell preparation failed/)
+        end
+
+        it 'tracks one NIC for grouped networks even when its result lookup fails' do
+          allow(network_configurator).to receive(:nic_groups).and_return([[manual_network, dynamic_network]])
+          allow(azure_client).to receive(:get_network_interface_by_name).and_raise('NIC lookup failed')
+          expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-0")
+          expect(azure_client).not_to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-1")
+
+          expect do
+            vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
+          end.to raise_error(Bosh::Clouds::VMCreationFailed, /NIC lookup failed/)
+        end
+
+        it 'records names before scheduling and waits for started tasks when later validation fails' do
+          network_interface_names = []
+          nic_task = instance_double(Concurrent::Future)
+          task_count = 0
+          allow(Concurrent::Future).to receive(:execute).and_wrap_original do |original, &block|
+            task_count += 1
+            if task_count == 4
+              expect(network_interface_names).to eq(["#{vm_name}-0"])
+              nic_task
+            else
+              original.call(&block)
+            end
+          end
+          allow(vm_manager).to receive(:_get_network_security_group).and_call_original
+          allow(vm_manager).to receive(:_get_network_security_group).with(vm_props, dynamic_network)
+            .and_raise('security group lookup failed')
+          expect(nic_task).to receive(:wait)
+
+          expect do
+            vm_manager.send(:_create_network_interfaces, MOCK_RESOURCE_GROUP_NAME, vm_name, location, vm_props, network_configurator, network_interface_names: network_interface_names)
+          end.to raise_error(/security group lookup failed/)
+          expect(network_interface_names).to eq(["#{vm_name}-0"])
+        end
+      end
+
       context 'and azure_client.create_virtual_machine raises an normal error' do
         context 'and no more error occurs' do
           before do
@@ -99,7 +166,8 @@ describe Bosh::AzureCloud::VMManager do
             expect(disk_manager).to receive(:delete_disk).with(storage_account_name, ephemeral_disk_name).once
             expect(disk_manager).to receive(:delete_vm_status_files)
               .with(storage_account_name, vm_name).once
-            expect(azure_client).to receive(:delete_network_interface).once
+            expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-0").once
+            expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-1").once
 
             expect do
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
@@ -116,13 +184,14 @@ describe Bosh::AzureCloud::VMManager do
             allow(vm_manager).to receive(:sleep)
           end
 
-          it 'retries 20 times when the error is NicReservedForAnotherVm' do
+          it 'attempts each NIC deletion 20 times when the error is NicReservedForAnotherVm' do
             expect(azure_client).to receive(:delete_virtual_machine).once
             expect(disk_manager).to receive(:delete_disk).with(storage_account_name, os_disk_name).once
             expect(disk_manager).to receive(:delete_disk).with(storage_account_name, ephemeral_disk_name).once
             expect(disk_manager).to receive(:delete_vm_status_files)
               .with(storage_account_name, vm_name).once
-            expect(azure_client).to receive(:delete_network_interface).exactly(20).times
+            expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-0").exactly(20).times
+            expect(azure_client).to receive(:delete_network_interface).with(MOCK_RESOURCE_GROUP_NAME, "#{vm_name}-1").exactly(20).times
 
             expect do
               vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)

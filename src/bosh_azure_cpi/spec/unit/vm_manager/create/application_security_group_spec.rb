@@ -251,7 +251,7 @@ describe Bosh::AzureCloud::VMManager do
                   .with(MOCK_RESOURCE_GROUP_NAME, asg_name)
                   .and_return(nil)
                 expect(azure_client).not_to receive(:create_network_interface)
-                expect(azure_client).to receive(:list_network_interfaces_by_keyword).and_return([])
+                expect(azure_client).not_to receive(:list_network_interfaces_by_keyword)
                 expect(azure_client).not_to receive(:delete_network_interface)
                 expect do
                   vm_manager.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
