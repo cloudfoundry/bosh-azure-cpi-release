@@ -1528,7 +1528,7 @@ module Bosh::AzureCloud
       result = get_resources_by_url(url)
       unless result.nil?
         result['value'].each do |value|
-          load_balancer = _parse_load_balancer(value)
+          load_balancer = _parse_load_balancer(value, false)
           load_balancers << load_balancer
         end
       end
@@ -1559,7 +1559,7 @@ module Bosh::AzureCloud
     # @param [Hash] result - The load balancer's information.
     #
     # @return [Hash]
-    def _parse_load_balancer(result)
+    def _parse_load_balancer(result, full = true)
       load_balancer = {}
         load_balancer[:id] = result['id']
         load_balancer[:name] = result['name']
@@ -1578,7 +1578,11 @@ module Bosh::AzureCloud
           ip[:private_ip_allocation_method] = frontend_ip['properties']['privateIPAllocationMethod']
           ip[:private_ip_address_version]   = frontend_ip['properties']['privateIPAddressVersion'] unless frontend_ip['properties']['privateIPAddressVersion'].nil?
           ip[:private_ip]                   = frontend_ip['properties']['privateIPAddress'] unless frontend_ip['properties']['privateIPAddress'].nil?
-          ip[:public_ip]                    = get_public_ip(frontend_ip['properties']['publicIPAddress']['id']) unless frontend_ip['properties']['publicIPAddress'].nil?
+
+          if full
+            ip[:public_ip] = get_public_ip(frontend_ip['properties']['publicIPAddress']['id']) unless frontend_ip['properties']['publicIPAddress'].nil?
+          end
+
           ip[:inbound_nat_rules]            = frontend_ip['properties']['inboundNatRules']
           load_balancer[:frontend_ip_configurations].push(ip)
         end
