@@ -346,7 +346,7 @@ jobs:
         input_mapping:
           input_repo: bosh-cpi-src-in
         params:
-          PACKAGES: [azure-cpi-ruby-3.3]
+          PACKAGES: [azure-cpi-ruby-3.4]
         on_success:
           do:
             - put: release-notes
@@ -426,7 +426,7 @@ jobs:
         GEM_DIRS: src/bosh_azure_cpi
         GIT_USER_NAME: CI Bot
         GIT_USER_EMAIL: bots@cloudfoundry.org
-        PACKAGE: ruby-3.3
+        PACKAGE: ruby-3.4
         VENDOR: true
     - task: run-unit-specs
       file: bosh-cpi-src/ci/tasks/run-unit-specs.yml
@@ -455,7 +455,7 @@ jobs:
       params:
         GIT_USER_NAME: CI Bot
         GIT_USER_EMAIL: cf-bosh-eng@pivotal.io
-        PACKAGE: ruby-3.3
+        PACKAGE: ruby-3.4
         PACKAGE_PREFIX: azure-cpi
         PRIVATE_YML: |
           ---

@@ -12,6 +12,7 @@ gem 'jwt'
 gem 'deep_merge'
 gem 'net-smtp'
 gem 'ostruct'
+gem 'resolv-replace'
 gem 'syslog'
 
 group :development, :test do
