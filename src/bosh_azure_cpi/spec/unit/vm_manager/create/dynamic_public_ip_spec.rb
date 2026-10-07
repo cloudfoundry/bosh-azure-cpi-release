@@ -283,7 +283,7 @@ describe Bosh::AzureCloud::VMManager do
 
                 expect do
                   vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                end.to raise_error(/('fake-lb-name' does not have a backend_pool named 'invalid-pool-name': \{:name=>"fake-lb-name", :backend_address_pools=>\[\{:name=>"fake-pool-name", :id=>"fake-pool-id", ).*/)
+                end.to raise_error(/('fake-lb-name' does not have a backend_pool named 'invalid-pool-name': \{name: "fake-lb-name", backend_address_pools: \[\{name: "fake-pool-name", id: "fake-pool-id", ).*/)
               end
             end
           end
@@ -515,7 +515,7 @@ describe Bosh::AzureCloud::VMManager do
 
                 expect do
                   vm_manager_for_pip.create(bosh_vm_meta, location, vm_props, disk_cids, network_configurator, env, agent_util, network_spec, config)
-                end.to raise_error(/('fake-ag-name' does not have a backend_pool named 'invalid-pool-name': \{:name=>"fake-ag-name", :backend_address_pools=>\[\{:name=>"fake-pool-name", :id=>"fake-pool-id", ).*/)
+                end.to raise_error(/('fake-ag-name' does not have a backend_pool named 'invalid-pool-name': \{name: "fake-ag-name", backend_address_pools: \[\{name: "fake-pool-name", id: "fake-pool-id", ).*/)
               end
             end
           end
