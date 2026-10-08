@@ -502,9 +502,10 @@ resources:
   - name: bosh-integration-registry-image
     type: registry-image
     source:
-      repository: bosh/integration
-      username: ((docker.username))
-      password: ((docker.password))
+      repository: ghcr.io/cloudfoundry/bosh/integration
+      tag: main
+      username: ((github_read_write_packages.username))
+      password: ((github_read_write_packages.password))
 
   - name: bosh-cpi-src-in
     type: git
