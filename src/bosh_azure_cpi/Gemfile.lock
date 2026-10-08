@@ -26,6 +26,7 @@ GEM
       httpclient
       logger
       membrane
+    cgi (0.5.2)
     concurrent-ruby (1.3.8)
     connection_pool (3.0.2)
     crack (1.0.1)
@@ -163,6 +164,7 @@ DEPENDENCIES
   azure-storage-table (~> 2.0, >= 2.0.4)
   bosh_common
   bosh_cpi
+  cgi
   concurrent-ruby
   deep_merge
   jwt
