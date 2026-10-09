@@ -110,7 +110,7 @@ describe Bosh::AzureCloud::AzureClient do
   # Load Balancer
   let(:load_balancer_name) { 'fake-name' }
   let(:load_balancer_id) { "/subscriptions/#{subscription_id}/resourceGroups/#{default_resource_group_name}/providers/Microsoft.Network/loadBalancers/#{load_balancer_name}" }
-  let(:load_balancer_uri) { "https://management.azure.com#{load_balancer_id}?api-version=#{api_version_network}" }
+  let(:load_balancer_uri) { "https://management.azure.com#{load_balancer_id}?api-version=2024-05-01" }
   let(:load_balancer_response_body) do
     {
       'id' => 'fake-id',
@@ -166,7 +166,11 @@ describe Bosh::AzureCloud::AzureClient do
           name: 'fake-name',
           id: 'fake-id',
           provisioning_state: 'fake-state',
-          backend_ip_configurations: []
+          backend_ip_configurations: [],
+          properties: {
+            'provisioningState' => 'fake-state',
+            'backendIPConfigurations' => []
+          }
         }
       ]
     }
@@ -224,6 +228,7 @@ describe Bosh::AzureCloud::AzureClient do
       'tags' => 'fake-tags',
       'properties' => {
         'provisioningState' => 'fake-state',
+        'primary' => true,
         'dnsSettings' => {
           'dnsServers' => ['168.63.129.16']
         },
@@ -246,6 +251,7 @@ describe Bosh::AzureCloud::AzureClient do
       location: 'fake-location',
       tags: 'fake-tags',
       provisioning_state: 'fake-state',
+      primary: true,
       dns_settings: ['168.63.129.16'],
       ip_configuration_id: 'fake-id',
       ip_configurations: [{
@@ -765,6 +771,7 @@ describe Bosh::AzureCloud::AzureClient do
             'tags' => 'fake-tags',
             'properties' => {
               'provisioningState' => 'fake-state',
+              'primary' => true,
               'dnsSettings' => {
                 'dnsServers' => ['168.63.129.16']
               },
@@ -790,6 +797,7 @@ describe Bosh::AzureCloud::AzureClient do
             location: 'fake-location',
             tags: 'fake-tags',
             provisioning_state: 'fake-state',
+            primary: true,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
             ip_configurations: [{
@@ -838,6 +846,7 @@ describe Bosh::AzureCloud::AzureClient do
             'tags' => 'fake-tags',
             'properties' => {
               'provisioningState' => 'fake-state',
+              'primary' => true,
               'dnsSettings' => {
                 'dnsServers' => ['168.63.129.16']
               },
@@ -863,6 +872,7 @@ describe Bosh::AzureCloud::AzureClient do
             location: 'fake-location',
             tags: 'fake-tags',
             provisioning_state: 'fake-state',
+            primary: true,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
             ip_configurations: [{
@@ -912,6 +922,7 @@ describe Bosh::AzureCloud::AzureClient do
             'tags' => 'fake-tags',
             'properties' => {
               'provisioningState' => 'fake-state',
+              'primary' => true,
               'dnsSettings' => {
                 'dnsServers' => ['168.63.129.16']
               },
@@ -937,6 +948,7 @@ describe Bosh::AzureCloud::AzureClient do
             location: 'fake-location',
             tags: 'fake-tags',
             provisioning_state: 'fake-state',
+            primary: true,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
             ip_configurations: [{
@@ -980,6 +992,7 @@ describe Bosh::AzureCloud::AzureClient do
             'tags' => 'fake-tags',
             'properties' => {
               'provisioningState' => 'fake-state',
+              'primary' => true,
               'enableIPForwarding' => true,
               'dnsSettings' => {
                 'dnsServers' => ['168.63.129.16']
@@ -1003,6 +1016,7 @@ describe Bosh::AzureCloud::AzureClient do
             location: 'fake-location',
             tags: 'fake-tags',
             provisioning_state: 'fake-state',
+            primary: true,
             enable_ip_forwarding: true,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
@@ -1040,6 +1054,7 @@ describe Bosh::AzureCloud::AzureClient do
             'tags' => 'fake-tags',
             'properties' => {
               'provisioningState' => 'fake-state',
+              'primary' => true,
               'enableAcceleratedNetworking' => true,
               'dnsSettings' => {
                 'dnsServers' => ['168.63.129.16']
@@ -1063,6 +1078,7 @@ describe Bosh::AzureCloud::AzureClient do
             location: 'fake-location',
             tags: 'fake-tags',
             provisioning_state: 'fake-state',
+            primary: true,
             enable_accelerated_networking: true,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
@@ -1100,6 +1116,7 @@ describe Bosh::AzureCloud::AzureClient do
             'tags' => 'fake-tags',
             'properties' => {
               'provisioningState' => 'fake-state',
+              'primary' => true,
               'networkSecurityGroup' => {
                 'id' => nsg_id
               },
@@ -1125,6 +1142,7 @@ describe Bosh::AzureCloud::AzureClient do
             location: 'fake-location',
             tags: 'fake-tags',
             provisioning_state: 'fake-state',
+            primary: true,
             network_security_group: fake_nsg,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
@@ -1167,6 +1185,7 @@ describe Bosh::AzureCloud::AzureClient do
             'tags' => 'fake-tags',
             'properties' => {
               'provisioningState' => 'fake-state',
+              'primary' => true,
               'dnsSettings' => {
                 'dnsServers' => ['168.63.129.16']
               },
@@ -1192,6 +1211,7 @@ describe Bosh::AzureCloud::AzureClient do
             location: 'fake-location',
             tags: 'fake-tags',
             provisioning_state: 'fake-state',
+            primary: true,
             dns_settings: ['168.63.129.16'],
             ip_configuration_id: 'fake-id',
             ip_configurations: [{

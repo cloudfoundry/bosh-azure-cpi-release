@@ -68,6 +68,8 @@ describe Bosh::AzureCloud::VMManager do
 
       allow(azure_client).to receive(:list_network_interfaces_by_keyword)
         .with(resource_group_name, vm_name).and_return(network_interfaces)
+      allow(azure_client).to receive(:list_all_load_balancers)
+        .and_return([])
     end
 
     context 'When vm is not nil' do
@@ -87,8 +89,8 @@ describe Bosh::AzureCloud::VMManager do
         let(:vm) do
           {
             network_interfaces: [
-              { name: 'fake-nic-1' },
-              { name: 'fake-nic-2' }
+              { name: 'fake-nic-1', ip_configurations: [] },
+              { name: 'fake-nic-2', ip_configurations: [] }
             ]
           }
         end
@@ -127,8 +129,8 @@ describe Bosh::AzureCloud::VMManager do
             {
               availability_set: availability_set,
               network_interfaces: [
-                { name: 'fake-nic-1' },
-                { name: 'fake-nic-2' }
+                  { name: 'fake-nic-1', ip_configurations: [] },
+                  { name: 'fake-nic-2', ip_configurations: [] }
               ]
             }
           end
@@ -168,8 +170,8 @@ describe Bosh::AzureCloud::VMManager do
             {
               availability_set: availability_set,
               network_interfaces: [
-                { name: 'fake-nic-1' },
-                { name: 'fake-nic-2' }
+                  { name: 'fake-nic-1', ip_configurations: [] },
+                  { name: 'fake-nic-2', ip_configurations: [] }
               ]
             }
           end
@@ -335,8 +337,8 @@ describe Bosh::AzureCloud::VMManager do
       let(:vm) do
         {
           network_interfaces: [
-            { name: 'fake-nic-1' },
-            { name: 'fake-nic-2' }
+            { name: 'fake-nic-1', ip_configurations: [] },
+            { name: 'fake-nic-2', ip_configurations: [] }
           ]
         }
       end
