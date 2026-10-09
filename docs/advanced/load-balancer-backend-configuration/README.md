@@ -37,7 +37,7 @@ Before enabling `default_backend_pool_type: ip`, assign the built-in **Reader** 
 
 Keep **Virtual Machine Contributor** and **Network Contributor** scoped to the relevant resource groups as described in [service principal role assignments](../../get-started/create-service-principal.md). Subscription-wide write access is not required. The service principal can lack write access in unrelated resource groups, but must have backend-pool write permission wherever cleanup removes matching private-IP/virtual-network addresses. A custom read role limited to the actions above does not grant access to other resource types.
 
-Subscription-scoped permissions are inherited by resources in the subscription. The CPI does not skip authorization failures: if a required load-balancer or public-IP read is denied, cleanup fails before VM deletion. Resource-group-only read assignments are therefore insufficient, even if VM creation succeeds. This prerequisite also applies to existing VMs whose NICs have `used_by_load_balancer: "true"`; no additional NIC tags or tag migration are required. Do not remove that tag to bypass cleanup, as that leaves stale backend addresses.
+Subscription-scoped permissions are inherited by resources in the subscription. The CPI does not skip authorization failures: if a required load-balancer or public-IP read is denied, cleanup fails before VM deletion. Resource-group-only read assignments are therefore insufficient, even if VM creation succeeds. This prerequisite also applies to existing VMs whose NICs have `used_by_load_balancer: "true"`; those NICs need no tag changes. Existing NIC-based pool members must have this tag set to `"true"` before migration, as described below. Do not remove that tag to bypass cleanup, as that leaves stale backend addresses.
 
 ### Configuration
 
@@ -101,7 +101,8 @@ Changing `default_backend_pool_type` does not migrate an existing Azure backend 
 
 1. Record the load balancer name and every backend pool that you want to migrate.
 2. Back up the current load balancer configuration and plan for the operational impact of changing backend membership.
-3. Call the Azure `migrateToIpBased` operation with API version `2025-07-01`. The request body contains the pool names:
+3. Verify that the CPI has the [required permissions](#required-permissions). Before migrating, set the NIC resource tag `used_by_load_balancer` to the string `"true"` on every existing NIC assigned to the selected backend pools, including IPv6 pools. Preserve all other tags. The CPI only scans NICs tagged `"true"` during IP-based backend cleanup; a missing tag or `"false"` skips cleanup. Without this backfill, migrated IP entries can survive deletion of the old VM during recreation. Use the [Azure CLI example](#tag-existing-backend-nics-with-azure-cli) below and verify the tags before continuing.
+4. Call the Azure `migrateToIpBased` operation with API version `2025-07-01`. The request body contains the pool names:
 
 ```http
 POST https://management.azure.com/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Network/loadBalancers/<load-balancer-name>/migrateToIpBased?api-version=2025-07-01
@@ -114,11 +115,64 @@ Content-Type: application/json
 }
 ```
 
-4. Confirm that Azure reports the expected pools in `migratedPools` and verify that existing backend addresses and load-balancing rules still operate as expected.
-5. Set `default_backend_pool_type: ip` for each migrated pool in the BOSH cloud configuration.
-6. Run `bosh update-cloud-config` and recreate or redeploy the affected instances. Newly created VMs are registered in the pools by private IP.
+5. Confirm that Azure reports the expected pools in `migratedPools` and verify that existing backend addresses and load-balancing rules still operate as expected.
+6. Set `default_backend_pool_type: ip` for each migrated pool in the BOSH cloud configuration.
+7. Run `bosh update-cloud-config` and recreate or redeploy the affected instances. Newly created VMs are registered in the pools by private IP.
 
 For the complete request contract and current Azure requirements, see [Migrate Load Balancer backend pools to IP-based membership](https://learn.microsoft.com/en-us/rest/api/load-balancer/load-balancers/migrate-to-ip-based?view=rest-load-balancer-2025-07-01&tabs=HTTP).
 
 Do not set `default_backend_pool_type: ip` before the Azure pool is IP-based. Also do not use the setting to describe a NIC-based pool as IP-based; it controls how the CPI registers new VMs and is not a migration command.
+
+### Tag existing backend NICs with Azure CLI
+
+Run this Bash example **before** migrating the pools, while their `backendIpConfigurations` still identify the member NICs. Sign in to Azure CLI, replace the subscription, resource group, load balancer, and pool names, and include every pool being migrated. Keep backend membership stable until tagging and migration finish. Repeat for each load balancer. The operator needs permission to read the pools and NICs and update NIC tags, including NICs in other resource groups.
+
+The script collects members of only the selected pools, deduplicates NIC resource IDs across pools and IP configurations, and uses `Merge` to preserve other tags. It is safe to rerun and replaces an existing `used_by_load_balancer` value of `"false"` with `"true"`. Any failed command or verification stops the script; do not proceed to migration until it succeeds.
+
+```bash
+set -euo pipefail
+
+subscription_id='<subscription-id>'
+resource_group='<load-balancer-resource-group>'
+load_balancer_name='cf-load-balancer'
+pool_names=('router-pool')
+nic_ids=()
+
+for pool_name in "${pool_names[@]}"; do
+  ip_config_ids=$(az network lb address-pool show \
+    --subscription "$subscription_id" \
+    --resource-group "$resource_group" \
+    --lb-name "$load_balancer_name" \
+    --name "$pool_name" \
+    --query 'backendIpConfigurations[].id' --output tsv)
+
+  while IFS= read -r ip_config_id; do
+    [[ -n "$ip_config_id" ]] || continue
+    nic_ids+=("${ip_config_id%/*/*}")
+  done <<< "$ip_config_ids"
+done
+
+if [[ ${#nic_ids[@]} -eq 0 ]]; then
+  printf 'No NIC members found. Verify the selected pools and migration state.\n' >&2
+  exit 1
+fi
+
+unique_nic_ids=$(printf '%s\n' "${nic_ids[@]}" | sort -u)
+while IFS= read -r nic_id; do
+  printf 'Tagging %s\n' "$nic_id"
+  az tag update --resource-id "$nic_id" \
+    --operation Merge --tags used_by_load_balancer=true --output none
+
+  tag_value=$(az network nic show --ids "$nic_id" \
+    --query 'tags.used_by_load_balancer' --output tsv)
+  if [[ "$tag_value" != 'true' ]]; then
+    printf 'Tag verification failed for %s\n' "$nic_id" >&2
+    exit 1
+  fi
+done <<< "$unique_nic_ids"
+```
+
+If a pool has already been migrated, this discovery method may no longer return its original NIC members. Identify those NICs from the pre-migration configuration backup and current VM/NIC inventory, then merge and verify the same tag before deleting or recreating the VMs. Tagging replacement NICs alone does not protect cleanup of the old VMs.
+
+CLI references: [Show a backend pool](https://learn.microsoft.com/en-us/cli/azure/network/lb/address-pool#az-network-lb-address-pool-show), [Merge resource tags](https://learn.microsoft.com/en-us/cli/azure/tag#az-tag-update), and [Show a NIC](https://learn.microsoft.com/en-us/cli/azure/network/nic#az-network-nic-show).
 
