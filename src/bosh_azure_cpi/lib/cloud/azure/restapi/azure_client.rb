@@ -132,6 +132,15 @@ module Bosh::AzureCloud
       url
     end
 
+    def rest_api_url_without_resource_group(resource_provider, resource_type, name: nil, others: nil)
+      url = "/subscriptions/#{uri_escape(@azure_config.subscription_id)}"
+      url += "/providers/#{resource_provider}"
+      url += "/#{resource_type}"
+      url += "/#{uri_escape(name)}" unless name.nil?
+      url += "/#{uri_escape(others)}" unless others.nil?
+      url
+    end
+
     # get single resource
     # example: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/networkInterfaces/{networkInterfaceName}
     def get_resource_by_id(url, params = {})
@@ -814,13 +823,8 @@ module Bosh::AzureCloud
 
         vm[:network_interfaces] = []
         properties['networkProfile']['networkInterfaces'].each do |nic_properties|
-          if extend_resources
-            vm[:network_interfaces].push(get_network_interface(nic_properties['id']))
-          else
-            interface = {}
-            interface[:id] = nic_properties['id']
-            vm[:network_interfaces].push(interface)
-          end
+          nic_resource = get_resource_by_id(nic_properties['id'])
+          vm[:network_interfaces].push(parse_network_interface(nic_resource, recursive: extend_resources))
         end
 
         boot_diagnostics = properties.fetch('diagnosticsProfile', {}).fetch('bootDiagnostics', {})
@@ -1511,6 +1515,15 @@ module Bosh::AzureCloud
 
     # Network/Load Balancer
 
+
+    # List all load balancers within a specified subscription
+    #
+    # @See https://learn.microsoft.com/en-us/rest/api/load-balancer/load-balancers/list-all?view=rest-load-balancer-2025-07-01&tabs=HTTP
+    def list_all_load_balancers()
+      url = rest_api_url_without_resource_group(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS)
+      _get_load_balancers(url)
+    end
+
     # Get a load balancer's information
     # @param [String,nil] resource_group_name - The load balancer's resource group name.
     # @param [String] name - Name of load balancer.
@@ -1524,8 +1537,26 @@ module Bosh::AzureCloud
       _get_load_balancer(url)
     end
 
+    # Get the complete list of all available load balancers within a specified subscription
+    # @param [String] url - URL of load balancers.
+    #
+    # @return [Array]
+    def _get_load_balancers(url)
+      load_balancers = []
+      result = get_resources_by_url(url)
+      unless result.nil?
+        result['value'].each do |value|
+          load_balancer = _parse_load_balancer(value, false)
+          load_balancers << load_balancer
+        end
+      end
+
+      load_balancers
+    end
+
     # Get a load balancer's information
     # @param [String] url - URL of load balancer.
+    # @param [String] backend_pool_type - Type of backend pool.
     #
     # @return [Hash]
     #
@@ -1536,7 +1567,18 @@ module Bosh::AzureCloud
       # see: https://docs.microsoft.com/en-us/rest/api/load-balancer/load-balancers/get#loadbalancer
       result = get_resource_by_id(url)
       unless result.nil?
-        load_balancer = {}
+        load_balancer = _parse_load_balancer(result)
+      end
+
+      load_balancer
+    end
+
+    # Parse a load balancer's information
+    # @param [Hash] result - The load balancer's information.
+    #
+    # @return [Hash]
+    def _parse_load_balancer(result, full = true)
+      load_balancer = {}
         load_balancer[:id] = result['id']
         load_balancer[:name] = result['name']
         load_balancer[:location] = result['location']
@@ -1554,7 +1596,11 @@ module Bosh::AzureCloud
           ip[:private_ip_allocation_method] = frontend_ip['properties']['privateIPAllocationMethod']
           ip[:private_ip_address_version]   = frontend_ip['properties']['privateIPAddressVersion'] unless frontend_ip['properties']['privateIPAddressVersion'].nil?
           ip[:private_ip]                   = frontend_ip['properties']['privateIPAddress'] unless frontend_ip['properties']['privateIPAddress'].nil?
-          ip[:public_ip]                    = get_public_ip(frontend_ip['properties']['publicIPAddress']['id']) unless frontend_ip['properties']['publicIPAddress'].nil?
+
+          if full
+            ip[:public_ip] = get_public_ip(frontend_ip['properties']['publicIPAddress']['id']) unless frontend_ip['properties']['publicIPAddress'].nil?
+          end
+
           ip[:inbound_nat_rules]            = frontend_ip['properties']['inboundNatRules']
           load_balancer[:frontend_ip_configurations].push(ip)
         end
@@ -1568,9 +1614,14 @@ module Bosh::AzureCloud
           ip[:id]                           = backend_ip['id']
           ip[:provisioning_state]           = backend_ip['properties']['provisioningState']
           ip[:backend_ip_configurations]    = backend_ip['properties']['backendIPConfigurations']
+          ip[:load_balancer_backend_addresses] = backend_ip['properties']['loadBalancerBackendAddresses'] unless backend_ip['properties']['loadBalancerBackendAddresses'].nil?
+
+          # Keep the original properties for future use, as some properties may not be parsed here.
+          ip[:properties] = backend_ip['properties']
+
           load_balancer[:backend_address_pools].push(ip)
         end
-      end
+
       load_balancer
     end
 
@@ -1703,6 +1754,25 @@ module Bosh::AzureCloud
     def get_virtual_network_by_name(resource_group_name, vnet_name)
       url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_VIRTUAL_NETWORKS, resource_group_name: resource_group_name, name: vnet_name)
       get_virtual_network(url)
+    end
+
+    # Update a load balancer backend pool
+    # @param [String] resource_group_name - Name of the resource group.
+    # @param [String] load_balancer_name - Name of the load balancer.
+    # @param [String] load_balancer_backend_pool_name - Name of the backend pool.
+    # @param [Array<Hash>] backend_addresses - Array of backend addresses to add to the backend pool.
+    # @return [Boolean]
+    # @See https://learn.microsoft.com/en-us/rest/api/load-balancer/load-balancer-backend-address-pools/create-or-update
+    def update_load_balancer_backend_pool(resource_group_name, load_balancer_name, load_balancer_backend_pool_name, backend_addresses)
+      unless load_balancer_name.nil? || load_balancer_backend_pool_name.nil? || backend_addresses.nil?
+      properties = {}
+        properties[:loadBalancerBackendAddresses] = []
+        properties[:loadBalancerBackendAddresses].concat(backend_addresses)
+
+        #PUT https://management.azure.com/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/loadBalancers/{lbName}/backendAddressPools/{poolName}?api-version=2023-09-01
+        url = rest_api_url(REST_API_PROVIDER_NETWORK, REST_API_LOAD_BALANCERS, resource_group_name: resource_group_name, name: load_balancer_name, others: "backendAddressPools/#{load_balancer_backend_pool_name}")
+        http_put(url, { properties: properties }, { 'api-version' => '2025-07-01' })
+      end
     end
 
     # Get a virutal network's information
@@ -2513,6 +2583,7 @@ module Bosh::AzureCloud
           backend_pools = nic_params[:load_balancers]
                           .map { |lb| lb[version_key] }
                           .compact
+                          .map { |pools| pools.reject { |pool| pool[:backend_address_pools_type] == LOAD_BALANCER_BACKEND_POOL_TYPE_IP } }
                           .reject(&:empty?)
                           .map { |pools| { 'id' => pools[0][:id] } }
           config_properties['loadBalancerBackendAddressPools'] = backend_pools unless backend_pools.empty?
@@ -2574,6 +2645,8 @@ module Bosh::AzureCloud
 
         interface[:enable_ip_forwarding] = properties['enableIPForwarding'] unless properties['enableIPForwarding'].nil?
 
+        interface[:primary] = properties['primary']
+
         interface[:enable_accelerated_networking] = properties['enableAcceleratedNetworking'] unless properties['enableAcceleratedNetworking'].nil?
 
         unless properties['networkSecurityGroup'].nil?
@@ -2624,6 +2697,12 @@ module Bosh::AzureCloud
                              else
                                { id: props['publicIPAddress']['id'] }
                              end
+      end
+
+      subnet = props['subnet']
+      unless subnet.nil?
+        config[:subnet] = {}
+        config[:subnet][:id] = subnet['id']
       end
 
       lb_backend_pools = props['loadBalancerBackendAddressPools']

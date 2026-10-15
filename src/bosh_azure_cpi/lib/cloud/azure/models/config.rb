@@ -3,17 +3,18 @@
 module Bosh::AzureCloud
   # TODO: Refactoring: Move class to new file: LoadBalancerConfig
   class LoadBalancerConfig
-    attr_reader :name, :resource_group_name, :backend_pool_name, :backend_pool_name_v6
+    attr_reader :name, :resource_group_name, :backend_pool_name, :backend_pool_name_v6, :default_backend_pool_type
 
-    def initialize(resource_group_name, name, backend_pool_name = nil, backend_pool_name_v6 = nil)
+    def initialize(resource_group_name, name, backend_pool_name = nil, backend_pool_name_v6 = nil, default_backend_pool_type = Helpers::LOAD_BALANCER_BACKEND_POOL_TYPE_NIC)
       @resource_group_name = resource_group_name
       @name = name
       @backend_pool_name = backend_pool_name
       @backend_pool_name_v6 = backend_pool_name_v6
+      @default_backend_pool_type = default_backend_pool_type
     end
 
     def to_s
-      "name: #{@name}, resource_group_name: #{@resource_group_name}, backend_pool_name: #{@backend_pool_name}, backend_pool_name_v6: #{@backend_pool_name_v6}"
+      "name: #{@name}, resource_group_name: #{@resource_group_name}, backend_pool_name: #{@backend_pool_name}, backend_pool_name_v6: #{@backend_pool_name_v6}, default_backend_pool_type: #{@default_backend_pool_type}"
     end
   end
 

@@ -66,6 +66,7 @@ describe Bosh::AzureCloud::AzureClient do
               'tags' => {},
               'properties' => {
                 'provisioningState' => 'c',
+                'primary' => true,
                 'ipConfigurations' => [
                   {
                     'id' => 'd0',
@@ -111,6 +112,7 @@ describe Bosh::AzureCloud::AzureClient do
               'tags' => {},
               'properties' => {
                 'provisioningState' => 'c',
+                'primary' => false,
                 'ipConfigurations' => [
                   {
                     'id' => 'd1',
@@ -135,6 +137,7 @@ describe Bosh::AzureCloud::AzureClient do
               'tags' => {},
               'properties' => {
                 'provisioningState' => 'c',
+                'primary' => false,
                 'ipConfigurations' => [
                   {
                     'id' => 'd2',
@@ -162,6 +165,7 @@ describe Bosh::AzureCloud::AzureClient do
           location: 'b',
           tags: {},
           provisioning_state: 'c',
+          primary: true,
           dns_settings: %w[g h],
           ip_configuration_id: 'd0',
           ip_configurations: [
@@ -194,6 +198,7 @@ describe Bosh::AzureCloud::AzureClient do
           location: 'b',
           tags: {},
           provisioning_state: 'c',
+          primary: false,
           dns_settings: %w[g h],
           ip_configuration_id: 'd1',
           ip_configurations: [
