@@ -13,7 +13,6 @@ module Bosh::AzureCloud
       azure_storage_client = initialize_azure_storage_client(storage_account, azure_config)
       @table_service_client = Azure::Storage::Table::TableService.new(client: azure_storage_client)
       @table_service_client.with_filter(Azure::Storage::Common::Core::Filter::ExponentialRetryPolicyFilter.new)
-      @table_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(azure_config)
     end
 
     def has_table?(table_name)

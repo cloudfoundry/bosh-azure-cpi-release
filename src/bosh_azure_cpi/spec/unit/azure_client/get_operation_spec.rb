@@ -2458,7 +2458,7 @@ describe Bosh::AzureCloud::AzureClient do
           )
         end
 
-        it 'should return keys and log keys' do
+        it 'should return keys without logging them in debug mode' do
           stub_request(:post, storage_account_list_keys_uri).to_return(
             status: 200,
             body: storage_account_list_keys_response_body,
@@ -2470,8 +2470,8 @@ describe Bosh::AzureCloud::AzureClient do
           ).to eq(fake_keys)
 
           logs = logger_strio.string
-          expect(logs.include?('fake-key-1')).to be(true)
-          expect(logs.include?('fake-key-2')).to be(true)
+          expect(logs.include?('fake-key-1')).to be(false)
+          expect(logs.include?('fake-key-2')).to be(false)
         end
       end
     end

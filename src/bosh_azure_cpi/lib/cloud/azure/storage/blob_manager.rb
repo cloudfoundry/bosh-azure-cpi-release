@@ -314,7 +314,7 @@ module Bosh::AzureCloud
       @logger.info("_upload_page_blob_in_threads Duration: #{duration.inspect}")
     end
 
-    def _initialize_blob_client(storage_account_name, disable_debug_mode = false)
+    def _initialize_blob_client(storage_account_name, _disable_debug_mode = false)
       @blob_client_mutex.synchronize do
         unless @storage_accounts.key?(storage_account_name)
           storage_account = @azure_client.get_storage_account_by_name(storage_account_name)
@@ -326,7 +326,6 @@ module Bosh::AzureCloud
         @azure_storage_client = initialize_azure_storage_client(@storage_accounts[storage_account_name], @azure_config)
         @blob_service_client = Azure::Storage::Blob::BlobService.new(client: @azure_storage_client)
         @blob_service_client.with_filter(CustomizedRetryPolicyFilter.new)
-        @blob_service_client.with_filter(Azure::Core::Http::DebugFilter.new) if is_debug_mode(@azure_config) && !disable_debug_mode
         yield
       end
     end

@@ -67,6 +67,8 @@ describe Bosh::AzureCloud::AzureClient do
       end
 
       context 'when the client_secret is not provided' do
+        let(:logger_strio) { StringIO.new }
+        let(:logger) { Logger.new(logger_strio) }
         let(:azure_config_without_client_secret) do
           properties = mock_cloud_options['properties']['azure'].clone
           properties.delete('client_secret')
@@ -144,6 +146,9 @@ describe Bosh::AzureCloud::AzureClient do
           expect(
             azure_client.get_resource_by_id(url, 'api-version' => api_version)
           ).not_to be_nil
+          expect(logger_strio.string).not_to include(jwt_assertion)
+          expect(logger_strio.string).not_to include(valid_access_token)
+          expect(logger_strio.string).to include('<redacted>')
         end
       end
 

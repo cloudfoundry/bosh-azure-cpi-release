@@ -107,7 +107,7 @@ module Bosh::AzureCloud
     REST_API_USER_ASSIGNED_IDENTITIES    = 'userAssignedIdentities'
 
     # Please add the key into this list if you want to redact its value in request body.
-    CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret customData].freeze
+    CREDENTIAL_KEYWORD_LIST = %w[adminPassword client_secret client_assertion access_token refresh_token customData].freeze
 
     CACHE_DIR = '/var/vcap/sys/run/azure_cpi'.freeze
     CACHE_SUBDIR = 'cache'.freeze
@@ -2809,7 +2809,7 @@ module Bosh::AzureCloud
 
     # @return [Boolean]
     def filter_credential_in_logs(uri)
-      return true if !is_debug_mode(@azure_config) && uri.request_uri.include?('/listKeys')
+      return true if uri.request_uri.include?('/listKeys')
 
       false
     end
@@ -2826,12 +2826,12 @@ module Bosh::AzureCloud
 
     # @return [String]
     def redact_credentials_in_request_body(body)
-      is_debug_mode(@azure_config) ? body.to_json : redact_credentials(CREDENTIAL_KEYWORD_LIST, body).to_json
+      redact_credentials(CREDENTIAL_KEYWORD_LIST, body).to_json
     end
 
     # @return [Object]
     def redact_credentials_in_response_body(body)
-      is_debug_mode(@azure_config) ? body : redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body)).to_json
+      redact_credentials(CREDENTIAL_KEYWORD_LIST, JSON.parse(body)).to_json
     rescue StandardError
       body
     end
@@ -2847,7 +2847,6 @@ module Bosh::AzureCloud
       # The default value for read_timeout is 60 seconds.
       # The default value for open_timeout is nil before ruby 2.3.0 so set it to 60 seconds here.
       http.open_timeout = 60
-      http.set_debug_output($stdout) if is_debug_mode(@azure_config)
       http
     end
 

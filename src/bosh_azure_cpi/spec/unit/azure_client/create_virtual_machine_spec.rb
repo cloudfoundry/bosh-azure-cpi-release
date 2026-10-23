@@ -1538,7 +1538,7 @@ describe Bosh::AzureCloud::AzureClient do
           end
         end
 
-        context 'do not redact credentials in logs' do
+        context 'redact credentials even in debug mode' do
           let(:azure_client) do
             Bosh::AzureCloud::AzureClient.new(
               mock_azure_config_merge('debug_mode' => true),
@@ -1572,9 +1572,9 @@ describe Bosh::AzureCloud::AzureClient do
             end.not_to raise_error
 
             logs = logger_strio.string
-            expect(logs.include?(windows_password)).to be(true)
-            expect(logs.include?(MOCK_AZURE_CLIENT_SECRET)).to be(true)
-            expect(logs.include?('<redacted>')).to be(false)
+            expect(logs.include?(windows_password)).to be(false)
+            expect(logs.include?(MOCK_AZURE_CLIENT_SECRET)).to be(false)
+            expect(logs.include?('<redacted>')).to be(true)
           end
         end
       end
