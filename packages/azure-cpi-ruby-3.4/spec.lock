@@ -1,4 +1,4 @@
 name: azure-cpi-ruby-3.4
-fingerprint: efc99bbb5a7d343371bbd0209c21b744a323f80fcc9451934884fccb9b31c8c8
+fingerprint: e7594fcd1fe240ff648d8630406bc73adb1348447a195c6e11f441f3ba245740
 dependencies:
 - azure-cpi-rust-1-linux
