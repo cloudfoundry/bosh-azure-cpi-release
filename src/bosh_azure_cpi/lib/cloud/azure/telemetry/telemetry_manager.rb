@@ -10,7 +10,8 @@ module Bosh::AzureCloud
 
     def initialize(azure_config)
       @azure_config = azure_config
-      @logger = Bosh::Cpi::Logger.new(CPI_TELEMETRY_LOG_FILE)
+      ensure_private_directory(CPI_LOCK_DIR)
+      @logger = Bosh::Cpi::Logger.new(open_private_file(CPI_TELEMETRY_LOG_FILE, File::WRONLY | File::CREAT | File::APPEND))
     end
 
     # Monitor the status of a block
@@ -75,25 +76,20 @@ module Bosh::AzureCloud
     private
 
     def _report_event(event)
-      filename = "/tmp/cpi-event-#{SecureRandom.uuid}.tld"
-      File.open(filename, 'w') do |file|
+      ensure_private_directory(CPI_EVENTS_DIR)
+      Tempfile.create(['cpi-event-', '.pending'], CPI_EVENTS_DIR) do |file|
         file.write(event.to_json)
+        file.flush
+        File.rename(file.path, file.path.sub(/\.pending\z/, '.tld'))
       end
-      FileUtils.mkdir_p(CPI_EVENTS_DIR)
-      _, stderr, status = Open3.capture3("mv #{filename} #{CPI_EVENTS_DIR}")
-      if status != 0
-        @logger.warn("[Telemetry] Failed to move '#{filename}' to '#{CPI_EVENTS_DIR}', error: #{stderr}")
-      else
-        # trigger event handler to send the event in a different process
+      # Trigger the event handler only after the complete event is published.
+      fork do
+        Process.setsid
+        STDIN.reopen('/dev/null')
+        STDOUT.reopen('/dev/null')
+        STDERR.reopen(STDOUT)
         fork do
-          # create a new session and re-fork to make sure that exit of parent process won't kill the sub process.
-          Process.setsid
-          STDIN.reopen('/dev/null')
-          STDOUT.reopen('/dev/null')
-          STDERR.reopen(STDOUT)
-          fork do
-            Bosh::AzureCloud::TelemetryEventHandler.new(@logger).collect_and_send_events
-          end
+          Bosh::AzureCloud::TelemetryEventHandler.new(@logger).collect_and_send_events
         end
       end
     rescue StandardError => e

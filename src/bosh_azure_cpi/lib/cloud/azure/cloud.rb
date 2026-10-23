@@ -852,7 +852,7 @@ module Bosh::AzureCloud
 
     def _init_cpi_lock_dir
       @logger.info('_init_cpi_lock_dir: Initializing the CPI lock directory')
-      FileUtils.mkdir_p(CPI_LOCK_DIR)
+      ensure_private_directory(CPI_LOCK_DIR)
     end
 
     def _create_vm_response(instance_id, networks)

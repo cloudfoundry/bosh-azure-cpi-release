@@ -199,9 +199,9 @@ module Bosh::AzureCloud
     AVAILABILITY_ZONES = %w[1 2 3].freeze
 
     # Telemetry
-    CPI_EVENTS_DIR                        = '/tmp/azure_cpi_events'
-    CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP = '/tmp/azure_cpi_events_last_update'
-    CPI_TELEMETRY_LOG_FILE                = '/tmp/azure_cpi_telemetry.log'
+    CPI_EVENTS_DIR                        = File.join(CPI_LOCK_DIR, 'events')
+    CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP = File.join(CPI_LOCK_DIR, 'events_last_update')
+    CPI_TELEMETRY_LOG_FILE                = File.join(CPI_LOCK_DIR, 'telemetry.log')
 
     ##
     # Raises CloudError exception
@@ -604,16 +604,51 @@ module Bosh::AzureCloud
     # @param [Constants] mode     - lock mode, a logical 'or' of the values in LOCK_EX, LOCK_NB, LOCK_SH. See detail in http://ruby-doc.org/core-2.4.2/File.html#method-i-flock
     # @return - return value of the block
     #
+    def ensure_private_directory(path)
+      begin
+        Dir.mkdir(path, 0o700)
+      rescue Errno::EEXIST
+        # Existing directories are shared between CPI processes.
+      end
+      stat = File.lstat(path)
+      unless stat.directory? && stat.uid == Process.euid && (stat.mode & 0o022).zero?
+        cloud_error("Unsafe CPI state directory: #{path}")
+      end
+      File.chmod(0o700, path)
+      path
+    end
+
+    def open_private_file(path, flags)
+      file = File.open(path, flags | File::NOFOLLOW, 0o600)
+      stat = file.stat
+      unless stat.file? && stat.uid == Process.euid && stat.nlink == 1
+        cloud_error("Unsafe CPI state file: #{path}")
+      end
+      file.chmod(0o600)
+      file
+    rescue StandardError
+      file.close if file && !file.closed?
+      raise
+    end
+
     def flock(lock_name, mode)
-      file_path = "#{CPI_LOCK_DIR}/#{lock_name}"
-      file = File.open(file_path, File::RDWR | File::CREAT, 0o644)
-      success = file.flock(mode)
-      if success
-        begin
-          return yield
-        ensure
-          file.flock(File::LOCK_UN)
+      unless lock_name.is_a?(String) && !lock_name.empty? && !['.', '..'].include?(lock_name) && !lock_name.match?(%r{[/\\\x00]})
+        cloud_error('Invalid CPI lock name')
+      end
+      ensure_private_directory(CPI_LOCK_DIR)
+      file_path = File.join(CPI_LOCK_DIR, lock_name)
+      file = open_private_file(file_path, File::RDWR | File::CREAT)
+      begin
+        success = file.flock(mode)
+        if success
+          begin
+            return yield
+          ensure
+            file.flock(File::LOCK_UN)
+          end
         end
+      ensure
+        file.close
       end
     end
 

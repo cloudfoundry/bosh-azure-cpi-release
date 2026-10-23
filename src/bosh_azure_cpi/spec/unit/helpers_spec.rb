@@ -902,6 +902,9 @@ describe Bosh::AzureCloud::Helpers do
 
       before do
         allow(File).to receive(:open).and_return(file)
+        allow(file).to receive(:stat).and_return(instance_double(File::Stat, file?: true, uid: Process.euid, nlink: 1))
+        allow(file).to receive(:chmod).with(0o600)
+        allow(file).to receive(:close)
         allow(file).to receive(:flock).with(mode).and_return(lock_result)
       end
 
@@ -923,6 +926,9 @@ describe Bosh::AzureCloud::Helpers do
 
       before do
         allow(File).to receive(:open).and_return(file)
+        allow(file).to receive(:stat).and_return(instance_double(File::Stat, file?: true, uid: Process.euid, nlink: 1))
+        allow(file).to receive(:chmod).with(0o600)
+        allow(file).to receive(:close)
         allow(file).to receive(:flock).with(mode).and_return(lock_result)
       end
 

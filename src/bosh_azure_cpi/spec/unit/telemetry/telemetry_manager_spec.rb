@@ -219,9 +219,6 @@ describe Bosh::AzureCloud::TelemetryManager do
       end
 
       it 'should collect and sent events' do
-        expect(File).to receive(:open).and_call_original do |file|
-          expect(file).to receive(:write)
-        end
         expect(event_handler).to receive(:collect_and_send_events)
         expect(telemetry_manager).to receive(:fork).and_yield.twice
 
@@ -232,17 +229,12 @@ describe Bosh::AzureCloud::TelemetryManager do
     end
 
     context 'when it fails to move event file to CPI_EVENTS_DIR' do
-      let(:err_status) { 1 }
-
       before do
-        allow(Open3).to receive(:capture3).and_return(['fake-stdout', 'fake-stderr', err_status])
+        allow(File).to receive(:rename).and_raise(IOError, 'fake-stderr')
         allow(telemetry_event).to receive(:to_json).and_return('fake-event')
       end
 
       it 'should log the error and drop it silently' do
-        expect(File).to receive(:open).and_call_original do |file|
-          expect(file).to receive(:write)
-        end
         expect(logger).to receive(:warn).with(/fake-stderr/)
         expect(Bosh::AzureCloud::TelemetryEventHandler).not_to receive(:new)
 
@@ -254,7 +246,7 @@ describe Bosh::AzureCloud::TelemetryManager do
 
     context 'when exception is caught' do
       before do
-        allow(File).to receive(:open).and_raise 'failed to open file'
+        allow(Tempfile).to receive(:create).and_raise 'failed to open file'
       end
 
       it 'should log the error and drop the exception silently' do

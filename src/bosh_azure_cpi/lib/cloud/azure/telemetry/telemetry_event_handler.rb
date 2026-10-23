@@ -8,7 +8,8 @@ module Bosh::AzureCloud
 
     def initialize(logger, events_dir = CPI_EVENTS_DIR)
       @logger = logger
-      @events_dir = events_dir
+      ensure_private_directory(CPI_LOCK_DIR)
+      @events_dir = ensure_private_directory(events_dir)
       @wire_client = Bosh::AzureCloud::WireClient.new(logger)
     end
 
@@ -55,7 +56,12 @@ module Bosh::AzureCloud
       event_files = Dir["#{@events_dir}/*.tld"]
       event_files = event_files[0...max] if event_files.length > max
       event_files.each do |file|
-        hash = JSON.parse(File.read(file))
+        handle = open_private_file(file, File::RDONLY)
+        begin
+          hash = JSON.parse(handle.read)
+        ensure
+          handle.close
+        end
         event_list << Bosh::AzureCloud::TelemetryEvent.parse_hash(hash)
       rescue StandardError => e
         @logger.warn("[Telemetry] Failed to collect event from '#{file}'. Error:\n#{e.inspect}\n#{e.backtrace.join("\n")}")
@@ -79,14 +85,23 @@ module Bosh::AzureCloud
     #
     def get_last_post_timestamp
       ignore_exception do
-        Time.parse(File.read(CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP))
+        handle = open_private_file(CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP, File::RDONLY)
+        begin
+          Time.parse(handle.read)
+        ensure
+          handle.close
+        end
       end
     end
 
     # Record the time of last post in a file
     def update_last_post_timestamp(time)
-      File.open(CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP, 'w') do |file|
+      file = open_private_file(CPI_EVENT_HANDLER_LAST_POST_TIMESTAMP, File::WRONLY | File::CREAT)
+      begin
+        file.truncate(0)
         file.write(time.to_s)
+      ensure
+        file.close
       end
     end
   end
