@@ -1,7 +1,7 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    addressable (2.9.0)
+    addressable (2.9.1)
       public_suffix (>= 2.0.2, < 8.0)
     ast (2.4.3)
     azure-storage-blob (2.0.3)
@@ -60,7 +60,7 @@ GEM
     faraday_middleware (1.2.1)
       faraday (~> 1.0)
     hashdiff (1.2.1)
-    httpclient (2.9.0)
+    httpclient (2.10.0)
       mutex_m
     json (3.1.0)
     jwt (3.3.0)
@@ -121,7 +121,7 @@ GEM
     rspec-retry (0.6.2)
       rspec-core (> 3.3)
     rspec-support (3.13.7)
-    rubocop (1.92.1)
+    rubocop (1.92.2)
       json (>= 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
