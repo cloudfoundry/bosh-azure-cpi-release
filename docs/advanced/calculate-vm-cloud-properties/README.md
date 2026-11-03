@@ -63,7 +63,7 @@ The returned Azure specific cloud properites contain two parts: `instance_type` 
 
 1. When the VM is created, CPI filters the calculated VM sizes using the stemcell architecture and Azure's `CpuArchitectureType` capability. Stemcells without architecture metadata and legacy VM sizes without this capability are treated as x64. Explicitly configured `instance_type` values are not filtered.
 
-    CPI maintains a table of recommended VM sizes. Please check [`RECOMMENDED_VM_SIZES`](https://github.com/cloudfoundry/bosh-azure-cpi-release/blob/master/src/bosh_azure_cpi/lib/cloud/azure/instance_type_mapper.rb). The table may **CHANGE** in future.
+    CPI maintains a table of recommended VM sizes. Please check [`RECOMMENDED_VM_SIZES`](https://github.com/cloudfoundry/bosh-azure-cpi-release/blob/main/src/bosh_azure_cpi/lib/cloud/azure/instance_type_mapper.rb). The table may **CHANGE** in future.
 
     CPI searches each series in the table from the top to the bottom, and selects the VM sizes which are also in the list of possible VM sizes. It means these VM sizes statisfy the requirements of `vm_resources`.
 

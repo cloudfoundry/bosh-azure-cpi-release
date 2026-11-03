@@ -126,7 +126,7 @@ Your development environment is prepared successfully.
 
 ### Unit tests
 
-The [unit tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/unit)
+The [unit tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/main/src/bosh_azure_cpi/spec/unit)
 are **REQUIRED** before you submit a PR.
 When submitting a PR, you need to provide the test coverage and make sure that the coverage doesn't decrease.
 
@@ -155,7 +155,7 @@ If unit tests are passed, you can create a dev release and deploy it for tests.
 
 ### Rubocop
 
-The [rubocop_check](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/bin/rubocop_check)
+The [rubocop_check](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/main/src/bosh_azure_cpi/bin/rubocop_check)
 script checks for rubocop offenses.
 
 ```bash
@@ -166,7 +166,7 @@ bundle install --with=test
 
 #### Rubocop autofix
 
-The [rubocop_autofix](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/bin/rubocop_autofix)
+The [rubocop_autofix](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/main/src/bosh_azure_cpi/bin/rubocop_autofix)
 script auto-corrects any rubocop offenses which can be auto-corrected.
 
 **_WARNING_:** Running this script **_COULD_** introduce bugs into the code.
@@ -196,7 +196,7 @@ bundle exec rspec spec/unit/bosh_release
 ### CI Pipeline
 
 You can setup a [CI pipeline](../ci/) to run the
-[integration tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/master/src/bosh_azure_cpi/spec/integration)
+[integration tests](https://github.com/cloudfoundry/bosh-azure-cpi-release/tree/main/src/bosh_azure_cpi/spec/integration)
 and [BATs](https://github.com/cloudfoundry/bosh-acceptance-tests/tree/gocli-bats).
 It's optional for submitting a PR and required for publishing a new CPI release.
 
