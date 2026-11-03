@@ -508,7 +508,6 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-cpi-certification
-      branch: master
   - name: bosh-release
     type: bosh-io-release
     source:
