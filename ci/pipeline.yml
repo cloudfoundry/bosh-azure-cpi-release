@@ -528,7 +528,6 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-deployment
-      branch: master
   - name: bosh-ruby-release-registry-image
     type: registry-image
     source:

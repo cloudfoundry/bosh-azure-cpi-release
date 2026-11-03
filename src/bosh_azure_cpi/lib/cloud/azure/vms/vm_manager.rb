@@ -197,7 +197,7 @@ module Bosh::AzureCloud
         # Generate secure random strings as username and password for Windows VMs
         # Users do not use this credential to logon to Windows VMs
         # If users want to logon to Windows VMs, they need to add a new user via the job 'user_add'
-        # https://github.com/cloudfoundry/bosh-deployment/blob/master/jumpbox-user.yml
+        # https://github.com/cloudfoundry/bosh-deployment/blob/main/jumpbox-user.yml
         #
         # https://docs.microsoft.com/en-us/rest/api/compute/virtualmachines/virtualmachines-create-or-update
         # adminUsername:

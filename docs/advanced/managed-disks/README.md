@@ -203,7 +203,7 @@ Below are behavior changes with a new deployment:
 
 1. Deploying BOSH director:
 
-    1. (**REQUIRED**) You need to enable managed disks in the [Global Configuration](http://bosh.io/docs/azure-cpi/#global) using the ops file [use-managed-disks.yml](https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/master/azure/use-managed-disks.yml).
+    1. (**REQUIRED**) You need to enable managed disks in the [Global Configuration](http://bosh.io/docs/azure-cpi/#global) using the ops file [use-managed-disks.yml](https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/main/azure/use-managed-disks.yml).
 
     1. (Optional) You can specify the `storage_account_type` in [Disk Types](http://bosh.io/docs/azure-cpi/#disk-pools). For example, if you need a SSD persistent disk for the BOSH director, you can use `Premium_LRS`.
 
@@ -248,7 +248,7 @@ This is the recommended approach for existing deployment, you can migrate entire
 
     1. (**REQUIRED**) Upgrade Azure CPI to the new version.
 
-    1. (**REQUIRED**) You need to enable managed disks in the [Global Configuration](http://bosh.io/docs/azure-cpi/#global) using the ops file [use-managed-disks.yml](https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/master/azure/use-managed-disks.yml).
+    1. (**REQUIRED**) You need to enable managed disks in the [Global Configuration](http://bosh.io/docs/azure-cpi/#global) using the ops file [use-managed-disks.yml](https://raw.githubusercontent.com/cloudfoundry/bosh-deployment/main/azure/use-managed-disks.yml).
 
     1. (**REQUIRED**) You need to remove `storage_account_name` and `storage_account_max_disk_number` if they exist in [VM Types/VM Extensions](http://bosh.io/docs/azure-cpi/#resource-pools).
 
