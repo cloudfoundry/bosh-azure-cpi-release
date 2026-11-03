@@ -454,7 +454,7 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-azure-cpi-release.git
-      branch: master
+      branch: main
       ignore_paths:
         - ci/
         - .final_builds/**/*.yml
@@ -463,7 +463,7 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-azure-cpi-release.git
-      branch: master
+      branch: main
       username: bosh-admin-bot
       password: ((github_read_write_token))
   - name: release-version-semver

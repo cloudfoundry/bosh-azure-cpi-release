@@ -21,7 +21,7 @@ test_config = Psych.load_file(test_config_file)
 cpi_config_file = File.expand_path('cpi.cfg', __dir__)
 @base_config = Psych.load_file(cpi_config_file)
 
-def checkout_repo(repo, dir: '/tmp/cpi-test', branch: 'master', force_renew: false)
+def checkout_repo(repo, dir: '/tmp/cpi-test', branch: 'main', force_renew: false)
   name = "#{File.basename(repo)}-#{branch}"
   dest_dir = File.join(dir, name)
   return dest_dir if File.exist?(dest_dir) && !force_renew
