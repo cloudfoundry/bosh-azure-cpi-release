@@ -131,6 +131,8 @@ builds:
     version: 53.1.7
   b813a1d9-20cd-4587-61c7-251eb527ae48:
     version: 37.6.0
+  be34d6da-1f62-4283-4537-e0e876879b1f:
+    version: 53.1.12
   bedc2f29-14e6-4952-aee9-d2844ebc374b:
     version: "2"
   bffcd0b4-ddcb-49b1-7f24-386b6187b180:
